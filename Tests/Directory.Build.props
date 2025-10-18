@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Import parent Directory.Build.props to inherit common settings -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  
+  <PropertyGroup>
+    <!-- Suppress XML documentation warnings (CS1591) for test projects -->
+    <!-- Test methods typically follow clear naming conventions and don't need XML documentation -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

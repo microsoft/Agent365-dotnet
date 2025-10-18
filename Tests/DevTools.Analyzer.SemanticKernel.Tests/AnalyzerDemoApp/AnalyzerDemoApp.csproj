@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <IsPublishable>false</IsPublishable>
+    <!-- Add local artifacts folder for NuGet restore -->
+    <RestoreSources>$(RestoreSources);$(MSBuildThisFileDirectory)..\..\..\artifacts</RestoreSources>
+  </PropertyGroup>
+  <!-- ASP.NET Core Framework Reference -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <!-- Core packages always needed -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SemanticKernel" />
+    <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
+    <PackageReference Include="Microsoft.Agents.Builder" />
+  </ItemGroup>
+  <!-- Default: Use project references since AnalyzerDemoApp is now part of the solution -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Observability\SemanticKernel\KairoSdk.SemanticKernel.csproj" />
+    <ProjectReference Include="..\..\..\..\Runtime\Common\Microsoft.Agents.A365.Runtime.Common.AspNetCore\Microsoft.Agents.A365.Runtime.Common.AspNetCore.csproj" />
+  </ItemGroup>
+  <!-- Analyzer reference for testing governance rules via NuGet package -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

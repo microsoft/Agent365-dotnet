@@ -1,0 +1,197 @@
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+using Microsoft.Agents.A365.Observability.Caching;
+
+namespace Microsoft.Agents.A365.Observability.Tests;
+
+/// <summary>
+/// Tests for KairoSdk extension methods.
+/// </summary>
+[TestClass]
+public sealed class KairoSdkExtensionTests
+{
+    /// <summary>
+    /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()
+    /// </summary>
+    private static readonly string[] ValidClusterCategories = new[]
+    {
+        "local", "dev", "test", "preprod", "firstrelease", "prod",
+        "gov", "high", "dod", "mooncake", "ex", "rx"
+    };
+
+    [TestMethod]
+    public void AddAgenticTracingExporter_RegistersRequiredServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddAgenticTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var tokenCache = serviceProvider.GetService<IExporterTokenCache<AgenticTokenStruct>>();
+        tokenCache.Should().NotBeNull();
+        tokenCache.Should().BeOfType<AgenticTokenCache>();
+
+        var options = serviceProvider.GetService<Agent365ExporterOptions>();
+        options.Should().NotBeNull();
+        options!.ClusterCategory.Should().Be("test");
+        options.TokenResolver.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void AddAgenticTracingExporter_DefaultClusterCategory_IsProduction()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddAgenticTracingExporter();
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+        options.ClusterCategory.Should().Be("production");
+    }
+
+    [TestMethod]
+    public void AddAgenticTracingExporter_UseS2SEndpoint_IsFalse()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddAgenticTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+        options.UseS2SEndpoint.Should().BeFalse("agentic exporter uses standard endpoint");
+    }
+
+    [TestMethod]
+    public void AddServiceTracingExporter_RegistersRequiredServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddServiceTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var tokenCache = serviceProvider.GetService<IExporterTokenCache<string>>();
+        tokenCache.Should().NotBeNull();
+        tokenCache.Should().BeOfType<ServiceTokenCache>();
+
+        var options = serviceProvider.GetService<Agent365ExporterOptions>();
+        options.Should().NotBeNull();
+        options!.ClusterCategory.Should().Be("test");
+        options.TokenResolver.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void AddServiceTracingExporter_DefaultClusterCategory_IsProduction()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddServiceTracingExporter();
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+        options.ClusterCategory.Should().Be("production");
+    }
+
+    [TestMethod]
+    public void AddServiceTracingExporter_UseS2SEndpoint_IsTrue()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddServiceTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Assert
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+        options.UseS2SEndpoint.Should().BeTrue("service tracing exporter uses S2S endpoint");
+    }
+
+    [TestMethod]
+    public void AddServiceTracingExporter_WithCustomClusterCategory_SetsCorrectly()
+    {
+        // Arrange - use all valid cluster categories from PowerPlatformApiDiscovery
+        foreach (var category in ValidClusterCategories)
+        {
+            // Act
+            var testServices = new ServiceCollection();
+            testServices.AddServiceTracingExporter(category);
+            var serviceProvider = testServices.BuildServiceProvider();
+
+            // Assert
+            var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+            options.ClusterCategory.Should().Be(category);
+            options.UseS2SEndpoint.Should().BeTrue();
+        }
+    }
+
+    [TestMethod]
+    public void AddAgenticTracingExporter_WithCustomClusterCategory_SetsCorrectly()
+    {
+        // Arrange - use all valid cluster categories from PowerPlatformApiDiscovery
+        foreach (var category in ValidClusterCategories)
+        {
+            // Act
+            var testServices = new ServiceCollection();
+            testServices.AddAgenticTracingExporter(category);
+            var serviceProvider = testServices.BuildServiceProvider();
+
+            // Assert
+            var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+            options.ClusterCategory.Should().Be(category);
+            options.UseS2SEndpoint.Should().BeFalse();
+        }
+    }
+
+    [TestMethod]
+    public void AddServiceTracingExporter_TokenResolver_CanBeCalled()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddServiceTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+
+        // Act
+        var token = options.TokenResolver!("test-agent", "test-tenant");
+
+        // Assert
+        // Token resolver should not throw (actual token retrieval logic is in the cache)
+        // This just verifies the resolver is wired up
+        options.TokenResolver.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void AddAgenticTracingExporter_TokenResolver_CanBeCalled()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddAgenticTracingExporter("test");
+        var serviceProvider = services.BuildServiceProvider();
+        var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+
+        // Act
+        var token = options.TokenResolver!("test-agent", "test-tenant");
+
+        // Assert
+        // Token resolver should not throw (actual token retrieval logic is in the cache)
+        // This just verifies the resolver is wired up
+        options.TokenResolver.Should().NotBeNull();
+    }
+}

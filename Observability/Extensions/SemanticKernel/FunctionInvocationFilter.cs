@@ -1,0 +1,70 @@
+﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.SemanticKernel;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// Function invocation filter that adds tracing capabilities to SemanticKernel function calls.
+/// </summary>
+public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
+{
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
+    /// <inheritdoc />
+    public async Task OnFunctionInvocationAsync(FunctionInvocationContext context, Func<FunctionInvocationContext, Task> next)
+    {
+        var argumentsArray = context.Arguments.Select(kvp => new NamedDataValue(kvp.Key, new DataValue(kvp.Value)));
+
+        var arguments = JsonSerializer.Serialize(argumentsArray, SerializerOptions);
+
+        if (Activity.Current?.OperationName.StartsWith(ExecuteToolScope.OperationName) ?? false)
+        {
+            // If we are already in a tool execution scope, we do not need to create a new one
+            Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+            Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolTypeKey, ToolType.Function);
+            await InvokeWithErrorHandlingAsync(next, context);
+            Activity.Current.AddTag(OpenTelemetryConstants.GenAiEventContent, GetResult(context));
+            return;
+        }
+        // TODO: figure out how to get agent and tenant details here
+        using var scope = ExecuteToolScope.Start(
+            new ToolCallDetails(
+                context.Function.Name,
+                arguments,
+                null,
+                context.Function.Description,
+                ToolType.Function),
+            new AgentDetails("tempAgentId"),
+            new TenantDetails(new Guid()));
+        await InvokeWithErrorHandlingAsync(next, context);
+        scope?.RecordResponse(GetResult(context));
+    }
+
+    private async Task InvokeWithErrorHandlingAsync(Func<FunctionInvocationContext, Task> next, FunctionInvocationContext context)
+    {
+        try
+        {
+            await next(context);
+        }
+        catch (Exception ex)
+        {
+            Activity.Current?.AddTag(OpenTelemetryConstants.ErrorTypeKey, ex.GetType().Name);
+            Activity.Current?.AddTag(OpenTelemetryConstants.ErrorMessageKey, ex.Message);
+            throw;
+        }
+    }
+
+    private static string GetResult(FunctionInvocationContext context)
+    {
+        var result = new DataValue(context.Result.GetValue<object>());
+
+        return JsonSerializer.Serialize(result, SerializerOptions);
+    }
+}

@@ -1,0 +1,29 @@
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Runtime.Authentication
+{
+    using Microsoft.Agents.Builder;
+    using Microsoft.Agents.Builder.App.UserAuth;
+    using Microsoft.Agents.A365.Runtime.Utils;
+
+    /// <summary>
+    /// Provides authentication services for agentic user scenarios.
+    /// </summary>
+    public class AgenticAuthenticationService
+    {
+        /// <summary>
+        /// Gets an agentic user token using the provided <see cref="UserAuthorization"/> and <see cref="ITurnContext"/>.
+        /// </summary>
+        /// <param name="userAuthorization">The user authorization instance.</param>
+        /// <param name="turnContext">The turn context for the current conversation.</param>
+        /// <returns>The agentic user token as a string.</returns>
+        public static async Task<string> GetAgenticUserTokenAsync(UserAuthorization userAuthorization, ITurnContext turnContext)
+        {
+            var scopes = new List<string> { Utility.GetMcpPlatformAuthenticationScope() };
+
+            return await userAuthorization.ExchangeTurnTokenAsync(turnContext, "agentic", exchangeScopes: scopes);
+        }
+    }
+}

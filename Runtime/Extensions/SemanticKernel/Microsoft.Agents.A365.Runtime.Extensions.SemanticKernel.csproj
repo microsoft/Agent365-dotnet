@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.SemanticKernel</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.SemanticKernel</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.SemanticKernel</PackageId>
+    <Title>Microsoft Kairo SemanticKernel Integration</Title>
+    <Description>A .NET SDK that integrates Microsoft Kairo with SemanticKernel, providing automatic tracing for ChatCompletionAgent operations.</Description>
+    <Summary>Microsoft Kairo SemanticKernel Integration - Automatic tracing for SemanticKernel agents</Summary>
+    <Product>Microsoft Agents A365 SDK SemanticKernel Integration</Product>
+    <PackageTags>Microsoft;Kairo;SemanticKernel;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
+</PropertyGroup>
+
+<ItemGroup>
+    <ProjectReference Include="..\..\..\Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj" />
+</ItemGroup>
+<ItemGroup>
+<PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
+<!-- Source Link Support -->
+<PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+</ItemGroup>
+</Project>

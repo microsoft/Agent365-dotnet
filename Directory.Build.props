@@ -1,0 +1,53 @@
+﻿<Project>
+  <PropertyGroup>
+    <!-- Path properties -->
+    <DotNetSdkPath>$(MSBuildThisFileDirectory)</DotNetSdkPath>
+    <DotNetPath>$(DotNetSdkPath)..\</DotNetPath>
+    <RepositoryRoot>$(DotNetPath)..\</RepositoryRoot>
+    
+    <!-- Common build properties -->
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors />
+    
+    <!-- Package properties -->
+    <PackageOutputPath>$(DotNetPath)/NuGetPackages</PackageOutputPath>
+
+    <!-- ImplicitUsings not supported in netstandard2.0, only enable for net6.0+ -->
+    <ImplicitUsings Condition="'$(TargetFramework)' != 'netstandard2.0'">enable</ImplicitUsings>
+    <!-- Nullable reference types require C# 8.0+, set LangVersion for netstandard2.0 -->
+    <LangVersion Condition="'$(TargetFramework)' == 'netstandard2.0'">8.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Authors>Microsoft</Authors>
+
+    <BaseVersion>$([System.DateTime]::UtcNow.Year).$([System.DateTime]::UtcNow.Month).$([System.DateTime]::UtcNow.Day)</BaseVersion>
+    <PackageVersion>$(BaseVersion)-preview</PackageVersion>
+    <Version>$(BaseVersion).$([System.DateTime]::UtcNow.ToString("HHmm"))</Version>
+    <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
+    <Company>Microsoft Corporation</Company>
+    <RepositoryUrl>https://github.com/microsoft/Agent365</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>See CHANGELOG.md for release notes.</PackageReleaseNotes>
+
+    <!-- Build Configuration -->
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Source Link Support -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(RepositoryRoot)\LICENSE.md" Pack="true" PackagePath="" />
+    <None Include="$(DotNetPath)\CHANGELOG.md" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+</Project>

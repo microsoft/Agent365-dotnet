@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReleaseTracking>
+  <Rule Id="AGENTS001" Name="Error pattern: Kernel retrieval and duplicate MyAgent registration" />
+  <Rule Id="AGENTS002" Name="ApplyGovernanceAsync must precede app.Run()" />
+</ReleaseTracking>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="DevTools\dirs.proj" />
+    <ProjectReference Include="Notification\dirs.proj" />
+    <ProjectReference Include="Observability\dirs.proj" />
+    <ProjectReference Include="Runtime\dirs.proj" />
+    <ProjectReference Include="Tooling\dirs.proj" />
+    <ProjectReference Include="Tests\dirs.proj" />
+  </ItemGroup>
+</Project>

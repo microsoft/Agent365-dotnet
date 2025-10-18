@@ -1,0 +1,17 @@
+namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+
+/// <summary>
+/// Contains constants for operation names, tag names, and activity source names used in SemanticKernel and OpenAI tracing.
+/// </summary>
+internal static class SemanticKernelTelemetryConstants
+{
+    // Operation Names
+    public const string InvokeAgentOperation = "invoke_agent";
+    public const string ExecuteToolOperation = "execute_tool";
+    public const string ChatCompletionsOperation = "chat.completions";
+
+    // Activity Source Names
+    public const string SemanticKernelSource = "Microsoft.SemanticKernel";
+    public const string SemanticKernelSourceWildcard = "Microsoft.SemanticKernel*";
+    public const string AzureAISourceWildcard = "Azure.AI.*";
+}

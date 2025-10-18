@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.Runtime.OpenAI</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Runtime.OpenAI</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.Runtime.OpenAI</PackageId>
+    <Title>Microsoft Kairo OpenAI Runtime</Title>
+    <Description>A .NET SDK that provides runtime providers for OpenAI integration with Microsoft Kairo, including multi-tenant client management and function orchestration.</Description>
+    <Summary>Microsoft Kairo OpenAI Runtime - Multi-tenant OpenAI client and function management</Summary>
+    <Product>Microsoft Agents A365 SDK OpenAI Runtime</Product>
+    <PackageTags>Microsoft;Kairo;OpenAI;AI;Agents;Multi-tenant;Runtime;Functions</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenAI" />
+    <PackageReference Include="Azure.AI.OpenAI" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- Source Link Support -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Exclude test files from compilation -->
+    <Compile Remove="Tests\**\*" />
+    <EmbeddedResource Remove="Tests\**\*" />
+    <None Remove="Tests\**\*" />
+  </ItemGroup>
+</Project>

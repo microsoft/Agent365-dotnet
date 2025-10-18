@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.Runtime.Common</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Runtime.Common</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.Runtime.Common</PackageId>
+    <Title>Microsoft Agents A365 SDK Runtime Common</Title>
+    <Description>Runtime common utilities for Microsoft Agents A365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.</Description>
+    <Summary>Microsoft Agents A365 SDK Runtime Common - Tenant context helpers for web applications</Summary>
+    <Product>Microsoft Agents A365 SDK Runtime Common</Product>
+    <PackageTags>Microsoft;Kairo;AspNetCore;MultiTenant;HttpContext;Web;AI;Agents</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- ASP.NET Core dependencies -->
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
+    <!-- Agents SDK dependencies -->
+    <PackageReference Include="Microsoft.Agents.Authentication.Msal" />
+    <PackageReference Include="Microsoft.Agents.Hosting.AspNetCore" />
+    <!-- Source Link Support -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+  <!-- Exclude test files from main project compilation -->
+  <ItemGroup>
+    <Compile Remove="Tests/**/*.cs" />
+    <None Include="Tests/**/*.cs" />
+  </ItemGroup>
+</Project>
