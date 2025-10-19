@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./dotnet/sdk
+        working-directory: ./src
 
     strategy:
       matrix:
