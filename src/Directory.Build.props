@@ -2,8 +2,7 @@
   <PropertyGroup>
     <!-- Path properties -->
     <DotNetSdkPath>$(MSBuildThisFileDirectory)</DotNetSdkPath>
-    <DotNetPath>$(DotNetSdkPath)..\</DotNetPath>
-    <RepositoryRoot>$(DotNetPath)..\</RepositoryRoot>
+    <RepositoryRoot>$(DotNetSdkPath)..\</RepositoryRoot>
     
     <!-- Common build properties -->
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -13,7 +12,7 @@
     <WarningsNotAsErrors />
     
     <!-- Package properties -->
-    <PackageOutputPath>$(DotNetPath)/NuGetPackages</PackageOutputPath>
+    <PackageOutputPath>$(RepositoryRoot)/NuGetPackages</PackageOutputPath>
 
     <!-- ImplicitUsings not supported in netstandard2.0, only enable for net6.0+ -->
     <ImplicitUsings Condition="'$(TargetFramework)' != 'netstandard2.0'">enable</ImplicitUsings>
@@ -47,7 +46,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="$(RepositoryRoot)\LICENSE.md" Pack="true" PackagePath="" />
-    <None Include="$(DotNetPath)\CHANGELOG.md" Pack="true" PackagePath="" />
+    <None Include="$(RepositoryRoot)\CHANGELOG.md" Pack="true" PackagePath="" />
     <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 </Project>
