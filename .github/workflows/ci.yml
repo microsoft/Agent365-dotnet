@@ -83,13 +83,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup .NET ${{ matrix.dotnet-version }}
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ matrix.dotnet-version }}
-        source-url: https://pkgs.dev.azure.com/msazure/OneAgile/_packaging/Agent365/nuget/v3/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
+    # - name: Setup .NET ${{ matrix.dotnet-version }}
+    #   uses: actions/setup-dotnet@v4
+    #   with:
+    #     dotnet-version: ${{ matrix.dotnet-version }}
+    #     source-url: https://pkgs.dev.azure.com/msazure/OneAgile/_packaging/Agent365/nuget/v3/index.json
+    #   env:
+    #     NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
     - name: Restore dependencies
       run: dotnet restore Microsoft.Kairo.Sdk.sln
