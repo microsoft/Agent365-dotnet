@@ -2,10 +2,10 @@
 
 <#
 .SYNOPSIS
-    Build script for Microsoft Kairo SDK using traversal build
+    Build script for Microsoft Agents A365 SDK using traversal build
 
 .DESCRIPTION
-    This script builds the Kairo SDK using dirs.proj traversal build and optionally creates NuGet packages.
+    This script builds the Agents A365 SDK using dirs.proj traversal build and optionally creates NuGet packages.
 
 .PARAMETER Configuration
     The build configuration (Debug or Release). Default is Release.
@@ -60,7 +60,7 @@ $ErrorActionPreference = 'Stop'
 # Set working directory to script location
 Set-Location $PSScriptRoot
 
-Write-Host "🔧 Building Microsoft Kairo SDK..." -ForegroundColor Green
+Write-Host "🔧 Building Microsoft Agents A365 SDK..." -ForegroundColor Green
 Write-Host "Configuration: $Configuration" -ForegroundColor Cyan
 
 try {
