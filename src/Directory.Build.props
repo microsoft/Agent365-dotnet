@@ -27,7 +27,7 @@
     <Version>$(BaseVersion).$([System.DateTime]::UtcNow.ToString("HHmm"))</Version>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <Company>Microsoft Corporation</Company>
-    <RepositoryUrl>https://github.com/microsoft/Agent365</RepositoryUrl>
+    <RepositoryUrl>https://github.com/microsoft/Agent365-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
