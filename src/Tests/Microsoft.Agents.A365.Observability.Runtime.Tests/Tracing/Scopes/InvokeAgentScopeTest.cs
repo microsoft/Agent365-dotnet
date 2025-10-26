@@ -1,5 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
+using System;
+using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
@@ -8,19 +10,6 @@ using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTele
 public sealed class InvokeAgentScopeTest : ActivityTest
 {
     [TestMethod]
-    public void Start_Request_Set()
-    {
-        const string expected = "response";
-
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails(), new Request(expected));
-        });
-
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiRequestContentKey, expected);
-    }
-
-    [TestMethod]
     public void RecordResponse_ActivityTagSet()
     {
         const string expected = "response";
@@ -28,10 +17,10 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
-            scope?.RecordResponse(expected);
+            scope.RecordResponse(expected);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiEventContent, expected);
+        activity.ShouldHaveTag("gen_ai.output.messages", expected);
     }
 
     [TestMethod]
@@ -40,7 +29,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         const string expected = "Test error";
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteAgentScope.Start(AgentId, Util.GetTenantDetails().TenantId);
+            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
             scope?.RecordError(new Exception(expected));
         });
         
@@ -54,7 +43,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
-            scope?.RecordInputMessages(messages);
+            scope.RecordInputMessages(messages);
         });
         activity.ShouldHaveTag("gen_ai.input.messages", string.Join(",", messages));
     }
@@ -66,8 +55,23 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
-            scope?.RecordOutputMessages(messages);
+            scope.RecordOutputMessages(messages);
         });
         activity.ShouldHaveTag("gen_ai.output.messages", string.Join(",", messages));
+    }
+
+    [TestMethod]
+    public void SetStartTime_SetsActivityStartTime()
+    {
+        var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            scope.SetStartTime(customStartTime);
+        });
+
+        // Activity start time should be close to the custom start time
+        var startTime = new DateTimeOffset(activity.StartTimeUtc);
+        startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
 }

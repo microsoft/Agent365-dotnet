@@ -9,7 +9,7 @@
     <Description>Runtime common utilities for Microsoft Agents A365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.</Description>
     <Summary>Microsoft Agents A365 SDK Runtime Common - Tenant context helpers for web applications</Summary>
     <Product>Microsoft Agents A365 SDK Runtime Common</Product>
-    <PackageTags>Microsoft;Kairo;AspNetCore;MultiTenant;HttpContext;Web;AI;Agents</PackageTags>
+    <PackageTags>Microsoft;A365AspNetCore;MultiTenant;HttpContext;Web;AI;Agents</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <!-- ASP.NET Core dependencies -->

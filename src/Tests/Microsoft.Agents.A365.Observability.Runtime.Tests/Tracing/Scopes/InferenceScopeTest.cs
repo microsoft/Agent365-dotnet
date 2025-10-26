@@ -1,5 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
+using System;
+using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
@@ -132,5 +134,25 @@ public sealed class InferenceScopeTest : ActivityTest
         });
 
         activity.ShouldHaveTag("gen_ai.output.messages", string.Join(",", messages));
+    }
+
+    [TestMethod]
+    public void SetStartTime_SetsActivityStartTime()
+    {
+        var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails());
+            scope.SetStartTime(customStartTime);
+        });
+
+        // Activity start time should be close to the custom start time
+        var startTime = new DateTimeOffset(activity.StartTimeUtc);
+        startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
 }

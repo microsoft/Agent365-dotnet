@@ -1,7 +1,7 @@
 namespace Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Runtime;
 using OpenTelemetry.Trace;
 
 /// <summary>

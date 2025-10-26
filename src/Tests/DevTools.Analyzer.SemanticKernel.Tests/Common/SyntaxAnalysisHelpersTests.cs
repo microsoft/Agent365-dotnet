@@ -28,7 +28,7 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.Tests.Common
         [Theory]
         [InlineData("IKernelProvider")]
         [InlineData("KernelProvider")]
-        [InlineData("Microsoft.Kairo.IKernelProvider")]
+        [InlineData("Microsoft.Agents.A365.IKernelProvider")]
         [InlineData("string")]
         [InlineData("")]
         public void IsDirectKernelType_WithNonKernelTypes_ReturnsFalse(string? typeString)
@@ -49,7 +49,7 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.Tests.Common
         [Theory]
         [InlineData("IKernelProvider")]
         [InlineData("KernelProvider")]
-        [InlineData("Microsoft.Kairo.IKernelProvider")]
+        [InlineData("Microsoft.Agents.A365.IKernelProvider")]
         public void IsProviderType_WithProviderTypes_ReturnsTrue(string typeString)
         {
             var result = SyntaxAnalysisHelpers.IsProviderType(typeString);

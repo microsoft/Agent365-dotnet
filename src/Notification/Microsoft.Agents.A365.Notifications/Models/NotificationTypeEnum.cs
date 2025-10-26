@@ -23,6 +23,11 @@
         /// <summary>
         /// Federated Knowledge Service notification.
         /// </summary>
-        FederatedKnowledgeServiceNotification = 3
+        FederatedKnowledgeServiceNotification = 3,
+
+        /// <summary>
+        /// Agent lifecycle notification.
+        /// </summary>
+        AgentLifecycleNotification = 4
     }
 }

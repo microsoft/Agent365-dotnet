@@ -17,11 +17,11 @@
     <PackageType>Analyzer</PackageType>
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel</PackageId>
-    <Title>Kairo SemanticKernel Governance Analyzers</Title>
-    <Description>Roslyn analyzers for enforcing governance rules and best practices in Kairo SemanticKernel-based multi-tenant AI agent projects. Ensures proper kernel access patterns, multi-tenant isolation, and secure coding practices.</Description>
-    <Summary>Governance analyzers for Kairo SemanticKernel projects - enforces multi-tenant security and coding standards</Summary>
+    <Title>Microsoft Agents A365 SemanticKernel Governance Analyzers</Title>
+    <Description>Roslyn analyzers for enforcing governance rules and best practices in Microsoft Agents A365 SemanticKernel-based multi-tenant AI agent projects. Ensures proper kernel access patterns, multi-tenant isolation, and secure coding practices.</Description>
+    <Summary>Governance analyzers for Microsoft Agents A365 SemanticKernel projects - enforces multi-tenant security and coding standards</Summary>
     <Product>Microsoft Agents A365 SDK SemanticKernel Analyzers</Product>
-    <PackageTags>Microsoft;Kairo;SemanticKernel;Analyzers;Roslyn;Governance;MultiTenant;Security;CodeAnalysis;AI;Agents</PackageTags>
+    <PackageTags>Microsoft;Agents;A365;SemanticKernel;Analyzers;Roslyn;Governance;MultiTenant;Security;CodeAnalysis;AI;Agents</PackageTags>
     <!-- Suppress warnings for analyzer projects -->
     <NoWarn>$(NoWarn);CS1591;CS1587;CS8602;CS8603;CS8604;CS8631</NoWarn>
     <!-- Allow files that start with '.' to be included in the package (e.g., .editorconfig) -->

@@ -1,8 +1,7 @@
 using FluentAssertions;
 using Microsoft.Agents.Builder.App;
-using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Runtime;
 
 namespace Microsoft.Agents.A365.Observability.Tests;
 
@@ -27,20 +26,6 @@ public sealed class BuilderPatternTests
     }
 
     [TestMethod]
-    public void AddTracing_WithLambdaConfiguration_WithConnectionString()
-    {
-        var services = new ServiceCollection();
-        const string connectionString = "InstrumentationKey=test-key-lambda";
-
-        // Use lambda configuration with multiple settings
-        var result = services.AddTracing(builder => builder
-            .WithConnectionString(connectionString));
-
-        result.Should().NotBeNull();
-        result.Should().BeSameAs(services);
-    }
-
-    [TestMethod]
     public void AddTracing_WithNullLambda_ShouldWork()
     {
         var services = new ServiceCollection();
@@ -61,20 +46,5 @@ public sealed class BuilderPatternTests
 
         result.Should().NotBeNull();
         result.Should().BeSameAs(services);
-    }
-
-    [TestMethod]
-    public void AddTracing_LambdaConfiguration_ServiceProviderCanBeBuilt()
-    {
-        var services = new ServiceCollection();
-        const string connectionString = "InstrumentationKey=test-key-provider";
-
-        // Configure using lambda
-        services.AddTracing(builder => builder
-            .WithConnectionString(connectionString));
-
-        // Should be able to build service provider successfully
-        using var serviceProvider = services.BuildServiceProvider();
-        serviceProvider.Should().NotBeNull();
     }
 }

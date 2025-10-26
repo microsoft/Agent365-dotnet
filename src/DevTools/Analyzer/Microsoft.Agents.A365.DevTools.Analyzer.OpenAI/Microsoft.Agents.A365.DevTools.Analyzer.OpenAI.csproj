@@ -17,11 +17,11 @@
     <PackageType>Analyzer</PackageType>
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.DevTools.Analyzer.OpenAI</PackageId>
-    <Title>Kairo OpenAI Governance Analyzers</Title>
-    <Description>Roslyn analyzers for enforcing governance rules and best practices in Kairo OpenAI-based multi-tenant AI agent projects. Ensures proper client access patterns, multi-tenant isolation, and secure coding practices.</Description>
-    <Summary>Governance analyzers for Kairo OpenAI projects - enforces multi-tenant security and coding standards</Summary>
+    <Title>Microsoft Agents A365 OpenAI Governance Analyzers</Title>
+    <Description>Roslyn analyzers for enforcing governance rules and best practices in Microsoft Agents A365 OpenAI-based multi-tenant AI agent projects. Ensures proper client access patterns, multi-tenant isolation, and secure coding practices.</Description>
+    <Summary>Governance analyzers for Microsoft Agents A365 OpenAI projects - enforces multi-tenant security and coding standards</Summary>
     <Product>Microsoft Agents A365 SDK OpenAI Analyzers</Product>
-    <PackageTags>Microsoft;Kairo;OpenAI;Analyzers;Roslyn;Governance;MultiTenant;Security;CodeAnalysis;AI;Agents</PackageTags>
+    <PackageTags>Microsoft;Agents;A365;OpenAI;Analyzers;Roslyn;Governance;MultiTenant;Security;CodeAnalysis;AI;Agents</PackageTags>
     <!-- Suppress warnings for analyzer projects -->
     <NoWarn>$(NoWarn);CS1591;CS1587;CS8602;CS8603;CS8604;CS8631</NoWarn>
     <!-- Allow files that start with '.' to be included in the package (e.g., .editorconfig) -->

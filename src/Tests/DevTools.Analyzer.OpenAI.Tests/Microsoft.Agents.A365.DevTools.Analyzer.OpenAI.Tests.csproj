@@ -24,7 +24,6 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
     
     <!-- Packages needed for test code references -->
-    <PackageReference Include="OpenAI" />
     <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="System.Security.Claims" />

@@ -11,7 +11,6 @@ namespace Microsoft.Agents.A365.Tooling.Utils
     /// </summary>
     public static class Utility
     {
-        private const string McpPlatformTestBaseUrl = "https://test.agent365.svc.cloud.dev.microsoft";
         private const string McpPlatformProdBaseUrl = "https://agent365.svc.cloud.microsoft";
 
         /// <summary>
@@ -31,6 +30,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <returns>The base URL for MCP servers.</returns>
         public static string GetMcpBaseUrl()
         {
+            var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl();
             var environment = RuntimeUtility.GetCurrentEnvironment();
             if (environment.ToLowerInvariant() == "development")
             {
@@ -41,24 +41,24 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 }
 
                 return Environment.GetEnvironmentVariable("MCP_DEVELOPMENT_BASE_URL")
-                       ?? $"{McpPlatformTestBaseUrl}/mcp/environments";
+                       ?? $"{mcpPlatformBaseUrl}/mcp/environments";
             }
 
-            return $"{GetMcpPlatformBaseUrl()}/mcp/environments";
+            return $"{mcpPlatformBaseUrl}/mcp/environments";
 
         }
 
         private static string GetMcpPlatformBaseUrl()
         {
-            var environment = RuntimeUtility.GetCurrentEnvironment();
-
-            return environment.ToLowerInvariant() switch
+            // First check for environment variable (takes precedence)
+            var environmentVariableValue = Environment.GetEnvironmentVariable("MCP_PLATFORM_ENDPOINT");
+            if (!string.IsNullOrEmpty(environmentVariableValue))
             {
-                "development" => McpPlatformTestBaseUrl,
-                "test" => McpPlatformTestBaseUrl,
-                "production" => McpPlatformProdBaseUrl,
-                _ => McpPlatformProdBaseUrl
-            };
+                return environmentVariableValue;
+            }
+
+            // Default to production URL if no override is specified
+            return McpPlatformProdBaseUrl;
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ using Microsoft.Agents.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-// ❌ VIOLATION: Removed Microsoft.Kairo.Sdk.AgentsSdkExtensions reference to show violations
+// ❌ VIOLATION: Removed Microsoft.Agents.A365.AgentsSdkExtensions reference to show violations
 
 using OpenAI;                // ❌ VIOLATION: Direct OpenAI access
 using OpenAI.Chat;           // ❌ VIOLATION: Direct ChatClient access

@@ -128,8 +128,8 @@ The side-by-side comparison shows that:
 ## 📚 Next Steps
 
 - Review [AnalyzerDocumentation.md](../AnalyzerDocumentation.md) for complete rule details
-- Check [Microsoft.Kairo.Sdk.Runtime.OpenAI](../../../Runtime/OpenAI/) for provider implementations
+- Check [Microsoft.Agents.A365.Runtime.OpenAI](../../../Runtime/OpenAI/) for provider implementations
 - Use CompliantDemoApp as your template for new agent projects
 - Enable all governance analyzers in your build pipeline
 
-The combination of both demo apps provides a comprehensive learning experience for implementing OpenAI agents that follow Microsoft Kairo SDK governance principles.
+The combination of both demo apps provides a comprehensive learning experience for implementing OpenAI agents that follow Microsoft Microsoft Agents A365 SDK governance principles.

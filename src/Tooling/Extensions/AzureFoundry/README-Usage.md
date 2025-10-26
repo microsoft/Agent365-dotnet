@@ -1,6 +1,6 @@
-# Microsoft Kairo SDK - AzureFoundry Tooling
+# Microsoft Agents A365 SDK - AzureFoundry Tooling
 
-This library provides integration between Microsoft Kairo and Azure AI Foundry, enabling you to add MCP (Model Context Protocol) tool servers to your Azure Foundry agents using the Persistent Agents client.
+This library provides integration between Microsoft Agents A365 and Azure AI Foundry, enabling you to add MCP (Model Context Protocol) tool servers to your Azure Foundry agents using the Persistent Agents client.
 
 ## Installation
 
@@ -15,7 +15,7 @@ The library provides an extension method `AddMcpServices()` to register all requ
 #### Required Namespace
 
 ```csharp
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
 ```
 
 #### Service Registration
@@ -31,7 +31,7 @@ The extension method registers the following services:
 In your `Program.cs` file:
 
 ```csharp
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,9 +57,9 @@ app.Run();
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
-using Microsoft.Kairo.Sdk.Tooling.Common.Services;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Services;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.Common.Services;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Services;
 using Azure.AI.Agents.Persistent;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -116,7 +116,7 @@ If you need to manually create and configure a service collection:
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
 
 var services = new ServiceCollection();
 
@@ -146,7 +146,7 @@ If you're building a class library that uses these services:
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
 
 public static class MyLibraryExtensions
 {
@@ -220,8 +220,8 @@ using Azure.AI.Projects;
 using Azure.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Extensions;
-using Microsoft.Kairo.Sdk.Tooling.AzureFoundry.Services;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Extensions;
+using Microsoft.Agents.A365.Tooling.AzureFoundry.Services;
 
 public class FoundryAgentExample
 {

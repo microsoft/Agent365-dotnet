@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -24,11 +23,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="invokeAgentDetails">The details of the agent invocation including endpoint, agent information, and conversation context.</param>
         /// <param name="tenantDetails"></param>
         /// <param name="request">The request content for the invoked agent.</param>
-        /// <returns>A new OpenTelemetryScope instance if telemetry is enabled, otherwise null.</returns>
-        public static InvokeAgentScope? Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request);
+        /// <param name="callerAgentDetails">The details of the caller agent.</param>
+        /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
+        /// <returns>A new InvokeAgentScope instance.</returns>
+        public static InvokeAgentScope Start(
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId)
             : base(
                 ActivityKind.Client,
                 invokeAgentDetails.Details,
@@ -40,15 +42,39 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
-
-            SetTagMaybe(SessionIdKey, sessionId);
-            SetTagMaybe(ServerAddressKey, endpoint.Host);
-            SetTagMaybe(GenAiRequestContentKey, request?.Content);
+            SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
+            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceIdKey, request?.SourceMetadata?.Id);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceNameKey, request?.SourceMetadata?.Name);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request?.SourceMetadata?.Description);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
+            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Only record port if it is different from 443
             if (endpoint.Port != 443)
             {
-                SetTagMaybe(ServerPortKey, endpoint.Port);
+                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+            }
+
+            // Set caller details tags
+            if (callerDetails != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUserIdKey, callerDetails.CallerUserId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+            }
+
+            // Set caller agent details tags
+            if (callerAgentDetails != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
             }
         }
         
@@ -57,7 +83,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(GenAiEventContent, response);
+            this.RecordOutputMessages(messages: new string[] { response });
         }
 
         /// <summary>
@@ -65,7 +91,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordInputMessages(string[] messages)
         {
-            SetTagMaybe(GenAiInputMessagesKey, string.Join(",", messages));
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
         }
 
         /// <summary>
@@ -73,7 +99,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordOutputMessages(string[] messages)
         {
-            SetTagMaybe(GenAiOutputMessagesKey, string.Join(",", messages));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
         }
     }
 }

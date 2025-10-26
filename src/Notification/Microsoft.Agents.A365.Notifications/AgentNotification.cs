@@ -15,7 +15,7 @@ using Microsoft.Agents.A365.Notifications;
 namespace AgentNotification
 {
     /// <summary>
-    /// AgentsSdkExtension for Kairo.
+    /// AgentsSdkExtension for Microsoft Agents A365.
     /// </summary>
     public class AgentNotification : AgentExtension
     {
@@ -61,6 +61,46 @@ namespace AgentNotification
             return this;
         }
 
+        /// <summary>
+        /// Register a route handler for agent lifecycle notifications.
+        /// </summary>
+        /// <param name="lifecycleEvent"></param>
+        /// <param name="handler"></param>
+        /// <param name="rank"></param>
+        /// <param name="autoSignInHandlers"></param>
+        public AgentNotification OnLifecycleNotification(string lifecycleEvent, AgentNotificationHandler handler, ushort rank = RouteRank.Unspecified, string[] autoSignInHandlers = null!)
+        {
+            RouteSelector routeSelector = (tc, ct) =>
+                Task.FromResult(
+                    IsChannelForMe(tc.Activity) &&
+                    IsLifecycleEvent(tc.Activity) &&
+                    (lifecycleEvent.Equals("*") || IsForKnownLifecycleEvent(tc.Activity, lifecycleEvent))
+                );
+
+            RouteHandler routeHandler = async (turnContext, turnState, cancellationToken) =>
+            {
+                // Wrap the activity in an AgentNotificationActivity
+                var agentNotificationActivity = new AgentNotificationActivity(turnContext.Activity);
+                await handler(turnContext, turnState, agentNotificationActivity, cancellationToken);
+            };
+            AddRoute(_app, routeSelector, routeHandler, false, rank, autoSignInHandlers);
+            return this;
+        }
+
+        private bool IsLifecycleEvent(IActivity agentActivity)
+        {
+            if (agentActivity.Type != ActivityTypes.Event)
+            {
+                return false;
+            }
+            if (string.IsNullOrEmpty(agentActivity.Name))
+            {
+                return false;
+            }
+
+            return agentActivity.Name.Equals(Events.AgentLifecycleEvent, StringComparison.OrdinalIgnoreCase);
+        }
+
         private bool IsChannelForMe(IActivity agentActivity)
         {
             return agentActivity.ChannelId != null 
@@ -85,6 +125,20 @@ namespace AgentNotification
                     && agentActivity.ChannelId.SubChannel.Equals(subChannelId, StringComparison.OrdinalIgnoreCase);
         }
 
+        private bool IsForKnownLifecycleEvent(IActivity agentActivity, string lifecycleEvent)
+        {
+            if (string.IsNullOrEmpty(lifecycleEvent))
+            {
+                return false;
+            }
+            if (!IsValidLifecycleEvent(lifecycleEvent))
+            {
+                return false;
+            }
+            return agentActivity.ValueType != null
+                    && agentActivity.ValueType.Equals(lifecycleEvent, StringComparison.OrdinalIgnoreCase);
+        }
+
         private static bool IsValidSubChannel(string subChannel)
         {
             return subChannel switch
@@ -94,6 +148,17 @@ namespace AgentNotification
                 SubChannels.AgentsWordSubChannel => true,
                 SubChannels.AgentsPowerPointSubChannel => true,
                 SubChannels.FederatedKnowledgeServiceSubChannel => true,
+                _ => false,
+            };
+        }
+
+        private static bool IsValidLifecycleEvent(string lifecycleEvent)
+        {
+            return lifecycleEvent switch
+            {
+                Events.AgenticUserIdentityCreated => true,
+                Events.AgenticUserWorkloadOnboardingUpdated => true,
+                Events.AgenticUserDeleted => true,
                 _ => false,
             };
         }
@@ -168,6 +233,58 @@ namespace AgentNotification
             app.RegisterExtension(new AgentNotification(app), a365 =>
             {
                 a365.OnAgentNotification(SubChannels.AgentsPowerPointSubChannel, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for all agent lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnLifecycleNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification("*", routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user creation lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserIdentityCreatedNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserIdentityCreated, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user workload onboarding lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserWorkloadOnboardingNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserWorkloadOnboardingUpdated, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user deleted lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserDeletedNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserDeleted, routeHandler, rank, autoSignInHandlers);
             });
     }
 }

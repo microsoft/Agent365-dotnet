@@ -4,13 +4,13 @@ To build the analyzer NuGet package and test governance failures in AnalyzerDemo
 
 1. **Restore and build the analyzer project:**
 	```pwsh
-	dotnet restore ../../Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel/Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel.csproj
-	dotnet build ../../Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel/Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel.csproj -c Release
+	dotnet restore ../../Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.csproj
+	dotnet build ../../Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.csproj -c Release
 	```
 
 2. **Pack the analyzer into a NuGet package:**
 	```pwsh
-	dotnet pack ../../Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel/Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel.csproj -c Release -o ../../artifacts
+	dotnet pack ../../Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.csproj -c Release -o ../../artifacts
 	```
 
 3. **Build AnalyzerDemoApp (which references the local NuGet package):**
@@ -106,4 +106,4 @@ When developing new analyzers:
 
 ## ?? Expected Analyzer Violations
 
-When you build this project, you should see numerous analyzer violations demonstrating common governance issues that developers might encounter in real-world Kairo applications.
+When you build this project, you should see numerous analyzer violations demonstrating common governance issues that developers might encounter in real-world Agents A365 applications.

@@ -108,7 +108,7 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.Constants
         /// Single source-of-truth for help link base used by diagnostic descriptors.
         /// Help link URIs will be built as {HelpLinkBase}/{DiagnosticId}.md
         /// </summary>
-        public const string HelpLinkBase = "https://github.com/microsoft/Kairo/tree/main/docs/analyzers";
+        public const string HelpLinkBase = "https://github.com/microsoft/Agent365/tree/main/docs/analyzers";
 
         /// <summary>
         /// Default severity used for these analyzers. Kept here so tests and descriptors stay consistent.

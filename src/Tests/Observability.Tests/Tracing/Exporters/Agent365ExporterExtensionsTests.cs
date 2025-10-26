@@ -2,8 +2,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-using Microsoft.Agents.A365.Observability.Tracing.Exporters;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
@@ -22,7 +20,7 @@ public sealed class Agent365ExporterExtensionsTests
         services.AddSingleton(new Agent365ExporterOptions
         {
             ClusterCategory = "test",
-            TokenResolver = (_, _) => "test-token",
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             MaxQueueSize = 4096,
             ScheduledDelayMilliseconds = 10000,
             ExporterTimeoutMilliseconds = 60000,
@@ -59,7 +57,7 @@ public sealed class Agent365ExporterExtensionsTests
         services.AddSingleton(new Agent365ExporterOptions
         {
             ClusterCategory = "test",
-            TokenResolver = (_, _) => "test-token"
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
         });
 
         var tracerProviderBuilder = services.AddOpenTelemetry().WithTracing(builder =>

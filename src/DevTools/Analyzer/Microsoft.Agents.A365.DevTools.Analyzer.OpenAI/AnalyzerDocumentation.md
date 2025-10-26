@@ -1,6 +1,6 @@
-# Analyzers in Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI
+# Analyzers in Microsoft.Agents.A365.DevTools.Analyzer.OpenAI
 
-This document provides a comprehensive guide for developers creating and maintaining analyzers in the Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI project. These analyzers enforce governance principles in multi-tenant environments and ensure proper OpenAI client management and tenant isolation.
+This document provides a comprehensive guide for developers creating and maintaining analyzers in the Microsoft.Agents.A365.DevTools.Analyzer.OpenAI project. These analyzers enforce governance principles in multi-tenant environments and ensure proper OpenAI client management and tenant isolation.
 
 ## Analyzer Summary Table
 
@@ -19,7 +19,7 @@ This document provides a comprehensive guide for developers creating and maintai
 ## Diagnostic ID System
 
 The analyzers use a structured diagnostic ID format: **A365OAI####**
-- **A365**: Kairo prefix
+- **A365**: Microsoft Agents A365 prefix
 - **OAI**: OpenAI orchestrator code  
 - **####**: 4-digit sequence number
 
@@ -61,7 +61,7 @@ Future orchestrator codes: SK (Semantic Kernel), CL (Claude), etc.
 
 ### Core Directories
 ```
-Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI/
+Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/
 ├── Constants/
 │   └── AnalyzerConstants.cs          # Central constants, diagnostic IDs, type names
 ├── Common/
@@ -79,7 +79,7 @@ Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI/
 
 ### Test Project Structure
 ```
-Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI.Tests/
+Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.Tests/
 ├── Common/
 │   ├── TestCodeSamples.cs            # Shared test code samples
 │   └── AnalyzerTestBase.cs           # Base test infrastructure
@@ -254,7 +254,7 @@ Add your analyzer to the integration tests to ensure it works with the complete 
 
 ### Help Documentation
 - **Help Links**: Auto-generated as `{HelpLinkBase}/{DiagnosticId}.md`
-- **Base URL**: `https://github.com/microsoft/Kairo/tree/main/docs/analyzers`
+- **Base URL**: `https://github.com/microsoft/Agent365/tree/main/docs/analyzers`
 - **Format**: Each analyzer has dedicated documentation page
 
 ## Usage Examples
@@ -335,7 +335,7 @@ public class WeatherAgent
 }
 
 // ✅ Centralized tenant context access
-using Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore;
+using Microsoft.Agents.A365.Runtime.Common.AspNetCore;
 var tenantId = TenantContextHelper.GetTenantId(context);
 var workerId = TenantContextHelper.GetWorkerId(context);
 
@@ -474,7 +474,7 @@ public class TestClass
 
     const string fixedCode = @"
 using OpenAI.Chat;
-using Microsoft.Kairo.Sdk.Runtime.OpenAI;
+using Microsoft.Agents.A365.Runtime.OpenAI;
 
 public class TestClass
 {

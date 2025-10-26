@@ -84,12 +84,23 @@ namespace Microsoft.Agents.A365.Notifications.Models
                 }
             }
 
-            // If NotificationType is still Unknown, we try to infer it from the Activity Sub channel name.
-            if (NotificationType == NotificationTypeEnum.Unknown && !string.IsNullOrEmpty(activity.ChannelId?.SubChannel) )
+            if (NotificationType == NotificationTypeEnum.Unknown)
             {
-                if (activity.ChannelId.SubChannel.Equals(SubChannels.FederatedKnowledgeServiceSubChannel, StringComparison.OrdinalIgnoreCase))
+                // Try to infer type from the Activity Sub channel name.
+                if (!string.IsNullOrEmpty(activity.ChannelId?.SubChannel))
                 {
-                    NotificationType = NotificationTypeEnum.FederatedKnowledgeServiceNotification;
+                    if (activity.ChannelId.SubChannel.Equals(SubChannels.FederatedKnowledgeServiceSubChannel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        NotificationType = NotificationTypeEnum.FederatedKnowledgeServiceNotification;
+                    }
+                }
+                else
+                {
+                    if (activity.Name != null && activity.Name.Equals(Events.AgentLifecycleEvent, StringComparison.OrdinalIgnoreCase))
+                    {
+                        NotificationType = NotificationTypeEnum.AgentLifecycleNotification;
+                    }
+
                 }
             }
 

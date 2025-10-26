@@ -1,6 +1,6 @@
-# Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel
+# Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel
 
-This package contains custom Roslyn analyzers for enforcing Microsoft Kairo SDK compliance and governance in Semantic Kernel-based agent projects.
+This package contains custom Roslyn analyzers for enforcing Microsoft Agents A365 SDK compliance and governance in Semantic Kernel-based agent projects.
 
 ## Included Rules
 - A365SK0001: Direct Kernel access or storage is not allowed
@@ -21,7 +21,7 @@ To build and generate a local NuGet package for this project:
 2. **Build and pack the project:**
    - Open a terminal in the project directory:
      ```pwsh
-     cd ./Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel
+     cd ./Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel
      dotnet build -c Release
      ```
    - The build will automatically generate the NuGet package in `nupkgs/`.
@@ -29,17 +29,17 @@ To build and generate a local NuGet package for this project:
 3. **Verify the package:**
    - Check for the `.nupkg` file in:
      ```
-     ./Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel/nupkgs/
+     ./Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/nupkgs/
      ```
 
 4. **Consume the package locally:**
    - In your agent project, add the following to your `.csproj`:
      ```xml
      <PropertyGroup>
-       <RestoreSources>$(RestoreSources);../Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel/nupkgs</RestoreSources>
+       <RestoreSources>$(RestoreSources);../Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/nupkgs</RestoreSources>
      </PropertyGroup>
      <ItemGroup>
-       <PackageReference Include="Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel" Version="1.0.0" />
+       <PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel" Version="1.0.0" />
      </ItemGroup>
      ```
    - Run `dotnet restore` in your agent project to use the local package.
@@ -50,7 +50,7 @@ If you want analyzer diagnostics to run immediately during development, add the 
 
 ```xml
 <ItemGroup>
-  <Analyzer Include="..\Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel\bin\Debug\netstandard2.0\Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel.dll" />
+  <Analyzer Include="..\Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel\bin\Debug\netstandard2.0\Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.dll" />
 </ItemGroup>
 ```
 This ensures analyzers run on every build, even if the NuGet package is not published or restored.

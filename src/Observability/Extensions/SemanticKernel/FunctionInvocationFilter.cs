@@ -1,7 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.SemanticKernel;
 using System.Diagnostics;
 using System.Text.Json;
@@ -31,6 +31,7 @@ public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolTypeKey, ToolType.Function);
             await InvokeWithErrorHandlingAsync(next, context);
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiEventContent, GetResult(context));
+            Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolCallIdKey, context.Function.PluginName);
             return;
         }
         // TODO: figure out how to get agent and tenant details here

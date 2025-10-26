@@ -24,12 +24,12 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case SemanticKernelTelemetryConstants.InvokeAgentOperation:
-                        // Span emitted by SK SDK follows Kairo schema, so no modification needed.
+                        // Span emitted by SK SDK follows Microsoft Agents A365 schema, so no modification needed.
                         // Placeholder for any plumbing if needed in the future.
                         break;
 
                     case SemanticKernelTelemetryConstants.ExecuteToolOperation:
-                        // Span emitted by SK SDK follows Kairo schema, so no modification needed.
+                        // Span emitted by SK SDK follows Microsoft Agents A365 schema, so no modification needed.
                         // FunctionInvocationFilter already adds other relevant tags.
                         // Placeholder for any plumbing if needed in the future.
                         break;
@@ -37,7 +37,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                     case SemanticKernelTelemetryConstants.ChatCompletionsOperation:
                         activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
                         activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
-                        // Other tags set by SK SDK follow Kairo schema.
+                        // Other tags set by SK SDK follow Microsoft Agents A365 schema.
                         break;
                 }
             }

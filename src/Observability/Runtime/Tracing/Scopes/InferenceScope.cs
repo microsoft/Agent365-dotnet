@@ -12,7 +12,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
-        public static InferenceScope? Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new InferenceScope(details, agentDetails, tenantDetails);
+        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new InferenceScope(details, agentDetails, tenantDetails);
 
         private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails)
             : base(

@@ -1,7 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Runtime;
 using Microsoft.SemanticKernel;
 using OpenTelemetry.Trace;
 

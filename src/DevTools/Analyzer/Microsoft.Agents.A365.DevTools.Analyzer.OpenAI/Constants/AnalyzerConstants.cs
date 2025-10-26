@@ -126,7 +126,7 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.Constants
         /// </summary>
         public static class Namespaces
         {
-            public const string OpenAIRuntime = "Microsoft.Kairo.Sdk.Runtime.OpenAI";
+            public const string OpenAIRuntime = "Microsoft.Agents.A365.Runtime.OpenAI";
             public const string OpenAI = "OpenAI";
             public const string OpenAIChat = "OpenAI.Chat";
         }
@@ -135,7 +135,7 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.Constants
         /// Single source-of-truth for help link base used by diagnostic descriptors.
         /// Help link URIs will be built as {HelpLinkBase}/{DiagnosticId}.md
         /// </summary>
-        public const string HelpLinkBase = "https://github.com/microsoft/Kairo/tree/main/docs/analyzers";
+        public const string HelpLinkBase = "https://github.com/microsoft/Agent365/tree/main/docs/analyzers";
 
         /// <summary>
         /// Default severity used for these analyzers. Kept here so tests and descriptors stay consistent.

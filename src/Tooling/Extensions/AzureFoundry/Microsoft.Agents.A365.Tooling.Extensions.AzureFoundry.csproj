@@ -7,11 +7,11 @@
 
 		<!-- NuGet Package Properties -->
 		<PackageId>Microsoft.Agents.A365.Tooling.AzureFoundry</PackageId>
-		<Title>Microsoft Kairo AzureFoundry Integration</Title>
-		<Description>A .NET SDK that integrates Microsoft Kairo with AzureFoundry, providing tooling functionalities.</Description>
-		<Summary>Microsoft Kairo AzureFoundry Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
+		<Title>Microsoft Agents A365 AzureFoundry Integration</Title>
+		<Description>A .NET SDK that integrates Microsoft Agents A365 with AzureFoundry, providing tooling functionalities.</Description>
+		<Summary>Microsoft Agents A365 AzureFoundry Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
 		<Product>Microsoft Agents A365 SDK AzureFoundry Tooling Integration</Product>
-		<PackageTags>Microsoft;Kairo;AzureFoundry;OpenTelemetry;AI;Agents;Tooling</PackageTags>
+		<PackageTags>Microsoft;A365AzureFoundry;OpenTelemetry;AI;Agents;Tooling</PackageTags>
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="D:\Agent365\dotnet\sdk\..\\CHANGELOG.md" />

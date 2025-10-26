@@ -1,6 +1,6 @@
-# Microsoft Kairo SDK - SemanticKernel Tooling
+# Microsoft Agents A365 SDK - SemanticKernel Tooling
 
-This library provides integration between Microsoft Kairo and SemanticKernel, enabling you to add MCP (Model Context Protocol) tool servers to your SemanticKernel agents.
+This library provides integration between Microsoft Agents A365 and SemanticKernel, enabling you to add MCP (Model Context Protocol) tool servers to your SemanticKernel agents.
 
 ## Installation
 
@@ -15,7 +15,7 @@ The library provides an extension method `AddMcpServices()` to register all requ
 #### Required Namespace
 
 ```csharp
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Extensions;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Extensions;
 ```
 
 #### Service Registration
@@ -31,7 +31,7 @@ The extension method registers the following services:
 In your `Program.cs` file:
 
 ```csharp
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Extensions;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,9 +57,9 @@ app.Run();
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Extensions;
-using Microsoft.Kairo.Sdk.Tooling.Common.Services;
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Services;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Extensions;
+using Microsoft.Agents.A365.Tooling.Common.Services;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Services;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -115,7 +115,7 @@ If you need to manually create and configure a service collection:
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Extensions;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Extensions;
 
 var services = new ServiceCollection();
 
@@ -145,7 +145,7 @@ If you're building a class library that uses these services:
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Kairo.Sdk.Tooling.SemanticKernel.Extensions;
+using Microsoft.Agents.A365.Tooling.SemanticKernel.Extensions;
 
 public static class MyLibraryExtensions
 {

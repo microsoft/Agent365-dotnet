@@ -8,9 +8,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Azure.Core" />
+    <PackageReference Include="Microsoft.Agents.Builder" />
 		<PackageReference Include="Newtonsoft.Json" />
 		<PackageReference Include="OpenTelemetry.Exporter.Console" />
 		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
 		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
 	</ItemGroup>
 </Project>

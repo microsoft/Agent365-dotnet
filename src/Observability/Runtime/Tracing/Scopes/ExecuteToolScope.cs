@@ -21,8 +21,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for tool execution tracing.
         /// </summary>
-        /// <returns>A new ExecuteToolScope instance if telemetry is enabled, otherwise null.</returns>
-        public static ExecuteToolScope? Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new ExecuteToolScope(details, agentDetails, tenantDetails);
+        /// <returns>A new ExecuteToolScope instance.</returns>
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new ExecuteToolScope(details, agentDetails, tenantDetails);
 
         private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails)
             : base(
@@ -33,21 +33,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 $"{OperationName} {details.ToolName}")
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint) = details;
-            SetTagMaybe(GenAiToolNameKey, toolName);
-            SetTagMaybe(GenAiToolArgumentsKey, arguments);
-            SetTagMaybe(GenAiToolTypeKey, toolType);
-            SetTagMaybe(GenAiToolCallIdKey, toolCallId);
-            SetTagMaybe(GenAiToolDescriptionKey, description);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolTypeKey, toolType);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallIdKey, toolCallId);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolDescriptionKey, description);
 
-            if(endpoint !=null)
+            if (endpoint !=null)
             {
-                SetTagMaybe(ServerAddressKey, endpoint.Host);
+                SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
                 if (endpoint.Port != 443)
                 {
-                    SetTagMaybe(ServerPortKey, endpoint.Port);
+                    SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
                 }
-            }        
-            
+            }
         }
         
         /// <summary>
@@ -55,7 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(GenAiEventContent, response);
+            SetTagMaybe(OpenTelemetryConstants.GenAiEventContent, response);
         }
     }
 }

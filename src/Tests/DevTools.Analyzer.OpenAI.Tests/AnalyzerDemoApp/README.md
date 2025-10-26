@@ -90,7 +90,7 @@ The **correct** implementation is in `C:\Users\sellak\source\repos\Agent365\dotn
 
 
 
-✅ Uses `Microsoft.Kairo.Sdk.Runtime.OpenAI` namespace  ## QuickStart using WebChat or Teams
+✅ Uses `Microsoft.Agents.A365.Runtime.OpenAI` namespace  ## QuickStart using WebChat or Teams
 
 ✅ Uses `IOpenAIClientProvider` with proper configuration  
 
@@ -164,7 +164,7 @@ Uncomment in `AnalyzerDemoApp.csproj`:
 
 ```xml## Testing this agent with WebChat
 
-<PackageReference Include="Microsoft.Kairo.Sdk.DevTools.Analyzer.OpenAI" Version="1.0.0">
+<PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.OpenAI" Version="1.0.0">
 
   <PrivateAssets>all</PrivateAssets>   1. Select **Test in WebChat** on the Azure Bot
 

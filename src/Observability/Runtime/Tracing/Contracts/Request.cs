@@ -58,7 +58,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
     }
 
     /// <summary>
-    /// Represents metadata about the source of an invocation.
+    /// Represents metadata about the source (i.e. channel) of an invocation.
     /// </summary>
     public sealed class SourceMetadata : IEquatable<SourceMetadata>
     {
@@ -67,14 +67,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// </summary>
         /// <param name="id">Unique identifier for the source.</param>
         /// <param name="name">Human-readable name of the source.</param>
-        /// <param name="iconUri">Optional icon URI associated with the source.</param>
         /// <param name="role">Optional role describing the source.</param>
         /// <param name="description">Optional description of the source.</param>
-        public SourceMetadata(string? id, string? name, string? iconUri = null, Role? role = null, string? description = null)
+        public SourceMetadata(string? id, string? name, Role? role = null, string? description = null)
         {
             Id = id;
             Name = name;
-            IconUri = iconUri;
             Role = role ?? Contracts.Role.Unknown;
             Description = description;
         }
@@ -88,11 +86,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// Gets the human-readable name for the source.
         /// </summary>
         public string? Name { get; }
-
-        /// <summary>
-        /// Gets an optional icon URI for the source.
-        /// </summary>
-        public string? IconUri { get; }
 
         /// <summary>
         /// Gets the role associated with the source.
@@ -109,14 +102,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// </summary>
         /// <param name="id">Receives the source identifier.</param>
         /// <param name="name">Receives the source name.</param>
-        /// <param name="iconUri">Receives the icon URI.</param>
         /// <param name="role">Receives the role value.</param>
         /// <param name="description">Receives the description.</param>
-        public void Deconstruct(out string? id, out string? name, out string? iconUri, out Role? role, out string? description)
+        public void Deconstruct(out string? id, out string? name, out Role? role, out string? description)
         {
             id = Id;
             name = Name;
-            iconUri = IconUri;
             role = Role;
             description = Description;
         }
@@ -131,7 +122,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 
             return string.Equals(Id, other.Id, StringComparison.Ordinal) &&
                    string.Equals(Name, other.Name, StringComparison.Ordinal) &&
-                   string.Equals(IconUri, other.IconUri, StringComparison.Ordinal) &&
                    Role == other.Role &&
                    string.Equals(Description, other.Description, StringComparison.Ordinal);
         }
@@ -150,7 +140,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 int hash = 17;
                 hash = (hash * 31) + (Id != null ? StringComparer.Ordinal.GetHashCode(Id) : 0);
                 hash = (hash * 31) + (Name != null ? StringComparer.Ordinal.GetHashCode(Name) : 0);
-                hash = (hash * 31) + (IconUri != null ? StringComparer.Ordinal.GetHashCode(IconUri) : 0);
                 hash = (hash * 31) + (Role?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (Description != null ? StringComparer.Ordinal.GetHashCode(Description) : 0);
                 return hash;
@@ -194,7 +183,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? SessionId { get; }
 
         /// <summary>
-        /// Gets metadata describing the origin of the request.
+        /// Gets metadata describing the origin (i.e. channel) of the request.
         /// </summary>
         public SourceMetadata? SourceMetadata { get; }
 

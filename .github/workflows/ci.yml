@@ -92,13 +92,13 @@ jobs:
     #     NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
     - name: Restore dependencies
-      run: dotnet restore Microsoft.Agents.A365.sln
+      run: dotnet restore Microsoft.Agents.A365.Sdk.sln
 
     - name: Build solution
-      run: dotnet build Microsoft.Agents.A365.sln --no-restore --configuration Release /p:Version=${{ needs.version-number.outputs.BUILD_VERSION }}
+      run: dotnet build Microsoft.Agents.A365.Sdk.sln --no-restore --configuration Release /p:Version=${{ needs.version-number.outputs.BUILD_VERSION }}
 
     - name: Run tests
-      run: dotnet test Microsoft.Agents.A365.sln --no-build --configuration Release --verbosity normal
+      run: dotnet test Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --verbosity normal
 
     - name: Pack NuGet packages
-      run: dotnet pack Microsoft.Agents.A365.sln --no-build --configuration Release --output ../NuGetPackages /p:PackageVersion=${{ needs.version-number.outputs.PACKAGE_VERSION }}
+      run: dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output ../NuGetPackages /p:PackageVersion=${{ needs.version-number.outputs.PACKAGE_VERSION }}

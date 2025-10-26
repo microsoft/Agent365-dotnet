@@ -1,4 +1,4 @@
-# Microsoft Kairo Tooling SDK for .NET
+# Microsoft Agents A365 Tooling SDK for .NET
 
 ## 🚀 Features
 

@@ -36,13 +36,13 @@ namespace Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.Tests.Common
         [Fact]
         public void SafeGetTypeString_WithComplexType_ReturnsFullString()
         {
-            var code = "public class TestClass { public Microsoft.Kairo.Sdk.Runtime.OpenAI.IOpenAIClientProvider Provider { get; set; } }";
+            var code = "public class TestClass { public Microsoft.Agents.A365.Runtime.OpenAI.IOpenAIClientProvider Provider { get; set; } }";
             var tree = CSharpSyntaxTree.ParseText(code);
             var property = tree.GetRoot().DescendantNodes().OfType<PropertyDeclarationSyntax>().First();
             
             var result = AnalyzerValidation.SafeGetTypeString(property.Type);
             
-            Assert.Equal("Microsoft.Kairo.Sdk.Runtime.OpenAI.IOpenAIClientProvider", result);
+            Assert.Equal("Microsoft.Agents.A365.Runtime.OpenAI.IOpenAIClientProvider", result);
         }
 
         #endregion

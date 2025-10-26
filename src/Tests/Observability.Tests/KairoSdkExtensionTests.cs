@@ -7,10 +7,10 @@ using Microsoft.Agents.A365.Observability.Caching;
 namespace Microsoft.Agents.A365.Observability.Tests;
 
 /// <summary>
-/// Tests for KairoSdk extension methods.
+/// Tests for Agents A365 extension methods.
 /// </summary>
 [TestClass]
-public sealed class KairoSdkExtensionTests
+public sealed class AgentsA365SdkExtensionTests
 {
     /// <summary>
     /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()

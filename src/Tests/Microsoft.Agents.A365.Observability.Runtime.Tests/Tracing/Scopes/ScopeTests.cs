@@ -16,7 +16,6 @@ public sealed class ScopeTests : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var agentScope = ExecuteAgentScope.Start(AgentId, Util.GetTenantDetails().TenantId);
             using var invokeAgentScope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
             using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails());
         });

@@ -7,11 +7,11 @@
     
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.Tooling.SemanticKernel</PackageId>
-    <Title>Microsoft Kairo SemanticKernel Integration</Title>
-    <Description>A .NET SDK that integrates Microsoft Kairo with SemanticKernel, providing tooling functionalities.</Description>
-    <Summary>Microsoft Kairo SemanticKernel Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
+    <Title>Microsoft Agents A365 SemanticKernel Integration</Title>
+    <Description>A .NET SDK that integrates Microsoft Agents A365 with SemanticKernel, providing tooling functionalities.</Description>
+    <Summary>Microsoft Agents A365 SemanticKernel Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
     <Product>Microsoft Agents A365 SDK SemanticKernel Tooling Integration</Product>
-    <PackageTags>Microsoft;Kairo;SemanticKernel;OpenTelemetry;AI;Agents;Tooling</PackageTags>
+    <PackageTags>Microsoft;A365SemanticKernel;OpenTelemetry;AI;Agents;Tooling</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

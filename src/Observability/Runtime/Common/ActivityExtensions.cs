@@ -25,12 +25,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets a tag on the activity only if it does not already exist.
         /// </summary>
-        public static void CoalesceTag(this Activity activity, string key, string? value)
+        public static void CoalesceTag(this Activity activity, string key, params string?[] values)
         {
             var tagValue = activity.GetTagItem(key);
             if (tagValue == null)
             {
-                activity.SetTag(key, value);
+                foreach (var value in values)
+                {
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        activity.SetTag(key, value);
+                        break;
+                    }
+                }
             }
         }
     }

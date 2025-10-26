@@ -54,11 +54,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // This would typically involve making an HTTP call to a configuration service
             var mcpServers = new List<MCPServerConfig>();
 
+            string configEndpoint = string.Empty;
             try
             {
                 // Example implementation - replace with actual endpoint call
                 using var httpClient = new HttpClient();
-                string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentUserId);
+                configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentUserId);
                 // Add any required headers for the config service
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
                 httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
@@ -81,7 +82,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
             catch (HttpRequestException httpEx)
             {
-                throw new InvalidOperationException($"Failed to connect to MCP configuration endpoint: {httpEx.Message}", httpEx);
+                throw new InvalidOperationException($"Failed to connect to MCP configuration endpoint '{configEndpoint}': {httpEx.Message}", httpEx);
             }
             catch (JsonException jsonEx)
             {

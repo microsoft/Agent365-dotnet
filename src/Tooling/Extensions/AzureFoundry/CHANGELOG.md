@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Microsoft Kairo SDK will be documented in this file.
+All notable changes to the Microsoft Agents A365 SDK will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Microsoft.Kairo.Sdk.Tooling.AzureFoundry** - Azure Foundry integration tooling for MCP server management
+- **Microsoft.Agents.A365.Tooling.AzureFoundry** - Azure Foundry integration tooling for MCP server management
   - `IMcpToolRegistrationService` interface for managing MCP tool server registrations
   - `McpToolRegistrationService` implementation for Foundry (Persistent Agents) scenarios
   - Support for both simple auth token and full authentication context workflows
@@ -25,14 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-01-16
 
 ### Added
-- Initial release of Microsoft Kairo SDK
+- Initial release of Microsoft Agents A365 SDK
 - OpenTelemetry integration for comprehensive telemetry and tracing
-- `Kairo` extension methods for `IHostApplicationBuilder` configuration
-- `KairoSpanProcessor` for custom span processing with agent-specific metadata
+- `Agents A365` extension methods for `IHostApplicationBuilder` configuration
+- `A365SpanProcessor` for custom span processing with agent-specific metadata
 - Specialized tracing scopes:
   - `InvokeAgentScope` for tracking AI agent invocations
   - `ExecuteToolScope` for tracking tool executions
-  - `KairoOpenTelemetryScope` base class for extensible tracing
+  - `A365OpenTelemetryScope` base class for extensible tracing
 - Support for Azure Monitor integration via connection string configuration
 - Built-in instrumentation for:
   - HTTP client requests

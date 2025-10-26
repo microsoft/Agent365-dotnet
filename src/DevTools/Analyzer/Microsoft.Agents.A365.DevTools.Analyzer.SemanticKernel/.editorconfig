@@ -1,6 +1,6 @@
 root = true
 
-# Analyzer severity recommendations for Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel
+# Analyzer severity recommendations for Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel
 # Enforce governance rules as errors by default
 [*.cs]
 # Kernel retrieval before build

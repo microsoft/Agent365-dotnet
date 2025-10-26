@@ -32,6 +32,31 @@ namespace Microsoft.Agents.A365.Notifications
         /// The sub-channel name for PowerPoint notifications.
         /// </summary>
         public const string AgentsPowerPointSubChannel = "powerpoint";
+    }
 
+    /// <summary>
+    /// Contains constants.
+    /// </summary>
+    public class Events
+    {
+        /// <summary>
+        /// The event name for agent lifecycle events.
+        /// </summary>
+        public const string AgentLifecycleEvent = "agentLifecycle";
+
+        /// <summary>
+        /// The event name for agentic user creation
+        /// </summary>
+        public const string AgenticUserIdentityCreated = "agenticUserIdentityCreated";
+
+        /// <summary>
+        /// The event name for agentic user onboarding
+        /// </summary>
+        public const string AgenticUserWorkloadOnboardingUpdated = "agenticUserWorkloadOnboardingUpdated";
+
+        /// <summary>
+        /// The event name for agentic user deletion
+        /// </summary>
+        public const string AgenticUserDeleted = "agenticUserDeleted";
     }
 }

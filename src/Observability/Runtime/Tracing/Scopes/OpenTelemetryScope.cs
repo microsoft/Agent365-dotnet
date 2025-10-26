@@ -19,7 +19,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
     /// </summary>
     public abstract class OpenTelemetryScope : IDisposable
     {
-        private const string OperationSourceValue = "sdk";
         private static readonly ActivitySource ActivitySource = new ActivitySource(SourceName);
         private static readonly Meter Meter = new Meter(SourceName);
 
@@ -29,6 +28,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         private readonly Activity? activity;
         private readonly Stopwatch? duration;
         private readonly TagList commonTags;
+        private DateTimeOffset? customStartTime;
+        private DateTimeOffset? customEndTime;
 
         private string? errorType;
         private Exception? exception;
@@ -41,13 +42,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="agentDetails">Agent details</param>
         /// <param name="tenantDetails"></param>
         /// <param name="operationName">The name of the operation being traced.</param>
-        /// <param name="activityName">The name of the activity for display purposes.</param>   
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
+        /// <param name="activityName">The name of the activity for display purposes.</param>
+        /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null)
         {
-            activity = ActivitySource.StartActivity(activityName, kind);
+            customStartTime = startTime;
+            activity = ActivitySource.StartActivity(activityName, kind, default(ActivityContext), startTime: startTime ?? default);
             commonTags = new TagList
                 {
-                    { GenAiSystemKey, GenAiSystemValue },
                     { GenAiOperationNameKey, operationName },
                 };
 
@@ -61,8 +63,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiAgentIdKey, agentDetails.AgentId);
                 SetTagMaybe(GenAiAgentNameKey, agentDetails.AgentName);
                 SetTagMaybe(GenAiAgentDescriptionKey, agentDetails.AgentDescription);
-                SetTagMaybe(GenAiConversationIdKey, agentDetails.ConversationId);
-                SetTagMaybe(GenAiIconUriKey, agentDetails.IconUri);
             }
 
             if (tenantDetails != null)
@@ -70,14 +70,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(TenantIdKey, tenantDetails.TenantId);
             }
 
-            var opSource = OpenTelemetry.Baggage.Current.GetBaggage(OperationSourceKey);
-            if (string.IsNullOrWhiteSpace(opSource))
+            // Only start the stopwatch if no custom start time is provided
+            if (!customStartTime.HasValue)
             {
-                OpenTelemetry.Baggage.Current = OpenTelemetry.Baggage.Current.SetBaggage(OperationSourceKey, OperationSourceValue);
+                duration = Stopwatch.StartNew();
             }
-
-            duration = Stopwatch.StartNew();
-
         }
 
         /// <summary>
@@ -108,6 +105,26 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         }
 
         /// <summary>
+        /// Sets a custom start time for the scope. This allows for manual control of the scope start time.
+        /// Can be used in addition to or instead of setting start time via constructor.
+        /// </summary>
+        /// <param name="startTime">The start time to set for this scope.</param>
+        public void SetStartTime(DateTimeOffset startTime)
+        {
+            customStartTime = startTime;
+            activity?.SetStartTime(startTime.UtcDateTime);
+        }
+
+        /// <summary>
+        /// Sets a custom end time for the scope. This allows for manual control of the scope duration.
+        /// </summary>
+        /// <param name="endTime">The end time to set for this scope.</param>
+        public void SetEndTime(DateTimeOffset endTime)
+        {
+            customEndTime = endTime;
+        }
+
+        /// <summary>
         /// Record the events and metrics associated with the response.
         /// </summary>
         private void End()
@@ -120,7 +137,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 activity?.SetStatus(ActivityStatusCode.Error, exception?.Message);
             }
 
-            Duration.Record(duration?.Elapsed.TotalSeconds ?? 0, finalTags);
+            // Calculate duration based on custom times if provided, otherwise use stopwatch
+            double durationSeconds;
+            if (customStartTime.HasValue && customEndTime.HasValue)
+            {
+                durationSeconds = (customEndTime.Value - customStartTime.Value).TotalSeconds;
+                // Set the end time on the activity if we have custom times
+                activity?.SetEndTime(customEndTime.Value.UtcDateTime);
+            }
+            else if (customStartTime.HasValue && !customEndTime.HasValue)
+            {
+                // Start time was custom but end time is now, calculate from custom start to now
+                var endTime = DateTimeOffset.UtcNow;
+                durationSeconds = (endTime - customStartTime.Value).TotalSeconds;
+                activity?.SetEndTime(endTime.UtcDateTime);
+            }
+            else
+            {
+                // Use stopwatch for normal operation
+                durationSeconds = duration?.Elapsed.TotalSeconds ?? 0;
+            }
+
+            Duration.Record(durationSeconds, finalTags);
         }
 
         /// <summary>
@@ -141,7 +179,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         /// <param name="name">The name of tag to set.</param>
         /// <param name="value">Nullable value to be set.</param>
-        protected void SetTagMaybe(string name, object? value)
+        public void SetTagMaybe(string name, object? value)
         {
             if (value != null)
             {

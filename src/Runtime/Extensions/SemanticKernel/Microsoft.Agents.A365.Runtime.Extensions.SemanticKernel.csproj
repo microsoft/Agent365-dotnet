@@ -5,11 +5,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.SemanticKernel</PackageId>
-    <Title>Microsoft Kairo SemanticKernel Integration</Title>
-    <Description>A .NET SDK that integrates Microsoft Kairo with SemanticKernel, providing automatic tracing for ChatCompletionAgent operations.</Description>
-    <Summary>Microsoft Kairo SemanticKernel Integration - Automatic tracing for SemanticKernel agents</Summary>
+    <Title>Microsoft Agents A365 SemanticKernel Integration</Title>
+    <Description>A .NET SDK that integrates Microsoft Agents A365 with SemanticKernel, providing automatic tracing for ChatCompletionAgent operations.</Description>
+    <Summary>Microsoft Agents A365 SemanticKernel Integration - Automatic tracing for SemanticKernel agents</Summary>
     <Product>Microsoft Agents A365 SDK SemanticKernel Integration</Product>
-    <PackageTags>Microsoft;Kairo;SemanticKernel;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
+    <PackageTags>Microsoft;A365SemanticKernel;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
 </PropertyGroup>
 
 <ItemGroup>

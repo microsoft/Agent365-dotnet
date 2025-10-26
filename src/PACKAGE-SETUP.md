@@ -1,18 +1,18 @@
-﻿# Microsoft Kairo SDK - Package Setup Guide
+﻿# Microsoft Agents A365 SDK - Package Setup Guide
 
-This document provides a complete guide for building, validating, and publishing the Microsoft Kairo SDK NuGet packages.
+This document provides a complete guide for building, validating, and publishing the Microsoft Agents A365 SDK NuGet packages.
 
 ## Package Information
 
-The Microsoft Kairo SDK is organized into multiple NuGet packages:
+The Microsoft Agents A365 SDK is organized into multiple NuGet packages:
 
-- **Microsoft.Kairo.Sdk.Observability.Common** - Core observability and tracing infrastructure
-- **Microsoft.Kairo.Sdk.Observability.SemanticKernel** - SemanticKernel observability integration
-- **Microsoft.Kairo.Sdk.Observability.OpenAI** - OpenAI observability integration
-- **Microsoft.Kairo.Sdk.Runtime.SemanticKernel** - Runtime components for SemanticKernel
-- **Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore** - ASP.NET Core runtime components
-- **Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel** - Roslyn analyzers for code governance
-- **Microsoft.Kairo.Sdk.Tooling.SemanticKernel** - Tooling and utilities for SemanticKernel
+- **Microsoft.Agents A365.Observability.Common** - Core observability and tracing infrastructure
+- **Microsoft.Agents.A365.Observability.SemanticKernel** - SemanticKernel observability integration
+- **Microsoft.Agents.A365.Observability.OpenAI** - OpenAI observability integration
+- **Microsoft.Agents.A365.Runtime.SemanticKernel** - Runtime components for SemanticKernel
+- **Microsoft.Agents.A365.Runtime.Common.AspNetCore** - ASP.NET Core runtime components
+- **Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel** - Roslyn analyzers for code governance
+- **Microsoft.Agents.A365.Tooling.SemanticKernel** - Tooling and utilities for SemanticKernel
 - **Version**: 1.0.0
 - **Target Framework**: .NET 8.0
 - **License**: MIT
@@ -29,13 +29,13 @@ The Microsoft Kairo SDK is organized into multiple NuGet packages:
 
 ```bash
 # Clean build entire solution
-dotnet clean Microsoft.Kairo.Sdk.sln
+dotnet clean Microsoft.Agents.A365.sln
 
 # Build the entire solution
-dotnet build Microsoft.Kairo.Sdk.sln --configuration Release
+dotnet build Microsoft.Agents.A365.sln --configuration Release
 
 # Create NuGet packages for all projects
-dotnet pack Microsoft.Kairo.Sdk.sln --configuration Release --output ../NuGetPackages
+dotnet pack Microsoft.Agents.A365.sln --configuration Release --output ../NuGetPackages
 ```
 
 ### Using Build Scripts
@@ -105,15 +105,15 @@ dotnet nuget push "../NuGetPackages/*.nupkg" \
 The generated package includes:
 
 ### Assemblies
-- `lib/net8.0/Microsoft.Kairo.Sdk.dll` - Main assembly
-- `lib/net8.0/Microsoft.Kairo.Sdk.xml` - XML documentation
+- `lib/net8.0/Microsoft.Agents.A365.dll` - Main assembly
+- `lib/net8.0/Microsoft.Agents.A365.xml` - XML documentation
 
 ### Documentation
 - `README.md` - Package documentation
 - `CHANGELOG.md` - Release notes and version history
 
 ### Symbol Package
-- `Microsoft.Kairo.Sdk.1.0.0.snupkg` - Debug symbols for source link support
+- `Microsoft.Agents.A365.1.0.0.snupkg` - Debug symbols for source link support
 
 ## Automated CI/CD
 
@@ -173,7 +173,7 @@ The package depends on the following NuGet packages:
 ### Common Issues
 
 1. **MSB1011 Error**: Multiple project files in folder
-   - Solution: Use `dotnet build Microsoft.Kairo.Sdk.sln` instead of `dotnet build`
+   - Solution: Use `dotnet build Microsoft.Agents.A365.sln` instead of `dotnet build`
 
 2. **NU5046 Error**: Missing icon file
    - Solution: Remove `<PackageIcon>` property or add the icon file
@@ -189,14 +189,14 @@ The package depends on the following NuGet packages:
 Enable MSBuild verbosity for detailed output:
 
 ```bash
-dotnet build Microsoft.Kairo.Sdk.sln --verbosity detailed
+dotnet build Microsoft.Agents.A365.sln --verbosity detailed
 ```
 
 ## File Structure
 
 ```
 /
-├── Microsoft.Kairo.Sdk.sln            # Main solution file
+├── Microsoft.Agents.A365.sln            # Main solution file
 ├── Directory.Build.props              # Common build properties
 ├── build.ps1                          # Build script
 ├── build.cmd                          # Build script (Windows batch)
@@ -205,21 +205,21 @@ dotnet build Microsoft.Kairo.Sdk.sln --verbosity detailed
 ├── PACKAGE-SETUP.md                   # This file
 ├── Observability/                     # Observability and tracing packages
 │   ├── Common/                        # Core observability infrastructure
-│   │   └── Microsoft.Kairo.Sdk.Observability.Common
+│   │   └── Microsoft.Agents.A365.Observability.Common
 │   ├── SemanticKernel/                # SemanticKernel observability
-│   │   └── Microsoft.Kairo.Sdk.Observability.SemanticKernel  
+│   │   └── Microsoft.Agents.A365.Observability.SemanticKernel  
 │   └── OpenAI/                        # OpenAI observability
-│       └── Microsoft.Kairo.Sdk.Observability.OpenAI
+│       └── Microsoft.Agents.A365.Observability.OpenAI
 ├── Runtime/                           # Runtime components
 │   ├── Common/                        # Common runtime functionality
-│   │   └── Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore
+│   │   └── Microsoft.Agents.A365.Runtime.Common.AspNetCore
 │   └── SemanticKernel/                # SemanticKernel runtime
-│       └── Microsoft.Kairo.Sdk.Runtime.SemanticKernel
+│       └── Microsoft.Agents.A365.Runtime.SemanticKernel
 ├── DevTools/                          # Development tools
 │   └── Analyzer/                      # Roslyn analyzers
-│       └── Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel
+│       └── Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel
 ├── Tooling/                           # Utilities and tooling
-│   └── Microsoft.Kairo.Sdk.Tooling.SemanticKernel
+│   └── Microsoft.Agents.A365.Tooling.SemanticKernel
 └── Notification/                      # Agent notifications
     └── AgentNotification
 ```

@@ -5,29 +5,23 @@
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
     /// <summary>
-    /// Provides utility methods for the Microsoft.Kairo.Sdk.Runtime.Common namespace.
+    /// Provides utility methods for the Microsoft.Agents.A365.Runtime.Common namespace.
     /// </summary>
     public static class Utility
     {
-        private const string McpPlatformTestAuthenticationScope = "https://api.test.powerplatform.com/.default";
         private const string McpPlatformProdAuthenticationScope = "https://api.powerplatform.com/.default";
 
         /// <summary>
-        /// Gets the MCP platform authentication scope based on the current environment.
+        /// Gets the MCP platform authentication scope.
         /// </summary>
         /// <returns>
-        /// The MCP platform authentication scope.
+        /// The MCP platform authentication scope from environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
+        /// or the default production scope if not set.
         /// </returns>
         public static string GetMcpPlatformAuthenticationScope()
         {
-            var environment = GetCurrentEnvironment();
-            return environment.ToLowerInvariant() switch
-            {
-                "development" => McpPlatformTestAuthenticationScope,
-                "test" => McpPlatformTestAuthenticationScope,
-                "production" => McpPlatformProdAuthenticationScope,
-                _ => McpPlatformProdAuthenticationScope
-            };
+            return Environment.GetEnvironmentVariable("MCP_PLATFORM_AUTHENTICATION_SCOPE") ??
+                   McpPlatformProdAuthenticationScope;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-# Kairo Notifications SDK for .NET
+# Microsoft Agents A365 Notifications SDK for .NET
 
 ## 🚀 Features
 
@@ -12,8 +12,8 @@ In your Agent class that extends `AgentApplication`:
     using AgentNotification;
     using AgentNotification.Extensions;
     using AgentNotification.Models;
-    using Microsoft.Kairo.Sdk.AgentsSdkExtensions;
-    using Microsoft.Kairo.Sdk.AgentsSdkExtensions.Models;
+    using Microsoft.Agents.A365.AgentsSdkExtensions;
+    using Microsoft.Agents.A365.AgentsSdkExtensions.Models;
     ```
 2. Create a method `AgentNotificationActivityAsync`:
     ```csharp

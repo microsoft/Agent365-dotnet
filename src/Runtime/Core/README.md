@@ -1,6 +1,6 @@
-# Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore
+# Microsoft.A365.Runtime.Common.AspNetCore
 
-ASP.NET Core integration helpers for Microsoft Kairo SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
+ASP.NET Core integration helpers for Microsoft Microsoft Agents A365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
 
 ## Features
 
@@ -13,7 +13,7 @@ ASP.NET Core integration helpers for Microsoft Kairo SDK, providing HttpContext-
 ## Installation
 
 ```bash
-dotnet add package Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore
+dotnet add package Microsoft.A365.Runtime.Common.AspNetCore
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ dotnet add package Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore
 ### Basic Tenant/Worker ID Extraction
 
 ```csharp
-using Microsoft.Kairo.Sdk.Runtime.Common.AspNetCore;
+using Microsoft.A365.Runtime.Common.AspNetCore;
 
 app.MapPost("/api/agent", async (HttpContext context) =>
 {
@@ -74,9 +74,9 @@ This package is separate from the core SemanticKernel integration to:
 
 ## Related Packages
 
-- **Microsoft.Kairo.Sdk.Runtime.SemanticKernel**: Core SemanticKernel integration and KernelProvider
-- **Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel**: Roslyn analyzers for governance enforcement
-- **Microsoft.Kairo.Sdk.Observability**: Core observability and tracing infrastructure
+- **Microsoft.A365.Runtime.SemanticKernel**: Core SemanticKernel integration and KernelProvider
+- **Microsoft.A365.DevTools.Analyzer.SemanticKernel**: Roslyn analyzers for governance enforcement
+- **Microsoft.A365.Observability**: Core observability and tracing infrastructure
 
 ## License
 

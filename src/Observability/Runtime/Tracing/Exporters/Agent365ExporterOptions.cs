@@ -1,13 +1,14 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
     /// <summary>
-    /// Delegate used by the exporter to obtain an auth token for a specific agent + tenant.
+    /// Async delegate used by the exporter to obtain an auth token for a specific agent + tenant.
     /// Must be fast and non-blocking (use internal caching elsewhere).
     /// Return null/empty to omit the Authorization header.
     /// </summary>
-    public delegate string? AuthTokenResolver(string agentId, string tenantId);
+    public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
     /// Configuration for Agent365Exporter.
@@ -21,9 +22,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public string ClusterCategory { get; set; } = "preprod";
 
         /// <summary>
-        /// Delegate used to resolve the auth token. REQUIRED.
+        /// Async delegate used to resolve the auth token. REQUIRED.
         /// </summary>
-        public AuthTokenResolver? TokenResolver { get; set; }
+        public AsyncAuthTokenResolver? TokenResolver { get; set; }
 
         /// <summary>
         /// When true, uses the service-to-service (S2S) endpoint path: /maven/agent365/service/agents/{agentId}/traces
