@@ -21,7 +21,9 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         public static string GetToolingGatewayForDigitalWorker(string agentUserId)
         {
             // The endpoint needs to be updated based on the environment (prod, dev, etc.)
-            return $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
+            return IsEntraScopeEnabled() ?
+                $"{GetMcpPlatformBaseUrl()}/agents/{agentUserId}/mcpServers" :
+                $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
         }
 
         /// <summary>
@@ -94,6 +96,20 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 "mockmcpserver" => ToolsMode.MockMCPServer,
                 _ => ToolsMode.MCPPlatform
             };
+        }
+
+
+        /// <summary>
+        /// Determines whether the Entra scope is enabled based on the ENTRA_SCOPE_ENABLED environment variable.
+        /// </summary>
+        /// <returns>
+        /// True if the ENTRA_SCOPE_ENABLED environment variable is set to "true" (case-insensitive); otherwise, false.
+        /// </returns>
+        public static bool IsEntraScopeEnabled()
+        {
+            var entraScopeEnabled = Environment.GetEnvironmentVariable("ENTRA_SCOPE_ENABLED");
+            return !string.IsNullOrEmpty(entraScopeEnabled) &&
+                   entraScopeEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
