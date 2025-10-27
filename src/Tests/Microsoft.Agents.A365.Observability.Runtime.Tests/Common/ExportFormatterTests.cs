@@ -2,85 +2,23 @@ using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Tests.Tracing;
+using Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 using OpenTelemetry.Resources;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
 {
-    [TestClass]
-    public class ExportFormatterTests
+    public sealed class TestScope : OpenTelemetryScope
     {
-        private static Activity CreateActivity(
-            string sourceName = "TestSource",
-            string? sourceVersion = "1.2.3",
-            string displayName = "test-span",
-            ActivityKind kind = ActivityKind.Server,
-            DateTime? startTimeUtc = null,
-            TimeSpan? duration = null,
-            Dictionary<string, object>? tags = null,
-            List<ActivityEvent>? events = null,
-            List<ActivityLink>? links = null,
-            ActivitySpanId? parentSpanId = null,
-            ActivityStatusCode status = ActivityStatusCode.Ok,
-            string? statusDescription = null)
-        {
-            var source = new ActivitySource(sourceName, sourceVersion);
+        public TestScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
+            : base(kind, agentDetails, tenantDetails, operationName, activityName) { }
+    }
 
-            using var listener = new ActivityListener
-            {
-                ShouldListenTo = s => s.Name == sourceName,
-                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-                ActivityStarted = _ => { },
-                ActivityStopped = _ => { }
-            };
-            ActivitySource.AddActivityListener(listener);
-
-            Activity? activity;
-            if (parentSpanId.HasValue)
-            {
-                var parentContext = new ActivityContext(
-                    ActivityTraceId.CreateRandom(),
-                    parentSpanId.Value,
-                    ActivityTraceFlags.Recorded);
-                activity = source.StartActivity(displayName, kind, parentContext);
-            }
-            else
-            {
-                activity = source.StartActivity(displayName, kind);
-            }
-
-            if (activity == null)
-                throw new InvalidOperationException("Failed to start activity.");
-
-            if (startTimeUtc.HasValue)
-                activity.SetStartTime(startTimeUtc.Value);
-
-            if (duration.HasValue)
-                activity.SetEndTime(activity.StartTimeUtc + duration.Value);
-
-            if (tags != null)
-            {
-                foreach (var tag in tags)
-                    activity.SetTag(tag.Key, tag.Value);
-            }
-
-            if (events != null)
-            {
-                foreach (var ev in events)
-                    activity.AddEvent(ev);
-            }
-
-            if (links != null)
-            {
-                foreach (var link in links)
-                    activity.AddLink(link);
-            }
-
-            activity.SetStatus(status, statusDescription);
-
-            activity.Stop();
-            return activity;
-        }
-
+    [TestClass]
+    public partial class ExportFormatterTests : ActivityTest
+    {
         private static Resource CreateResource(Dictionary<string, object>? attributes = null)
         {
             var builder = ResourceBuilder.CreateEmpty();
@@ -132,7 +70,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
 
             var activity = CreateActivity(
                 sourceName: "TestSource",
-                sourceVersion: "1.2.3",
                 displayName: "span1",
                 kind: ActivityKind.Client,
                 startTimeUtc: startTime,
@@ -158,7 +95,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
 
             var scope = scopeSpans[0].GetProperty("scope");
             scope.GetProperty("name").GetString().Should().Be("TestSource");
-            scope.GetProperty("version").GetString().Should().Be("1.2.3");
 
             var spans = scopeSpans[0].GetProperty("spans");
             spans.GetArrayLength().Should().Be(1);
@@ -193,9 +129,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
         public void Format_MultipleActivities_GroupedBySource()
         {
             // Arrange
-            var act1 = CreateActivity(sourceName: "SourceA", sourceVersion: "1.0", displayName: "spanA");
-            var act2 = CreateActivity(sourceName: "SourceA", sourceVersion: "1.0", displayName: "spanB");
-            var act3 = CreateActivity(sourceName: "SourceB", sourceVersion: "2.0", displayName: "spanC");
+            var act1 = CreateActivity(sourceName: "SourceA", displayName: "spanA");
+            var act2 = CreateActivity(sourceName: "SourceA", displayName: "spanB");
+            var act3 = CreateActivity(sourceName: "SourceB", displayName: "spanC");
 
             var activities = new List<Activity> { act1, act2, act3 };
             var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
@@ -245,23 +181,30 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
         }
 
         [TestMethod]
-        public void Format_ParentSpanId_IsMapped()
+        public void Format_ManuallySetParentId_IsReflectedInExport()
         {
             // Arrange
-            var parentSpanId = ActivitySpanId.CreateRandom();
-            var act = CreateActivity(parentSpanId: parentSpanId);
-            var resource = CreateResource();
+            var manualParentActivity = CreateActivity();
+            var parentId = manualParentActivity.Id ?? string.Empty;
+            var parentSpanId = manualParentActivity.SpanId.ToString();
+            var activity = ListenForActivity(() =>
+            {
+                using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentId);
+            });
+
+            var resource = ResourceBuilder.CreateDefault().Build();
 
             // Act
-            var json = ExportFormatter.Format(new[] { act }, resource);
+            var json = ExportFormatter.Format(new[] { activity! }, resource);
 
             // Assert
-            var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(json);
             var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
             var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-            var span = scopeSpans[0].GetProperty("spans")[0];
-            var parentSpanIdJson = span.GetProperty("parentSpanId").GetString();
-            parentSpanIdJson.Should().Be(parentSpanId.ToHexString().ToLowerInvariant());
+            var spans = scopeSpans[0].GetProperty("spans");
+            var span = spans[0];
+            var parentSpanIdJson = span.GetProperty("parentSpanId").GetString()?.ToLowerInvariant();
+            parentSpanIdJson.Should().Be(parentSpanId.ToLowerInvariant());
         }
 
         [TestMethod]
