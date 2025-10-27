@@ -39,7 +39,14 @@
 
     <!-- Azure Foundry related package -->
 	<PackageVersion Include="Azure.AI.Agents.Persistent" Version="1.2.0-beta.4" />
-    
+
+    <!-- Agent Framewok packages -->
+    <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.251016.1" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="9.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.10.0-preview.1.25513.3" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="9.10.0-preview.1.25513.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+	  
     <!-- Json packages -->
     <PackageVersion Include="System.Text.Json" Version="9.0.2" />
     
