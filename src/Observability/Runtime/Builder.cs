@@ -9,6 +9,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
     using Microsoft.Extensions.DependencyInjection;
+    using OpenTelemetry;
     using OpenTelemetry.Trace;
     using System;
 
@@ -18,6 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     public sealed class Builder
     {
         private readonly IServiceCollection _services;
+        private readonly bool _useOpenTelemetryBuilder;
         private bool _isBuilt = false;
 
 
@@ -25,9 +27,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// Initializes a new instance of the <see cref="Builder"/> class.
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
-        internal Builder(IServiceCollection services)
+        /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service colletion.</param>
+        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder)
         {
-            _services = services;
+            this._services = services;
+            this._useOpenTelemetryBuilder = useOpenTelemetryBuilder;
         }
 
         /// <summary>
@@ -58,29 +62,54 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
 
             // Configure OpenTelemetry with all processors in a single call
-            _services
-                .AddOpenTelemetry()
-                .WithTracing(tracing =>
-                {
-                    tracing
-                        .SetSampler(new ParentBasedSampler(
-                            rootSampler: new AlwaysOnSampler(),
-                            localParentNotSampled: new AlwaysOnSampler(),
-                            remoteParentNotSampled: new AlwaysOnSampler()))
-                        .AddSource(OpenTelemetryConstants.SourceName)
-                        .AddProcessor(new ActivityProcessor());
-
-                    if (IsAgent365ExporterEnabled())
+            // NOTE: _useOpenTelemetryBuilder = true does two things.
+            // 1. Uses the provided service collection to create the tracer provider (using IDeferredTracerProviderBuilder in ObservabilityTracerProviderBuilderExtensions.AddAgent365Exporter())
+            // 2. Adds open telemetry and tracing services to the service collecion.
+            // _useOpenTelemetryBuilder = false just uses the provided service collection to create the tracer provider (using ObservabilityTracerProviderBuilderExtensions.AddAgent365Exporter(IServiceCollection))
+            if (this._useOpenTelemetryBuilder)
+            {
+                _services
+                    .AddOpenTelemetry()
+                    .WithTracing(tracerProviderBuilder =>
                     {
-                        tracing.AddAgent365Exporter();
-                    }
-                    else if (EnvironmentUtils.IsDevelopmentEnvironment())
-                    {
-                        tracing.AddConsoleExporter();
-                    }
-                });
+                        this.Configure(tracerProviderBuilder: tracerProviderBuilder);
+                    });
+            }
+            else
+            {
+                var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
+                this.Configure(tracerProviderBuilder: tracerProviderBuilder);
+                tracerProviderBuilder.Build();
+            }
 
             _isBuilt = true;
+        }
+
+        private void Configure(TracerProviderBuilder tracerProviderBuilder)
+        {
+            tracerProviderBuilder
+                .SetSampler(new ParentBasedSampler(
+                    rootSampler: new AlwaysOnSampler(),
+                    localParentNotSampled: new AlwaysOnSampler(),
+                    remoteParentNotSampled: new AlwaysOnSampler()))
+                .AddSource(OpenTelemetryConstants.SourceName)
+                .AddProcessor(new ActivityProcessor());
+
+            if (IsAgent365ExporterEnabled())
+            {
+                if (this._useOpenTelemetryBuilder)
+                {
+                    tracerProviderBuilder.AddAgent365Exporter();
+                }
+                else
+                {
+                    tracerProviderBuilder.AddAgent365Exporter(serviceCollection: this._services);
+                }
+            }
+            else if (EnvironmentUtils.IsDevelopmentEnvironment())
+            {
+                tracerProviderBuilder.AddConsoleExporter();
+            }
         }
     }
 }
