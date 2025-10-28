@@ -47,6 +47,20 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
+    /// <summary>
+    /// Add new MCP servers to the agent by creating a new Agent instance.
+    /// 
+    /// Note: Due to Microsoft.Extensions.AI framework limitations, MCP tools must be set during
+    /// Agent creation. If new tools are found, this method creates a new Agent
+    /// instance with all tools (existing + new) properly initialized.
+    /// </summary>
+    /// <param name="chatClient">The configured IChatClient to use for creating the agent</param>
+    /// <param name="agentInstructions">The agent instructions</param>
+    /// <param name="initialTools">The existing tools to add servers to</param>
+    /// <param name="agentUserId">Agent User ID for the agent</param>
+    /// <param name="environmentId">Environment ID for the environment</param>
+    /// <param name="authToken">Authentication token to access the MCP servers</param>
+    /// <returns>New Agent instance with all MCP tools, or agent with original tools if no new servers</returns>
     public async Task<AIAgent> AddToolServersToAgent(
         IChatClient chatClient,
         string agentInstructions,
