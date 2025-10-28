@@ -17,7 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Minimal OTLP/HTTP JSON exporter for traces.
     /// Sends POST {Endpoint}/v1/traces with application/json.
     /// </summary>
-    public sealed class Agent365Exporter : BaseExporter<Activity>
+    public sealed class Agent365Exporter : BaseExporter<SpanData>
     {
         private readonly HttpClient _httpClient;
         private readonly Resource _resource;
@@ -48,7 +48,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// </summary>
         /// <param name="batch">The batch of activities to export.</param>
         /// <returns>The export result indicating success or failure.</returns>
-        public override ExportResult Export(in Batch<Activity> batch)
+        public override ExportResult Export(in Batch<SpanData> batch)
         {
             var anyFailure = false;
 
@@ -64,10 +64,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 foreach (var g in groups)
                 {
-                    var (tenantId, agentId, activities) = g;
+                    var (tenantId, agentId, spanDataList) = g;
 
                     // Build payload for just this identity
-                    var json = ExportFormatter.Format(activities, _resource);
+                    var json = ExportFormatter.Format(spanDataList, _resource);
                     using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     // Endpoint/token per identity
@@ -130,17 +130,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             return anyFailure ? ExportResult.Failure : ExportResult.Success;
         }
 
-        // Extract (tenant, agent) per activity. Prefer tags; fallback to per-activity baggage.
-        private List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
+        // Extract (tenant, agent) per spanItem. Prefer tags; fallback to per-spanItem baggage.
+        private List<(string TenantId, string AgentId, List<SpanData> SpanDataList)> PartitionByIdentity(in Batch<SpanData> batch)
         {
-            var map = new Dictionary<(string tenant, string agent), List<Activity>>();
+            var map = new Dictionary<(string tenant, string agent), List<SpanData>>();
 
-            foreach (var activity in batch)
+            foreach (var spanItem in batch)
             {
-                if (activity is null) continue;
+                if (spanItem is null) continue;
 
-                var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
-                var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
+                var tenant = spanItem.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
+                var agent = spanItem.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
 
                 if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
                     continue; // skip spans without identity (could log once with a counter)
@@ -149,10 +149,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var key = (tenant!, agent!);
                 if (!map.TryGetValue(key, out var list))
                 {
-                    list = new List<Activity>();
+                    list = new List<SpanData>();
                     map[key] = list;
                 }
-                list.Add(activity);
+                list.Add(spanItem);
             }
 
             return map.Select(kvp => (kvp.Key.tenant, kvp.Key.agent, kvp.Value)).ToList();

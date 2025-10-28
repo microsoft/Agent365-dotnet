@@ -30,10 +30,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         private readonly TagList commonTags;
         private DateTimeOffset? customStartTime;
         private DateTimeOffset? customEndTime;
+        private readonly SpanData spanData;
 
         private string? errorType;
         private Exception? exception;
         private int hasEnded = 0;
+
+        /// <summary>
+        /// Gets the internal span data containing all properties.
+        /// This provides access to span properties independently of System.Diagnostics.Activity.
+        /// </summary>
+        public SpanData SpanData => spanData;
 
         /// <summary>
         /// Initializes a new instance of the OpenTelemetryScope class.
@@ -45,19 +52,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
         /// <param name="parentId">Optional parent ID for the activity.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null)
+        /// <param name="useActivity">Whether to use Activity for tracing. Default is true.</param>
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null, bool? useActivity = true)
         {
+            // Create internal span data for property storage
+            spanData = new SpanData(kind, operationName, activityName);
+
+            // Still create Activity for OpenTelemetry integration, but don't rely on it for property storage
             customStartTime = startTime;
+            // TODO: Ensure an Activity is always created so we can depend on the ids? Or remove Activity usage entirely?
             activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
             if (!string.IsNullOrEmpty(parentId))
             {
                 activity?.SetParentId(parentId!);
             }
 
-            if (startTime != null) 
+            if (startTime != null)
             {
                 activity?.SetStartTime(startTime.Value.UtcDateTime);
             }
+
+            spanData.SetSpanIdentifiers(activity?.TraceId.ToHexString(), activity?.SpanId.ToHexString(), activity?.ParentSpanId.ToHexString());
 
             commonTags = new TagList
                 {
@@ -66,7 +81,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
             foreach (var kv in commonTags)
             {
-                activity?.SetTag(kv.Key, kv.Value);
+                spanData.SetTag(kv.Key, kv.Value);
             }
 
             if (agentDetails != null)
@@ -140,12 +155,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Record the events and metrics associated with the response.
         /// </summary>
-        private void End()
+        public void End()
         {
             var finalTags = commonTags;
             if (errorType != null)
             {
                 finalTags.Add(ErrorTypeKey, errorType);
+                spanData.SetTag(ErrorTypeKey, errorType);
+                spanData.SetStatus(ActivityStatusCode.Error, exception?.Message);
                 activity?.SetTag(ErrorTypeKey, errorType);
                 activity?.SetStatus(ActivityStatusCode.Error, exception?.Message);
             }
@@ -196,6 +213,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             if (value != null)
             {
+                spanData.SetTag(name, value);
                 activity?.SetTag(name, value);
             }
         }
@@ -210,6 +228,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             foreach (var kv in attributes)
             {
                 if (string.IsNullOrWhiteSpace(kv.Key)) continue;
+                spanData.SetTag(kv.Key, kv.Value);
                 activity?.SetTag(kv.Key, kv.Value);
             }
         }
@@ -221,6 +240,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="value">The baggage value.</param>
         protected void AddBaggage(string key, string value)
         {
+            spanData.AddBaggage(key, value);
             activity?.AddBaggage(key, value);
         }
 

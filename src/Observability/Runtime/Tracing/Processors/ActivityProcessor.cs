@@ -4,16 +4,14 @@
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
 {
-    using Microsoft.Agents.A365.Observability.Runtime.Common;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
     using OpenTelemetry;
-    using System.Diagnostics;
 
     /// <summary>
     /// Processes activity telemetry data by adding contextual baggage information.
     /// </summary>
-    public sealed class ActivityProcessor : BaseProcessor<Activity>
+    public sealed class ActivityProcessor : BaseProcessor<SpanData>
     {
         private static readonly string[] AttributeKeys = new[]
         {
@@ -57,7 +55,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
         /// Called when an activity starts, adds tags for attributes listed in AttributeKeys.
         /// </summary>
         /// <param name="activity">The activity that is starting.</param>
-        public override void OnStart(Activity activity)
+        public override void OnStart(SpanData activity)
         {
             activity.CoalesceTag(OpenTelemetryConstants.OperationSourceKey, Baggage.Current.GetBaggage(OpenTelemetryConstants.OperationSourceKey), OperationSource.SDK.ToString());
 
@@ -67,7 +65,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             }
 
             if (activity.OperationName == InvokeAgentScope.OperationName ||
-                (activity.DisplayName != null && activity.DisplayName.StartsWith(InvokeAgentScope.OperationName)))
+                (activity.OperationName != null && activity.OperationName.StartsWith(InvokeAgentScope.OperationName)))
             {
                 foreach (var key in InvokeAgentAttributeKeys)
                 {
