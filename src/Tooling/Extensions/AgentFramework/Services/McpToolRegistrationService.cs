@@ -48,21 +48,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
     /// <inheritdoc />
     public async Task<AIAgent> AddToolServersToAgent(
-        AzureOpenAIClient agentClient,
+        IChatClient chatClient,
         string agentInstructions,
-        AIAgent agent,
+        IList<AITool> initialTools,
         string agentUserId,
         string environmentId,
         string? authToken = null)
     {
-        if (agentClient == null)
+        if (chatClient == null)
         {
-            throw new ArgumentNullException(nameof(agentClient));
-        }
-
-        if (agent == null)
-        {
-            throw new ArgumentNullException(nameof(agent));
+            throw new ArgumentNullException(nameof(chatClient));
         }
 
         if (string.IsNullOrWhiteSpace(authToken))
@@ -73,8 +68,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         
         try
         {
-            // Get existing tools from the agent
-            var updatedTools = new List<AITool>(agent.Tools ?? Enumerable.Empty<AITool>());
+            // Step 2: Now update agent by adding MCP tools
+            var updatedTools = new List<AITool>();
+            
+            // Keep any existing tools that were passed in
+            updatedTools.AddRange(initialTools);
 
             // Get MCP tool server configurations
             var mcpConfigurations = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
@@ -99,16 +97,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 }
             }
 
-            _logger.LogInformation("Combined {ExistingCount} existing tools with {McpCount} MCP tools for a total of {TotalCount} tools",
-                agent.Tools?.Count() ?? 0, updatedTools.Count - (agent.Tools?.Count() ?? 0), updatedTools.Count);
-
-            // Get chat client from agent client
-            var chatClient = agentClient.GetChatClient("gpt-4o").AsIChatClient();
+            _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId} in environment {EnvironmentId}",
+                updatedTools.Count, agentUserId, environmentId);
 
             // Recreate agent with updated tools (since AIAgent is immutable)
-            return chatClient.CreateAIAgent(
-                instructions: agentInstructions, 
+            var agentWithTools = chatClient.CreateAIAgent(
+                instructions: agentInstructions,
                 tools: [.. updatedTools]);
+
+            // Return the enhanced agent
+            return agentWithTools;
         }
         catch (Exception ex)
         {

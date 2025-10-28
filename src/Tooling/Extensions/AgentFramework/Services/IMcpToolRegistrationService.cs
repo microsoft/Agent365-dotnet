@@ -7,6 +7,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.AI.OpenAI;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
 /// <summary>
@@ -15,20 +16,20 @@ using Microsoft.Extensions.AI;
 public interface IMcpToolRegistrationService
 {
     /// <summary>
-    /// Takes an existing AIAgent and creates a new AIAgent with MCP tools added to its existing tools.
-    /// Returns the new agent instance since AIAgent is immutable.
+    /// Creates a new AIAgent from the provided IChatClient with MCP tools added to existing tools.
+    /// Returns the new agent instance configured with existing tools plus MCP tools.
     /// </summary>
-    /// <param name="agentClient">The Azure OpenAI client for creating the new AIAgent.</param>
+    /// <param name="chatClient">The configured IChatClient to use for creating the agent.</param>
     /// <param name="agentInstructions">The agent instructions.</param>
-    /// <param name="agent">The existing AIAgent to enhance with MCP tools.</param>
+    /// <param name="initialTools">The existing tools to keep and add MCP tools to.</param>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
     /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
-    /// <returns>A new AIAgent instance with the original tools plus MCP tools.</returns>
+    /// <returns>A new AIAgent instance with existing tools plus MCP tools.</returns>
     Task<AIAgent> AddToolServersToAgent(
-        AzureOpenAIClient agentClient,
+        IChatClient chatClient,
         string agentInstructions,
-        AIAgent agent,
+        IList<AITool> initialTools,
         string agentUserId,
         string environmentId,
         string? authToken = null);
