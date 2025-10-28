@@ -1,1 +1,0 @@
-# Agent Runtime OpenAI SDK for .NET
