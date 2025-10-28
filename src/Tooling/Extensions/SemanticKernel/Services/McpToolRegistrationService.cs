@@ -75,7 +75,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = GetTools(server, environmentId, authToken).Result;
+                var listAvailableToolsForServer = GetTools(turnContext, server, environmentId, authToken).Result;
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -84,7 +84,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             }
         }
 
-        private async Task<IList<McpClientTool>> GetTools(MCPServerConfig mCPServerConfig, string environmentId, string authToken)
+        private async Task<IList<McpClientTool>> GetTools(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string environmentId, string authToken)
         {
             try
             {
@@ -97,7 +97,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -121,7 +121,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(Uri endpoint, string clientName, string environmentId, string authToken)
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string clientName, string environmentId, string authToken)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -144,10 +144,15 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             this._logger.LogInformation($"Configured authentication handler for MCP endpoint {endpoint}");
 
+            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext)
+            {
+                InnerHandler = authHandler
+            };
+
             // Create logging handler (optional - for debugging HTTP requests)
             var loggingHandler = new HttpLoggingHandler(this._logger)
             {
-                InnerHandler = authHandler
+                InnerHandler = httpContextHeaderHandler
             };
 
             // Setup SSE client transport options without manual token management
