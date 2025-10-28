@@ -66,16 +66,14 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             if (authToken == null)
             {
-                authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).Result;
+                authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
             }
 
-            var servers = _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken).Result;
-
-            var toolsMode = Utility.GetToolsMode();
+            var servers = _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken).GetAwaiter().GetResult();
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = GetTools(turnContext, server, environmentId, authToken).Result;
+                var listAvailableToolsForServer = GetTools(turnContext, server, environmentId, authToken).GetAwaiter().GetResult();
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

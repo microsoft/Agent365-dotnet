@@ -11,7 +11,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Handlers
 
     internal class HttpContextHeadersHandler(ITurnContext turnContext) : DelegatingHandler
     {
-        protected async override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (turnContext?.Activity != null)
             {
@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Handlers
                 }
             }
 
-            return await base.SendAsync(request, cancellationToken);
+            return base.SendAsync(request, cancellationToken);
         }
     }
 }
