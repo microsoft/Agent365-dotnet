@@ -9,16 +9,10 @@ using OpenTelemetry.Trace;
 /// </summary>
 public static class BuilderExtensions
 {
-    // Activity Source Names
     /// <summary>
     /// The activity source name for Agent Framework tracing.
     /// </summary>
     public const string AgentFrameworkSource = "Experimental.Microsoft.Agents.AI";
-
-    /// <summary>
-    /// The activity source name for Agent Framework tracing with wildcards.
-    /// </summary>
-    public const string AgentFrameworkSourceWildCard = "*Microsoft.Agents.AI";
 
     /// <summary>
     /// Adds OpenAI integration to the builder.
@@ -32,7 +26,7 @@ public static class BuilderExtensions
         {
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
-                    .AddSource(AgentFrameworkSourceWildCard));
+                    .AddSource(AgentFrameworkSource));
         }
 
         return builder;
