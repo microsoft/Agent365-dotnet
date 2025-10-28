@@ -1,6 +1,6 @@
 # Microsoft Agents A365 SDK - AgentFramework Tooling
 
-This library provides integration between Microsoft Agents A365 and Microsoft Agent Framework (Semantic Kernel Agents), enabling you to add MCP (Model Context Protocol) tool servers to your Agent Framework agents.
+This library provides integration between Microsoft Agents A365 and Microsoft Extensions AI (AIAgent), enabling you to add MCP (Model Context Protocol) tool servers to your AI agents.
 
 ## Installation
 
@@ -32,8 +32,8 @@ In your `Program.cs` file:
 
 ```csharp
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
+using Microsoft.Extensions.AI;
+using Azure.AI.OpenAI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,12 +41,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddLogging();
 
-// Add Semantic Kernel services
-builder.Services.AddSingleton<Kernel>(serviceProvider =>
+// Add Azure OpenAI client
+builder.Services.AddSingleton<AzureOpenAIClient>(serviceProvider =>
 {
-    return KernelBuilder.Create()
-        .AddOpenAITextCompletion("gpt-4", "your-api-key")
-        .Build();
+    var endpoint = new Uri("https://your-resource.openai.azure.com");
+    var credential = new DefaultAzureCredential();
+    return new AzureOpenAIClient(endpoint, credential);
 });
 
 // Add MCP services
@@ -70,8 +70,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
+using Microsoft.Extensions.AI;
+using Azure.AI.OpenAI;
+using Azure.Identity;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
@@ -79,12 +80,12 @@ var host = Host.CreateDefaultBuilder(args)
         // Add logging (required dependency)
         services.AddLogging();
         
-        // Add Semantic Kernel
-        services.AddSingleton<Kernel>(serviceProvider =>
+        // Add Azure OpenAI client
+        services.AddSingleton<AzureOpenAIClient>(serviceProvider =>
         {
-            return KernelBuilder.Create()
-                .AddOpenAITextCompletion("gpt-4", "your-api-key")
-                .Build();
+            var endpoint = new Uri("https://your-resource.openai.azure.com");
+            var credential = new DefaultAzureCredential();
+            return new AzureOpenAIClient(endpoint, credential);
         });
         
         // Add MCP services
@@ -103,34 +104,32 @@ public class MyApplication
 {
     private readonly IMcpToolRegistrationService _mcpToolRegistrationService;
     private readonly IMcpServerConfigurationService _mcpServerConfigurationService;
-    private readonly Kernel _kernel;
+    private readonly AzureOpenAIClient _azureOpenAIClient;
     
     public MyApplication(
         IMcpToolRegistrationService mcpToolRegistrationService,
         IMcpServerConfigurationService mcpServerConfigurationService,
-        Kernel kernel)
+        AzureOpenAIClient azureOpenAIClient)
     {
         _mcpToolRegistrationService = mcpToolRegistrationService;
         _mcpServerConfigurationService = mcpServerConfigurationService;
-        _kernel = kernel;
+        _azureOpenAIClient = azureOpenAIClient;
     }
     
     public async Task RunAsync()
     {
-        // Create an agent
-        var agent = new Agent(_kernel)
-        {
-            Name = "MyAgent",
-            Instructions = "You are a helpful assistant."
-        };
+        // Define initial tools (if any)
+        var initialTools = new List<AITool>();
 
         // Get MCP server configurations
         var servers = await _mcpServerConfigurationService
             .ListToolServers("userId", "envId", "authToken");
         
-        // Add MCP tools to the agent
-        _mcpToolRegistrationService.AddToolServersToAgent(
-            agent, 
+        // Add MCP tools to get combined tools
+        await _mcpToolRegistrationService.AddToolServersToAgent(
+            chatClient,  // IChatClient instead of AzureOpenAIClient
+            "You are a helpful assistant.",
+            initialTools,
             "userId", 
             "envId", 
             "authToken");
@@ -140,72 +139,76 @@ public class MyApplication
 }
 ```
 
-### 3. Using with Existing Agent Framework Agents
+### 3. Using with Microsoft.Extensions.AI
 
 ```csharp
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Agents;
+using Microsoft.Extensions.AI;
+using Azure.AI.OpenAI;
+using Azure.Identity;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
-// Create your kernel
-var kernel = KernelBuilder.Create()
-    .AddOpenAITextCompletion("gpt-4", "your-api-key")
-    .Build();
+// Create your Azure OpenAI client
+var endpoint = new Uri("https://your-resource.openai.azure.com");
+var credential = new DefaultAzureCredential();
+var azureClient = new AzureOpenAIClient(endpoint, credential);
 
-// Create an agent
-var agent = new Agent(kernel)
-{
-    Name = "Assistant",
-    Instructions = "You are a helpful assistant with access to external tools."
-};
+// Define initial tools (if any)
+var initialTools = new List<AITool>();
 
 // Get the MCP tool registration service (from DI or create manually)
 var mcpService = serviceProvider.GetRequiredService<IMcpToolRegistrationService>();
 
-// Add MCP tools to your agent
-mcpService.AddToolServersToAgent(
-    agent,
+// Add MCP tools to get combined tools collection
+await mcpService.AddToolServersToAgent(
+    chatClient,  // IChatClient - get this from azureClient.GetChatClient(deploymentName).AsIChatClient()
+    agentInstructions: "You are a helpful assistant with access to external tools.",
+    initialTools: initialTools,
     agentUserId: "user123",
     environmentId: "prod",
     authToken: "your-auth-token");
 
-// Now your agent has access to all configured MCP tools
-var response = await agent.InvokeAsync("Help me with my tasks");
+// The method internally creates an AIAgent with combined tools
+Console.WriteLine("Agent created with MCP tools integrated");
 ```
 
-### 4. Advanced Usage with Authentication Context
+### 4. Simple Usage with Nullable Parameters
 
 ```csharp
-using Microsoft.Agents.Builder.App.UserAuth;
-using Microsoft.Agents.Builder;
+// The service supports nullable parameters for flexibility
 
-// When you have full authentication context
-var userAuthorization = new UserAuthorization(/* your auth details */);
-var turnContext = /* your turn context */;
-
-mcpService.AddToolServersToAgent(
-    agent,
+// With just MCP tools (no initial tools or instructions)
+await mcpService.AddToolServersToAgent(
+    azureClient,
+    agentInstructions: null,           // No specific instructions
+    initialTools: null,               // No initial tools
     agentUserId: "user123",
     environmentId: "prod",
-    userAuthorization: userAuthorization,
-    turnContext: turnContext);
+    authToken: "your-auth-token");
+
+// With instructions but no initial tools
+await mcpService.AddToolServersToAgent(
+    azureClient,
+    agentInstructions: "You are a helpful assistant.",
+    initialTools: null,               // No initial tools
+    agentUserId: "user123",
+    environmentId: "prod",
+    authToken: "your-auth-token");
 ```
 
-### 5. Getting Tool Definitions and Functions Separately
+### 5. Getting Combined Tools Collection
 
 ```csharp
-// Get MCP tool definitions and Kernel functions without modifying an agent
-var (toolDefinitions, functions) = await mcpService
-    .GetMcpToolDefinitionsAndFunctionsAsync(
-        "userId", 
-        "envId", 
-        "authToken");
+// If you want to create the AIAgent yourself, you can get just the tools
+// Note: This would require modifying the service to return tools instead of void
 
-// Use the functions as needed
-foreach (var function in functions)
-{
-    kernel.Plugins.AddFromFunctions("MCPTools", new[] { function });
-}
+// Create your own agent with combined tools
+var combinedTools = new List<AITool>();
+combinedTools.AddRange(initialTools ?? Enumerable.Empty<AITool>());
+// Add MCP tools to the collection...
+
+var agent = azureClient.CreateAIAgent(
+    instructions: "You are a helpful assistant",
+    tools: combinedTools);
 ```
 
 ## Key Features
@@ -214,20 +217,20 @@ foreach (var function in functions)
 
 - **Automatic Discovery**: Discovers available MCP tool servers based on configuration
 - **Live Validation**: Tests connectivity to MCP servers before integration
-- **Function Conversion**: Converts MCP tools to Semantic Kernel functions
+- **Tool Conversion**: Converts MCP tools to Microsoft.Extensions.AI AITool format
 - **Error Handling**: Robust error handling for server connectivity issues
 
 ### Authentication Support
 
 - **Bearer Token**: Simple authentication using bearer tokens
-- **Full Context**: Support for complete authentication context with user authorization
-- **Token Acquisition**: Automatic token acquisition when authentication context is available
+- **Secure Communication**: HTTPS communication with MCP servers
+- **Environment-aware SSL**: Development-friendly SSL certificate handling
 
-### Agent Framework Integration
+### Microsoft.Extensions.AI Integration
 
-- **Native Integration**: Seamlessly integrates with Microsoft.SemanticKernel.Agents
-- **Plugin System**: Uses Semantic Kernel's plugin system for tool registration
-- **Kernel Functions**: Converts MCP tools to native Kernel functions
+- **Native Integration**: Seamlessly integrates with Microsoft.Extensions.AI
+- **AIAgent Support**: Creates AIAgent instances with combined tools
+- **AITool Conversion**: Converts MCP tools to native AITool instances
 
 ## Configuration
 

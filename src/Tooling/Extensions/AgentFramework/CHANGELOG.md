@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Authentication handlers for secure MCP server communication:
     - `BearerTokenHandler` for Bearer token authentication
     - `HttpLoggingHandler` for HTTP request/response logging
-  - Integration with Microsoft.SemanticKernel.Agents for agent tool management
+  - Integration with Microsoft.Extensions.AI for agent tool management
   - Environment-aware SSL certificate validation for development scenarios
   - Comprehensive error handling and logging for MCP server operations
-  - Support for MCP tool definitions and Kernel function integration
+  - Support for MCP tool definitions and AIAgent integration
 
 
 ## [1.0.0] - 2025-01-16
@@ -45,10 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 - .NET 8.0 target framework
-- Microsoft.SemanticKernel.Agents.Core for Agent Framework integration
+- Azure.AI.OpenAI for Azure OpenAI client integration
 - Microsoft.Extensions.AI for AI abstraction layer
 - Microsoft.Extensions.AI.OpenAI for OpenAI integration
 - Microsoft.Extensions.AI.AzureAIInference for Azure AI integration
+- Microsoft.Agents.AI for agent functionality
 - ModelContextProtocol.Core for MCP client functionality
 - Microsoft.Agents.Authentication.Msal for authentication
 - Microsoft.Agents.Hosting.AspNetCore for hosting integration
