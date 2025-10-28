@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -32,7 +32,6 @@
   <ItemGroup>
     <!-- Reference analyzer project for testing (both as analyzer and assembly) -->
     <ProjectReference Include="../../DevTools/Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.csproj" />
-    <ProjectReference Include="..\..\Runtime\Extensions\OpenAI\Microsoft.Agents.A365.Runtime.Extensions.OpenAI.csproj" />
   </ItemGroup>
   
   <!-- Completely exclude AnalyzerDemoApp from compilation and processing -->
