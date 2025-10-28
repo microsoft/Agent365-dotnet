@@ -47,28 +47,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// This method cannot directly update an existing AIAgent's tools because AIAgent is immutable in Microsoft.Extensions.AI.
-    /// The design pattern requires creating a new AIAgent instance whenever you need to modify its configuration (instructions, tools, etc.).
-    /// 
-    /// Therefore, this method extracts the existing agent's properties and creates a new AIAgent with the combined tools
-    /// (existing + MCP tools) rather than modifying the existing agent instance.
-    /// </remarks>
     public async Task<AIAgent> AddToolServersToAgent(
-        AIAgent existingAgent,
-        IChatClient chatClient,
+        AzureOpenAIClient agentClient,
+        string agentInstructions,
+        AIAgent agent,
         string agentUserId,
         string environmentId,
         string? authToken = null)
     {
-        if (existingAgent == null)
+        if (agentClient == null)
         {
-            throw new ArgumentNullException(nameof(existingAgent));
+            throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (chatClient == null)
+        if (agent == null)
         {
-            throw new ArgumentNullException(nameof(chatClient));
+            throw new ArgumentNullException(nameof(agent));
         }
 
         if (string.IsNullOrWhiteSpace(authToken))
@@ -79,14 +73,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         
         try
         {
-            // Extract existing agent properties
-            var existingTools = existingAgent.Tools ?? Enumerable.Empty<AITool>();
-            var agentInstructions = existingAgent.Instructions;
+            // Get existing tools from the agent
+            var updatedTools = new List<AITool>(agent.Tools ?? Enumerable.Empty<AITool>());
 
             // Get MCP tool server configurations
             var mcpConfigurations = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
-            
-            var allTools = new List<AITool>(existingTools);
             
             // Retrieve MCP tools from all configured servers
             foreach (var config in mcpConfigurations)
@@ -94,8 +85,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 try
                 {
                     var mcpTools = await GetTools(config, environmentId, authToken);
-                    // Add the MCP tools directly (McpClientTool implements AITool)
-                    allTools.AddRange(mcpTools.Cast<AITool>());
+                    // Add the MCP tools
+                    updatedTools.AddRange(mcpTools.Cast<AITool>());
                     
                     _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'", 
                         mcpTools.Count, config.mcpServerName);
@@ -109,12 +100,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             }
 
             _logger.LogInformation("Combined {ExistingCount} existing tools with {McpCount} MCP tools for a total of {TotalCount} tools",
-                existingTools.Count(), allTools.Count - existingTools.Count(), allTools.Count);
+                agent.Tools?.Count() ?? 0, updatedTools.Count - (agent.Tools?.Count() ?? 0), updatedTools.Count);
 
-            // Create and return new agent with combined tools
+            // Get chat client from agent client
+            var chatClient = agentClient.GetChatClient("gpt-4o").AsIChatClient();
+
+            // Recreate agent with updated tools (since AIAgent is immutable)
             return chatClient.CreateAIAgent(
                 instructions: agentInstructions, 
-                tools: allTools);
+                tools: [.. updatedTools]);
         }
         catch (Exception ex)
         {
