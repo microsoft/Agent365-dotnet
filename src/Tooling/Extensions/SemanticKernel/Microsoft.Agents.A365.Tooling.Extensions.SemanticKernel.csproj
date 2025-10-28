@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Tooling.SemanticKernel</AssemblyName>
-    <RootNamespace>Microsoft.Agents.A365.Tooling.SemanticKernel</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     
     <!-- NuGet Package Properties -->
-    <PackageId>Microsoft.Agents.A365.Tooling.SemanticKernel</PackageId>
+    <PackageId>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</PackageId>
     <Title>Microsoft Agents A365 SemanticKernel Integration</Title>
     <Description>A .NET SDK that integrates Microsoft Agents A365 with SemanticKernel, providing tooling functionalities.</Description>
     <Summary>Microsoft Agents A365 SemanticKernel Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
