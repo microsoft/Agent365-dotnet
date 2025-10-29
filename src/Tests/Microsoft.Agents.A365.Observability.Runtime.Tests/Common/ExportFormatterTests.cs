@@ -286,37 +286,26 @@ public partial class ExportFormatterTests : ActivityTest
 
         // Assert
         var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        scopeSpans.GetArrayLength().Should().Be(1);
-
-        var scope = scopeSpans[0].GetProperty("scope");
+        var root = doc.RootElement;
+        var resourceSpan = root.GetProperty("resourceSpan");
+        var scopeSpan = resourceSpan.GetProperty("scopeSpan");
+        var scope = scopeSpan.GetProperty("scope");
         scope.GetProperty("name").GetString().Should().Be("TestSource");
-
-        var spans = scopeSpans[0].GetProperty("spans");
-        spans.GetArrayLength().Should().Be(1);
-
-        var span = spans[0];
+        var span = scopeSpan.GetProperty("span");
         span.GetProperty("name").GetString().Should().Be("span1");
         span.GetProperty("kind").GetInt32().Should().Be((int)ActivityKind.Client);
         span.GetProperty("startTimeUnixNano").GetUInt64().Should().BeGreaterThan(0);
         span.GetProperty("endTimeUnixNano").GetUInt64().Should().BeGreaterThan(span.GetProperty("startTimeUnixNano").GetUInt64());
-
         var attributes = span.GetProperty("attributes");
         attributes.GetProperty("tag1").GetString().Should().Be("value1");
         attributes.GetProperty("tag2").GetInt32().Should().Be(42);
-
         var eventsJson = span.GetProperty("events");
-        eventsJson.GetArrayLength().Should().Be(1);
         var eventJson = eventsJson[0];
         eventJson.GetProperty("name").GetString().Should().Be("ev1");
         eventJson.GetProperty("attributes").GetProperty("evtag").GetString().Should().Be("evval");
-
         var linksJson = span.GetProperty("links");
-        linksJson.GetArrayLength().Should().Be(1);
         var linkJson = linksJson[0];
         linkJson.GetProperty("attributes").GetProperty("linktag").GetString().Should().Be("linkval");
-
         var status = span.GetProperty("status");
         status.GetProperty("code").GetInt32().Should().Be((int)ActivityStatusCode.Error);
         status.GetProperty("message").GetString().Should().Be("fail");
@@ -338,8 +327,9 @@ public partial class ExportFormatterTests : ActivityTest
 
         // Assert
         var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var resourceObj = resourceSpans[0].GetProperty("resource");
+        var root = doc.RootElement;
+        var resourceSpan = root.GetProperty("resourceSpan");
+        var resourceObj = resourceSpan.GetProperty("resource");
         var attrs = resourceObj.GetProperty("attributes");
         attrs.GetProperty("custom1").GetString().Should().Be("val1");
         attrs.GetProperty("custom2").GetInt32().Should().Be(123);
@@ -358,9 +348,10 @@ public partial class ExportFormatterTests : ActivityTest
 
         // Assert
         var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
+        var root = doc.RootElement;
+        var resourceSpan = root.GetProperty("resourceSpan");
+        var scopeSpan = resourceSpan.GetProperty("scopeSpan");
+        var span = scopeSpan.GetProperty("span");
         var parentSpanIdJson = span.GetProperty("parentSpanId").GetString();
         parentSpanIdJson.Should().Be(parentSpanId.ToHexString().ToLowerInvariant());
     }
@@ -377,10 +368,10 @@ public partial class ExportFormatterTests : ActivityTest
 
         // Assert
         var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
-
+        var root = doc.RootElement;
+        var resourceSpan = root.GetProperty("resourceSpan");
+        var scopeSpan = resourceSpan.GetProperty("scopeSpan");
+        var span = scopeSpan.GetProperty("span");
         span.TryGetProperty("events", out var eventsProp).Should().BeFalse();
         span.TryGetProperty("links", out var linksProp).Should().BeFalse();
     }
@@ -397,10 +388,10 @@ public partial class ExportFormatterTests : ActivityTest
 
         // Assert
         var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
-
+        var root = doc.RootElement;
+        var resourceSpan = root.GetProperty("resourceSpan");
+        var scopeSpan = resourceSpan.GetProperty("scopeSpan");
+        var span = scopeSpan.GetProperty("span");
         span.TryGetProperty("attributes", out var attrsProp).Should().BeTrue();
         attrsProp.EnumerateObject().Should().BeEmpty();
     }

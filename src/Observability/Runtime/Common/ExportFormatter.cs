@@ -84,21 +84,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             var serviceName = GetServiceName(resource);
             var serviceVersion = GetServiceVersion(resource);
 
-            var scopeSpans = new List<ScopeSpans>
-            {
-                BuildScopeSpans(activity)
-            };
-
             var resourceAttrs = MapResourceAttributes(resourceAttributes, serviceName, serviceVersion);
 
-            var payload = new ExportTraceServicePayload
+            var payload = new ExportTraceEtwPayload
             {
-                ResourceSpans = new List<ResourceSpans>
+                ResourceSpan = new EtwResourceSpan()
                 {
-                    new ResourceSpans
+                    Resource = new OtlpResource { Attributes = resourceAttrs },
+                    ScopeSpan = new EtwScopeSpan()
                     {
-                        Resource = new OtlpResource { Attributes = resourceAttrs },
-                        ScopeSpans = scopeSpans
+                        Scope = new InstrumentationScope
+                        {
+                            Name = activity.Source.Name,
+                            Version = activity.Source.Version
+                        },
+                        Span = BuildOtlpSpan(activity)
                     }
                 }
             };
@@ -148,20 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             };
         }
 
-        private static ScopeSpans BuildScopeSpans(Activity activity)
-        {
-            return new ScopeSpans
-            {
-                Scope = new InstrumentationScope
-                {
-                    Name = activity.Source.Name,
-                    Version = activity.Source.Version
-                },
-                Spans = new List<OtlpSpan> { BuildOtlpSpan(activity) }
-            };
-        }
-
-        private static string SerializePayload(ExportTraceServicePayload payload)
+        private static string SerializePayload<T>(T payload)
         {
             return JsonSerializer.Serialize(payload, new JsonSerializerOptions
             {
@@ -270,6 +257,30 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("resourceSpans")]
         public List<ResourceSpans> ResourceSpans { get; set; } = new List<ResourceSpans>();
+    }
+
+    internal sealed class ExportTraceEtwPayload
+    {
+        [JsonPropertyName("resourceSpan")]
+        public EtwResourceSpan ResourceSpan { get; set; } = new EtwResourceSpan();
+    }
+
+    internal sealed class EtwResourceSpan
+    {
+        [JsonPropertyName("resource")]
+        public OtlpResource? Resource { get; set; }
+        
+        [JsonPropertyName("scopeSpan")]
+        public EtwScopeSpan ScopeSpan { get; set; } = new EtwScopeSpan();
+    }
+
+    internal sealed class EtwScopeSpan
+    {
+        [JsonPropertyName("scope")]
+        public InstrumentationScope? Scope { get; set; }
+     
+        [JsonPropertyName("span")]
+        public OtlpSpan Span { get; set; } = new OtlpSpan();
     }
 
     internal sealed class ResourceSpans
