@@ -19,6 +19,16 @@ public static class BuilderExtensions
     public const string AgentFrameworkSource = "Experimental.Microsoft.Agents.AI";
 
     /// <summary>
+    /// The activity source name for Agent Framework agent tracing.
+    /// </summary>
+    public const string AgentFrameworkAgentSource = "Experimental.Microsoft.Agents.AI.Agent";
+
+    /// <summary>
+    /// The activity source name for Agent Framework chat client tracing.
+    /// </summary>
+    public const string AgentFrameworkChatClientSource = "Experimental.Microsoft.Agents.AI.ChatClient";
+
+    /// <summary>
     /// Adds Agent Framework integration to the builder.
     /// </summary>
     /// <param name="builder">The builder to configure.</param>
@@ -30,7 +40,9 @@ public static class BuilderExtensions
         {
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
-                    .AddSource(AgentFrameworkSource));
+                    .AddSource(AgentFrameworkAgentSource)
+                    .AddSource(AgentFrameworkChatClientSource)
+                    .AddProcessor(new AgentFrameworkSpanProcessor()));
         }
 
         return builder;
