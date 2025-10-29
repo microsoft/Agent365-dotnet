@@ -85,5 +85,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiResponseFinishReasonsKey, string.Join(",", finishReasons));
             }
         }
+
+        /// <summary>
+        /// Records the thought process.
+        /// </summary>
+        public void RecordThoughtProcess(string thoughtProcess)
+        {
+            SetTagMaybe(GenAiThoughtProcessKey, thoughtProcess);
+        }
     }
 }

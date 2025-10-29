@@ -27,12 +27,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiSystemKey = "gen_ai.system";
 
         public const string GenAiConversationIdKey = "gen_ai.conversation.id";
-        public const string GenAiConversationItemLinkKey = "gen_ai.conversation.itemLink";
+        public const string GenAiConversationItemLinkKey = "gen_ai.conversation.item.link";
         public const string GenAiUsageInputTokensKey = "gen_ai.usage.input_tokens";
         public const string GenAiUsageOutputTokensKey = "gen_ai.usage.output_tokens";
         public const string GenAiProviderNameKey = "gen_ai.provider.name";
         public const string GenAiInputMessagesKey = "gen_ai.input.messages";
         public const string GenAiOutputMessagesKey = "gen_ai.output.messages";
+        public const string GenAiThoughtProcessKey = "gen_ai.agent.thought.process";
 
 
         // AI invocation context dimensions
