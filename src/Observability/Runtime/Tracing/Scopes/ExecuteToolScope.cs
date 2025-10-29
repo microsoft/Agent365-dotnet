@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -22,15 +21,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// Creates and starts a new scope for tool execution tracing.
         /// </summary>
         /// <returns>A new ExecuteToolScope instance.</returns>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new ExecuteToolScope(details, agentDetails, tenantDetails);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
             : base(
                 ActivityKind.Internal,
                 agentDetails,
                 tenantDetails,
                 OperationName,
-                $"{OperationName} {details.ToolName}")
+                $"{OperationName} {details.ToolName}",
+                parentId: parentId)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
