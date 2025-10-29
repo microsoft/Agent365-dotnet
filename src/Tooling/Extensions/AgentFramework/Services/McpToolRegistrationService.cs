@@ -114,7 +114,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId} in environment {EnvironmentId}",
                 updatedTools.Count, agentUserId, environmentId);
 
-            // Recreate agent with updated tools (since AIAgent is immutable)
+            // Create agent with updated tools (since AIAgent is immutable)
             var agentWithTools = chatClient.CreateAIAgent(
                 instructions: agentInstructions,
                 tools: [.. updatedTools]);
