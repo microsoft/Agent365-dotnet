@@ -5,7 +5,7 @@ using Microsoft.Agents.A365.Observability.Runtime;
 using OpenTelemetry.Trace;
 
 /// <summary>
-/// Extension methods for configuring Builder with OpenAI integration.
+/// Extension methods for configuring Builder with Agent Framework integration.
 /// </summary>
 public static class BuilderExtensions
 {
@@ -15,10 +15,10 @@ public static class BuilderExtensions
     public const string AgentFrameworkSource = "Experimental.Microsoft.Agents.AI";
 
     /// <summary>
-    /// Adds OpenAI integration to the builder.
+    /// Adds Agent Framework integration to the builder.
     /// </summary>
     /// <param name="builder">The builder to configure.</param>
-    /// <param name="enableRelatedSources">Whether to enable related tracing sources for OpenTelemetry.</param>
+    /// <param name="enableRelatedSources">If true, enables Agent Framework activity source tracing for OpenTelemetry.</param>
     /// <returns>The configured builder for method chaining.</returns>
     public static Builder WithAgentFramework(this Builder builder, bool enableRelatedSources = true)
     {
