@@ -24,7 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 .SetExecutionTypeTags(turnContext)
                 .SetTargetAgentTags(turnContext)
                 .SetTenantIdTags(turnContext)
-                .SetSourceMetadataTags(turnContext)
+                .SetChannelMetadataTags(turnContext)
                 .SetConversationIdTags(turnContext);
 
             return invokeAgentScope;
@@ -70,11 +70,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the source metadata tags from the TurnContext.
+        /// Sets the channel metadata tags from the TurnContext.
         /// </summary>
-        public static InvokeAgentScope SetSourceMetadataTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
+        public static InvokeAgentScope SetChannelMetadataTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
-            invokeAgentScope.RecordAttributes(turnContext.GetSourceMetadataBaggagePairs());
+            invokeAgentScope.RecordAttributes(turnContext.GetChannelMetadataBaggagePairs());
             return invokeAgentScope;
         }
 

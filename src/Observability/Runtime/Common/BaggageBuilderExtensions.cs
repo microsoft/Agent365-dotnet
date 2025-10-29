@@ -23,7 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 .SetExecutionTypeBaggage(turnContext)
                 .SetTargetAgentBaggage(turnContext)
                 .SetTenantIdBaggage(turnContext)
-                .SetSourceMetadataBaggage(turnContext)
+                .SetChannelMetadataBaggage(turnContext)
                 .SetConversationIdBaggage(turnContext);
 
             return baggageBuilder;
@@ -78,14 +78,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the source metadata baggage values from the TurnContext.
+        /// Sets the channel metadata baggage values from the TurnContext.
         /// </summary>
         /// <param name="baggageBuilder">The BaggageBuilder instance.</param>
         /// <param name="turnContext">The turn context containing activity information.</param>
         /// <returns>The updated BaggageBuilder instance.</returns>
-        public static BaggageBuilder SetSourceMetadataBaggage(this BaggageBuilder baggageBuilder, ITurnContext turnContext)
+        public static BaggageBuilder SetChannelMetadataBaggage(this BaggageBuilder baggageBuilder, ITurnContext turnContext)
         {
-            baggageBuilder.SetRange(turnContext.GetSourceMetadataBaggagePairs());
+            baggageBuilder.SetRange(turnContext.GetChannelMetadataBaggagePairs());
             return baggageBuilder;
         }
 
