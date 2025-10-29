@@ -123,7 +123,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                    string.Equals(AgentAUID, other.AgentAUID, StringComparison.Ordinal) &&
                    string.Equals(AgentUPN, other.AgentUPN, StringComparison.Ordinal) &&
                    string.Equals(AgentBlueprintId, other.AgentBlueprintId, StringComparison.Ordinal) &&
-                   string.Equals(AgentType, other.AgentType) &&
+                   AgentType == other.AgentType &&
                    string.Equals(TenantId, other.TenantId, StringComparison.Ordinal);
         }
 
@@ -145,7 +145,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (AgentAUID != null ? StringComparer.Ordinal.GetHashCode(AgentAUID) : 0);
                 hash = (hash * 31) + (AgentUPN != null ? StringComparer.Ordinal.GetHashCode(AgentUPN) : 0);
                 hash = (hash * 31) + (AgentBlueprintId != null ? StringComparer.Ordinal.GetHashCode(AgentBlueprintId) : 0);
-                hash = (hash * 31) + (StringComparer.Ordinal.GetHashCode(AgentType));
+                hash = (hash * 31) + (AgentType?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (TenantId != null ? StringComparer.Ordinal.GetHashCode(TenantId) : 0);
                 return hash;
             }
