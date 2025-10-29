@@ -7,7 +7,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.AI.OpenAI;
 using Azure.Identity;
@@ -19,10 +18,6 @@ using System.Net.Http;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Utils;
-using Microsoft.Agents.A365.Runtime.Authentication;
-using Microsoft.Agents.A365.Runtime.Utils;
-using Microsoft.Agents.Builder;
-using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Handlers;
 
 /// <summary>
