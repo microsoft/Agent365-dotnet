@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+// ------------------------------------------------------------------------------
+namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
