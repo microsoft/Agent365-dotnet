@@ -1,11 +1,6 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// Licensed under the MIT License.
-// ------------------------------------------------------------------------------
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry;
-using OpenTelemetry.Trace;
 using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
@@ -27,22 +22,13 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 
             if (activity.Source.Name.StartsWith(BuilderExtensions.AgentFrameworkSource))
             {
-                var tags = activity.Tags.ToDictionary(kv => kv.Key, kv => kv.Value);
-                if (tags.TryGetValue(OpenTelemetryConstants.GenAiOperationNameKey, out var operationName))
+                var operationName = activity.GetTagItem(OpenTelemetryConstants.GenAiOperationNameKey);
+                if (operationName is string opName && opName == ExecuteToolOperation)
                 {
-                    switch (operationName)
-                    {
-                        case ExecuteToolOperation:
-                            var toolCallResult = activity.GetTagItem(ToolCallResultTag);
-                            if (toolCallResult != null)
-                            {
-                                activity.SetTag(EventContentTag, toolCallResult);
-                            }
-                            break;
-                    }
+                    var toolCallResult = activity.GetTagItem(ToolCallResultTag);
+                    activity.SetTag(EventContentTag, toolCallResult);
                 }
             }
-            
         }
     }
 }
