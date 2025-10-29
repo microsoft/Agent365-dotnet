@@ -76,7 +76,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (string.IsNullOrWhiteSpace(authToken))
         {
-            _logger.LogError("Auth token is required for AddToolServersToAgent.");
             throw new ArgumentException("Auth token cannot be null or empty.", nameof(authToken));
         }
         
@@ -89,25 +88,24 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             updatedTools.AddRange(initialTools);
 
             // Get MCP tool server configurations
-            var mcpConfigurations = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
+            var servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
             
             // Retrieve MCP tools from all configured servers
-            foreach (var config in mcpConfigurations)
+            foreach (var server in servers)
             {
                 try
                 {
-                    var mcpTools = await GetTools(config, environmentId, authToken);
+                    var mcpTools = await GetTools(server, environmentId, authToken);
                     // Add the MCP tools
                     updatedTools.AddRange(mcpTools.Cast<AITool>());
                     
                     _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'", 
-                        mcpTools.Count, config.mcpServerName);
+                        mcpTools.Count, server.mcpServerName);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}", 
-                        config.mcpServerName, ex.Message);
-                    // Continue with other servers even if one fails
+                        server.mcpServerName, ex.Message);
                 }
             }
 

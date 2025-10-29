@@ -8,20 +8,24 @@ Add the necessary project references or NuGet packages to your project.
 
 ## Setup and Configuration
 
-### Adding MCP Services to Dependency Injection
+### Manual Service Registration
 
-The library provides an extension method `AddMcpServices()` to register all required services with the dependency injection container.
+Since the library doesn't currently include built-in extension methods, you'll need to register the services manually in your dependency injection container.
 
-#### Required Namespace
+#### Required Namespaces
 
 ```csharp
-using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions;
+using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+using Microsoft.Agents.A365.Tooling.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.AI;
+using Azure.AI.OpenAI;
 ```
 
 #### Service Registration
 
-The extension method registers the following services:
-- `IMcpServerConfigurationService` → `McpServerConfigurationService` (from Common project)
+Register the following services manually:
+- `IMcpServerConfigurationService` → `McpServerConfigurationService` (from Core project)
 - `IMcpToolRegistrationService` → `McpToolRegistrationService` (from AgentFramework project)
 
 ## Usage Examples
@@ -31,7 +35,8 @@ The extension method registers the following services:
 In your `Program.cs` file:
 
 ```csharp
-using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions;
+using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Extensions.AI;
 using Azure.AI.OpenAI;
 
@@ -49,8 +54,9 @@ builder.Services.AddSingleton<AzureOpenAIClient>(serviceProvider =>
     return new AzureOpenAIClient(endpoint, credential);
 });
 
-// Add MCP services
-builder.Services.AddMcpServices();
+// Register MCP services manually
+builder.Services.AddScoped<IMcpServerConfigurationService, McpServerConfigurationService>();
+builder.Services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
 
 var app = builder.Build();
 
@@ -67,9 +73,8 @@ app.Run();
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions;
-using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Extensions.AI;
 using Azure.AI.OpenAI;
 using Azure.Identity;
@@ -88,8 +93,9 @@ var host = Host.CreateDefaultBuilder(args)
             return new AzureOpenAIClient(endpoint, credential);
         });
         
-        // Add MCP services
-        services.AddMcpServices();
+        // Register MCP services manually
+        services.AddScoped<IMcpServerConfigurationService, McpServerConfigurationService>();
+        services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
         
         // Add your application services
         services.AddScoped<MyApplication>();
@@ -125,9 +131,12 @@ public class MyApplication
         var servers = await _mcpServerConfigurationService
             .ListToolServers("userId", "envId", "authToken");
         
-        // Add MCP tools to get combined tools
-        await _mcpToolRegistrationService.AddToolServersToAgent(
-            chatClient,  // IChatClient instead of AzureOpenAIClient
+        // Create chat client from Azure OpenAI client
+        var chatClient = _azureOpenAIClient.GetChatClient("your-deployment-name").AsIChatClient();
+        
+        // Add MCP tools to create an AIAgent
+        var agent = await _mcpToolRegistrationService.AddToolServersToAgent(
+            chatClient,
             "You are a helpful assistant.",
             initialTools,
             "userId", 
@@ -152,23 +161,25 @@ var endpoint = new Uri("https://your-resource.openai.azure.com");
 var credential = new DefaultAzureCredential();
 var azureClient = new AzureOpenAIClient(endpoint, credential);
 
+// Get chat client from Azure OpenAI client
+var chatClient = azureClient.GetChatClient("your-deployment-name").AsIChatClient();
+
 // Define initial tools (if any)
 var initialTools = new List<AITool>();
 
 // Get the MCP tool registration service (from DI or create manually)
 var mcpService = serviceProvider.GetRequiredService<IMcpToolRegistrationService>();
 
-// Add MCP tools to get combined tools collection
-await mcpService.AddToolServersToAgent(
-    chatClient,  // IChatClient - get this from azureClient.GetChatClient(deploymentName).AsIChatClient()
+// Add MCP tools to create an AIAgent
+var agent = await mcpService.AddToolServersToAgent(
+    chatClient,
     agentInstructions: "You are a helpful assistant with access to external tools.",
     initialTools: initialTools,
     agentUserId: "user123",
     environmentId: "prod",
     authToken: "your-auth-token");
 
-// The method internally creates an AIAgent with combined tools
-Console.WriteLine("Agent created with MCP tools integrated");
+Console.WriteLine("AIAgent created with MCP tools integrated");
 ```
 
 ### 4. Simple Usage with Nullable Parameters
@@ -177,8 +188,8 @@ Console.WriteLine("Agent created with MCP tools integrated");
 // The service supports nullable parameters for flexibility
 
 // With just MCP tools (no initial tools or instructions)
-await mcpService.AddToolServersToAgent(
-    azureClient,
+var agent = await mcpService.AddToolServersToAgent(
+    chatClient,
     agentInstructions: null,           // No specific instructions
     initialTools: null,               // No initial tools
     agentUserId: "user123",
@@ -186,8 +197,8 @@ await mcpService.AddToolServersToAgent(
     authToken: "your-auth-token");
 
 // With instructions but no initial tools
-await mcpService.AddToolServersToAgent(
-    azureClient,
+var agent = await mcpService.AddToolServersToAgent(
+    chatClient,
     agentInstructions: "You are a helpful assistant.",
     initialTools: null,               // No initial tools
     agentUserId: "user123",
@@ -195,20 +206,71 @@ await mcpService.AddToolServersToAgent(
     authToken: "your-auth-token");
 ```
 
-### 5. Getting Combined Tools Collection
+### 5. Manual Service Instantiation
+
+If you're not using dependency injection, you can create services manually:
 
 ```csharp
-// If you want to create the AIAgent yourself, you can get just the tools
-// Note: This would require modifying the service to return tools instead of void
+using Microsoft.Extensions.Logging;
+using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+using Microsoft.Agents.A365.Tooling.Services;
 
-// Create your own agent with combined tools
-var combinedTools = new List<AITool>();
-combinedTools.AddRange(initialTools ?? Enumerable.Empty<AITool>());
-// Add MCP tools to the collection...
+// Create logger
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<McpToolRegistrationService>();
 
-var agent = azureClient.CreateAIAgent(
-    instructions: "You are a helpful assistant",
-    tools: combinedTools);
+// Create configuration service
+var configService = new McpServerConfigurationService(/* required dependencies */);
+
+// Create MCP tool registration service
+var mcpService = new McpToolRegistrationService(logger, configService);
+
+// Use the service
+var chatClient = azureClient.GetChatClient("your-deployment").AsIChatClient();
+var agent = await mcpService.AddToolServersToAgent(
+    chatClient,
+    "You are a helpful assistant",
+    new List<AITool>(),
+    "userId",
+    "envId", 
+    "authToken");
+```
+
+## Service Interfaces
+
+### IMcpServerConfigurationService
+
+Responsible for managing MCP server configurations.
+
+```csharp
+public interface IMcpServerConfigurationService
+{
+    Task<List<MCPServerConfig>> ListToolServers(
+        string agentUserId, 
+        string environmentId, 
+        string authToken);
+}
+```
+
+### IMcpToolRegistrationService
+
+Responsible for registering MCP tools with Microsoft.Extensions.AI.
+
+```csharp
+public interface IMcpToolRegistrationService
+{
+    /// <summary>
+    /// Creates a new AIAgent from the provided IChatClient with MCP tools added to existing tools.
+    /// Returns the new agent instance configured with existing tools plus MCP tools.
+    /// </summary>
+    Task<AIAgent> AddToolServersToAgent(
+        IChatClient chatClient,
+        string agentInstructions,
+        IList<AITool> initialTools,
+        string agentUserId,
+        string environmentId,
+        string? authToken = null);
+}
 ```
 
 ## Key Features
@@ -238,6 +300,63 @@ var agent = azureClient.CreateAIAgent(
 
 Configure your MCP servers through the configuration service. The exact configuration format depends on your specific setup and requirements.
 
+### Environment-Based Configuration
+
+The services automatically detect the environment using these environment variables:
+- `ASPNETCORE_ENVIRONMENT`
+- `DOTNET_ENVIRONMENT`
+
+In **Development** mode:
+- Reads MCP server configurations from `ToolingManifest.json`
+- Disables SSL certificate validation (for development only)
+
+In **Production** mode:
+- Fetches MCP server configurations from the Tooling Gateway endpoint
+
+### ToolingManifest.json Format
+
+For development scenarios, create a `ToolingManifest.json` file in your project output directory:
+
+```json
+{
+  "mcpServers": [
+    {
+      "mcpServerName": "mailMCPServer",
+      "mcpServerUniqueName": "mcp_MailTools"
+    },
+    {
+      "mcpServerName": "sharePointMCPServer",
+      "mcpServerUniqueName": "mcp_SharePointTools"
+    }
+  ]
+}
+```
+
+**Important Notes:**
+- The `mcpServerUniqueName` field should contain only the server name (e.g., `mcp_MailTools`), not the full URL
+- The library automatically constructs the full URL based on:
+  - Current environment (Development/Test/Production)
+  - Environment ID passed to the service
+  - Base URL for the current environment
+
+**URL Construction:**
+The library builds full URLs like:
+```
+{BaseURL}/{EnvironmentId}/servers/{ServerName}
+```
+
+**Environment-Based Base URLs:**
+- **Development**: `https://localhost:8080/mcp/environments`
+- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/mcp/environments`
+- **Staging**: `https://staging.agent365.svc.cloud.microsoft/mcp/environments`
+- **Production**: `https://agent365.svc.cloud.microsoft/mcp/environments`
+
+**Example:**
+For environment ID `Default-5369a35c-46a5-4677-8ff9-2e65587654e7` and server name `mcp_MailTools` in Test environment:
+```
+https://test.agent365.svc.cloud.dev.microsoft/mcp/environments/Default-5369a35c-46a5-4677-8ff9-2e65587654e7/servers/mcp_MailTools
+```
+
 ### Logging
 
 The library uses Microsoft.Extensions.Logging for comprehensive logging:
@@ -261,11 +380,12 @@ The library provides comprehensive error handling:
 
 ## Best Practices
 
-1. **Service Registration**: Always register MCP services in your DI container
+1. **Service Registration**: Always register MCP services in your DI container using the shown patterns
 2. **Error Handling**: Implement proper error handling around MCP tool registration
 3. **Logging**: Enable appropriate logging levels to monitor MCP server interactions
 4. **Authentication**: Use full authentication context when available for better security
 5. **Testing**: Test MCP server connectivity in development environments
+6. **IChatClient Usage**: Always use `IChatClient` interface, not concrete client implementations
 
 ## Troubleshooting
 
@@ -275,6 +395,7 @@ The library provides comprehensive error handling:
 2. **Authentication**: Verify authentication tokens and permissions
 3. **Tool Registration**: Check logs for tool registration failures
 4. **Agent Configuration**: Ensure agents are properly configured before adding tools
+5. **Missing Dependencies**: Ensure all required packages are installed and services are registered
 
 ### Debugging
 
@@ -287,3 +408,74 @@ builder.Services.AddLogging(config =>
     config.SetMinimumLevel(LogLevel.Debug);
 });
 ```
+
+### Common Integration Patterns
+
+#### Using with Existing Tools
+
+```csharp
+// If you already have tools defined
+var existingTools = new List<AITool>
+{
+    AIFunctionFactory.Create((string city) => $"Weather in {city}"),
+    // ... other tools
+};
+
+// MCP tools will be added to these existing tools
+var agent = await mcpService.AddToolServersToAgent(
+    chatClient,
+    "You are a helpful assistant with weather and MCP tools.",
+    existingTools,
+    "userId",
+    "envId",
+    "authToken");
+```
+
+#### Error Handling Example
+
+```csharp
+try
+{
+    var agent = await mcpService.AddToolServersToAgent(
+        chatClient,
+        instructions,
+        tools,
+        userId,
+        envId,
+        authToken);
+    
+    // Use the agent
+    var response = await agent.CompleteAsync("Hello!");
+}
+catch (InvalidOperationException ex)
+{
+    // Handle MCP server connection issues
+    logger.LogError(ex, "Failed to connect to MCP servers");
+}
+catch (ArgumentException ex)
+{
+    // Handle configuration issues
+    logger.LogError(ex, "Invalid MCP configuration");
+}
+```
+
+## Important Notes
+
+1. **Required Dependencies**: 
+   - Ensure you have logging configured since the MCP services depend on `ILogger<T>`
+   - Azure.AI.OpenAI is required for `AzureOpenAIClient`
+   - Microsoft.Extensions.AI is required for `IChatClient` and `AIAgent`
+2. **Service Lifetimes**: Services are typically registered with `Scoped` lifetime
+3. **SSL in Development**: SSL certificate validation is disabled in development mode for local testing
+4. **Authentication**: Services use Bearer token authentication for MCP server communication
+5. **Immutable Agents**: `AIAgent` instances are immutable; the service creates new instances with tools
+6. **Tool Limitations**: Tool names are limited to 64 characters (server name + tool name + separator)
+
+## Migration Notes
+
+This library creates `AIAgent` instances using Microsoft.Extensions.AI patterns. If you're migrating from other agent frameworks:
+
+1. Replace direct client dependencies with `IChatClient`
+2. Use the service to create agents with MCP tools rather than manual tool registration
+3. Handle the async nature of agent creation
+4. Update error handling to catch the specific exceptions thrown by this library
