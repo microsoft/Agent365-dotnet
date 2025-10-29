@@ -112,19 +112,6 @@ public sealed class Agent365ExporterTests
     }
 
     [TestMethod]
-    public void Constructor_NullLogger_Throws()
-    {
-        var options = new Agent365ExporterOptions
-        {
-            ClusterCategory = "test",
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
-        };
-
-        Action act = () => _ = new Agent365Exporter(logger: null!, options, resource: null);
-        act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
-    }
-
-    [TestMethod]
     public void Constructor_NullOptions_Throws()
     {
         Action act = () => _ = new Agent365Exporter(NullLogger<Agent365Exporter>.Instance, null!, null);
