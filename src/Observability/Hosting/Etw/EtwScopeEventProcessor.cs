@@ -27,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         /// </summary>
         public override void OnEnd(Activity data)
         {
-            var activityContent = ExportFormatter.Format(new List<Activity> { data }, _resource);
+            var activityContent = ExportFormatter.FormatMany(new List<Activity> { data }, _resource);
 
             EtwEventSource.Log.SpanStop(
                 data.DisplayName,
