@@ -13,19 +13,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentId">The unique identifier for the agent.</param>
         /// <param name="agentName">Optional display name for the agent.</param>
         /// <param name="agentDescription">Optional description of the agent's purpose.</param>
-        /// <param name="iconUri">Optional URI pointing to the agent icon.</param>
         /// <param name="agentAUID">Optional Azure User ID (AUID) for the agent.</param>
         /// <param name="agentUPN">Optional User Principal Name (UPN) for the agent.</param>
         /// <param name="agentBlueprintId">Optional Blueprint/Application ID for the agent.</param>
+        /// <param name="agentType">Optional type of the agent.</param>
         /// <param name="tenantId">Optional Tenant ID for the agent.</param>
         public AgentDetails(
             string agentId,
             string? agentName = null,
             string? agentDescription = null,
-            string? iconUri = null,
             string? agentAUID = null,
             string? agentUPN = null,
             string? agentBlueprintId = null,
+            AgentType? agentType = null,
             string? tenantId = null)
         {
             AgentId = agentId;
@@ -34,6 +34,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             AgentAUID = agentAUID;
             AgentUPN = agentUPN;
             AgentBlueprintId = agentBlueprintId;
+            AgentType = agentType;
             TenantId = tenantId;
         }
 
@@ -68,6 +69,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? AgentDescription { get; }
 
         /// <summary>
+        /// The agent type. 
+        /// </summary>
+        public AgentType? AgentType { get; }
+
+        /// <summary>
         /// Optional Tenant ID for the agent.
         /// </summary>
         public string? TenantId { get; }
@@ -81,6 +87,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentAUID">Receives the agent Azure User ID (AUID).</param>
         /// <param name="agentUPN">Receives the agent User Principal Name (UPN).</param>
         /// <param name="agentBlueprintId">Receives the agent Blueprint/Application ID.</param>
+        /// <param name="agentType">Receives the agent type.</param>
         /// <param name="tenantId">Receives the tenant identifier.</param>
         public void Deconstruct(
             out string agentId,
@@ -89,6 +96,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             out string? agentAUID,
             out string? agentUPN,
             out string? agentBlueprintId,
+            out AgentType? agentType,
             out string? tenantId)
         {
             agentId = AgentId;
@@ -97,6 +105,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             agentAUID = AgentAUID;
             agentUPN = AgentUPN;
             agentBlueprintId = AgentBlueprintId;
+            agentType = AgentType;
             tenantId = TenantId;
         }
 
@@ -114,6 +123,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                    string.Equals(AgentAUID, other.AgentAUID, StringComparison.Ordinal) &&
                    string.Equals(AgentUPN, other.AgentUPN, StringComparison.Ordinal) &&
                    string.Equals(AgentBlueprintId, other.AgentBlueprintId, StringComparison.Ordinal) &&
+                   string.Equals(AgentType, other.AgentType) &&
                    string.Equals(TenantId, other.TenantId, StringComparison.Ordinal);
         }
 
@@ -135,6 +145,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (AgentAUID != null ? StringComparer.Ordinal.GetHashCode(AgentAUID) : 0);
                 hash = (hash * 31) + (AgentUPN != null ? StringComparer.Ordinal.GetHashCode(AgentUPN) : 0);
                 hash = (hash * 31) + (AgentBlueprintId != null ? StringComparer.Ordinal.GetHashCode(AgentBlueprintId) : 0);
+                hash = (hash * 31) + (StringComparer.Ordinal.GetHashCode(AgentType));
                 hash = (hash * 31) + (TenantId != null ? StringComparer.Ordinal.GetHashCode(TenantId) : 0);
                 return hash;
             }
