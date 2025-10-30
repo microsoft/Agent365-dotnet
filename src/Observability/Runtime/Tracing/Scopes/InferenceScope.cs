@@ -12,15 +12,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
-        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails) => new InferenceScope(details, agentDetails, tenantDetails);
+        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId);
 
-        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails)
+        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
             : base(
                 ActivityKind.Client,
                 agentDetails,
                 tenantDetails,
                 details.OperationName.ToString(),
-                $"{details.OperationName} {details.Model}")
+                $"{details.OperationName} {details.Model}",
+                parentId: parentId)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);

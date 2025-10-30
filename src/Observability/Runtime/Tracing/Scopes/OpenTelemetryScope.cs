@@ -44,10 +44,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="operationName">The name of the operation being traced.</param>
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null)
+        /// <param name="parentId">Optional parent ID for the activity.</param>
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null)
         {
             customStartTime = startTime;
-            activity = ActivitySource.StartActivity(activityName, kind, default(ActivityContext), startTime: startTime ?? default);
+            activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
+            if (!string.IsNullOrEmpty(parentId))
+            {
+                activity?.SetParentId(parentId!);
+            }
+
+            if (startTime != null) 
+            {
+                activity?.SetStartTime(startTime.Value.UtcDateTime);
+            }
+
             commonTags = new TagList
                 {
                     { GenAiOperationNameKey, operationName },
@@ -75,6 +86,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             {
                 duration = Stopwatch.StartNew();
             }
+
+            activity?.Start();
         }
 
         /// <summary>
@@ -210,5 +223,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             activity?.AddBaggage(key, value);
         }
+
+        /// <summary>
+        /// Gets the span ID for the current activity.
+        /// </summary>
+        public string Id => activity?.Id ?? string.Empty;
     }
 }
