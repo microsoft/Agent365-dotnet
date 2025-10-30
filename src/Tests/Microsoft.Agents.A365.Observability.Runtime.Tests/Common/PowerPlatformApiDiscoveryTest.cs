@@ -1,6 +1,6 @@
 ﻿using Microsoft.Agents.A365.Observability.Runtime.Common;
 
-namespace Microsoft.Agents.A365.Observability.Tests.Common;
+namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
 
 [TestClass]

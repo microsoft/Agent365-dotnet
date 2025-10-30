@@ -68,7 +68,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     var (tenantId, agentId, activities) = g;
 
                     // Build payload for just this identity
-                    var json = ExportFormatter.Format(activities, _resource);
+                    var json = ExportFormatter.FormatMany(activities, _resource);
                     using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                     // Endpoint/token per identity
