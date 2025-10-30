@@ -41,14 +41,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
         public async Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string environmentId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentUserId, environmentId, authToken);
+            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentUserId, authToken);
         }
 
         /// <summary>
         /// Reads MCP server configurations from an endpoint for prod scenario.
         /// </summary>
         /// <returns>List of MCP server configurations</returns>
-        private static async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(string agentUserId, string environmentId, string authToken)
+        private static async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(string agentUserId, string authToken)
         {
             // TODO: Implement endpoint reading logic for production
             // This would typically involve making an HTTP call to a configuration service
@@ -62,7 +62,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentUserId);
                 // Add any required headers for the config service
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
-                httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
                 var configData = JsonSerializer.Deserialize<JsonElement>(response);

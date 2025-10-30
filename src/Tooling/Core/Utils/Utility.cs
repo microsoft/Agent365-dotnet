@@ -62,24 +62,14 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Constructs the full MCP server URL using the base URL, environment ID, and server name.
+        /// Constructs the full MCP server URL using the base URL and server name.
         /// </summary>
-        /// <param name="environmentId">The environment ID.</param>
         /// <param name="serverName">The MCP server name.</param>
         /// <returns>The full MCP server URL.</returns>
-        public static string BuildMcpServerUrl(string environmentId, string serverName)
+        public static string BuildMcpServerUrl(string serverName)
         {
             var baseUrl = GetMcpBaseUrl();
-
-            if (RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
-                && baseUrl.EndsWith("servers"))
-            {
-                return $"{baseUrl}/{serverName}";
-            }
-            else
-            {
-                return $"{baseUrl}/{environmentId}/servers/{serverName}";
-            }
+            return $"{baseUrl}/{serverName}";
         }
 
         /// <summary>
