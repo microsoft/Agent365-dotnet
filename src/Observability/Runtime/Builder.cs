@@ -64,7 +64,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             // Configure OpenTelemetry with all processors in a single call
             // NOTE: _useOpenTelemetryBuilder = true does two things.
             // 1. Uses the provided service collection to create the tracer provider (using IDeferredTracerProviderBuilder in ObservabilityTracerProviderBuilderExtensions.AddAgent365Exporter())
-            // 2. Adds open telemetry and tracing services to the service collecion.
+            // 2. Adds open telemetry and tracing services to the service colletion.
             // _useOpenTelemetryBuilder = false just uses the provided service collection to create the tracer provider (using ObservabilityTracerProviderBuilderExtensions.AddAgent365Exporter(IServiceCollection))
             if (this._useOpenTelemetryBuilder)
             {
@@ -79,8 +79,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             {
                 var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
                 this.Configure(tracerProviderBuilder: tracerProviderBuilder);
-                tracerProviderBuilder.Build();
-                _services.AddSingleton(tracerProviderBuilder);
+                var tracerProvider = tracerProviderBuilder.Build();
+                _services.AddSingleton(tracerProvider);
             }
 
             _isBuilt = true;

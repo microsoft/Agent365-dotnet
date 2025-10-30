@@ -129,7 +129,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
 
             // Cleanup
-            provider.GetService<TracerProvider>()?.Dispose();
+            var tp = provider.GetRequiredService<TracerProvider>();
+            tp?.ForceFlush();
+            tp?.Dispose();
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
@@ -231,7 +233,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
 
             // Cleanup
-            provider.GetService<TracerProvider>()?.Dispose();
+            var tp = provider.GetRequiredService<TracerProvider>();
+            tp?.ForceFlush();
+            tp?.Dispose();
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
@@ -340,7 +344,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "gen_ai.agent.thought.process").Should().Be("Reasoning step 1; step 2");
 
             // Cleanup
-            provider.GetService<TracerProvider>()?.Dispose();
+            var tp = provider.GetRequiredService<TracerProvider>();
+            tp?.ForceFlush();
+            tp?.Dispose();
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
