@@ -16,12 +16,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <summary>
         /// Gets the tooling gateway URL for the specified digital worker.
         /// </summary>
-        /// <param name="agentUserId">The unique identifier of the digital worker.</param>
+        /// <param name="agentInstanceId">The unique identifier of the digital worker.</param>
         /// <returns>The tooling gateway URL for the digital worker.</returns>
-        public static string GetToolingGatewayForDigitalWorker(string agentUserId)
+        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId)
         {
-            // The endpoint needs to be updated based on the environment (prod, dev, etc.)
-            return $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl()}/agents/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
@@ -95,5 +94,5 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 _ => ToolsMode.MCPPlatform
             };
         }
-    }
+     }
 }

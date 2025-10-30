@@ -134,7 +134,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListMCPToolServersFromToolingGatewayAsync(
-    "agentUserId", 
+    "agentInstanceId", 
     "environmentId", 
     "authToken");
 ```
@@ -175,7 +175,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListMCPToolServersFromToolingGatewayAsync(
-        string agentUserId, 
+        string agentInstanceId, 
         string environmentId, 
         string authToken);
 }
@@ -190,7 +190,7 @@ public interface IMcpToolRegistrationService
 {
     Kernel AddMCPToolServerToAgent(
         Kernel kernel, 
-        string agentUserId, 
+        string agentInstanceId, 
         string environmentId, 
         string authToken);
 }

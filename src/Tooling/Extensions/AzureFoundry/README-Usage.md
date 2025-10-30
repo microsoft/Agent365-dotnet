@@ -135,7 +135,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListToolServers(
-    "agentUserId", 
+    "agentInstance", 
     "environmentId", 
     "authToken");
 ```
@@ -176,7 +176,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListToolServers(
-        string agentUserId, 
+        string agentInstance, 
         string environmentId, 
         string authToken);
 }
@@ -191,20 +191,20 @@ public interface IMcpToolRegistrationService
 {
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         string? authToken = null);
 
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
 
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         string authToken);
 }
@@ -236,7 +236,7 @@ public class FoundryAgentExample
         _logger = logger;
     }
 
-    public async Task<string> ProcessRequestAsync(string userMessage, string agentUserId, string environmentId, string authToken)
+    public async Task<string> ProcessRequestAsync(string userMessage, string agentInstanceId, string environmentId, string authToken)
     {
         // Create Azure AI Project client
         var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
@@ -254,7 +254,7 @@ public class FoundryAgentExample
             // Add MCP tool servers to the agent
             _mcpToolRegistrationService.AddToolServersToAgent(
                 agentClient, 
-                agentUserId, 
+                agentInstanceId, 
                 environmentId, 
                 authToken);
 
