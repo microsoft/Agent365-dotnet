@@ -96,12 +96,12 @@ public class MyApplication
     {
         // Get MCP server configurations
         var servers = await _mcpServerConfigurationService
-            .ListMCPToolServersFromToolingGatewayAsync("userId", "envId", "authToken");
+            .ListMCPToolServersFromToolingGatewayAsync("userId", "authToken");
             
         // Create and configure kernel with MCP tools
         var kernel = new Kernel();
         var updatedKernel = _mcpToolRegistrationService
-            .AddMCPToolServerToAgent(kernel, "userId", "envId", "authToken");
+            .AddMCPToolServerToAgent(kernel, "userId", "authToken");
             
         // Use the kernel with MCP tools...
     }
