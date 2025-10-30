@@ -69,7 +69,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
             }
 
-            var servers = _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken).GetResult();
+            var servers = _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken).Result;
 
             var toolsMode = Utility.GetToolsMode();
             foreach (var server in servers)
