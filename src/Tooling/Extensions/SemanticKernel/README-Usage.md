@@ -134,8 +134,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListMCPToolServersFromToolingGatewayAsync(
-    "agentUserId", 
-    "environmentId", 
+    "agentUserId",
     "authToken");
 ```
 
@@ -176,7 +175,6 @@ public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListMCPToolServersFromToolingGatewayAsync(
         string agentUserId, 
-        string environmentId, 
         string authToken);
 }
 ```
@@ -191,7 +189,6 @@ public interface IMcpToolRegistrationService
     Kernel AddMCPToolServerToAgent(
         Kernel kernel, 
         string agentUserId, 
-        string environmentId, 
         string authToken);
 }
 ```
@@ -240,7 +237,7 @@ For development scenarios, create a `ToolingManifest.json` file in your project 
 **URL Construction:**
 The library builds full URLs like:
 ```
-{BaseURL}/{EnvironmentId}/servers/{ServerName}
+{BaseURL}/{ServerName}
 ```
 
 **Environment-Based Base URLs:**

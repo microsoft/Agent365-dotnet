@@ -17,10 +17,10 @@ TODO: This is currently only for Semantic Kernel. We need to add a sample for Li
 3. Call `IMcpToolRegistrationService.AddToolServersToAgent(...)`:
     ```csharp
     // To use agentic authentation:
-    mcpToolRegistrationService.AddToolServersToAgent(kernel, agentUserId, environmentId, userAuthorization, turnContext);
+    mcpToolRegistrationService.AddToolServersToAgent(kernel, agentUserId, userAuthorization, turnContext);
     
     // To use an auth token you specify yourself:
-    mcpToolRegistrationService.AddToolServersToAgent(kernel, agentUserId, environmentId, userAuthorization, turnContext, authToken);
+    mcpToolRegistrationService.AddToolServersToAgent(kernel, agentUserId, userAuthorization, turnContext, authToken);
     ```
 4. Define the agent:
     ```csharp

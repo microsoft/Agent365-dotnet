@@ -36,12 +36,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Gets the list of MCP Servers that are configured for the agent.
         /// </summary>
         /// <param name="agentUserId">Agent User Id for the agent.</param>
-        /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        public async Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string environmentId, string authToken)
+        public async Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentUserId, authToken);
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentUserId, authToken);
         }
 
         /// <summary>
@@ -146,9 +145,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Parses a JSON element into an MCPServerConfig object from manifest, constructing full URL.
         /// </summary>
         /// <param name="serverElement">The JSON element containing server configuration</param>
-        /// <param name="environmentId">Environment ID to construct full URL</param>
         /// <returns>MCPServerConfig object or null if parsing fails</returns>
-        private static MCPServerConfig? ParseServerConfigFromManifest(JsonElement serverElement, string environmentId)
+        private static MCPServerConfig? ParseServerConfigFromManifest(JsonElement serverElement)
         {
             try
             {
@@ -167,7 +165,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
 
                 // Construct full URL using environment utilities
-                var fullUrl = Utility.BuildMcpServerUrl(environmentId, name);
+                var fullUrl = Utility.BuildMcpServerUrl(name);
 
                 return new MCPServerConfig
                 {
@@ -200,9 +198,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         ///   ]
         /// }
         /// </summary>
-        /// <param name="environmentId">Environment ID to construct full URLs.</param>
         /// <returns>List of MCP server configurations</returns>
-        private List<MCPServerConfig> GetMCPServersFromManifest(string environmentId)
+        private List<MCPServerConfig> GetMCPServersFromManifest()
         {
             var mcpServers = new List<MCPServerConfig>();
 
@@ -247,7 +244,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         {
                             foreach (var serverElement in serversElement.EnumerateArray())
                             {
-                                var serverConfig = ParseServerConfigFromManifest(serverElement, environmentId);
+                                var serverConfig = ParseServerConfigFromManifest(serverElement);
                                 if (serverConfig != null)
                                 {
                                     mcpServers.Add(serverConfig);

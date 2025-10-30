@@ -23,12 +23,10 @@ public interface IMcpToolRegistrationService
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance.</param>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         string? authToken = null);
 
     /// <summary>
@@ -37,14 +35,12 @@ public interface IMcpToolRegistrationService
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance.</param>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="userAuthorization">User authorization context.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
@@ -53,11 +49,9 @@ public interface IMcpToolRegistrationService
     /// Get MCP tool definitions and resources asynchronously.
     /// </summary>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="authToken">Auth token to access the MCP servers.</param>
     /// <returns>A tuple containing the list of MCP tool definitions and tool resources.</returns>
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentUserId,
-        string environmentId,
         string authToken);
 }

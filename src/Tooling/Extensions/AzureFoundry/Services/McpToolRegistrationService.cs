@@ -55,7 +55,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         string? authToken = null)
     {
         if (agentClient == null)
@@ -66,7 +65,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, authToken ?? string.Empty).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentUserId,
@@ -86,7 +85,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null)
@@ -105,7 +103,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, authToken ?? string.Empty).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentUserId,
@@ -126,7 +124,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// </summary>
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentUserId,
-        string environmentId,
         string authToken)
     {
         // TODO: Make this method private 
@@ -139,7 +136,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, authToken);
         }
         catch (Exception ex)
         {
@@ -149,7 +146,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (servers.Count == 0)
         {
-            _logger.LogInformation("No MCP servers configured for AgentUserId={AgentUserId}, EnvironmentId={EnvId}", agentUserId, environmentId);
+            _logger.LogInformation("No MCP servers configured for AgentUserId={AgentUserId}", agentUserId);
             return (new List<MCPToolDefinition>(), null);
         }
 
@@ -202,7 +199,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await GetTools(server, environmentId, authToken);
+                var mcpTools = await GetTools(server, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)
@@ -229,7 +226,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         return (toolDefinitions, combinedToolResources);
     }
 
-    private async Task<IList<McpClientTool>> GetTools(MCPServerConfig mCPServerConfig, string environmentId, string authToken)
+    private async Task<IList<McpClientTool>> GetTools(MCPServerConfig mCPServerConfig, string authToken)
     {
         try
         {
@@ -240,7 +237,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             }
 
             // Use custom HTTP-based implementation since MCP client library doesn't work
-            var mcpClient = await CreateMcpClientWithAuthHandlers(new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
+            var mcpClient = await CreateMcpClientWithAuthHandlers(new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, authToken);
             var tools = await mcpClient.ListToolsAsync();
 
             return tools;
@@ -262,7 +259,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <summary>
     /// Creates an MCP client with authentication handlers similar to your reference implementation
     /// </summary>
-    private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(Uri endpoint, string clientName, string environmentId, string authToken)
+    private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(Uri endpoint, string clientName, string authToken)
     {
         // Create HTTP client handler chain for MCP service authentication
         var httpClientHandler = new HttpClientHandler();

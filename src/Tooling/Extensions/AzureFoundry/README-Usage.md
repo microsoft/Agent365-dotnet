@@ -97,12 +97,12 @@ public class MyApplication
     {
         // Get MCP server configurations
         var servers = await _mcpServerConfigurationService
-            .ListToolServers("userId", "envId", "authToken");
+            .ListToolServers("userId", "authToken");
             
         // Create Azure Foundry agent client and configure with MCP tools
         var agentClient = new PersistentAgentsClient(/* your configuration */);
         _mcpToolRegistrationService
-            .AddToolServersToAgent(agentClient, "userId", "envId", "authToken");
+            .AddToolServersToAgent(agentClient, "userId", "authToken");
             
         // Use the agent client with MCP tools...
     }
@@ -135,8 +135,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListToolServers(
-    "agentUserId", 
-    "environmentId", 
+    "agentUserId",
     "authToken");
 ```
 
@@ -177,7 +176,6 @@ public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListToolServers(
         string agentUserId, 
-        string environmentId, 
         string authToken);
 }
 ```
@@ -192,20 +190,17 @@ public interface IMcpToolRegistrationService
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         string? authToken = null);
 
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentUserId,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
 
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentUserId,
-        string environmentId,
         string authToken);
 }
 ```
@@ -236,7 +231,7 @@ public class FoundryAgentExample
         _logger = logger;
     }
 
-    public async Task<string> ProcessRequestAsync(string userMessage, string agentUserId, string environmentId, string authToken)
+    public async Task<string> ProcessRequestAsync(string userMessage, string agentUserId, string authToken)
     {
         // Create Azure AI Project client
         var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
@@ -255,7 +250,6 @@ public class FoundryAgentExample
             _mcpToolRegistrationService.AddToolServersToAgent(
                 agentClient, 
                 agentUserId, 
-                environmentId, 
                 authToken);
 
             // Create thread and send message
@@ -398,7 +392,7 @@ For development scenarios, create a `ToolingManifest.json` file in your project 
 **URL Construction:**
 The library builds full URLs like:
 ```
-{BaseURL}/{EnvironmentId}/servers/{ServerName}
+{BaseURL}/{ServerName}
 ```
 
 **Environment-Based Base URLs:**

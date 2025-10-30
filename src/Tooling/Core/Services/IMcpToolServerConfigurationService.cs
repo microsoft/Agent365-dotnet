@@ -15,9 +15,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Gets the list of MCP Servers that are configured for the agent.
         /// </summary>
         /// <param name="agentUserId">Agent User Id for the agent.</param>
-        /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string environmentId, string authToken);
+        Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string authToken);
     }
 }
