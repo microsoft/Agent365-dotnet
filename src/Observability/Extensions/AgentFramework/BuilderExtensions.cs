@@ -37,6 +37,7 @@ public static class BuilderExtensions
         {
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
+                    .AddSource(AgentFrameworkSource)
                     .AddSource(AgentFrameworkAgentSource)
                     .AddSource(AgentFrameworkChatClientSource)
                     .AddProcessor(new AgentFrameworkSpanProcessor()));
