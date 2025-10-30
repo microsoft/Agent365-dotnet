@@ -402,7 +402,7 @@ The library builds full URLs like:
 - **Production**: `https://agent365.svc.cloud.microsoft/agents`
 
 **Example:**
-For environment ID `Default-5369a35c-46a5-4677-8ff9-2e65587654e7` and server name `mcp_MailTools` in Test environment:
+For server name `mcp_MailTools` in the Test environment:
 ```
 https://test.agent365.svc.cloud.dev.microsoft/agents/servers/mcp_MailTools
 ```
