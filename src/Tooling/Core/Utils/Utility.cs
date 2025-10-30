@@ -21,7 +21,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         public static string GetToolingGatewayForDigitalWorker(string agentUserId)
         {
             // The endpoint needs to be updated based on the environment (prod, dev, etc.)
-            return $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl()}/agents/{agentUserId}/mcpServers";
         }
 
         /// <summary>
@@ -41,10 +41,10 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 }
 
                 return Environment.GetEnvironmentVariable("MCP_DEVELOPMENT_BASE_URL")
-                       ?? $"{mcpPlatformBaseUrl}/mcp/environments";
+                       ?? $"{mcpPlatformBaseUrl}/agents/servers";
             }
 
-            return $"{mcpPlatformBaseUrl}/mcp/environments";
+            return $"{mcpPlatformBaseUrl}/agents/servers";
 
         }
 
