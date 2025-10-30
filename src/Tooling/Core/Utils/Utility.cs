@@ -16,14 +16,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <summary>
         /// Gets the tooling gateway URL for the specified digital worker.
         /// </summary>
-        /// <param name="agentUserId">The unique identifier of the digital worker.</param>
+        /// <param name="agentInstanceId">The unique identifier of the digital worker.</param>
         /// <returns>The tooling gateway URL for the digital worker.</returns>
-        public static string GetToolingGatewayForDigitalWorker(string agentUserId)
+        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId)
         {
-            // The endpoint needs to be updated based on the environment (prod, dev, etc.)
-            return IsEntraScopeEnabled() ?
-                $"{GetMcpPlatformBaseUrl()}/agents/{agentUserId}/mcpServers" :
-                $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl()}/agents/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
@@ -97,19 +94,5 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 _ => ToolsMode.MCPPlatform
             };
         }
-
-
-        /// <summary>
-        /// Determines whether the Entra scope is enabled based on the ENTRA_SCOPE_ENABLED environment variable.
-        /// </summary>
-        /// <returns>
-        /// True if the ENTRA_SCOPE_ENABLED environment variable is set to "true" (case-insensitive); otherwise, false.
-        /// </returns>
-        public static bool IsEntraScopeEnabled()
-        {
-            var entraScopeEnabled = Environment.GetEnvironmentVariable("ENTRA_SCOPE_ENABLED");
-            return !string.IsNullOrEmpty(entraScopeEnabled) &&
-                   entraScopeEnabled.Equals("true", StringComparison.OrdinalIgnoreCase);
-        }
-    }
+     }
 }
