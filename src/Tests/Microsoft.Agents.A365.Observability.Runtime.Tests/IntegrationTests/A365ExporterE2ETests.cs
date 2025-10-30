@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Trace;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
@@ -126,6 +127,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentDetails.AgentType.ToString());
             GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
+
+            // Cleanup
+            provider.GetService<TracerProvider>()?.Dispose();
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
         [TestMethod]
@@ -224,6 +229,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "server.address").Should().Be(endpoint.Host);
             GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
+
+            // Cleanup
+            provider.GetService<TracerProvider>()?.Dispose();
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
         [TestMethod]
@@ -329,6 +338,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
             GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
             GetAttribute(attributes, "gen_ai.agent.thought.process").Should().Be("Reasoning step 1; step 2");
+
+            // Cleanup
+            provider.GetService<TracerProvider>()?.Dispose();
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
         private class TestHttpMessageHandler : HttpMessageHandler

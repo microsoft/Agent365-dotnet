@@ -80,6 +80,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
                 this.Configure(tracerProviderBuilder: tracerProviderBuilder);
                 tracerProviderBuilder.Build();
+                _services.AddSingleton(tracerProviderBuilder);
             }
 
             _isBuilt = true;
