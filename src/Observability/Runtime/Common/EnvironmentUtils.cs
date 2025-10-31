@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -15,7 +16,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string PreprodObservabilityClusterCategory = "preprod";
         private const string ProdObservabilityClusterCategory = "prod";
 
-        private const string DevelopmentEnvironmentName = "Development";
+        private const string DevelopmentEnvironmentName = "development";
+        private const string TestEnvironmentName = "test";
+        private const string PreprodEnvironmentName = "preprod";
+        private const string ProductionEnvironmentName = "production";
+        private const string ProdEnvironmentName = "prod";
 
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
@@ -29,10 +34,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return environment.ToLowerInvariant() switch
             {
                 // For now, map "development" to preprod scope for local testing
-                "development" => new[] { PreprodObservabilityScope },
-                "test" => new[] { TestObservabilityScope },
-                "preprod" => new[] { PreprodObservabilityScope },
-                "production" => new[] { ProdObservabilityScope },
+                EnvironmentUtils.DevelopmentEnvironmentName => new[] { PreprodObservabilityScope },
+                EnvironmentUtils.TestEnvironmentName => new[] { TestObservabilityScope },
+                EnvironmentUtils.PreprodEnvironmentName => new[] { PreprodObservabilityScope },
+                EnvironmentUtils.ProductionEnvironmentName => new[] { ProdObservabilityScope },
+                EnvironmentUtils.ProdEnvironmentName => new[] { ProdObservabilityScope },
                 _ => new[] { ProdObservabilityScope },
             };
         }
@@ -48,10 +54,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return environment.ToLowerInvariant() switch
             {
                 // For now, map "development" to preprod scope for local testing
-                "development" => PreprodObservabilityClusterCategory,
-                "test" => TestObservabilityClusterCategory,
-                "preprod" => PreprodObservabilityClusterCategory,
-                "production" => ProdObservabilityClusterCategory,
+                EnvironmentUtils.DevelopmentEnvironmentName => PreprodObservabilityClusterCategory,
+                EnvironmentUtils.TestEnvironmentName => TestObservabilityClusterCategory,
+                EnvironmentUtils.PreprodEnvironmentName => PreprodObservabilityClusterCategory,
+                EnvironmentUtils.ProductionEnvironmentName => ProdObservabilityClusterCategory,
+                EnvironmentUtils.ProdEnvironmentName => ProdObservabilityClusterCategory,
                 _ => ProdObservabilityClusterCategory,
             };
         }
