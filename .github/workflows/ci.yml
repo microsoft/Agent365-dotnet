@@ -69,7 +69,17 @@ jobs:
 
       - name: Pack
         run: dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output ../NuGetPackages /p:PackageVersion=${{ needs.version-number.outputs.PACKAGE_VERSION }}
+        
+      - name: Copy NuGet packages
+        run: |
+          mkdir -p ~/drop/dotnet/NuGetPackages && cp -v ../NuGetPackages/*.nupkg $_
 
+      - name: Upload NuGet packages as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-${{ needs.version-number.outputs.PACKAGE_VERSION }}
+          path: ~/drop/dotnet/NuGetPackages/*
+        
       - name: Publish
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
