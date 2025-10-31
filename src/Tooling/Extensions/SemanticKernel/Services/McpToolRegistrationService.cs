@@ -164,7 +164,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
-            httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
+            if (Utility.UseEnvironmentId())
+            {
+                httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
+            }
             
             var clientTransport = new SseClientTransport(options, httpClient);
 

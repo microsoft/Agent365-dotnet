@@ -39,6 +39,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                     return Environment.GetEnvironmentVariable("MOCK_MCP_SERVER_URL") ?? "http://localhost:5309/mcp-mock/agents/servers";
                 }
 
+                if (!UseEnvironmentId())
+                {
+                    return $"{mcpPlatformBaseUrl}/agents/servers";
+                }
+
                 return Environment.GetEnvironmentVariable("MCP_DEVELOPMENT_BASE_URL")
                        ?? $"{mcpPlatformBaseUrl}/mcp/environments";
             }
@@ -70,8 +75,8 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         {
             var baseUrl = GetMcpBaseUrl();
 
-            if (RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
-                && baseUrl.EndsWith("servers"))
+            if (!UseEnvironmentId() || ((RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
+                && baseUrl.EndsWith("servers"))))
             {
                 return $"{baseUrl}/{serverName}";
             }
@@ -93,6 +98,14 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 "mockmcpserver" => ToolsMode.MockMCPServer,
                 _ => ToolsMode.MCPPlatform
             };
+        }
+        /// <summary>
+        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID environment variable. 
+        /// </summary>
+        /// <returns>True if environment ID should be used; otherwise, false.</returns>
+        public static bool UseEnvironmentId()
+        {
+            return Environment.GetEnvironmentVariable("USE_ENVIRONMENT_ID") ?? "true";
         }
      }
 }

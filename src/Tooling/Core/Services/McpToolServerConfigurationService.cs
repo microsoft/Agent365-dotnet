@@ -59,7 +59,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
+                if (Utility.UseEnvironmentId())
+                {
+                    httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
+                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 

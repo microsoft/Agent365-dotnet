@@ -188,8 +188,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
-            // Set environment ID header
-            resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            if(Utility.UseEnvironmentId())
+            {
+                // Set environment ID header
+                resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            }
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
@@ -300,7 +303,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         // Create HTTP client with the authentication handler chain
         var httpClient = new HttpClient(loggingHandler);
-        httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
+        if (Utility.UseEnvironmentId())
+        {
+            httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
+        }
 
         var clientTransport = new SseClientTransport(options, httpClient);
 
