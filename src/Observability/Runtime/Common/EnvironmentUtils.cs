@@ -20,16 +20,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
         /// </summary>
+        /// <param name="environment"> Optional environment name. Supported values "development", "test", "preprod", "production".</param>
         /// <returns></returns>
-        public static string[] GetObservabilityAuthenticationScope()
+        public static string[] GetObservabilityAuthenticationScope(string? environment = null)
         {
-            var environment = GetCurrentEnvironment();
+            environment = environment ?? GetCurrentEnvironment();
 
             return environment.ToLowerInvariant() switch
             {
                 // For now, map "development" to preprod scope for local testing
                 "development" => new[] { PreprodObservabilityScope },
                 "test" => new[] { TestObservabilityScope },
+                "preprod" => new[] { PreprodObservabilityScope },
                 "production" => new[] { ProdObservabilityScope },
                 _ => new[] { ProdObservabilityScope },
             };
@@ -37,16 +39,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Returns the cluster category for the observability service based on the current environment.
         /// </summary>
+        /// <param name="environment"> Optional environment name. Supported values "development", "test", "preprod", "production".</param>
         /// <returns></returns>
-        public static string GetObservabilityClusterCategory()
+        public static string GetObservabilityClusterCategory(string? environment = null)
         {
-            var environment = GetCurrentEnvironment();
+            environment = environment ?? GetCurrentEnvironment();
 
             return environment.ToLowerInvariant() switch
             {
                 // For now, map "development" to preprod scope for local testing
                 "development" => PreprodObservabilityClusterCategory,
                 "test" => TestObservabilityClusterCategory,
+                "preprod" => PreprodObservabilityClusterCategory,
                 "production" => ProdObservabilityClusterCategory,
                 _ => ProdObservabilityClusterCategory,
             };
