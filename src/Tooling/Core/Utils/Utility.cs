@@ -105,7 +105,8 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <returns>True if environment ID should be used; otherwise, false.</returns>
         public static bool UseEnvironmentId()
         {
-            return Environment.GetEnvironmentVariable("USE_ENVIRONMENT_ID") ?? "true";
+            var useEnvironmentId = Environment.GetEnvironmentVariable("USE_ENVIRONMENT_ID") ?? "true";
+            return useEnvironmentId == "true";
         }
      }
 }
