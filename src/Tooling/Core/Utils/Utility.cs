@@ -30,23 +30,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         public static string GetMcpBaseUrl()
         {
             var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl();
-            var environment = RuntimeUtility.GetCurrentEnvironment();
-            if (environment.ToLowerInvariant() == "development")
+            if (!UseEnvironmentId())
             {
-                var toolsMode = GetToolsMode();
-                if (toolsMode == ToolsMode.MockMCPServer)
-                {
-                    return Environment.GetEnvironmentVariable("MOCK_MCP_SERVER_URL") ?? "http://localhost:5309/mcp-mock/agents/servers";
-                }
-
-                if (!UseEnvironmentId())
-                {
-                    return $"{mcpPlatformBaseUrl}/agents/servers";
-                }
-
-                return Environment.GetEnvironmentVariable("MCP_DEVELOPMENT_BASE_URL")
-                       ?? $"{mcpPlatformBaseUrl}/mcp/environments";
+                return $"{mcpPlatformBaseUrl}/agents/servers";
             }
+
 
             return $"{mcpPlatformBaseUrl}/mcp/environments";
 
