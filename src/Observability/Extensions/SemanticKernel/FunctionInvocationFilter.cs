@@ -20,9 +20,7 @@ public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
     /// <inheritdoc />
     public async Task OnFunctionInvocationAsync(FunctionInvocationContext context, Func<FunctionInvocationContext, Task> next)
     {
-        var argumentsArray = context.Arguments.Select(kvp => new NamedDataValue(kvp.Key, new DataValue(kvp.Value)));
-
-        var arguments = JsonSerializer.Serialize(argumentsArray, SerializerOptions);
+        var arguments = JsonSerializer.Serialize(context.Arguments, SerializerOptions);
 
         if (Activity.Current?.OperationName.StartsWith(ExecuteToolScope.OperationName) ?? false)
         {
