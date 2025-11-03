@@ -14,14 +14,34 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="logger"></param>
         /// <param name="invokeAgentDetails"></param>
         /// <param name="tenantDetails"></param>
+        /// <param name="request"></param>
+        /// <param name="callerAgentDetails"></param>
+        /// <param name="callerDetails"></param>
+        /// <param name="conversationId"></param>
         public static void LogInvokeAgent(
-            this ILogger logger, 
-            [LogProperties(OmitReferenceName = true)] in InvokeAgentDetails invokeAgentDetails,
-            [LogProperties(OmitReferenceName = true)] in TenantDetails tenantDetails)
+            this ILogger logger,
+            InvokeAgentDetails invokeAgentDetails, 
+            TenantDetails tenantDetails, 
+            Request? request = null, 
+            AgentDetails? callerAgentDetails = null, 
+            CallerDetails? callerDetails = null, 
+            string? conversationId = null)
         {
-            // TODO
+            logger.LogInformation(
+                new EventId(1001, "invoke_agent"),
+                null,
+                // TODO: Prepare a struct with the OpenTelemetryConstants keys like it's done in InvokeAgentScope
+                new
+                {
+                    InvokeAgent = invokeAgentDetails,
+                    Tenant = tenantDetails,
+                    Request = request,
+                    CallerAgent = callerAgentDetails,
+                    Caller = callerDetails,
+                    ConversationId = conversationId
+                });
         }
-
+        
         /// <summary>
         /// Logs an inference call event.
         /// </summary>
@@ -29,6 +49,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="inferenceCallDetails"></param>
         /// <param name="agentDetails"></param>
         /// <param name="tenantDetails"></param>
+        [LoggerMessage(LogLevel.Information)]
         public static void LogInferenceCall(
             this ILogger logger,
             [LogProperties(OmitReferenceName = true)] in InferenceCallDetails inferenceCallDetails,
@@ -45,6 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="toolCallDetails"></param>
         /// <param name="agentDetails"></param>
         /// <param name="tenantDetails"></param>
+        [LoggerMessage(LogLevel.Information)]
         public static void LogToolCall(
             this ILogger logger,
             [LogProperties(OmitReferenceName = true)] in ToolCallDetails toolCallDetails,
