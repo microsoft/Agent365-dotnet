@@ -85,7 +85,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <inheritdoc />
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentInstanceId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
@@ -102,13 +101,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).Result;
         }
 
+        var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
+
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
-                agentInstanceId,
+                agenticAppId,
                 tools: toolDefinitions,
                 toolResources: toolResources);
 
@@ -116,7 +117,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agenticAppId}", agenticAppId);
             throw;
         }
     }
