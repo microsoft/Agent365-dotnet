@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Handlers
+namespace Microsoft.Agents.A365.Tooling.Handlers
 {
     using System.Net.Http;
     using System.Threading;
