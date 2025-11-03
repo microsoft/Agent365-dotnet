@@ -3,8 +3,8 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Tooling.Models;
-using ModelContextProtocol.Client;
 using Microsoft.Agents.Builder;
+using ModelContextProtocol.Client;
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
