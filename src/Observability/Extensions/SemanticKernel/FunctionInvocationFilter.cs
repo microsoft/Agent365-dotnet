@@ -62,8 +62,6 @@ public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
 
     private static string GetResult(FunctionInvocationContext context)
     {
-        var result = new DataValue(context.Result.GetValue<object>());
-
-        return JsonSerializer.Serialize(result, SerializerOptions);
+        return JsonSerializer.Serialize(context.Result.GetValue<object>(), SerializerOptions);
     }
 }
