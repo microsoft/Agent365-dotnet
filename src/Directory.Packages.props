@@ -32,7 +32,7 @@
     <PackageVersion Include="OpenAI" Version="2.5.0" />
     <!-- Azure Foundry related package -->
     <PackageVersion Include="Azure.AI.Agents.Persistent" Version="1.2.0-beta.4" />
-    <!-- Agent Framework packages -->
+    <!-- Agent Framewok packages -->
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.10.0" />
