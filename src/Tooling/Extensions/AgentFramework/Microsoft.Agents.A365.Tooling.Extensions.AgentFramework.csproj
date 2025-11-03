@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.Tooling.AgentFramework</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Tooling.AgentFramework</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.Tooling.AgentFramework</PackageId>
+    <Title>Microsoft Agents A365 AgentFramework Integration</Title>
+    <Description>A .NET SDK that integrates Microsoft Agents A365 with AgentFramework, providing tooling functionalities.</Description>
+    <Summary>Microsoft Agents A365 AgentFramework Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
+    <Product>Microsoft Agents A365 SDK AgentFramework Tooling Integration</Product>
+    <PackageTags>Microsoft;A365AgentFramework;OpenTelemetry;AI;Agents;Tooling</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Azure AI and Extensions AI packages -->
+    <PackageReference Include="Azure.AI.OpenAI" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.AzureAIInference" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Agents.AI" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    
+    <!-- Source Link Support -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="Microsoft.Agents.Authentication.Msal" />
+    <PackageReference Include="Microsoft.Agents.Hosting.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Tooling.csproj" />
+    <ProjectReference Include="..\..\..\Runtime\Core\Microsoft.Agents.A365.Runtime.csproj" />
+  </ItemGroup>
+</Project>
