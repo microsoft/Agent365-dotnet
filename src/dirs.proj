@@ -9,6 +9,6 @@
     <ProjectReference Include="Observability\dirs.proj" />
     <ProjectReference Include="Runtime\dirs.proj" />
     <ProjectReference Include="Tooling\dirs.proj" />
-    <ProjectReference Include="Tests\dirs.proj" />
   </ItemGroup>
 </Project>
+

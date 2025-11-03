@@ -54,7 +54,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <inheritdoc />
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         string? authToken = null)
     {
@@ -66,10 +66,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
-                agentUserId,
+                agentInstanceId,
                 tools: toolDefinitions,
                 toolResources: toolResources);
 
@@ -77,7 +77,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {AgentUserId}", agentUserId);
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
             throw;
         }
     }
@@ -85,7 +85,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <inheritdoc />
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
@@ -105,10 +105,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
-                agentUserId,
+                agentInstanceId,
                 tools: toolDefinitions,
                 toolResources: toolResources);
 
@@ -116,7 +116,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {AgentUserId}", agentUserId);
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
             throw;
         }
     }
@@ -125,7 +125,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// Get MCP tool definitions and resources.
     /// </summary>
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         string authToken)
     {
@@ -139,17 +139,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list MCP tool servers for AgentUserId={AgentUserId}", agentUserId);
+            _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={agentInstanceId}", agentInstanceId);
             return (new List<MCPToolDefinition>(), null);
         }
 
         if (servers.Count == 0)
         {
-            _logger.LogInformation("No MCP servers configured for AgentUserId={AgentUserId}, EnvironmentId={EnvId}", agentUserId, environmentId);
+            _logger.LogInformation("No MCP servers configured for agentInstanceId={agentInstanceId}, EnvironmentId={EnvId}", agentInstanceId, environmentId);
             return (new List<MCPToolDefinition>(), null);
         }
 

@@ -35,65 +35,67 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Gets the list of MCP Servers that are configured for the agent.
         /// </summary>
-        /// <param name="agentUserId">Agent User Id for the agent.</param>
+        /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
         /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        public async Task<List<MCPServerConfig>> ListToolServers(string agentUserId, string environmentId, string authToken)
+        public async Task<List<MCPServerConfig>> ListToolServers(string agentInstanceId, string environmentId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentUserId, environmentId, authToken);
+            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, environmentId, authToken);
         }
 
-        /// <summary>
-        /// Reads MCP server configurations from an endpoint for prod scenario.
-        /// </summary>
-        /// <returns>List of MCP server configurations</returns>
-        private static async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(string agentUserId, string environmentId, string authToken)
+        private static async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
+            string agentInstanceId, string environmentId, string authToken)
         {
-            // TODO: Implement endpoint reading logic for production
-            // This would typically involve making an HTTP call to a configuration service
-            var mcpServers = new List<MCPServerConfig>();
+            string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId);
 
-            string configEndpoint = string.Empty;
+            if (string.IsNullOrWhiteSpace(configEndpoint))
+            {
+                throw new InvalidOperationException("Configuration endpoint is not configured");
+            }
+
             try
             {
-                // Example implementation - replace with actual endpoint call
-                using var httpClient = new HttpClient();
-                configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentUserId);
-                // Add any required headers for the config service
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", authToken);
                 httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
-                var configData = JsonSerializer.Deserialize<JsonElement>(response);
 
-                if (configData.TryGetProperty("mcpServers", out var serversElement) &&
-                    serversElement.ValueKind == JsonValueKind.Array)
+                var options = new JsonSerializerOptions
                 {
-                    foreach (var serverElement in serversElement.EnumerateArray())
-                    {
-                        var serverConfig = ParseServerConfig(serverElement);
-                        if (serverConfig != null)
-                        {
-                            mcpServers.Add(serverConfig);
-                        }
-                    }
-                }
+                    PropertyNameCaseInsensitive = true
+                };
+
+                // Single parse approach
+                var jsonDoc = JsonSerializer.Deserialize<JsonElement>(response, options);
+
+                IEnumerable<JsonElement> serverElements = jsonDoc.ValueKind switch
+                {
+                    JsonValueKind.Array => jsonDoc.EnumerateArray(),
+                    JsonValueKind.Object when jsonDoc.TryGetProperty("mcpServers", out var servers)
+                                           && servers.ValueKind == JsonValueKind.Array
+                        => servers.EnumerateArray(),
+                    _ => throw new InvalidOperationException(
+                        $"Unexpected JSON structure. Expected array or object with 'mcpServers' property, got {jsonDoc.ValueKind}")
+                };
+
+                return serverElements
+                    .Select(ParseServerConfig)
+                    .Where(config => config != null)
+                    .ToList()!;
             }
             catch (HttpRequestException httpEx)
             {
-                throw new InvalidOperationException($"Failed to connect to MCP configuration endpoint '{configEndpoint}': {httpEx.Message}", httpEx);
+                throw new InvalidOperationException(
+                    $"Failed to retrieve configuration from '{configEndpoint}': {httpEx.Message}", httpEx);
             }
             catch (JsonException jsonEx)
             {
-                throw new InvalidOperationException($"Failed to parse MCP server configuration response: {jsonEx.Message}", jsonEx);
+                throw new InvalidOperationException(
+                    $"Failed to parse configuration response from '{configEndpoint}': {jsonEx.Message}", jsonEx);
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to read MCP servers from endpoint: {ex.Message}", ex);
-            }
-
-            return mcpServers;
         }
 
         /// <summary>
@@ -107,6 +109,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 string? name = null;
                 string? endpoint = null;
+                string? id = null;
+                string? scope = null;
+                string? audience = null;
+                string? publisher = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
@@ -119,9 +125,31 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     name = mcpServerUniqueNameElement.GetString();
                 }
 
-                if (serverElement.TryGetProperty("url", out var urlElement) && nameElement.ValueKind == JsonValueKind.String)
+                if (serverElement.TryGetProperty("url", out var urlElement) &&
+                    urlElement.ValueKind == JsonValueKind.String)
                 {
                     endpoint = urlElement.GetString();
+                }
+
+                if (serverElement.TryGetProperty("id", out var idElement) &&
+                    idElement.ValueKind == JsonValueKind.String)
+                {
+                    id = idElement.GetString();
+                }
+                if (serverElement.TryGetProperty("scope", out var scopeElement) &&
+                    scopeElement.ValueKind == JsonValueKind.String)
+                {
+                    scope = scopeElement.GetString();
+                }
+                if (serverElement.TryGetProperty("audience", out var audienceElement) &&
+                    audienceElement.ValueKind == JsonValueKind.String)
+                {
+                    audience = audienceElement.GetString();
+                }
+                if (serverElement.TryGetProperty("publisher", out var publisherElement) &&
+                    publisherElement.ValueKind == JsonValueKind.String)
+                {
+                    publisher = publisherElement.GetString();
                 }
 
                 // Both Name and Endpoint are required
@@ -133,7 +161,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 return new MCPServerConfig
                 {
                     mcpServerName = name,
-                    url = endpoint
+                    url = endpoint,
+                    id = id ?? string.Empty,
+                    scope = scope ?? string.Empty,
+                    audience = audience ?? string.Empty,
+                    publisher = publisher ?? string.Empty
                 };
             }
             catch (Exception)
@@ -154,11 +186,35 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 string? name = null;
+                string? id = null;
+                string? scope = null;
+                string? audience = null;
+                string? publisher = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
                 {
                     name = nameElement.GetString();
+                }
+                if (serverElement.TryGetProperty("id", out var idElement) &&
+                    idElement.ValueKind == JsonValueKind.String)
+                {
+                    id = idElement.GetString();
+                }
+                if (serverElement.TryGetProperty("scope", out var scopeElement) &&
+                    scopeElement.ValueKind == JsonValueKind.String)
+                {
+                    scope = scopeElement.GetString();
+                }
+                if (serverElement.TryGetProperty("audience", out var audienceElement) &&
+                    audienceElement.ValueKind == JsonValueKind.String)
+                {
+                    audience = audienceElement.GetString();
+                }
+                if (serverElement.TryGetProperty("publisher", out var publisherElement) &&
+                    publisherElement.ValueKind == JsonValueKind.String)
+                {
+                    publisher = publisherElement.GetString();
                 }
 
                 // Both Name and ServerName are required
@@ -173,7 +229,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 return new MCPServerConfig
                 {
                     mcpServerName = name,
-                    url = fullUrl
+                    url = fullUrl,
+                    id = id ?? string.Empty,
+                    scope = scope ?? string.Empty,
+                    audience = audience ?? string.Empty,
+                    publisher = publisher ?? string.Empty
                 };
             }
             catch (Exception)
