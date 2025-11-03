@@ -4,21 +4,22 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using Microsoft.Agents.A365.Tooling.Models;
+using Microsoft.Agents.A365.Tooling.Services;
+using Microsoft.Agents.A365.Tooling.Utils;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.Builder;
+using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using Microsoft.Agents.A365.Tooling.Services;
-using Microsoft.Agents.A365.Tooling.Models;
-using Microsoft.Agents.A365.Tooling.Utils;
-using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Handlers;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Agent Framework scenarios.
@@ -54,6 +55,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="initialTools">The existing tools to add servers to</param>
     /// <param name="agentUserId">Agent User ID for the agent</param>
     /// <param name="environmentId">Environment ID for the environment</param>
+    /// <param name="turnContext">Turn context for the current request</param>
+    /// <param name="userAuthorization">User authorization information</param>
     /// <param name="authToken">Authentication token to access the MCP servers</param>
     /// <returns>New Agent instance with all MCP tools, or agent with original tools if no new servers</returns>
     public async Task<AIAgent> AddToolServersToAgent(
@@ -62,6 +65,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         IList<AITool> initialTools,
         string agentUserId,
         string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
         string? authToken = null)
     {
         if (chatClient == null)
@@ -90,7 +95,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             {
                 try
                 {
-                    var mcpTools = await GetTools(server, environmentId, authToken);
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
                     // Add the MCP tools
                     updatedTools.AddRange(mcpTools.Cast<AITool>());
                     
@@ -121,97 +126,5 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentUserId, environmentId);
             throw;
         }
-    }
-
-    private async Task<IList<McpClientTool>> GetTools(MCPServerConfig mCPServerConfig, string environmentId, string authToken)
-    {
-        try
-        {
-            // Validate the server name
-            if (string.IsNullOrWhiteSpace(mCPServerConfig.mcpServerName))
-            {
-                throw new ArgumentException("MCP Server name cannot be null or empty", nameof(mCPServerConfig.mcpServerName));
-            }
-
-            // Use custom HTTP-based implementation since MCP client library doesn't work
-            var mcpClient = await CreateMcpClientWithAuthHandlers(new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
-            var tools = await mcpClient.ListToolsAsync();
-
-            return tools;
-        }
-        catch (HttpRequestException httpEx)
-        {
-            throw new InvalidOperationException($"HTTP error connecting to MCP server '{mCPServerConfig.mcpServerName}' at '{mCPServerConfig.url}': {httpEx.Message}", httpEx);
-        }
-        catch (ArgumentException argEx)
-        {
-            throw new InvalidOperationException($"Invalid configuration for MCP server '{mCPServerConfig.mcpServerName}': {argEx.Message}", argEx);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed to get tools from MCP server '{mCPServerConfig.mcpServerName}' at '{mCPServerConfig.url}': {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Creates an MCP client with authentication handlers similar to your reference implementation
-    /// </summary>
-    private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(Uri endpoint, string clientName, string environmentId, string authToken)
-    {
-        // Create HTTP client handler chain for MCP service authentication
-        var httpClientHandler = new HttpClientHandler();
-
-        // WARNING: Only use this in development/testing - never in production!
-        // This bypasses SSL certificate validation
-        var isDevScenario = IsDevScenario();
-        if (isDevScenario)
-        {
-            httpClientHandler.ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-        }
-
-        // Create a simple authentication handler that adds the bearer token
-        var authHandler = new BearerTokenHandler(authToken)
-        {
-            InnerHandler = httpClientHandler
-        };
-
-        // Create logging handler (optional - for debugging HTTP requests)
-        var loggingHandler = new HttpLoggingHandler(this._logger)
-        {
-            InnerHandler = authHandler
-        };
-
-        // Setup SSE client transport options without manual token management
-        var options = new SseClientTransportOptions
-        {
-            Endpoint = endpoint,
-            TransportMode = HttpTransportMode.AutoDetect,
-        };
-
-        // Create HTTP client with the authentication handler chain
-        var httpClient = new HttpClient(loggingHandler);
-        httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
-
-        var clientTransport = new SseClientTransport(options, httpClient);
-
-        try
-        {
-            return await McpClientFactory.CreateAsync(clientTransport);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed to create MCP client for endpoint '{endpoint}': {ex.Message}", ex);
-        }
-    }
-
-    private static bool IsDevScenario()
-    {
-        // Check environment variable first, default to dev if not set
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                         Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
-                         "Development";
-
-        return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
     }
 }

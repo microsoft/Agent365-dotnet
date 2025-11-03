@@ -3,6 +3,8 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Tooling.Models;
+using ModelContextProtocol.Client;
+using Microsoft.Agents.Builder;
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
@@ -19,5 +21,16 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
         Task<List<MCPServerConfig>> ListToolServers(string agentInstanceId, string environmentId, string authToken);
+
+        /// <summary>
+        /// Gets the MCP Client Tools from the specified MCP server.
+        /// </summary>
+        /// <param name="turnContext">The turn context.</param>
+        /// <param name="mCPServerConfig">The MCP server configuration.</param>
+        /// <param name="environmentId">The environment ID.</param>
+        /// <param name="authToken">The authentication token.</param>
+        /// <returns>MCP Client Tools</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        Task<IList<McpClientTool>> GetMcpClientTools(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string environmentId, string authToken);
     }
 }

@@ -4,11 +4,13 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
+using Microsoft.Agents.Builder;
+using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Provides methods for managing MCP tool server registrations for Agent Framework scenarios.
@@ -24,6 +26,8 @@ public interface IMcpToolRegistrationService
     /// <param name="initialTools">The existing tools to keep and add MCP tools to.</param>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
     /// <param name="environmentId">Environment Id for the environment.</param>
+    /// <param name="turnContext">Turn context for the current request</param>
+    /// <param name="userAuthorization">User authorization information</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
     /// <returns>A new AIAgent instance with existing tools plus MCP tools.</returns>
     Task<AIAgent> AddToolServersToAgent(
@@ -32,5 +36,7 @@ public interface IMcpToolRegistrationService
         IList<AITool> initialTools,
         string agentUserId,
         string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
         string? authToken = null);
 }
