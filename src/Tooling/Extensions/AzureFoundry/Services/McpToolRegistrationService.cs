@@ -73,16 +73,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        // Acquire token if not explicitly supplied
         if (authToken == null)
         {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).Result;
+            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
         }
 
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,

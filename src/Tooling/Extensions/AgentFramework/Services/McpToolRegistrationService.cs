@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.A365.Tooling.Utils;
@@ -74,11 +75,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (string.IsNullOrWhiteSpace(authToken))
+        if (authToken == null)
         {
-            throw new ArgumentException("Auth token cannot be null or empty.", nameof(authToken));
+            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
         }
-        
+
         try
         {
             // Step 2: Now update agent by adding MCP tools
