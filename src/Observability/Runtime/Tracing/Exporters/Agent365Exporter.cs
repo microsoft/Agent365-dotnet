@@ -51,6 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public override ExportResult Export(in Batch<Activity> batch)
         {
             var anyFailure = false;
+            _logger.LogInformation("Agent365Exporter: Exporting batch of {Count} spans.", batch.Count);
 
             try
             {
@@ -58,7 +59,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var groups = PartitionByIdentity(batch);
                 if (groups.Count == 0)
                 {
-                    _logger.LogDebug("Agent365Exporter: No spans with tenant/agent identity found; nothing exported.");
+                    _logger.LogInformation("Agent365Exporter: No spans with tenant/agent identity found; nothing exported.");
                     return ExportResult.Success;
                 }
 
