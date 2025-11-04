@@ -91,6 +91,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     try
                     {
                         token = _options.TokenResolver!(agentId, tenantId).GetAwaiter().GetResult();
+                        _logger.LogInformation("Agent365Exporter: Obtained token for agent {Agent} tenant {Tenant}.", agentId, tenantId);
                     }
                     catch (Exception ex)
                     {
@@ -103,8 +104,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     HttpResponseMessage? resp = null;
                     try
                     {
+                        _logger.LogInformation("Agent365Exporter: Sending {Count} spans to {Uri} for agent {Agent} tenant {Tenant}.",
+                            activities.Count, requestUri, agentId, tenantId);
+
                         resp = _httpClient.SendAsync(request).GetAwaiter().GetResult();
-                        if (!resp.IsSuccessStatusCode)
+
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.",
+                                (int)resp.StatusCode, agentId, tenantId);
+                        }
+                        else
                         {
                             anyFailure = true;
                             _logger.LogWarning("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.",
