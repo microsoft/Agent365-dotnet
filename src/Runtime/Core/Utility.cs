@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Runtime.Utils
     /// </summary>
     public static class Utility
     {
-        private const string McpPlatformProdAuthenticationScope = "https://api.powerplatform.com/.default";
+        private const string McpPlatformProdAuthenticationScope = "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default";
 
         /// <summary>
         /// Gets the MCP platform authentication scope.
