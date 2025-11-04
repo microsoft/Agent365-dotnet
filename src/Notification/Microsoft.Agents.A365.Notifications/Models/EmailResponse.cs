@@ -1,10 +1,13 @@
 ﻿using Microsoft.Agents.Core.Models;
+using Microsoft.Agents.Core.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Microsoft.Agents.A365.Notifications.Models
 {
     /// <summary>
     /// Represents an email response entity containing HTML body content.
     /// </summary>
+    [EntityName(name:"emailNotification")]
     public class EmailResponse : Entity
     {
         /// <summary>
@@ -15,10 +18,11 @@ namespace Microsoft.Agents.A365.Notifications.Models
         /// <summary>
         /// Initializes a new instance of the <see cref="EmailResponse"/> class.
         /// </summary>
-        /// <param name="emailHtmlBody">The HTML body content of the email response.</param>
-        public EmailResponse(string? emailHtmlBody = default) : base("emailResponse")
+        /// <param name="htmlBody">The HTML body content of the email response.</param>
+        [JsonConstructor]
+        public EmailResponse(string? htmlBody = default) : base("emailResponse")
         {
-            HtmlBody = emailHtmlBody;
+            HtmlBody = htmlBody;
         }
     }
 
