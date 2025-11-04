@@ -50,7 +50,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>The export result indicating success or failure.</returns>
         public override ExportResult Export(in Batch<Activity> batch)
         {
-            var anyFailure = false;
             _logger.LogInformation("Agent365Exporter: Exporting batch of {Count} spans.", batch.Count);
 
             try
@@ -108,20 +107,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                         resp = _httpClient.SendAsync(request).GetAwaiter().GetResult();
 
-                        if (resp.IsSuccessStatusCode)
-                        {
-                            _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
-                        }
-                        else
-                        {
-                            anyFailure = true;
-                            _logger.LogWarning("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
-                        }
+                        _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
+
+                        return resp.IsSuccessStatusCode ? ExportResult.Success : ExportResult.Failure;
                     }
                     catch (Exception ex)
                     {
-                        anyFailure = true;
                         _logger.LogError(ex, "Agent365Exporter: Exception exporting spans for agent {Agent} tenant {Tenant}.", agentId, tenantId);
+                        return ExportResult.Failure;
                     }
                     finally
                     {
@@ -135,7 +128,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 return ExportResult.Failure;
             }
 
-            return anyFailure ? ExportResult.Failure : ExportResult.Success;
+            return ExportResult.Success;
         }
 
         // Extract (tenant, agent) per activity. Prefer tags; fallback to per-activity baggage.
