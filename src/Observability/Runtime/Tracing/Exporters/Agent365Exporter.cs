@@ -104,21 +104,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     HttpResponseMessage? resp = null;
                     try
                     {
-                        _logger.LogInformation("Agent365Exporter: Sending {Count} spans to {Uri} for agent {Agent} tenant {Tenant}.",
-                            activities.Count, requestUri, agentId, tenantId);
+                        _logger.LogInformation("Agent365Exporter: Sending {Count} spans to {Uri} for agent {Agent} tenant {Tenant}.", activities.Count, requestUri, agentId, tenantId);
 
                         resp = _httpClient.SendAsync(request).GetAwaiter().GetResult();
 
                         if (resp.IsSuccessStatusCode)
                         {
-                            _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.",
-                                (int)resp.StatusCode, agentId, tenantId);
+                            _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
                         }
                         else
                         {
                             anyFailure = true;
-                            _logger.LogWarning("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.",
-                                (int)resp.StatusCode, agentId, tenantId);
+                            _logger.LogWarning("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
                         }
                     }
                     catch (Exception ex)
