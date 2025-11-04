@@ -64,6 +64,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         PersistentAgentsClient agentClient,
         string agentInstanceId,
         string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
         string? authToken = null)
     {
         if (agentClient == null)
@@ -74,7 +76,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,
@@ -113,7 +115,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
