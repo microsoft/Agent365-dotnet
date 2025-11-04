@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -101,6 +102,26 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                         Span = BuildOtlpSpan(activity)
                     }
                 }
+            };
+
+            return SerializePayload(payload);
+        }
+
+        /// <summary>
+        /// Formats the log data for the OTLP payload.
+        /// </summary>
+        /// <param name="invokeAgentData">The InvokeAgentData containing the log information.</param>
+        /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
+        public static string FormatLogData(InvokeAgentData invokeAgentData)
+        {
+            var payload = new
+            {
+                invokeAgentData.Name,
+                invokeAgentData.Attributes,
+                StartTimeUnixNano = invokeAgentData.StartTime.HasValue ? ToUnixNanos(invokeAgentData.StartTime.Value.UtcDateTime) : 0,
+                EndTimeUnixNano = invokeAgentData.EndTime.HasValue ? ToUnixNanos(invokeAgentData.EndTime.Value.UtcDateTime) : 0,
+                invokeAgentData.SpanId,
+                invokeAgentData.ParentSpanId
             };
 
             return SerializePayload(payload);

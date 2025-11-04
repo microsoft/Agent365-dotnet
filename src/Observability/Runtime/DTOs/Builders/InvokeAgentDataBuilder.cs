@@ -1,18 +1,63 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
+﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
     /// <summary>
-    /// Builds attributes for invoke_agent operations that can be used for both tracing and logging.
+    /// Builds an InvokeAgentData instance
     /// </summary>
-    public static class InvokeAgentAttributesBuilder
+    public class InvokeAgentDataBuilder
     {
+        /// <summary>
+        /// Builds complete data for an invoke_agent operation.
+        /// </summary>
+        /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
+        /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="request">The request content for the invoked agent.</param>
+        /// <param name="callerAgentDetails">The details of the caller agent.</param>
+        /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
+        /// <param name="inputMessages">Optional input messages to include in the telemetry.</param>
+        /// <param name="outputMessages">Optional output messages to include in the telemetry.</param>
+        /// <param name="startTime">Optional custom start time for the operation.</param>
+        /// <param name="endTime">Optional custom end time for the operation.</param>
+        /// <param name="spanId">Optional span ID for the operation.</param>
+        /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
+        public static InvokeAgentData Build(
+            InvokeAgentDetails invokeAgentDetails,
+            TenantDetails tenantDetails,
+            Request? request = null,
+            AgentDetails? callerAgentDetails = null,
+            CallerDetails? callerDetails = null,
+            string? conversationId = null,
+            string[]? inputMessages = null,
+            string[]? outputMessages = null,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null)
+        {
+            var attributes = BuildAttributes(
+                invokeAgentDetails,
+                tenantDetails,
+                request,
+                callerAgentDetails,
+                callerDetails,
+                conversationId,
+                inputMessages,
+                outputMessages);
+
+            return new InvokeAgentData(
+                attributes,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+        }
+
         /// <summary>
         /// Builds all attributes for an invoke_agent operation.
         /// </summary>
@@ -22,14 +67,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="callerAgentDetails">The details of the caller agent.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
+        /// <param name="inputMessages">Optional input messages to include in the attributes.</param>
+        /// <param name="outputMessages">Optional output messages to include in the attributes.</param>
         /// <returns>A dictionary of attribute key-value pairs.</returns>
-        public static Dictionary<string, object?> BuildAttributes(
+        private static Dictionary<string, object?> BuildAttributes(
             InvokeAgentDetails invokeAgentDetails,
             TenantDetails tenantDetails,
             Request? request = null,
             AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
-            string? conversationId = null)
+            string? conversationId = null,
+            string[]? inputMessages = null,
+            string[]? outputMessages = null)
         {
             var attributes = new Dictionary<string, object?>();
 
@@ -46,33 +95,52 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             AddIfNotNull(attributes, OpenTelemetryConstants.SessionIdKey, invokeAgentDetails.SessionId);
 
             // Add request details
-            if (request != null)
-            {
-                AddRequestDetails(attributes, request);
-            }
+            AddRequestDetails(attributes, request);
 
             // Add conversation ID
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Add caller details
-            if (callerDetails != null)
-            {
-                AddCallerDetails(attributes, callerDetails);
-            }
+            AddCallerDetails(attributes, callerDetails);
 
             // Add caller agent details
-            if (callerAgentDetails != null)
-            {
-                AddCallerAgentDetails(attributes, callerAgentDetails);
-            }
+            AddCallerAgentDetails(attributes, callerAgentDetails);
+
+            // Add input messages
+            AddInputMessagesAttributes(attributes, inputMessages);
+
+            // Add output messages
+            AddOutputMessagesAttributes(attributes, outputMessages);
 
             return attributes;
         }
 
         /// <summary>
+        /// Adds attributes for input messages.
+        /// </summary>
+        private static void AddInputMessagesAttributes(IDictionary<string, object?> attributes, string[]? messages)
+        {
+            if (messages != null && messages.Length > 0)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
+            }
+        }
+
+        /// <summary>
+        /// Adds attributes for output messages.
+        /// </summary>
+        private static void AddOutputMessagesAttributes(IDictionary<string, object?> attributes, string[]? messages)
+        {
+            if (messages != null && messages.Length > 0)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+            }
+        }
+
+        /// <summary>
         /// Adds agent details to the attributes dictionary.
         /// </summary>
-        private static void AddAgentDetails(Dictionary<string, object?> attributes, AgentDetails agentDetails)
+        private static void AddAgentDetails(IDictionary<string, object?> attributes, AgentDetails agentDetails)
         {
             if (agentDetails == null) return;
 
@@ -87,7 +155,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds tenant details to the attributes dictionary.
         /// </summary>
-        private static void AddTenantDetails(Dictionary<string, object?> attributes, TenantDetails tenantDetails)
+        private static void AddTenantDetails(IDictionary<string, object?> attributes, TenantDetails tenantDetails)
         {
             if (tenantDetails == null) return;
 
@@ -97,12 +165,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds endpoint details to the attributes dictionary.
         /// </summary>
-        private static void AddEndpointDetails(Dictionary<string, object?> attributes, Uri endpoint)
+        private static void AddEndpointDetails(IDictionary<string, object?> attributes, Uri endpoint)
         {
             if (endpoint == null) return;
 
             AddIfNotNull(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
-            
+
             // Only record port if it is different from 443
             if (endpoint.Port != 443)
             {
@@ -113,8 +181,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds request details to the attributes dictionary.
         /// </summary>
-        private static void AddRequestDetails(Dictionary<string, object?> attributes, Request request)
+        private static void AddRequestDetails(IDictionary<string, object?> attributes, Request? request)
         {
+            if (request == null) return;
+
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceIdKey, request.SourceMetadata?.Id);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceNameKey, request.SourceMetadata?.Name);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request.SourceMetadata?.Description);
@@ -124,8 +194,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds caller details to the attributes dictionary.
         /// </summary>
-        private static void AddCallerDetails(Dictionary<string, object?> attributes, CallerDetails callerDetails)
+        private static void AddCallerDetails(IDictionary<string, object?> attributes, CallerDetails? callerDetails)
         {
+            if (callerDetails == null) return;
+
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
@@ -136,8 +208,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds caller agent details to the attributes dictionary.
         /// </summary>
-        private static void AddCallerAgentDetails(Dictionary<string, object?> attributes, AgentDetails callerAgentDetails)
+        private static void AddCallerAgentDetails(IDictionary<string, object?> attributes, AgentDetails? callerAgentDetails)
         {
+            if (callerAgentDetails == null) return;
+
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
@@ -149,7 +223,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Adds a key-value pair to the dictionary if the value is not null.
         /// </summary>
-        private static void AddIfNotNull(Dictionary<string, object?> attributes, string key, object? value)
+        private static void AddIfNotNull(IDictionary<string, object?> attributes, string key, object? value)
         {
             if (value != null)
             {

@@ -1,10 +1,10 @@
 using FluentAssertions;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
+namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
 {
     [TestClass]
-    public class InvokeAgentTelemetryTests
+    public class InvokeAgentDataTests
     {
         [TestMethod]
         public void Constructor_WithMinimalParameters_CreatesInstance()
@@ -13,7 +13,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?> { { "key1", "value1" } };
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.Should().NotBeNull();
@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var parentSpanId = "parent-span-456";
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(
+            var telemetry = new InvokeAgentData(
                 attributes,
                 startTime,
                 endTime,
@@ -62,7 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.SpanId.Should().NotBeNullOrEmpty();
@@ -77,7 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var customSpanId = "custom-span-id-789";
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, spanId: customSpanId);
+            var telemetry = new InvokeAgentData(attributes, spanId: customSpanId);
 
             // Assert
             telemetry.SpanId.Should().Be(customSpanId);
@@ -92,7 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var endTime = DateTimeOffset.UtcNow;
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, startTime, endTime);
+            var telemetry = new InvokeAgentData(attributes, startTime, endTime);
 
             // Assert
             telemetry.Duration.Should().BeCloseTo(TimeSpan.FromMinutes(10), TimeSpan.FromMilliseconds(100));
@@ -106,7 +106,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var startTime = DateTimeOffset.UtcNow;
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, startTime);
+            var telemetry = new InvokeAgentData(attributes, startTime);
 
             // Assert
             telemetry.Duration.Should().Be(TimeSpan.Zero);
@@ -120,7 +120,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var endTime = DateTimeOffset.UtcNow;
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, endTime: endTime);
+            var telemetry = new InvokeAgentData(attributes, endTime: endTime);
 
             // Assert
             telemetry.Duration.Should().Be(TimeSpan.Zero);
@@ -133,7 +133,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.Duration.Should().Be(TimeSpan.Zero);
@@ -148,7 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var endTime = startTime.AddMinutes(-5);
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, startTime, endTime);
+            var telemetry = new InvokeAgentData(attributes, startTime, endTime);
 
             // Assert
             telemetry.Duration.Should().BeNegative();
@@ -162,7 +162,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.StartTime.Should().BeNull();
@@ -175,7 +175,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.EndTime.Should().BeNull();
@@ -188,7 +188,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.ParentSpanId.Should().BeNull();
@@ -202,7 +202,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var parentSpanId = "parent-abc-123";
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, parentSpanId: parentSpanId);
+            var telemetry = new InvokeAgentData(attributes, parentSpanId: parentSpanId);
 
             // Assert
             telemetry.ParentSpanId.Should().Be(parentSpanId);
@@ -213,7 +213,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
         {
             // Arrange
             var attributes = new Dictionary<string, object?> { { "key1", "value1" } };
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Act & Assert
             telemetry.Attributes.Should().BeAssignableTo<IReadOnlyDictionary<string, object?>>();
@@ -231,7 +231,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             };
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.Attributes.Should().HaveCount(3);
@@ -247,7 +247,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.Attributes.Should().NotBeNull();
@@ -263,7 +263,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var endTime = new DateTimeOffset(2024, 1, 1, 10, 5, 30, TimeSpan.Zero);
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes, startTime, endTime);
+            var telemetry = new InvokeAgentData(attributes, startTime, endTime);
 
             // Assert
             telemetry.Duration.Should().Be(TimeSpan.FromMinutes(5).Add(TimeSpan.FromSeconds(30)));
@@ -276,9 +276,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             var attributes = new Dictionary<string, object?>();
 
             // Act
-            var telemetry1 = new InvokeAgentTelemetry(attributes);
-            var telemetry2 = new InvokeAgentTelemetry(attributes);
-            var telemetry3 = new InvokeAgentTelemetry(attributes);
+            var telemetry1 = new InvokeAgentData(attributes);
+            var telemetry2 = new InvokeAgentData(attributes);
+            var telemetry3 = new InvokeAgentData(attributes);
 
             // Assert
             telemetry1.SpanId.Should().NotBe(telemetry2.SpanId);
@@ -303,7 +303,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Contracts
             };
 
             // Act
-            var telemetry = new InvokeAgentTelemetry(attributes);
+            var telemetry = new InvokeAgentData(attributes);
 
             // Assert
             telemetry.Attributes.Should().HaveCount(8);

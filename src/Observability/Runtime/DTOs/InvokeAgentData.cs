@@ -1,22 +1,22 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
+namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
 {
     /// <summary>
     /// Encapsulates all telemetry data for an invoke_agent operation, including attributes, timing, and span information.
     /// </summary>
-    public sealed class InvokeAgentTelemetry
+    public struct InvokeAgentData
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="InvokeAgentTelemetry"/> class.
+        /// Initializes a new instance of the <see cref="InvokeAgentData"/> struct.
         /// </summary>
         /// <param name="attributes">The telemetry attributes (tags).</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
-        public InvokeAgentTelemetry(
+        public InvokeAgentData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
@@ -29,6 +29,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             SpanId = spanId ?? Guid.NewGuid().ToString();
             ParentSpanId = parentSpanId;
         }
+
+        /// <summary>
+        /// Gets the name of the operation.
+        /// </summary>
+        public readonly string Name => "InvokeAgent";
 
         /// <summary>
         /// Gets the telemetry attributes (tags) for the invoke_agent operation.
@@ -48,7 +53,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// Gets the span ID for the operation, if provided.
         /// </summary>
-        public string? SpanId { get; }
+        public string SpanId { get; }
 
         /// <summary>
         /// Gets the parent span ID for distributed tracing, if provided.

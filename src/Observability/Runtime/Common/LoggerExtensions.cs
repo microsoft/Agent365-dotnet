@@ -1,5 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -18,6 +21,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="callerAgentDetails"></param>
         /// <param name="callerDetails"></param>
         /// <param name="conversationId"></param>
+        /// <param name="inputMessages">Optional input messages to include in the log.</param>
+        /// <param name="outputMessages">Optional output messages to include in the log.</param>
         public static void LogInvokeAgent(
             this ILogger logger,
             InvokeAgentDetails invokeAgentDetails, 
@@ -25,21 +30,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             Request? request = null, 
             AgentDetails? callerAgentDetails = null, 
             CallerDetails? callerDetails = null, 
-            string? conversationId = null)
+            string? conversationId = null,
+            string[]? inputMessages = null,
+            string[]? outputMessages = null)
         {
-            // Build attributes using the same builder as InvokeAgentScope
-            var attributes = InvokeAgentAttributesBuilder.BuildAttributes(
+            var invokeAgentData = InvokeAgentDataBuilder.Build(
                 invokeAgentDetails,
                 tenantDetails,
                 request,
                 callerAgentDetails,
                 callerDetails,
-                conversationId);
+                conversationId,
+                inputMessages,
+                outputMessages);
 
-            logger.LogInformation(
+            logger.Log(
+                LogLevel.Information,
                 new EventId(1001, "InvokeAgent"),
-                "InvokeAgent",
-                attributes);
+                invokeAgentData,
+                null,
+                LogFormatter
+            );
         }
         
         ///// <summary>
@@ -75,5 +86,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         //{
         //    // TODO
         //}
+
+        private static string LogFormatter(InvokeAgentData data, Exception? ex)
+        {
+            return ExportFormatter.FormatLogData(data);
+        }
     }
 }
