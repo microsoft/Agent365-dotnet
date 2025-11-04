@@ -3,7 +3,6 @@
 // ------------------------------------------------------------------------------
 
 using System.Diagnostics;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
@@ -41,20 +40,44 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     ? OperationName
                     : $"invoke_agent {invokeAgentDetails.Details.AgentName}")
         {
-            // Build all attributes using the shared builder
-            var attributes = InvokeAgentAttributesBuilder.BuildAttributes(
-                invokeAgentDetails,
-                tenantDetails,
-                request,
-                callerAgentDetails,
-                callerDetails,
-                conversationId);
+            var (endpoint, _, sessionId) = invokeAgentDetails;
 
-            // Apply all attributes to the activity
-            RecordAttributes(attributes);
+            SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
+            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceIdKey, request?.SourceMetadata?.Id);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceNameKey, request?.SourceMetadata?.Name);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request?.SourceMetadata?.Description);
+            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
+            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+
+            // Only record port if it is different from 443
+            if (endpoint.Port != 443)
+            {
+                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+            }
+
+            // Set caller details tags
+            if (callerDetails != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUserIdKey, callerDetails.CallerUserId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+            }
+
+            // Set caller agent details tags
+            if (callerAgentDetails != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
+            }
         }
 
-        // TODO: Refactor these methods to use InvokeAgentAttributesBuilder
         /// <summary>
         /// Records response information for telemetry tracking.
         /// </summary>
