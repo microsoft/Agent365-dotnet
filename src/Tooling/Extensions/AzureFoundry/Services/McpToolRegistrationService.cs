@@ -11,7 +11,6 @@ using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Agents.A365.Runtime.Authentication;
-using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Handlers;
 using Microsoft.Agents.A365.Tooling;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -51,38 +50,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         _mcpServerConfigurationService = mcpToolServerConfigurationService;
     }
 
-    /// <inheritdoc />
-    public void AddToolServersToAgent(
-        PersistentAgentsClient agentClient,
-        string agentInstanceId,
-        string environmentId,
-        string? authToken = null)
-    {
-        if (agentClient == null)
-        {
-            throw new ArgumentNullException(nameof(agentClient));
-        }
-
-        try
-        {
-            // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
-
-            agentClient.Administration.UpdateAgent(
-                agentInstanceId,
-                tools: toolDefinitions,
-                toolResources: toolResources);
-
-            _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
-            throw;
-        }
-    }
-
-    /// <inheritdoc />
+    /// <summary>
+    /// Add new MCP servers to the agent by updating the PersistentAgentsClient.
+    /// </summary>
+    /// <param name="agentClient">PersistentAgentsClient instance for the agent.</param>
+    /// <param name="agentInstanceId">The ID of the agent instance.</param>
+    /// <param name="environmentId">The ID of the environment.</param>
+    /// <param name="userAuthorization">User authorization information.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="authToken">Authentication token for MCP server access.</param>
+    /// <exception cref="ArgumentNullException"></exception>
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentInstanceId,
@@ -96,16 +73,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        // Acquire token if not explicitly supplied
         if (authToken == null)
         {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).Result;
+            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
         }
 
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,
@@ -127,7 +103,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string environmentId,
-        string authToken)
+        string authToken,
+        ITurnContext turnContext)
     {
         // TODO: Make this method private 
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
@@ -208,7 +185,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await GetTools(server, environmentId, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)

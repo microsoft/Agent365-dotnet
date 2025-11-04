@@ -14,9 +14,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
     using Microsoft.Agents.A365.Tooling.Utils;
-    using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Handlers;
     using Microsoft.SemanticKernel;
-    using ModelContextProtocol.Client;
 
     /// <summary>
     /// Provides services related to tools in the Semantic Kernel.
@@ -75,7 +73,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = GetTools(turnContext, server, environmentId, authToken).GetAwaiter().GetResult();
+                var listAvailableToolsForServer = _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken).GetAwaiter().GetResult();
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
