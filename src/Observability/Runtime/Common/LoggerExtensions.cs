@@ -11,16 +11,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public static partial class LoggerExtensions
     {
+        private const string InvokeAgentEventName = "InvokeAgent";
+        private static EventId InvokeAgentEventId = new EventId(1001, InvokeAgentEventName);
+        private const string ExecuteInferenceEventName = "ExecuteInference";
+        private static EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
+        private const string ExecuteToolEventName = "ExecuteTool";
+        private static EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
+
         /// <summary>
         /// Logs an invoke_agent event.
         /// </summary>
         /// <param name="logger"></param>
-        /// <param name="invokeAgentDetails"></param>
-        /// <param name="tenantDetails"></param>
-        /// <param name="request"></param>
-        /// <param name="callerAgentDetails"></param>
-        /// <param name="callerDetails"></param>
-        /// <param name="conversationId"></param>
+        /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
+        /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="request">The request content for the invoked agent.</param>
+        /// <param name="callerAgentDetails">The details of the caller agent.</param>
+        /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
         /// <param name="inputMessages">Optional input messages to include in the log.</param>
         /// <param name="outputMessages">Optional output messages to include in the log.</param>
         public static void LogInvokeAgent(
@@ -34,7 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             string[]? inputMessages = null,
             string[]? outputMessages = null)
         {
-            var invokeAgentData = InvokeAgentDataBuilder.Build(
+            var data = InvokeAgentDataBuilder.Build(
                 invokeAgentDetails,
                 tenantDetails,
                 request,
@@ -46,48 +53,107 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
             logger.Log(
                 LogLevel.Information,
-                new EventId(1001, "InvokeAgent"),
-                invokeAgentData,
+                InvokeAgentEventId,
+                data,
                 null,
                 LogFormatter
             );
         }
-        
-        ///// <summary>
-        ///// Logs an inference call event.
-        ///// </summary>
-        ///// <param name="logger"></param>
-        ///// <param name="inferenceCallDetails"></param>
-        ///// <param name="agentDetails"></param>
-        ///// <param name="tenantDetails"></param>
-        //[LoggerMessage(LogLevel.Information)]
-        //public static void LogInferenceCall(
-        //    this ILogger logger,
-        //    [LogProperties(OmitReferenceName = true)] in InferenceCallDetails inferenceCallDetails,
-        //    [LogProperties(OmitReferenceName = true)] in AgentDetails agentDetails,
-        //    [LogProperties(OmitReferenceName = true)] in TenantDetails tenantDetails)
-        //{
-        //    // TODO
-        //}
 
-        ///// <summary>
-        ///// Logs a tool call event.
-        ///// </summary>
-        ///// <param name="logger"></param>
-        ///// <param name="toolCallDetails"></param>
-        ///// <param name="agentDetails"></param>
-        ///// <param name="tenantDetails"></param>
-        //[LoggerMessage(LogLevel.Information)]
-        //public static void LogToolCall(
-        //    this ILogger logger,
-        //    [LogProperties(OmitReferenceName = true)] in ToolCallDetails toolCallDetails,
-        //    [LogProperties(OmitReferenceName = true)] in AgentDetails agentDetails,
-        //    [LogProperties(OmitReferenceName = true)] in TenantDetails tenantDetails)
-        //{
-        //    // TODO
-        //}
+        /// <summary>
+        /// Logs an inference event.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="inferenceCallDetails">The details of the inference call.</param>
+        /// <param name="agentDetails">The details of the agent.</param>
+        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
+        /// <param name="inputMessages">Optional input messages to include in the log.</param>
+        /// <param name="outputMessages">Optional output messages to include in the log.</param>
+        /// <param name="startTime">Optional start time of the inference.</param>
+        /// <param name="endTime">Optional end time of the inference.</param>
+        /// <param name="spanId">Optional span ID for tracing.</param>
+        /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
+        public static void LogInferenceCall(
+            this ILogger logger,
+            InferenceCallDetails inferenceCallDetails,
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            string? conversationId = null,
+            string[]? inputMessages = null,
+            string[]? outputMessages = null,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null)
+        {
+            var data = ExecuteInferenceDataBuilder.Build(
+                inferenceCallDetails,
+                agentDetails,
+                tenantDetails,
+                conversationId,
+                inputMessages,
+                outputMessages,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
 
-        private static string LogFormatter(InvokeAgentData data, Exception? ex)
+            logger.Log(
+                LogLevel.Information,
+                ExecuteInferenceEventId,
+                data,
+                null,
+                LogFormatter
+            );
+        }
+
+        /// <summary>
+        /// Logs an execute_tool event.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="toolCallDetails">The details of the tool call.</param>
+        /// <param name="agentDetails">The details of the agent.</param>
+        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
+        /// <param name="responseContent">Optional response content to include in the log.</param>
+        /// <param name="startTime">Optional start time of the tool execution.</param>
+        /// <param name="endTime">Optional end time of the tool execution.</param>
+        /// <param name="spanId">Optional span ID for tracing.</param>
+        /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
+        public static void LogToolCall(
+            this ILogger logger,
+            ToolCallDetails toolCallDetails,
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            string? conversationId = null,
+            string? responseContent = null,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null)
+        {
+            var data = ExecuteToolDataBuilder.Build(
+                toolCallDetails,
+                agentDetails,
+                tenantDetails,
+                conversationId,
+                responseContent,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+
+            logger.Log(
+                LogLevel.Information,
+                ExecuteToolEventId,
+                data,
+                null,
+                LogFormatter
+            );
+        }
+
+        private static string LogFormatter(BaseData data, Exception? ex)
         {
             return ExportFormatter.FormatLogData(data);
         }

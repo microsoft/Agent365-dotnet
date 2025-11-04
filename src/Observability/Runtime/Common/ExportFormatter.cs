@@ -110,18 +110,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Formats the log data for the OTLP payload.
         /// </summary>
-        /// <param name="invokeAgentData">The InvokeAgentData containing the log information.</param>
+        /// <param name="data">The operation data containing the log information.</param>
         /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
-        public static string FormatLogData(InvokeAgentData invokeAgentData)
+        public static string FormatLogData(BaseData data)
         {
             var payload = new
             {
-                invokeAgentData.Name,
-                invokeAgentData.Attributes,
-                StartTimeUnixNano = invokeAgentData.StartTime.HasValue ? ToUnixNanos(invokeAgentData.StartTime.Value.UtcDateTime) : 0,
-                EndTimeUnixNano = invokeAgentData.EndTime.HasValue ? ToUnixNanos(invokeAgentData.EndTime.Value.UtcDateTime) : 0,
-                invokeAgentData.SpanId,
-                invokeAgentData.ParentSpanId
+                data.Name,
+                data.Attributes,
+                StartTimeUnixNano = data.StartTime.HasValue ? ToUnixNanos(data.StartTime.Value.UtcDateTime) : 0,
+                EndTimeUnixNano = data.EndTime.HasValue ? ToUnixNanos(data.EndTime.Value.UtcDateTime) : 0,
+                data.SpanId,
+                data.ParentSpanId
             };
 
             return SerializePayload(payload);
