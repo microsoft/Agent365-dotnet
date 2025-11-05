@@ -32,7 +32,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="logger">The logger instance.</param>
         /// <param name="options">The exporter configuration options.</param>
         /// <param name="resource">Optional OpenTelemetry resource information.</param>
-        public Agent365ExporterAsync(ILogger<Agent365Exporter> logger, Agent365ExporterOptions options, Resource? resource = null)
+        /// <param name="httpClient">Optional HttpClient instance.</param>
+        public Agent365ExporterAsync(ILogger<Agent365Exporter> logger, Agent365ExporterOptions options, Resource? resource = null, HttpClient? httpClient = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -40,7 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (_options.TokenResolver == null)
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
-            _httpClient = new HttpClient();
+            _httpClient = httpClient ?? new HttpClient();
 
             _resource = resource ?? ResourceBuilder.CreateEmpty().Build();
         }
@@ -53,7 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>A <see cref="Task"/> representing the asynchronous export operation.</returns>
         public override async Task ExportAsync(IReadOnlyCollection<Activity> batch, CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Agent365Exporter: Exporting batch of {Count} spans.", batch.Count);
+            _logger.LogInformation("Agent365ExporterAsync: Exporting batch of {Count} spans.", batch.Count);
 
             try
             {
@@ -61,7 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var groups = PartitionByIdentity(batch);
                 if (groups.Count == 0)
                 {
-                    _logger.LogInformation("Agent365Exporter: No spans with tenant/agent identity found; nothing exported.");
+                    _logger.LogInformation("Agent365ExporterAsync: No spans with tenant/agent identity found; nothing exported.");
                     return;
                 }
 
@@ -95,11 +96,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     try
                     {
                         token = await _options.TokenResolver!(agentId, tenantId).ConfigureAwait(false);
-                        _logger.LogInformation("Agent365Exporter: Obtained token for agent {Agent} tenant {Tenant}.", agentId, tenantId);
+                        _logger.LogInformation("Agent365ExporterAsync: Obtained token for agent {Agent} tenant {Tenant}.", agentId, tenantId);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Agent365Exporter: TokenResolver threw for agent {Agent} tenant {Tenant}.", agentId, tenantId);
+                        _logger.LogError(ex, "Agent365ExporterAsync: TokenResolver threw for agent {Agent} tenant {Tenant}.", agentId, tenantId);
                     }
 
                     if (!string.IsNullOrEmpty(token))
@@ -108,17 +109,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     HttpResponseMessage? resp = null;
                     try
                     {
-                        _logger.LogInformation("Agent365Exporter: Sending {Count} spans to {Uri} for agent {Agent} tenant {Tenant}.", activities.Count, requestUri, agentId, tenantId);
+                        _logger.LogInformation("Agent365ExporterAsync: Sending {Count} spans to {Uri} for agent {Agent} tenant {Tenant}.", activities.Count, requestUri, agentId, tenantId);
 
                         resp = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-                        _logger.LogInformation("Agent365Exporter: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
+                        _logger.LogInformation("Agent365ExporterAsync: HTTP {Status} exporting spans for agent {Agent} tenant {Tenant}.", (int)resp.StatusCode, agentId, tenantId);
 
                         // No return value needed; just continue
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Agent365Exporter: Exception exporting spans for agent {Agent} tenant {Tenant}.", agentId, tenantId);
+                        _logger.LogError(ex, "Agent365ExporterAsync: Exception exporting spans for agent {Agent} tenant {Tenant}.", agentId, tenantId);
                     }
                     finally
                     {
@@ -128,12 +129,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("Agent365Exporter: Export operation was canceled.");
+                _logger.LogWarning("Agent365ExporterAsync: Export operation was canceled.");
                 throw;
             }
             catch (Exception exOuter)
             {
-                _logger.LogError(exOuter, "Agent365Exporter: Unhandled export exception.");
+                _logger.LogError(exOuter, "Agent365ExporterAsync: Unhandled export exception.");
             }
         }
 

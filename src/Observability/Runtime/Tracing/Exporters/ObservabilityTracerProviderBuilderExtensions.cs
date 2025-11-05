@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using System;
+using System.Net.Http;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -78,11 +79,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 logger = loggerFactory.CreateLogger<Agent365Exporter>();
             }
 
+            var httpClient = serviceProvider.GetService<HttpClient>();
+
             switch (exporterType)
             {
                 case Agent365ExporterType.Agent365ExporterAsync:
                     builder.AddProcessor(new BatchActivityExportProcessorAsync(
-                        new Agent365ExporterAsync(logger, exporterOptions),
+                        new Agent365ExporterAsync(options: exporterOptions, resource: null, logger: logger, httpClient: httpClient),
                         maxQueueSize: exporterOptions.MaxQueueSize,
                         scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
                         maxExportBatchSize: exporterOptions.MaxExportBatchSize));
