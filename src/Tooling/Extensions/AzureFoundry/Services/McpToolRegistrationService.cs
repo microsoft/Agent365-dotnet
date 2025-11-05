@@ -199,8 +199,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
-            // Set environment ID header
-            resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            if (Utility.UseEnvironmentId())
+            {
+                // Set environment ID header
+                resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            }
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
