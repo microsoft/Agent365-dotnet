@@ -28,7 +28,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="logger">The logger instance.</param>
         /// <param name="options">The exporter configuration options.</param>
         /// <param name="resource">Optional OpenTelemetry resource information.</param>
-        public Agent365Exporter(ILogger<Agent365Exporter> logger, Agent365ExporterOptions options, Resource? resource = null)
+        /// <param name="httpClient">Optional HttpClient instance.</param>
+        public Agent365Exporter(ILogger<Agent365Exporter> logger, Agent365ExporterOptions options, Resource? resource = null, HttpClient? httpClient = null)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _options = options ?? throw new ArgumentNullException(nameof(options));
@@ -36,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (_options.TokenResolver == null)
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
-            _httpClient = new HttpClient();
+            _httpClient = httpClient ?? new HttpClient();
 
             _resource = resource ?? ResourceBuilder.CreateEmpty().Build();
         }
