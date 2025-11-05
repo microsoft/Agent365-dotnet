@@ -92,7 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 x => x.Log(
                     LogLevel.Information,
                     It.Is<EventId>((eventId) => eventId.Id == 1001 && eventId.Name == "InvokeAgent"),
-                    It.Is<It.IsAnyType>((state, type) => VerifyLogState(state, 
+                    It.Is<It.IsAnyType>((state, type) => VerifyInvokeAgentLogState(state, 
                         agentDetails, 
                         tenantDetails, 
                         endpoint, 
@@ -103,6 +103,112 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                         conversationId,
                         inputMessages,
                         outputMessages)),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [TestMethod]
+        public void LogExecuteTool_WithFullDetails_LogsWithCorrectArguments()
+        {
+            // Arrange
+            var mockLogger = new Mock<ILogger>();
+            var endpoint = new Uri("https://tools.example.com:9090");
+            var toolDetails = new ToolCallDetails("GetWeather", "{ \"location\": \"NYC\" }", "tool-call-123", "Gets current weather", "function", endpoint);
+            var agentDetails = new AgentDetails("agent-tool-1", "ToolAgent", "Agent for tools", agentAUID: "auid-tool", agentUPN: "tool@agent.com", agentBlueprintId: "bp-tool");
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-tool";
+            var responseContent = "Sunny 72F";
+            var start = DateTimeOffset.UtcNow.AddSeconds(-5);
+            var end = DateTimeOffset.UtcNow;
+            var spanId = "tool-span";
+            var parentSpanId = "tool-parent";
+
+            // Act
+            mockLogger.Object.LogToolCall(
+                toolCallDetails: toolDetails,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                responseContent: responseContent,
+                conversationId: conversationId,
+                startTime: start,
+                endTime: end,
+                spanId: spanId,
+                parentSpanId: parentSpanId);
+
+            // Assert
+            mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.Is<EventId>((eventId) => eventId.Id == 1003 && eventId.Name == "ExecuteTool"),
+                    It.Is<It.IsAnyType>((state, type) => VerifyExecuteToolLogState(state,
+                        toolDetails,
+                        agentDetails,
+                        tenantDetails,
+                        endpoint,
+                        conversationId,
+                        responseContent,
+                        start,
+                        end,
+                        spanId,
+                        parentSpanId)),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+
+        [TestMethod]
+        public void LogExecuteInference_WithFullDetails_LogsWithCorrectArguments()
+        {
+            // Arrange
+            var mockLogger = new Mock<ILogger>();
+            var inferenceDetails = new InferenceCallDetails(
+                InferenceOperationType.Chat,
+                "gpt-4o-mini",
+                "openai",
+                inputTokens: 120,
+                outputTokens: 240,
+                finishReasons: new[] { "stop", "length" },
+                responseId: "resp-789");
+            var agentDetails = new AgentDetails("agent-inf-1", "InferAgent", "Inference agent", agentAUID: "auid-inf", agentUPN: "inf@agent.com", agentBlueprintId: "bp-inf");
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-inf";
+            var inputMessages = new[] { "Hello", "Tell me a joke" };
+            var outputMessages = new[] { "Hi!", "Why did the AI cross the road?" };
+            var start = DateTimeOffset.UtcNow.AddSeconds(-3);
+            var end = DateTimeOffset.UtcNow;
+            var spanId = "inf-span";
+            var parentSpanId = "inf-parent";
+
+            // Act
+            mockLogger.Object.LogInferenceCall(
+                inferenceCallDetails: inferenceDetails,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                conversationId: conversationId,
+                inputMessages: inputMessages,
+                outputMessages: outputMessages,
+                startTime: start,
+                endTime: end,
+                spanId: spanId,
+                parentSpanId: parentSpanId);
+
+            // Assert
+            mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.Is<EventId>((eventId) => eventId.Id == 1002 && eventId.Name == "ExecuteInference"),
+                    It.Is<It.IsAnyType>((state, type) => VerifyExecuteInferenceLogState(state,
+                        inferenceDetails,
+                        agentDetails,
+                        tenantDetails,
+                        conversationId,
+                        inputMessages,
+                        outputMessages,
+                        start,
+                        end,
+                        spanId,
+                        parentSpanId)),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
@@ -127,7 +233,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 x => x.Log(
                     LogLevel.Information,
                     It.Is<EventId>((eventId) => eventId.Id == 1001 && eventId.Name == "InvokeAgent"),
-                    It.Is<It.IsAnyType>((state, type) => VerifyMinimalLogState(state, agentDetails, tenantDetails, endpoint)),
+                    It.Is<It.IsAnyType>((state, type) => VerifyMinimalInvokeAgentLogState(state, agentDetails, tenantDetails, endpoint)),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
@@ -181,7 +287,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 Times.Once);
         }
 
-        private static bool VerifyLogState(
+        private static bool VerifyInvokeAgentLogState(
             object state,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
@@ -194,64 +300,101 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             string[] inputMessages,
             string[] outputMessages)
         {
-            if (state is not InvokeAgentData data)
-                return false;
-
-            var attributes = data.Attributes;
-
-            // Agent details
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
-
-            // Endpoint details
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
-            if (endpoint.Port != 443 && !TryGetAndEquals(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port)) return false;
-            if (endpoint.Port == 443 && attributes.ContainsKey(OpenTelemetryConstants.ServerPortKey)) return false;
-
-            // Session ID
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.SessionIdKey, sessionId)) return false;
-
-            // Conversation ID
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)) return false;
-
-            // Input messages
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))) return false;
-
-            // Output messages
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages))) return false;
-
-            return true;
+            if (state is not InvokeAgentData data) return false;
+            var a = data.Attributes;
+            return TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)
+                && TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)
+                && TryGetAndEquals(a, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)
+                && (endpoint.Port == 443 || TryGetAndEquals(a, OpenTelemetryConstants.ServerPortKey, endpoint.Port))
+                && TryGetAndEquals(a, OpenTelemetryConstants.SessionIdKey, sessionId)
+                && TryGetAndEquals(a, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)
+                && TryGetAndEquals(a, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))
+                && TryGetAndEquals(a, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages));
         }
 
-        private static bool VerifyMinimalLogState(
+        private static bool VerifyMinimalInvokeAgentLogState(
             object state,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
             Uri endpoint)
         {
-            if (state is not InvokeAgentData data)
-                return false;
+            if (state is not InvokeAgentData data) return false;
+            var a = data.Attributes;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
+            if (!a.ContainsKey(OpenTelemetryConstants.TenantIdKey)) return false;
+            if (a.ContainsKey(OpenTelemetryConstants.SessionIdKey)) return false;
+            if (a.ContainsKey(OpenTelemetryConstants.GenAiConversationIdKey)) return false;
+            if (a.ContainsKey(OpenTelemetryConstants.GenAiCallerIdKey)) return false;
+            return true;
+        }
 
-            var attributes = data.Attributes;
+        private static bool VerifyExecuteToolLogState(
+            object state,
+            ToolCallDetails toolDetails,
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            Uri endpoint,
+            string conversationId,
+            string responseContent,
+            DateTimeOffset start,
+            DateTimeOffset end,
+            string spanId,
+            string parentSpanId)
+        {
+            if (state is not ExecuteToolData data) return false;
+            var a = data.Attributes;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiToolNameKey, toolDetails.ToolName)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiToolArgumentsKey, toolDetails.Arguments)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiToolCallIdKey, toolDetails.ToolCallId)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiToolDescriptionKey, toolDetails.Description)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiToolTypeKey, toolDetails.ToolType)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
+            if (endpoint.Port != 443 && !TryGetAndEquals(a, OpenTelemetryConstants.ServerPortKey, endpoint.Port)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiEventContent, responseContent)) return false;
+            // Timing and span validation
+            if (data.StartTime != start || data.EndTime != end) return false;
+            if (data.Duration <= TimeSpan.Zero) return false;
+            if (data.SpanId != spanId || data.ParentSpanId != parentSpanId) return false;
+            return true;
+        }
 
-            // Required attributes
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
-            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
-            if (!attributes.TryGetValue(OpenTelemetryConstants.TenantIdKey, out _)) return false;
-
-            // Optional attributes should not be present
-            if (attributes.TryGetValue(OpenTelemetryConstants.SessionIdKey, out _)) return false;
-            if (attributes.TryGetValue(OpenTelemetryConstants.GenAiConversationIdKey, out _)) return false;
-            if (attributes.TryGetValue(OpenTelemetryConstants.GenAiCallerIdKey, out _)) return false;
-
+        private static bool VerifyExecuteInferenceLogState(
+            object state,
+            InferenceCallDetails inferenceDetails,
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            string conversationId,
+            string[] inputMessages,
+            string[] outputMessages,
+            DateTimeOffset start,
+            DateTimeOffset end,
+            string spanId,
+            string parentSpanId)
+        {
+            if (state is not ExecuteInferenceData data) return false;
+            var a = data.Attributes;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiOperationNameKey, inferenceDetails.OperationName.ToString())) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiRequestModelKey, inferenceDetails.Model)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiProviderNameKey, inferenceDetails.ProviderName)) return false;
+            if (inferenceDetails.InputTokens.HasValue && !TryGetAndEquals(a, OpenTelemetryConstants.GenAiUsageInputTokensKey, inferenceDetails.InputTokens.Value)) return false;
+            if (inferenceDetails.OutputTokens.HasValue && !TryGetAndEquals(a, OpenTelemetryConstants.GenAiUsageOutputTokensKey, inferenceDetails.OutputTokens.Value)) return false;
+            if (inferenceDetails.FinishReasons != null && !TryGetAndEquals(a, OpenTelemetryConstants.GenAiResponseFinishReasonsKey, string.Join(",", inferenceDetails.FinishReasons))) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiResponseIdKey, inferenceDetails.ResponseId)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))) return false;
+            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages))) return false;
+            if (data.StartTime != start || data.EndTime != end) return false;
+            if (data.Duration <= TimeSpan.Zero) return false;
+            if (data.SpanId != spanId || data.ParentSpanId != parentSpanId) return false;
             return true;
         }
 
         private static bool TryGetAndEquals(IDictionary<string, object?> dict, string key, object? expected)
         {
             if (!dict.TryGetValue(key, out var value)) return false;
-
             return Equals(value, expected);
         }
     }
