@@ -197,14 +197,13 @@ public interface IMcpToolRegistrationService
 
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentInstanceId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
 
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
-        string agentInstanceId,
+        string agenticAppId,
         string environmentId,
         string authToken);
 }
@@ -236,7 +235,7 @@ public class FoundryAgentExample
         _logger = logger;
     }
 
-    public async Task<string> ProcessRequestAsync(string userMessage, string agentInstanceId, string environmentId, string authToken)
+    public async Task<string> ProcessRequestAsync(string userMessage, string environmentId, string authToken, UserAuthorization userAuthorization, ITurnContext turnContext)
     {
         // Create Azure AI Project client
         var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
@@ -251,11 +250,12 @@ public class FoundryAgentExample
                 name: "mcp-enabled-agent",
                 instructions: "You are a helpful assistant with access to MCP tools.");
 
-            // Add MCP tool servers to the agent
+            // Add MCP tool servers to the agent (agenticAppId extracted from turnContext)
             _mcpToolRegistrationService.AddToolServersToAgent(
                 agentClient, 
-                agentInstanceId, 
                 environmentId, 
+                userAuthorization,
+                turnContext,
                 authToken);
 
             // Create thread and send message

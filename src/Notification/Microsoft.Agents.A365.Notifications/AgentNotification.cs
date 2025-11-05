@@ -286,5 +286,28 @@ namespace AgentNotification
             {
                 a365.OnLifecycleNotification(Events.AgenticUserDeleted, routeHandler, rank, autoSignInHandlers);
             });
+
+        /// <summary>
+        /// Creates a reply Activity containing an <see cref="EmailResponse"/> entity populated with the provided HTML body.
+        /// </summary>
+        /// <param name="activity">The source Activity this reply is based on. Routing/conversation metadata is copied via <see cref="IActivity.CreateReply(string, string)"/>.</param>
+        /// <param name="emailResponseHtmlBody">The HTML body content to include in the <see cref="EmailResponse"/> entity.</param>
+        /// <returns>
+        /// A new <see cref="IActivity"/> reply whose <c>Entities</c> collection includes an <see cref="EmailResponse"/> carrying the supplied HTML body.
+        /// </returns>
+        /// <remarks>
+        /// This helper wraps two operations:
+        /// 1. Calls <see cref="IActivity.CreateReply(string, string)"/> to initialize a response Activity with proper conversation context.
+        /// 2. Adds a newly constructed <see cref="EmailResponse"/> (with the provided HTML body) to the reply's <c>Entities</c>.
+        /// The method does not perform HTML validation or sanitization; callers should ensure the HTML body is safe for downstream rendering.
+        /// </remarks>
+        public static IActivity CreateEmailResponseActivity(this IActivity activity, string emailResponseHtmlBody)
+        {
+            var workingActivity = activity.CreateReply();
+            var emailResponse = new EmailResponse(emailResponseHtmlBody);
+            workingActivity.Entities ??= new List<Entity>();
+            workingActivity.Entities.Add(emailResponse);
+            return workingActivity;
+        }
     }
 }

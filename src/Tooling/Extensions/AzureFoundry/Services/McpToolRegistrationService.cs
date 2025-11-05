@@ -73,15 +73,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken == null)
-        {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
-        }
-
         try
         {
-            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken, turnContext).GetAwaiter().GetResult();
+            // Get the tool definitions and resources using the internal implementation
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,
@@ -93,6 +88,45 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public void AddToolServersToAgent(
+        PersistentAgentsClient agentClient,
+        string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
+        string? authToken = null)
+    {
+        if (agentClient == null)
+        {
+            throw new ArgumentNullException(nameof(agentClient));
+        }
+
+        if (authToken == null)
+        {
+            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+        }
+
+        var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
+
+        try
+        {
+            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+
+            agentClient.Administration.UpdateAgent(
+                agenticAppId,
+                tools: toolDefinitions,
+                toolResources: toolResources);
+
+            _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agenticAppId}", agenticAppId);
             throw;
         }
     }

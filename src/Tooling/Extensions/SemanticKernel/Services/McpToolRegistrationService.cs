@@ -48,14 +48,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// Adds the A365 MCP Tool Servers
         /// </summary>
         /// <param name="kernel">Kernel</param>
-        /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
         /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="userAuthorization"></param>
         /// <param name="turnContext"></param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns a new object of the kernel</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public void AddToolServersToAgent(Kernel kernel, string agentInstanceId, string environmentId, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null)
+        public void AddToolServersToAgent(Kernel kernel, string environmentId, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null)
         {
             if (kernel == null)
             {
@@ -67,7 +66,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
             }
 
-            var servers = _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken).Result;
+            var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
+            var servers = _mcpServerConfigurationService.ListToolServers(agenticAppId, environmentId, authToken).Result;
 
             var toolsMode = Utility.GetToolsMode();
             foreach (var server in servers)
