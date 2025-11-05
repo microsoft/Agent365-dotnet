@@ -200,43 +200,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             var attributes = data.Attributes;
 
             // Agent details
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiAgentIdKey) || 
-                attributes[OpenTelemetryConstants.GenAiAgentIdKey]?.ToString() != agentDetails.AgentId)
-                return false;
-
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiAgentNameKey) || 
-                attributes[OpenTelemetryConstants.GenAiAgentNameKey]?.ToString() != agentDetails.AgentName)
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
 
             // Endpoint details
-            if (!attributes.ContainsKey(OpenTelemetryConstants.ServerAddressKey) || 
-                attributes[OpenTelemetryConstants.ServerAddressKey]?.ToString() != endpoint.Host)
-                return false;
-
-            if (endpoint.Port != 443 && 
-                (!attributes.ContainsKey(OpenTelemetryConstants.ServerPortKey) || 
-                 !attributes[OpenTelemetryConstants.ServerPortKey]?.Equals(endpoint.Port) == true))
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
+            if (endpoint.Port != 443 && !TryGetAndEquals(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port)) return false;
+            if (endpoint.Port == 443 && attributes.ContainsKey(OpenTelemetryConstants.ServerPortKey)) return false;
 
             // Session ID
-            if (!attributes.ContainsKey(OpenTelemetryConstants.SessionIdKey) || 
-                attributes[OpenTelemetryConstants.SessionIdKey]?.ToString() != sessionId)
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.SessionIdKey, sessionId)) return false;
 
             // Conversation ID
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiConversationIdKey) || 
-                attributes[OpenTelemetryConstants.GenAiConversationIdKey]?.ToString() != conversationId)
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)) return false;
 
             // Input messages
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiInputMessagesKey) || 
-                attributes[OpenTelemetryConstants.GenAiInputMessagesKey]?.ToString() != string.Join(",", inputMessages))
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))) return false;
 
             // Output messages
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiOutputMessagesKey) || 
-                attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]?.ToString() != string.Join(",", outputMessages))
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages))) return false;
 
             return true;
         }
@@ -253,32 +235,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             var attributes = data.Attributes;
 
             // Required attributes
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiAgentIdKey) || 
-                attributes[OpenTelemetryConstants.GenAiAgentIdKey]?.ToString() != agentDetails.AgentId)
-                return false;
-
-            if (!attributes.ContainsKey(OpenTelemetryConstants.GenAiAgentNameKey) || 
-                attributes[OpenTelemetryConstants.GenAiAgentNameKey]?.ToString() != agentDetails.AgentName)
-                return false;
-
-            if (!attributes.ContainsKey(OpenTelemetryConstants.ServerAddressKey) || 
-                attributes[OpenTelemetryConstants.ServerAddressKey]?.ToString() != endpoint.Host)
-                return false;
-
-            if (!attributes.ContainsKey(OpenTelemetryConstants.TenantIdKey))
-                return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
+            if (!TryGetAndEquals(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
+            if (!attributes.TryGetValue(OpenTelemetryConstants.TenantIdKey, out _)) return false;
 
             // Optional attributes should not be present
-            if (attributes.ContainsKey(OpenTelemetryConstants.SessionIdKey))
-                return false;
-
-            if (attributes.ContainsKey(OpenTelemetryConstants.GenAiConversationIdKey))
-                return false;
-
-            if (attributes.ContainsKey(OpenTelemetryConstants.GenAiCallerIdKey))
-                return false;
+            if (attributes.TryGetValue(OpenTelemetryConstants.SessionIdKey, out _)) return false;
+            if (attributes.TryGetValue(OpenTelemetryConstants.GenAiConversationIdKey, out _)) return false;
+            if (attributes.TryGetValue(OpenTelemetryConstants.GenAiCallerIdKey, out _)) return false;
 
             return true;
+        }
+
+        private static bool TryGetAndEquals(IDictionary<string, object?> dict, string key, object? expected)
+        {
+            if (!dict.TryGetValue(key, out var value)) return false;
+
+            return Equals(value, expected);
         }
     }
 }

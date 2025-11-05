@@ -10,7 +10,6 @@
 		<PackageReference Include="Azure.Core" />
     <PackageReference Include="Microsoft.Agents.Builder" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions" />
 		<PackageReference Include="Newtonsoft.Json" />
 		<PackageReference Include="OpenTelemetry.Exporter.Console" />
 		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />

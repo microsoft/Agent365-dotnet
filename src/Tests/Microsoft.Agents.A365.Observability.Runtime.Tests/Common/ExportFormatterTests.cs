@@ -7,7 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Tests.Tracing;
 using Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 using OpenTelemetry.Resources;
-using Microsoft.Agents.A365.Observability.Runtime.DTOs; // Added for InvokeAgentData
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 

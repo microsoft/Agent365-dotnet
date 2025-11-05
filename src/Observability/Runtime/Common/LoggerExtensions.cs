@@ -12,11 +12,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     public static partial class LoggerExtensions
     {
         private const string InvokeAgentEventName = "InvokeAgent";
-        private static EventId InvokeAgentEventId = new EventId(1001, InvokeAgentEventName);
+        private static readonly EventId InvokeAgentEventId = new EventId(1001, InvokeAgentEventName);
         private const string ExecuteInferenceEventName = "ExecuteInference";
-        private static EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
+        private static readonly EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
         private const string ExecuteToolEventName = "ExecuteTool";
-        private static EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
+        private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
 
         /// <summary>
         /// Logs an invoke_agent event.
