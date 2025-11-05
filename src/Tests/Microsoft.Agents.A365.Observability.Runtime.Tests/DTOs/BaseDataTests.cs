@@ -3,6 +3,7 @@
 
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
 {
@@ -33,7 +34,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
         {
             var data = new TestData();
             data.SpanId.Should().NotBeNullOrEmpty();
-            Guid.TryParse(data.SpanId, out _).Should().BeTrue();
+            ActivitySpanId.CreateFromString(data.SpanId).ToString().Should().Be(data.SpanId);
         }
 
         [TestMethod]

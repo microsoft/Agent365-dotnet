@@ -3,6 +3,7 @@
 
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
 {
@@ -13,7 +14,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
         public void Name_ReturnsExecuteInference()
         {
             var data = new ExecuteInferenceData();
-            data.Name.Should().Be("Inference");
+            data.Name.Should().Be(OpenTelemetryConstants.OperationNames.ExecuteInference.ToString());
         }
     }
 }

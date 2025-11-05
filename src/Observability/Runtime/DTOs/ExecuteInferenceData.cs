@@ -1,3 +1,4 @@
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
 
@@ -28,6 +29,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <summary>
         /// Gets the name of the operation.
         /// </summary>
-        public override string Name => "Inference";
+        public override string Name => OpenTelemetryConstants.OperationNames.ExecuteInference.ToString();
     }
 }

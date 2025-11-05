@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
 {
@@ -26,7 +27,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
             Attributes = attributes ?? new Dictionary<string, object?>();
             StartTime = startTime;
             EndTime = endTime;
-            SpanId = spanId ?? Guid.NewGuid().ToString();
+            // Generate a random span ID if not provided. Use ActivitySpanId for consistency with tracing.
+            SpanId = spanId ?? ActivitySpanId.CreateRandom().ToString();
             ParentSpanId = parentSpanId;
         }
 

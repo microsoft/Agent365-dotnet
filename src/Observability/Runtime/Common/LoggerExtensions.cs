@@ -30,6 +30,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="conversationId">Optional conversation ID to include in the log.</param>
         /// <param name="inputMessages">Optional input messages to include in the log.</param>
         /// <param name="outputMessages">Optional output messages to include in the log.</param>
+        /// <param name="startTime">Optional start time of the inference.</param>
+        /// <param name="endTime">Optional end time of the inference.</param>
+        /// <param name="spanId">Optional span ID for tracing.</param>
+        /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
         public static void LogInvokeAgent(
             this ILogger logger,
             InvokeAgentDetails invokeAgentDetails, 
@@ -39,7 +43,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             CallerDetails? callerDetails = null, 
             string? conversationId = null,
             string[]? inputMessages = null,
-            string[]? outputMessages = null)
+            string[]? outputMessages = null,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null)
         {
             var data = InvokeAgentDataBuilder.Build(
                 invokeAgentDetails,
@@ -49,7 +57,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 callerDetails,
                 conversationId,
                 inputMessages,
-                outputMessages);
+                outputMessages,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
 
             logger.Log(
                 LogLevel.Information,
