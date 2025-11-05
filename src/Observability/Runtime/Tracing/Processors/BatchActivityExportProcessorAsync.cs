@@ -75,7 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
                 return;
             }
 
-            OnExport(data);
+            this.OnExport(data);
         }
 
         /// <summary>
