@@ -37,21 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             foreach (var activity in batch)
             {
-                if (activity is null) continue;
-
-                var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
-                var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
-
-                if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
-                    continue;
-
-                var key = (tenant!, agent!);
-                if (!map.TryGetValue(key, out var list))
-                {
-                    list = new List<Activity>();
-                    map[key] = list;
-                }
-                list.Add(activity);
+                Agent365ExporterCore.TryAddActivityToMap(activity, map);
             }
 
             return map.Select(kvp => (kvp.Key.tenant, kvp.Key.agent, kvp.Value)).ToList();
@@ -70,22 +56,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             foreach (var activity in batch)
             {
-                if (activity is null) continue;
-
-                var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
-                var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
-
-                if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
-                    continue; // skip spans without identity (could log once with a counter)
-
-                // At this point, tenant and agent are guaranteed to be non-null and non-empty
-                var key = (tenant!, agent!);
-                if (!map.TryGetValue(key, out var list))
-                {
-                    list = new List<Activity>();
-                    map[key] = list;
-                }
-                list.Add(activity);
+                Agent365ExporterCore.TryAddActivityToMap(activity, map);
             }
 
             return map.Select(kvp => (kvp.Key.tenant, kvp.Key.agent, kvp.Value)).ToList();
@@ -175,6 +146,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 }
             }
             return ExportResult.Success;
+        }
+
+        private static void TryAddActivityToMap(Activity activity, Dictionary<(string tenant, string agent), List<Activity>> map)
+        {
+            if (activity is null) return;
+
+            var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
+            var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
+
+            if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
+                return;
+
+            var key = (tenant!, agent!);
+            if (!map.TryGetValue(key, out var list))
+            {
+                list = new List<Activity>();
+                map[key] = list;
+            }
+            list.Add(activity);
         }
     }
 }
