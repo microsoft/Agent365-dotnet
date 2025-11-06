@@ -1,14 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="C:\Agent365-dotnet\src\..\\CHANGELOG.md" />
-    <None Remove="C:\Agent365-dotnet\src\..\\LICENSE.md" />
-  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
