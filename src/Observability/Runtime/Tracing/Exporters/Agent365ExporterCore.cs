@@ -22,7 +22,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Utility methods for Agent365 trace exporters.
     /// Provides helpers for partitioning activities and building endpoint URIs.
     /// </summary>
-    internal static class Agent365ExporterCore
+    public static class Agent365ExporterCore
     {
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
@@ -31,7 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>
         /// A list of tuples containing TenantId, AgentId, and the corresponding activities.
         /// </returns>
-        internal static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(IEnumerable<Activity> batch)
+        public static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(IEnumerable<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
 
@@ -50,7 +50,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>
         /// A list of tuples containing TenantId, AgentId, and the corresponding activities.
         /// </returns>
-        internal static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
+        public static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
 
@@ -68,7 +68,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        internal static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
         {
             return useS2SEndpoint
                 ? $"/maven/agent365/service/agents/{agentId}/traces"
@@ -81,12 +81,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="endpoint">The base endpoint.</param>
         /// <param name="endpointPath">The endpoint path.</param>
         /// <returns>The full request URI string.</returns>
-        internal static string BuildRequestUri(string endpoint, string endpointPath)
+        public static string BuildRequestUri(string endpoint, string endpointPath)
         {
             return $"https://{endpoint}{endpointPath}?api-version=1";
         }
 
-        internal static async Task<ExportResult> ExportBatchCoreAsync(
+        /// <summary>
+        /// Exports a batch of activities grouped by tenant and agent identity.
+        /// </summary>
+        /// <param name="groups"></param>
+        /// <param name="resource"></param>
+        /// <param name="options"></param>
+        /// <param name="tokenResolver"></param>
+        /// <param name="sendAsync"></param>
+        /// <param name="logInformation"></param>
+        /// <param name="logError"></param>
+        /// <returns></returns>
+        public static async Task<ExportResult> ExportBatchCoreAsync(
             IEnumerable<(string TenantId, string AgentId, List<Activity> Activities)> groups,
             Resource resource,
             Agent365ExporterOptions options,
