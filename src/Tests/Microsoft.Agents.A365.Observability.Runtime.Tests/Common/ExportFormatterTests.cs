@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Tests.Tracing;
 using Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 using OpenTelemetry.Resources;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
@@ -394,5 +395,88 @@ public partial class ExportFormatterTests : ActivityTest
         var span = scopeSpan.GetProperty("span");
         span.TryGetProperty("attributes", out var attrsProp).Should().BeTrue();
         attrsProp.EnumerateObject().Should().BeEmpty();
+    }
+
+    private static ulong ToUnixNanos(DateTimeOffset dto)
+    {
+        var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        return (ulong)((dto.UtcDateTime - epoch).Ticks * 100);
+    }
+
+    [TestMethod]
+    public void FormatLogData_WithAllFields_ProducesExpectedJson()
+    {
+        // Arrange
+        var start = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var end = DateTimeOffset.UtcNow;
+        var spanId = "span-123";
+        var parentSpanId = "parent-456";
+        var data = new InvokeAgentData(
+            new Dictionary<string, object?>
+            {
+                { "attr1", "value1" },
+                { "attr2", 42 }
+            },
+            start,
+            end,
+            spanId,
+            parentSpanId);
+
+        // Act
+        var json = ExportFormatter.FormatLogData(data);
+
+        // Assert
+        json.Should().NotBeNullOrWhiteSpace();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        root.GetProperty("Name").GetString().Should().Be("InvokeAgent");
+        root.GetProperty("SpanId").GetString().Should().Be(spanId);
+        root.GetProperty("ParentSpanId").GetString().Should().Be(parentSpanId);
+
+        var attrs = root.GetProperty("Attributes");
+        attrs.GetProperty("attr1").GetString().Should().Be("value1");
+        attrs.GetProperty("attr2").GetInt32().Should().Be(42);
+
+        var startNs = root.GetProperty("StartTimeUnixNano").GetUInt64();
+        var endNs = root.GetProperty("EndTimeUnixNano").GetUInt64();
+        startNs.Should().Be(ToUnixNanos(start));
+        endNs.Should().Be(ToUnixNanos(end));
+        endNs.Should().BeGreaterThan(startNs);
+
+        // Duration is not part of the serialized payload
+        root.TryGetProperty("Duration", out _).Should().BeFalse();
+    }
+
+    [TestMethod]
+    public void FormatLogData_WithMissingOptionalFields_ProducesDefaults()
+    {
+        // Arrange
+        var explicitSpanId = "explicit-span";
+        var data = new InvokeAgentData(
+            new Dictionary<string, object?> { { "key", "val" } },
+            startTime: null,
+            endTime: null,
+            spanId: explicitSpanId,
+            parentSpanId: null);
+
+        // Act
+        var json = ExportFormatter.FormatLogData(data);
+
+        // Assert
+        json.Should().NotBeNullOrWhiteSpace();
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        root.GetProperty("Name").GetString().Should().Be("InvokeAgent");
+        root.GetProperty("SpanId").GetString().Should().Be(explicitSpanId);
+        root.GetProperty("StartTimeUnixNano").GetUInt64().Should().Be(0);
+        root.GetProperty("EndTimeUnixNano").GetUInt64().Should().Be(0);
+
+        // ParentSpanId should be omitted due to null (ignore when writing null)
+        root.TryGetProperty("ParentSpanId", out _).Should().BeFalse();
+
+        var attrs = root.GetProperty("Attributes");
+        attrs.GetProperty("key").GetString().Should().Be("val");
     }
 }
