@@ -4,6 +4,7 @@
 
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Extensions.DependencyInjection;
     using System;
 
@@ -18,13 +19,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// <param name="services">The service collection to add to.</param>
         /// <param name="configure">Optional configuration delegate for the Builder.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder.</param>
+        /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
         /// <returns>The configured service collection.</returns>
         public static IServiceCollection AddTracing(
             this IServiceCollection services,
             Action<Builder>? configure = null,
-            bool useOpenTelemetryBuilder = true)
+            bool useOpenTelemetryBuilder = true,
+            Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter)
         {
-            var builder = new Builder(services: services, useOpenTelemetryBuilder: useOpenTelemetryBuilder);
+            var builder = new Builder(services: services, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType);
             configure?.Invoke(builder);
             return builder.Build();
         }

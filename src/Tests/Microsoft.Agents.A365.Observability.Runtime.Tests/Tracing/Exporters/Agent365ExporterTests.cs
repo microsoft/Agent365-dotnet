@@ -190,13 +190,7 @@ public sealed class Agent365ExporterTests
 
         var batch = CreateBatch(a1, a2, a3, a4, a5, a6);
 
-        // Use reflection to invoke private PartitionByIdentity
-        var method = typeof(Agent365Exporter)
-            .GetMethod("PartitionByIdentity", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        method.Should().NotBeNull("PartitionByIdentity should exist for grouping behavior tests.");
-
-        var result = method!.Invoke(exporter, new object[] { batch });
+        var result = Agent365ExporterCore.PartitionByIdentity(in batch);
 
         result.Should().NotBeNull();
 

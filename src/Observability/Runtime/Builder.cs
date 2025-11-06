@@ -20,6 +20,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     {
         private readonly IServiceCollection _services;
         private readonly bool _useOpenTelemetryBuilder;
+        private readonly Agent365ExporterType _agent365ExporterType;
         private bool _isBuilt = false;
 
 
@@ -28,10 +29,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service colletion.</param>
-        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder)
+        /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
+        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType)
         {
             this._services = services;
             this._useOpenTelemetryBuilder = useOpenTelemetryBuilder;
+            this._agent365ExporterType = agent365ExporterType;
         }
 
         /// <summary>
@@ -99,11 +102,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             {
                 if (this._useOpenTelemetryBuilder)
                 {
-                    tracerProviderBuilder.AddAgent365Exporter();
+                    tracerProviderBuilder.AddAgent365Exporter(exporterType: this._agent365ExporterType);
                 }
                 else
                 {
-                    tracerProviderBuilder.AddAgent365Exporter(serviceCollection: this._services);
+                    tracerProviderBuilder.AddAgent365Exporter(serviceCollection: this._services, exporterType: this._agent365ExporterType);
                 }
             }
             else if (EnvironmentUtils.IsDevelopmentEnvironment())
