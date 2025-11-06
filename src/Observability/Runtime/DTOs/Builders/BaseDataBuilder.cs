@@ -2,7 +2,6 @@
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
@@ -180,9 +179,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (extraAttributes == null) return;
 
-            foreach (var kvp in extraAttributes.Where(kvp => kvp.Value != null && !ReservedAttributeKeys.Contains(kvp.Key)))
+            foreach (var kvp in extraAttributes)
             {
-                attributes[kvp.Key] = kvp.Value;
+                if ((kvp.Value != null && !ReservedAttributeKeys.Contains(kvp.Key)))
+                {
+                    attributes[kvp.Key] = kvp.Value;
+                }
             }
         }
     }
