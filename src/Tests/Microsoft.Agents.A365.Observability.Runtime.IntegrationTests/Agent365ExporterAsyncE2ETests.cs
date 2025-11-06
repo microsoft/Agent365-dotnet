@@ -13,30 +13,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
     [TestClass]
     public class Agent365ExporterAsyncE2ETests
     {
-        private TestHttpMessageHandler _handler;
-        private ServiceProvider _provider;
+        private TestHttpMessageHandler? _handler;
+        private ServiceProvider? _provider;
         private bool _receivedRequest;
         private string? _receivedContent;
 
         public Agent365ExporterAsyncE2ETests()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-            this._handler = new TestHttpMessageHandler(req =>
-            {
-                this._receivedRequest = true;
-                this._receivedContent = req.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
-                req.RequestUri.Should().NotBeNull();
-                req.Headers.Authorization.Should().NotBeNull();
-                return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-            });
-            var httpClient = new HttpClient(this._handler);
-            this._provider = this.CreateTestServiceProvider(httpClient);
         }
 
         [TestMethod]
         public async Task AddTracing_And_InvokeAgentScope_ExporterMakesExpectedRequest()
         {
             // Arrange
+            this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
             var expectedAgentDetails = new AgentDetails(
@@ -120,6 +111,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public async Task AddTracing_And_ExecuteToolScope_ExporterMakesExpectedRequest()
         {
             // Arrange
+            this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
             var expectedAgentDetails = new AgentDetails(
@@ -187,6 +179,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public async Task AddTracing_And_InferenceScope_ExporterMakesExpectedRequest()
         {
             // Arrange
+            this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
             var expectedAgentDetails = new AgentDetails(
@@ -404,6 +397,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             services.AddTracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
             return services.BuildServiceProvider();
+        }
+        private void SetupExporterTest()
+        {
+            this._handler = new TestHttpMessageHandler(req =>
+            {
+                this._receivedRequest = true;
+                this._receivedContent = req.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                req.RequestUri.Should().NotBeNull();
+                req.Headers.Authorization.Should().NotBeNull();
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            });
+            var httpClient = new HttpClient(this._handler);
+            this._provider = this.CreateTestServiceProvider(httpClient);
         }
     }
 }
