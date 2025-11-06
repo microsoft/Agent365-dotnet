@@ -135,8 +135,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListToolServers(
-    "agentInstance", 
-    "environmentId", 
+    "agentInstance",
     "authToken");
 ```
 
@@ -176,8 +175,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListToolServers(
-        string agentInstance, 
-        string environmentId, 
+        string agentInstance,
         string authToken);
 }
 ```
@@ -192,19 +190,16 @@ public interface IMcpToolRegistrationService
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentInstanceId,
-        string environmentId,
         string? authToken = null);
 
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
 
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agenticAppId,
-        string environmentId,
         string authToken);
 }
 ```
@@ -235,7 +230,7 @@ public class FoundryAgentExample
         _logger = logger;
     }
 
-    public async Task<string> ProcessRequestAsync(string userMessage, string environmentId, string authToken, UserAuthorization userAuthorization, ITurnContext turnContext)
+    public async Task<string> ProcessRequestAsync(string userMessage, string authToken, UserAuthorization userAuthorization, ITurnContext turnContext)
     {
         // Create Azure AI Project client
         var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
@@ -252,8 +247,7 @@ public class FoundryAgentExample
 
             // Add MCP tool servers to the agent (agenticAppId extracted from turnContext)
             _mcpToolRegistrationService.AddToolServersToAgent(
-                agentClient, 
-                environmentId, 
+                agentClient,
                 userAuthorization,
                 turnContext,
                 authToken);
@@ -352,7 +346,7 @@ The `IMcpToolRegistrationService` integrates with Azure Foundry's `PersistentAge
 
 **Key Features:**
 - **Automatic Tool Discovery**: No manual tool configuration required
-- **Authentication Handling**: Automatic Bearer token and environment ID headers
+- **Authentication Handling**: Automatic Bearer token header
 - **Error Resilience**: Graceful handling of server connection issues
 - **Governance Compliance**: Built-in approval controls and validation
 
@@ -392,25 +386,24 @@ For development scenarios, create a `ToolingManifest.json` file in your project 
 - The `mcpServerUniqueName` field should contain only the server name (e.g., `mcp_MailTools`), not the full URL
 - The library automatically constructs the full URL based on:
   - Current environment (Development/Test/Production)
-  - Environment ID passed to the service
   - Base URL for the current environment
 
 **URL Construction:**
 The library builds full URLs like:
 ```
-{BaseURL}/{EnvironmentId}/servers/{ServerName}
+{BaseURL}/agents/servers/{ServerName}
 ```
 
 **Environment-Based Base URLs:**
-- **Development**: `https://localhost:8080/mcp/environments`
-- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/mcp/environments`
-- **Staging**: `https://staging.agent365.svc.cloud.microsoft/mcp/environments`
-- **Production**: `https://agent365.svc.cloud.microsoft/mcp/environments`
+- **Development**: `https://localhost:8080/agents/servers`
+- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/agents/servers`
+- **Staging**: `https://staging.agent365.svc.cloud.microsoft/agents/servers`
+- **Production**: `https://agent365.svc.cloud.microsoft/agents/servers`
 
 **Example:**
-For environment ID `Default-5369a35c-46a5-4677-8ff9-2e65587654e7` and server name `mcp_MailTools` in Test environment:
+For server name `mcp_MailTools` in Test environment:
 ```
-https://test.agent365.svc.cloud.dev.microsoft/mcp/environments/Default-5369a35c-46a5-4677-8ff9-2e65587654e7/servers/mcp_MailTools
+https://test.agent365.svc.cloud.dev.microsoft/agents/servers/mcp_MailTools
 ```
 
 ## Important Notes

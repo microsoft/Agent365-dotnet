@@ -176,7 +176,6 @@ var agent = await mcpService.AddToolServersToAgent(
     agentInstructions: "You are a helpful assistant with access to external tools.",
     initialTools: initialTools,
     agentUserId: "user123",
-    environmentId: "prod",
     authToken: "your-auth-token");
 
 Console.WriteLine("AIAgent created with MCP tools integrated");
@@ -193,7 +192,6 @@ var agent = await mcpService.AddToolServersToAgent(
     agentInstructions: null,           // No specific instructions
     initialTools: null,               // No initial tools
     agentUserId: "user123",
-    environmentId: "prod",
     authToken: "your-auth-token");
 
 // With instructions but no initial tools
@@ -202,7 +200,6 @@ var agent = await mcpService.AddToolServersToAgent(
     agentInstructions: "You are a helpful assistant.",
     initialTools: null,               // No initial tools
     agentUserId: "user123",
-    environmentId: "prod",
     authToken: "your-auth-token");
 ```
 
@@ -246,8 +243,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListToolServers(
-        string agentUserId, 
-        string environmentId, 
+        string agentUserId,
         string authToken);
 }
 ```
@@ -268,7 +264,6 @@ public interface IMcpToolRegistrationService
         string agentInstructions,
         IList<AITool> initialTools,
         string agentUserId,
-        string environmentId,
         string? authToken = null);
 }
 ```
@@ -336,25 +331,24 @@ For development scenarios, create a `ToolingManifest.json` file in your project 
 - The `mcpServerUniqueName` field should contain only the server name (e.g., `mcp_MailTools`), not the full URL
 - The library automatically constructs the full URL based on:
   - Current environment (Development/Test/Production)
-  - Environment ID passed to the service
   - Base URL for the current environment
 
 **URL Construction:**
 The library builds full URLs like:
 ```
-{BaseURL}/{EnvironmentId}/servers/{ServerName}
+{BaseURL}/agents/servers/{ServerName}
 ```
 
 **Environment-Based Base URLs:**
-- **Development**: `https://localhost:8080/mcp/environments`
-- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/mcp/environments`
-- **Staging**: `https://staging.agent365.svc.cloud.microsoft/mcp/environments`
-- **Production**: `https://agent365.svc.cloud.microsoft/mcp/environments`
+- **Development**: `https://localhost:8080/agents/servers`
+- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/agents/servers`
+- **Staging**: `https://staging.agent365.svc.cloud.microsoft/agents/servers`
+- **Production**: `https://agent365.svc.cloud.microsoft/agents/servers`
 
 **Example:**
-For environment ID `Default-5369a35c-46a5-4677-8ff9-2e65587654e7` and server name `mcp_MailTools` in Test environment:
+For server name `mcp_MailTools` in Test environment:
 ```
-https://test.agent365.svc.cloud.dev.microsoft/mcp/environments/Default-5369a35c-46a5-4677-8ff9-2e65587654e7/servers/mcp_MailTools
+https://test.agent365.svc.cloud.dev.microsoft/agents/servers/mcp_MailTools
 ```
 
 ### Logging

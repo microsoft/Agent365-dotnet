@@ -48,13 +48,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// Adds the A365 MCP Tool Servers
         /// </summary>
         /// <param name="kernel">Kernel</param>
-        /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="userAuthorization"></param>
         /// <param name="turnContext"></param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns a new object of the kernel</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        public void AddToolServersToAgent(Kernel kernel, string environmentId, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null)
+        public void AddToolServersToAgent(Kernel kernel, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null)
         {
             if (kernel == null)
             {
@@ -67,13 +66,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             }
 
             var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
-            var servers = _mcpServerConfigurationService.ListToolServers(agenticAppId, environmentId, authToken).Result;
+            var servers = _mcpServerConfigurationService.ListToolServers(agenticAppId, authToken).Result;
 
             var toolsMode = Utility.GetToolsMode();
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken).GetAwaiter().GetResult();
+                var listAvailableToolsForServer = _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, authToken).GetAwaiter().GetResult();
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

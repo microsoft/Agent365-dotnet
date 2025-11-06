@@ -55,7 +55,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// </summary>
     /// <param name="agentClient">PersistentAgentsClient instance for the agent.</param>
     /// <param name="agentInstanceId">The ID of the agent instance.</param>
-    /// <param name="environmentId">The ID of the environment.</param>
     /// <param name="userAuthorization">User authorization information.</param>
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="authToken">Authentication token for MCP server access.</param>
@@ -63,7 +62,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentInstanceId,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null)
@@ -76,7 +74,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,
@@ -95,7 +93,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <inheritdoc />
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null)
@@ -115,7 +112,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
@@ -136,7 +133,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// </summary>
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
-        string environmentId,
         string authToken,
         ITurnContext turnContext)
     {
@@ -150,7 +146,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, authToken);
         }
         catch (Exception ex)
         {
@@ -160,7 +156,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (servers.Count == 0)
         {
-            _logger.LogInformation("No MCP servers configured for agentInstanceId={agentInstanceId}, EnvironmentId={EnvId}", agentInstanceId, environmentId);
+            _logger.LogInformation("No MCP servers configured for agentInstanceId={agentInstanceId}", agentInstanceId);
             return (new List<MCPToolDefinition>(), null);
         }
 
@@ -199,12 +195,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
-            if (Utility.UseEnvironmentId())
-            {
-                // Set environment ID header
-                resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
-            }
-
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
 
@@ -219,7 +209,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)

@@ -10,7 +10,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
     public class Constants
     {
         /// <summary>
-        /// Provides constant header values used for authentication and environment identification.
+        /// Provides constant header values used for authentication.
         /// </summary>
         public class Headers
         {
@@ -18,11 +18,6 @@ namespace Microsoft.Agents.A365.Tooling.Utils
             /// The prefix used for Bearer authentication tokens in HTTP headers.
             /// </summary>
             public const string BearerPrefix = "Bearer";
-
-            /// <summary>
-            /// The header name used to specify the environment identifier in HTTP requests.
-            /// </summary>
-            public const string EnvironmentId = "x-ms-environment-id";
         }
     }
 }

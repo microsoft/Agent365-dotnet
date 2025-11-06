@@ -55,7 +55,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="agentInstructions">The agent instructions</param>
     /// <param name="initialTools">The existing tools to add servers to</param>
     /// <param name="agentUserId">Agent User ID for the agent</param>
-    /// <param name="environmentId">Environment ID for the environment</param>
     /// <param name="turnContext">Turn context for the current request</param>
     /// <param name="userAuthorization">User authorization information</param>
     /// <param name="authToken">Authentication token to access the MCP servers</param>
@@ -65,7 +64,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         string agentInstructions,
         IList<AITool> initialTools,
         string agentUserId,
-        string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null)
@@ -89,14 +87,14 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             updatedTools.AddRange(initialTools);
 
             // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
+            var servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, authToken!);
             
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
                 try
                 {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, authToken);
                     // Add the MCP tools
                     updatedTools.AddRange(mcpTools.Cast<AITool>());
                     
@@ -110,8 +108,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 }
             }
 
-            _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId} in environment {EnvironmentId}",
-                updatedTools.Count, agentUserId, environmentId);
+            _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
+                updatedTools.Count, agentUserId);
 
             // Create agent with updated tools (since AIAgent is immutable)
             var agentWithTools = chatClient.CreateAIAgent(
@@ -123,8 +121,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to add MCP tool servers for agent {AgentUserId} in environment {EnvironmentId}", 
-                agentUserId, environmentId);
+            _logger.LogError(ex, "Failed to add MCP tool servers for agent {AgentUserId}", 
+                agentUserId);
             throw;
         }
     }

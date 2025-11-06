@@ -39,12 +39,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Gets the list of MCP Servers that are configured for the agent.
         /// </summary>
         /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
-        /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        public async Task<List<MCPServerConfig>> ListToolServers(string agentInstanceId, string environmentId, string authToken)
+        public async Task<List<MCPServerConfig>> ListToolServers(string agentInstanceId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, environmentId, authToken);
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken);
         }
 
         /// <summary>
@@ -52,11 +51,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// </summary>
         /// <param name="turnContext">The turn context.</param>
         /// <param name="mCPServerConfig">The MCP server configuration.</param>
-        /// <param name="environmentId">The environment ID.</param>
         /// <param name="authToken">The authentication token.</param>
         /// <returns>MCP Client Tools</returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<IList<McpClientTool>> GetMcpClientTools(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string environmentId, string authToken)
+        public async Task<IList<McpClientTool>> GetMcpClientTools(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken)
         {
             try
             {
@@ -69,7 +67,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, authToken);
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -91,7 +89,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         private static async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
-            string agentInstanceId, string environmentId, string authToken)
+            string agentInstanceId, string authToken)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId);
 
@@ -105,10 +103,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                if (Utility.UseEnvironmentId())
-                {
-                    httpClient.DefaultRequestHeaders.Add("x-ms-environment-id", environmentId);
-                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
@@ -228,9 +222,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Parses a JSON element into an MCPServerConfig object from manifest, constructing full URL.
         /// </summary>
         /// <param name="serverElement">The JSON element containing server configuration</param>
-        /// <param name="environmentId">Environment ID to construct full URL</param>
         /// <returns>MCPServerConfig object or null if parsing fails</returns>
-        private static MCPServerConfig? ParseServerConfigFromManifest(JsonElement serverElement, string environmentId)
+        private static MCPServerConfig? ParseServerConfigFromManifest(JsonElement serverElement)
         {
             try
             {
@@ -272,8 +265,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     return null;
                 }
 
-                // Construct full URL using environment utilities
-                var fullUrl = Utility.BuildMcpServerUrl(environmentId, name);
+                // Construct full URL
+                var fullUrl = Utility.BuildMcpServerUrl(name);
 
                 return new MCPServerConfig
                 {
@@ -310,9 +303,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         ///   ]
         /// }
         /// </summary>
-        /// <param name="environmentId">Environment ID to construct full URLs.</param>
         /// <returns>List of MCP server configurations</returns>
-        private List<MCPServerConfig> GetMCPServersFromManifest(string environmentId)
+        private List<MCPServerConfig> GetMCPServersFromManifest()
         {
             var mcpServers = new List<MCPServerConfig>();
 
@@ -357,7 +349,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         {
                             foreach (var serverElement in serversElement.EnumerateArray())
                             {
-                                var serverConfig = ParseServerConfigFromManifest(serverElement, environmentId);
+                                var serverConfig = ParseServerConfigFromManifest(serverElement);
                                 if (serverConfig != null)
                                 {
                                     mcpServers.Add(serverConfig);
@@ -385,7 +377,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string clientName, string environmentId, string authToken)
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string clientName, string authToken)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -428,7 +420,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
-            httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
 
             var clientTransport = new SseClientTransport(options, httpClient);
 
