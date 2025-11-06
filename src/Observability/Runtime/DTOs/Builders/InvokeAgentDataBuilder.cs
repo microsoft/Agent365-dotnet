@@ -28,6 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
             InvokeAgentDetails invokeAgentDetails,
@@ -41,7 +42,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
+            string? parentSpanId = null,
+            IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
                 invokeAgentDetails,
@@ -51,7 +53,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 callerAgentDetails,
                 callerDetails,
                 inputMessages,
-                outputMessages);
+                outputMessages,
+                extraAttributes);
 
             return new InvokeAgentData(
                 attributes,
@@ -72,6 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="inputMessages">Optional input messages to include in the attributes.</param>
         /// <param name="outputMessages">Optional output messages to include in the attributes.</param>
+        /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>A dictionary of attribute key-value pairs.</returns>
         private static Dictionary<string, object?> BuildAttributes(
             InvokeAgentDetails invokeAgentDetails,
@@ -81,7 +85,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
             string[]? inputMessages = null,
-            string[]? outputMessages = null)
+            string[]? outputMessages = null,
+            IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
 
@@ -114,6 +119,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Add output messages
             AddOutputMessagesAttributes(attributes, outputMessages);
+
+            // Add any extra attributes
+            AddExtraAttributes(attributes, extraAttributes);
 
             return attributes;
         }

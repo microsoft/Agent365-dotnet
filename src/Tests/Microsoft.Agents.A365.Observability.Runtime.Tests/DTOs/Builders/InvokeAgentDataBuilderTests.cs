@@ -359,5 +359,88 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.EndTime.Should().BeNull();
             telemetry.Duration.Should().Be(TimeSpan.Zero);
         }
+
+        [TestMethod]
+        public void Build_AddsExtraAttributes_WhenNotReserved()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-extra", "ExtraAgent");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-extra";
+            var extras = new Dictionary<string, object?>
+            {
+                {"custom.key1", "value1"},
+                {"custom.key2", 42},
+            };
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                extraAttributes: extras);
+
+            // Assert
+            telemetry.Attributes.Should().ContainKey("custom.key1").WhoseValue.Should().Be("value1");
+            telemetry.Attributes.Should().ContainKey("custom.key2").WhoseValue.Should().Be(42);
+        }
+
+        [TestMethod]
+        public void Build_DoesNotOverrideReservedKeys_WithExtraAttributes()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-resv", "ReservedAgent");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-resv";
+            var extras = new Dictionary<string, object?>
+            {
+                {OpenTelemetryConstants.GenAiAgentIdKey, "fake-id"}, // reserved
+                {OpenTelemetryConstants.GenAiAgentNameKey, "fake-name"}, // reserved
+                {"another.key", "present"}
+            };
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                extraAttributes: extras);
+
+            // Assert - reserved keys keep original values
+            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentIdKey].Should().Be("agent-resv");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentNameKey].Should().Be("ReservedAgent");
+            telemetry.Attributes.Should().ContainKey("another.key").WhoseValue.Should().Be("present");
+        }
+
+        [TestMethod]
+        public void Build_IgnoresNullValues_InExtraAttributes()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-null", "NullAgent");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-null-extra";
+            var extras = new Dictionary<string, object?>
+            {
+                {"custom.null", null},
+                {"custom.good", "ok"}
+            };
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                extraAttributes: extras);
+
+            // Assert
+            telemetry.Attributes.Should().NotContainKey("custom.null");
+            telemetry.Attributes.Should().ContainKey("custom.good").WhoseValue.Should().Be("ok");
+        }
     }
 }

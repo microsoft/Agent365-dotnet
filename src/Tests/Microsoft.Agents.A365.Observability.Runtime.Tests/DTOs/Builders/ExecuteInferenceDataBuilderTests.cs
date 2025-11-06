@@ -203,5 +203,73 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.EndTime.Should().BeNull();
             data.Duration.Should().Be(TimeSpan.Zero);
         }
+
+        [TestMethod]
+        public void Build_AddsExtraAttributes_WhenNotReserved()
+        {
+            // Arrange
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-extra", "provider-extra");
+            var agent = new AgentDetails("agent-extra", "ExtraInfAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-extra-inf";
+            var extras = new Dictionary<string, object?>
+            {
+                {"inf.attr1", "v1"},
+                {"inf.attr2", 99}
+            };
+
+            // Act
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes.Should().ContainKey("inf.attr1").WhoseValue.Should().Be("v1");
+            data.Attributes.Should().ContainKey("inf.attr2").WhoseValue.Should().Be(99);
+        }
+
+        [TestMethod]
+        public void Build_DoesNotOverrideReservedKeys_WithExtraAttributes()
+        {
+            // Arrange
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-resv", "provider-resv");
+            var agent = new AgentDetails("agent-resv", "ReservedInfAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-resv-inf";
+            var extras = new Dictionary<string, object?>
+            {
+                {OpenTelemetryConstants.GenAiRequestModelKey, "fake-model"},
+                {OpenTelemetryConstants.GenAiProviderNameKey, "fake-provider"},
+                {"inf.other", "ok"}
+            };
+
+            // Act
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes[OpenTelemetryConstants.GenAiRequestModelKey].Should().Be("model-resv");
+            data.Attributes[OpenTelemetryConstants.GenAiProviderNameKey].Should().Be("provider-resv");
+            data.Attributes.Should().ContainKey("inf.other").WhoseValue.Should().Be("ok");
+        }
+
+        [TestMethod]
+        public void Build_IgnoresNullValues_InExtraAttributes()
+        {
+            // Arrange
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-null", "provider-null");
+            var agent = new AgentDetails("agent-null", "NullInfAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-null-inf";
+            var extras = new Dictionary<string, object?>
+            {
+                {"inf.null", null},
+                {"inf.valid", "yes"}
+            };
+
+            // Act
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes.Should().NotContainKey("inf.null");
+            data.Attributes.Should().ContainKey("inf.valid").WhoseValue.Should().Be("yes");
+        }
     }
 }

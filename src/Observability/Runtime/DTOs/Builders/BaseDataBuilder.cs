@@ -1,7 +1,11 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
@@ -10,6 +14,52 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     /// </summary>
     public abstract class BaseDataBuilder<T> where T : BaseData
     {
+        // Reserved attribute keys managed by specific builder methods; extra attributes must NOT override these.
+        private static readonly HashSet<string> ReservedAttributeKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            OpenTelemetryConstants.GenAiInputMessagesKey,
+            OpenTelemetryConstants.GenAiOutputMessagesKey,
+            OpenTelemetryConstants.GenAiAgentIdKey,
+            OpenTelemetryConstants.GenAiAgentNameKey,
+            OpenTelemetryConstants.GenAiAgentDescriptionKey,
+            OpenTelemetryConstants.GenAiAgentAUIDKey,
+            OpenTelemetryConstants.GenAiAgentUPNKey,
+            OpenTelemetryConstants.GenAiAgentBlueprintIdKey,
+            OpenTelemetryConstants.TenantIdKey,
+            OpenTelemetryConstants.ServerAddressKey,
+            OpenTelemetryConstants.ServerPortKey,
+            OpenTelemetryConstants.GenAiExecutionSourceIdKey,
+            OpenTelemetryConstants.GenAiExecutionSourceNameKey,
+            OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey,
+            OpenTelemetryConstants.GenAiExecutionTypeKey,
+            OpenTelemetryConstants.GenAiCallerIdKey,
+            OpenTelemetryConstants.GenAiCallerUpnKey,
+            OpenTelemetryConstants.GenAiCallerNameKey,
+            OpenTelemetryConstants.GenAiCallerUserIdKey,
+            OpenTelemetryConstants.GenAiCallerTenantIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentNameKey,
+            OpenTelemetryConstants.GenAiCallerAgentIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentAUIDKey,
+            OpenTelemetryConstants.GenAiCallerAgentUPNKey,
+            OpenTelemetryConstants.GenAiCallerAgentTenantKey,
+            OpenTelemetryConstants.GenAiConversationIdKey,
+            OpenTelemetryConstants.SessionIdKey,
+            OpenTelemetryConstants.GenAiToolNameKey,
+            OpenTelemetryConstants.GenAiToolArgumentsKey,
+            OpenTelemetryConstants.GenAiToolCallIdKey,
+            OpenTelemetryConstants.GenAiToolDescriptionKey,
+            OpenTelemetryConstants.GenAiToolTypeKey,
+            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiOperationNameKey,
+            OpenTelemetryConstants.GenAiRequestModelKey,
+            OpenTelemetryConstants.GenAiProviderNameKey,
+            OpenTelemetryConstants.GenAiUsageInputTokensKey,
+            OpenTelemetryConstants.GenAiUsageOutputTokensKey,
+            OpenTelemetryConstants.GenAiResponseFinishReasonsKey,
+            OpenTelemetryConstants.GenAiResponseIdKey
+        };
+
         /// <summary>
         /// Adds attributes for input messages.
         /// </summary>
@@ -123,6 +173,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             if (value != null)
             {
                 attributes[key] = value;
+            }
+        }
+
+        /// <summary>
+        /// Adds extra attributes to the attributes dictionary while ignoring reserved keys.
+        /// </summary>
+        protected static void AddExtraAttributes(IDictionary<string, object?> attributes, IDictionary<string, object?>? extraAttributes)
+        {
+            if (extraAttributes == null) return;
+
+            foreach (var kvp in extraAttributes)
+            {
+                if (kvp.Value == null) continue;
+
+                // Skip reserved keys
+                if (ReservedAttributeKeys.Contains(kvp.Key)) continue;
+
+                attributes[kvp.Key] = kvp.Value;
             }
         }
     }

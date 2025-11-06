@@ -237,5 +237,73 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.EndTime.Should().BeNull();
             data.Duration.Should().Be(TimeSpan.Zero);
         }
+
+        [TestMethod]
+        public void Build_AddsExtraAttributes_WhenNotReserved()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("tool-extra", null);
+            var agent = new AgentDetails("agent-extra", "ExtraToolAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-extra-tool";
+            var extras = new Dictionary<string, object?>
+            {
+                {"tool.custom", "abc"},
+                {"tool.number", 7}
+            };
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(tool, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes.Should().ContainKey("tool.custom").WhoseValue.Should().Be("abc");
+            data.Attributes.Should().ContainKey("tool.number").WhoseValue.Should().Be(7);
+        }
+
+        [TestMethod]
+        public void Build_DoesNotOverrideReservedKeys_WithExtraAttributes()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("tool-resv", null);
+            var agent = new AgentDetails("agent-resv", "ReservedToolAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-resv-tool";
+            var extras = new Dictionary<string, object?>
+            {
+                {OpenTelemetryConstants.GenAiToolNameKey, "fake-tool"},
+                {OpenTelemetryConstants.GenAiAgentIdKey, "fake-agent"},
+                {"tool.other", "ok"}
+            };
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(tool, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes[OpenTelemetryConstants.GenAiToolNameKey].Should().Be("tool-resv");
+            data.Attributes[OpenTelemetryConstants.GenAiAgentIdKey].Should().Be("agent-resv");
+            data.Attributes.Should().ContainKey("tool.other").WhoseValue.Should().Be("ok");
+        }
+
+        [TestMethod]
+        public void Build_IgnoresNullValues_InExtraAttributes()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("tool-null", null);
+            var agent = new AgentDetails("agent-null", "NullToolAgent");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-null-tool";
+            var extras = new Dictionary<string, object?>
+            {
+                {"tool.null", null},
+                {"tool.valid", "yes"}
+            };
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(tool, agent, tenant, conversationId, extraAttributes: extras);
+
+            // Assert
+            data.Attributes.Should().NotContainKey("tool.null");
+            data.Attributes.Should().ContainKey("tool.valid").WhoseValue.Should().Be("yes");
+        }
     }
 }

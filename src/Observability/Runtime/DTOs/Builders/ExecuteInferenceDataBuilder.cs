@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
@@ -27,6 +26,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
             InferenceCallDetails inferenceCallDetails,
@@ -38,7 +38,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
+            string? parentSpanId = null,
+            IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
                 inferenceCallDetails,
@@ -46,7 +47,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 tenantDetails,
                 conversationId,
                 inputMessages,
-                outputMessages);
+                outputMessages,
+                extraAttributes);
 
             return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -57,7 +59,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             TenantDetails tenantDetails,
             string conversationId,
             string[]? inputMessages,
-            string[]? outputMessages)
+            string[]? outputMessages,
+            IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
 
@@ -74,6 +77,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Input/output messages
             AddInputMessagesAttributes(attributes, inputMessages);
             AddOutputMessagesAttributes(attributes, outputMessages);
+
+            // Add any extra attributes
+            AddExtraAttributes(attributes, extraAttributes);
 
             return attributes;
         }
