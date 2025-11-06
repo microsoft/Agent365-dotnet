@@ -24,10 +24,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="logger"></param>
         /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
         /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="conversationId">The required conversation ID.</param>
         /// <param name="request">The request content for the invoked agent.</param>
         /// <param name="callerAgentDetails">The details of the caller agent.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
-        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
         /// <param name="inputMessages">Optional input messages to include in the log.</param>
         /// <param name="outputMessages">Optional output messages to include in the log.</param>
         /// <param name="startTime">Optional start time of the inference.</param>
@@ -36,12 +36,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
         public static void LogInvokeAgent(
             this ILogger logger,
-            InvokeAgentDetails invokeAgentDetails, 
-            TenantDetails tenantDetails, 
-            Request? request = null, 
-            AgentDetails? callerAgentDetails = null, 
-            CallerDetails? callerDetails = null, 
-            string? conversationId = null,
+            InvokeAgentDetails invokeAgentDetails,
+            TenantDetails tenantDetails,
+            string conversationId,
+            Request? request = null,
+            AgentDetails? callerAgentDetails = null,
+            CallerDetails? callerDetails = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
             DateTimeOffset? startTime = null,
@@ -52,10 +52,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             var data = InvokeAgentDataBuilder.Build(
                 invokeAgentDetails,
                 tenantDetails,
+                conversationId,
                 request,
                 callerAgentDetails,
                 callerDetails,
-                conversationId,
                 inputMessages,
                 outputMessages,
                 startTime,
@@ -79,7 +79,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="inferenceCallDetails">The details of the inference call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
-        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
+        /// <param name="conversationId">The required conversation ID.</param>
         /// <param name="inputMessages">Optional input messages to include in the log.</param>
         /// <param name="outputMessages">Optional output messages to include in the log.</param>
         /// <param name="startTime">Optional start time of the inference.</param>
@@ -91,7 +91,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId = null,
+            string conversationId,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
             DateTimeOffset? startTime = null,
@@ -127,7 +127,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="toolCallDetails">The details of the tool call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
-        /// <param name="conversationId">Optional conversation ID to include in the log.</param>
+        /// <param name="conversationId">The required conversation ID.</param>
         /// <param name="responseContent">Optional response content to include in the log.</param>
         /// <param name="startTime">Optional start time of the tool execution.</param>
         /// <param name="endTime">Optional end time of the tool execution.</param>
@@ -138,7 +138,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId = null,
+            string conversationId,
             string? responseContent = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
