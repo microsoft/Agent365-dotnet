@@ -1,7 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
@@ -183,13 +180,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (extraAttributes == null) return;
 
-            foreach (var kvp in extraAttributes)
+            foreach (var kvp in extraAttributes.Where(kvp => kvp.Value != null && !ReservedAttributeKeys.Contains(kvp.Key)))
             {
-                if (kvp.Value == null) continue;
-
-                // Skip reserved keys
-                if (ReservedAttributeKeys.Contains(kvp.Key)) continue;
-
                 attributes[kvp.Key] = kvp.Value;
             }
         }
