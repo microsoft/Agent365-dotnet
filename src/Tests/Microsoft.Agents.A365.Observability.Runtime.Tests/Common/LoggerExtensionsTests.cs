@@ -36,10 +36,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             Action act = () => logger.LogInvokeAgent(
                 invokeAgentDetails,
                 tenantDetails,
+                conversationId,
                 request,
                 callerAgentDetails,
                 callerDetails,
-                conversationId,
                 inputMessages,
                 outputMessages);
 
@@ -80,10 +80,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             mockLogger.Object.LogInvokeAgent(
                 invokeAgentDetails,
                 tenantDetails,
+                conversationId,
                 request,
                 callerAgentDetails,
                 callerDetails,
-                conversationId,
                 inputMessages,
                 outputMessages);
 
@@ -92,10 +92,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 x => x.Log(
                     LogLevel.Information,
                     It.Is<EventId>((eventId) => eventId.Id == 1001 && eventId.Name == "InvokeAgent"),
-                    It.Is<It.IsAnyType>((state, type) => VerifyInvokeAgentLogState(state, 
-                        agentDetails, 
-                        tenantDetails, 
-                        endpoint, 
+                    It.Is<It.IsAnyType>((state, type) => VerifyInvokeAgentLogState(state,
+                        agentDetails,
+                        tenantDetails,
+                        endpoint,
                         "session-456",
                         request,
                         callerAgentDetails,
@@ -129,8 +129,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 toolCallDetails: toolDetails,
                 agentDetails: agentDetails,
                 tenantDetails: tenantDetails,
-                responseContent: responseContent,
                 conversationId: conversationId,
+                responseContent: responseContent,
                 startTime: start,
                 endTime: end,
                 spanId: spanId,
@@ -215,31 +215,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
         }
 
         [TestMethod]
-        public void LogInvokeAgent_WithMinimalDetails_LogsOnlyRequiredAttributes()
-        {
-            // Arrange
-            var mockLogger = new Mock<ILogger>();
-            var endpoint = new Uri("https://example.com");
-            var tenantId = Guid.NewGuid();
-            var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
-            var tenantDetails = new TenantDetails(tenantId);
-
-            // Act
-            mockLogger.Object.LogInvokeAgent(invokeAgentDetails, tenantDetails);
-
-            // Assert
-            mockLogger.Verify(
-                x => x.Log(
-                    LogLevel.Information,
-                    It.Is<EventId>((eventId) => eventId.Id == 1001 && eventId.Name == "InvokeAgent"),
-                    It.Is<It.IsAnyType>((state, type) => VerifyMinimalInvokeAgentLogState(state, agentDetails, tenantDetails, endpoint)),
-                    null,
-                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-                Times.Once);
-        }
-
-        [TestMethod]
         public void LogInvokeAgent_UsesInformationLogLevel()
         {
             // Arrange
@@ -248,9 +223,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             var agentDetails = new AgentDetails("agent-123");
             var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-minimal";
 
             // Act
-            mockLogger.Object.LogInvokeAgent(invokeAgentDetails, tenantDetails);
+            mockLogger.Object.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
 
             // Assert
             mockLogger.Verify(
@@ -272,9 +248,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             var agentDetails = new AgentDetails("agent-123");
             var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-minimal";
 
             // Act
-            mockLogger.Object.LogInvokeAgent(invokeAgentDetails, tenantDetails);
+            mockLogger.Object.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
 
             // Assert
             mockLogger.Verify(
@@ -310,24 +287,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 && TryGetAndEquals(a, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)
                 && TryGetAndEquals(a, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))
                 && TryGetAndEquals(a, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages));
-        }
-
-        private static bool VerifyMinimalInvokeAgentLogState(
-            object state,
-            AgentDetails agentDetails,
-            TenantDetails tenantDetails,
-            Uri endpoint)
-        {
-            if (state is not InvokeAgentData data) return false;
-            var a = data.Attributes;
-            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId)) return false;
-            if (!TryGetAndEquals(a, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName)) return false;
-            if (!TryGetAndEquals(a, OpenTelemetryConstants.ServerAddressKey, endpoint.Host)) return false;
-            if (!a.ContainsKey(OpenTelemetryConstants.TenantIdKey)) return false;
-            if (a.ContainsKey(OpenTelemetryConstants.SessionIdKey)) return false;
-            if (a.ContainsKey(OpenTelemetryConstants.GenAiConversationIdKey)) return false;
-            if (a.ContainsKey(OpenTelemetryConstants.GenAiCallerIdKey)) return false;
-            return true;
         }
 
         private static bool VerifyExecuteToolLogState(

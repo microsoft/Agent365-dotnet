@@ -20,7 +20,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="inferenceCallDetails">The details of the inference call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
-        /// <param name="conversationId">Optional conversation id.</param>
+        /// <param name="conversationId">The conversation id.</param>
         /// <param name="inputMessages">Optional input messages for the inference.</param>
         /// <param name="outputMessages">Optional output messages from the inference.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
@@ -32,7 +32,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId = null,
+            string conversationId,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
             DateTimeOffset? startTime = null,
@@ -55,7 +55,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId,
+            string conversationId,
             string[]? inputMessages,
             string[]? outputMessages)
         {

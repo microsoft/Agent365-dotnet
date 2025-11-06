@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -16,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="toolCallDetails">The details of the tool call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
-        /// <param name="conversationId">Optional conversation id.</param>
+        /// <param name="conversationId">The conversation id.</param>
         /// <param name="responseContent">Optional response content from the tool.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
         /// <param name="endTime">Optional custom end time for the operation.</param>
@@ -27,7 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId = null,
+            string conversationId,
             string? responseContent = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
@@ -43,7 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId,
+            string conversationId,
             string? responseContent)
         {
             var attributes = new Dictionary<string, object?>();

@@ -1,4 +1,7 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
@@ -15,10 +18,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// </summary>
         /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
         /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="conversationId">The required conversation ID for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
         /// <param name="callerAgentDetails">The details of the caller agent.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
-        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="inputMessages">Optional input messages to include in the telemetry.</param>
         /// <param name="outputMessages">Optional output messages to include in the telemetry.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
@@ -29,10 +32,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         public static InvokeAgentData Build(
             InvokeAgentDetails invokeAgentDetails,
             TenantDetails tenantDetails,
+            string conversationId,
             Request? request = null,
             AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
-            string? conversationId = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
             DateTimeOffset? startTime = null,
@@ -43,10 +46,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             var attributes = BuildAttributes(
                 invokeAgentDetails,
                 tenantDetails,
+                conversationId,
                 request,
                 callerAgentDetails,
                 callerDetails,
-                conversationId,
                 inputMessages,
                 outputMessages);
 
@@ -63,20 +66,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// </summary>
         /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
         /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
         /// <param name="callerAgentDetails">The details of the caller agent.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
-        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="inputMessages">Optional input messages to include in the attributes.</param>
         /// <param name="outputMessages">Optional output messages to include in the attributes.</param>
         /// <returns>A dictionary of attribute key-value pairs.</returns>
         private static Dictionary<string, object?> BuildAttributes(
             InvokeAgentDetails invokeAgentDetails,
             TenantDetails tenantDetails,
+            string conversationId,
             Request? request = null,
             AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
-            string? conversationId = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null)
         {
