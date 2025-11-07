@@ -4,6 +4,9 @@
   "publicReleaseRefSpec": [
     "^refs/tags/v\\d+\\.\\d+\\.\\d+$"
   ],
+  "release": {
+    "firstUnstableTag": "preview"
+  },
   "cloudBuild": {
     "setAllVariables": true,
     "buildNumber": {
@@ -12,9 +15,5 @@
         "when": "never"
       }
     }
-  },
-  "release": {
-    "firstUnstableTag": "preview",
-    "versionIncrement": "minor"
   }
 }
