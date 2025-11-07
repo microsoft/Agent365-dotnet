@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.Builder;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.Builder;
 using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common

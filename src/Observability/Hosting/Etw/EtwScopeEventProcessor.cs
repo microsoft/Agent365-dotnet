@@ -1,7 +1,10 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Common;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw

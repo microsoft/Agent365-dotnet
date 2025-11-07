@@ -1,4 +1,8 @@
-﻿using System.Diagnostics.Tracing;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using System.Diagnostics.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
