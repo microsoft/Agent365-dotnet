@@ -143,7 +143,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 {
                     logInformation?.Invoke($"Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
                     resp = await sendAsync(request).ConfigureAwait(false);
-                    logInformation?.Invoke($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{Agent365ExporterCore.CorrelationIdHeaderKey}': '{resp.Headers.GetValues(Agent365ExporterCore.CorrelationIdHeaderKey).FirstOrDefault()}'.");
+                    var correlationId = resp.Headers.Contains(Agent365ExporterCore.CorrelationIdHeaderKey) ? resp.Headers.GetValues(Agent365ExporterCore.CorrelationIdHeaderKey).FirstOrDefault() : null;
+                    logInformation?.Invoke($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{Agent365ExporterCore.CorrelationIdHeaderKey}': '{correlationId}'.");
                     if (!resp.IsSuccessStatusCode)
                         return ExportResult.Failure;
                 }
