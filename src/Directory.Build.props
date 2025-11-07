@@ -45,6 +45,10 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Package references for all projects -->
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="$(RepositoryRoot)\LICENSE.md" Pack="true" PackagePath="" />
     <None Include="$(RepositoryRoot)\CHANGELOG.md" Pack="true" PackagePath="" />
     <None Include="README.md" Pack="true" PackagePath="" />
