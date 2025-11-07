@@ -1,4 +1,7 @@
-using System;
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters

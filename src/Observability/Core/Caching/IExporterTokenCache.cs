@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Agents.A365.Observability.Caching;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Caching;
 
 /// <summary>
 /// Cache only for observability (exporter) scoped tokens per (agentId, tenantId).

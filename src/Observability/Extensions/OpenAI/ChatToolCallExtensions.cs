@@ -1,7 +1,10 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using OpenAI.Chat;
-using System;
 
 namespace Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
