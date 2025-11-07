@@ -15,12 +15,22 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         /// <summary>
         /// Adds OpenTelemetry tracing with ETW to the service collection.
         /// </summary>
-        public static IServiceCollection AddTracingWithEtw(this IServiceCollection services, Action<EtwBuilder>? configure = null)
+        public static IServiceCollection AddTracingWithEtw(this IServiceCollection services, Action<EtwTracingBuilder>? configure = null)
         {
-            var builder = new EtwBuilder(services);
+            var builder = new EtwTracingBuilder(services);
 
             configure?.Invoke(builder);
             
+            return builder.Build();
+        }
+
+        /// <summary>
+        /// Adds OpenTelemetry logging with ETW to the service collection.
+        /// </summary>
+        public static IServiceCollection AddLoggingWithEtw(this IServiceCollection services, Action<EtwLoggingBuilder>? configure = null)
+        {
+            var builder = new EtwLoggingBuilder(services);
+            configure?.Invoke(builder);
             return builder.Build();
         }
     }
