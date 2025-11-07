@@ -47,13 +47,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Obser
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Runtime.Tests", "Tests\Runtime.Tests\Microsoft.Agents.A365.Runtime.Tests.csproj", "{7A8B9C0D-1E2F-4030-5142-6789ABCDEF01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry", "Tooling\Extensions\AzureFoundry\Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.csproj", "{C5A0294B-784B-456F-8C1A-A3FF4BB4C678}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry", "Tooling\Extensions\AzureAIFoundry\Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.csproj", "{C5A0294B-784B-456F-8C1A-A3FF4BB4C678}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensions", "Extensions", "{715DDBDC-9E00-40A7-AC63-654F609903C2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensions", "Extensions", "{89AD1AA2-300A-483A-832E-9047201DD2BC}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureFoundry", "AzureFoundry", "{516CB904-1318-4C78-8EAB-7A56AB1A5EDF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureAIFoundry", "AzureAIFoundry", "{516CB904-1318-4C78-8EAB-7A56AB1A5EDF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SemanticKernel", "SemanticKernel", "{407C231E-438A-462B-8559-65A71551BD8B}"
 EndProject
