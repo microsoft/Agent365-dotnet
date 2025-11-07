@@ -69,8 +69,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     options: this._options,
                     tokenResolver: (agentId, tenantId) => this._options.TokenResolver!(agentId, tenantId),
                     sendAsync: request => this._httpClient.SendAsync(request, cancellationToken),
-                    logInformation: msg => this._logger.LogInformation(msg),
-                    logError: (ex, msg) => this._logger.LogError(ex, msg)
+                    logInformation: msg => this._logger.LogInformation("Agent365ExporterAsync: {Message}", msg),
+                    logError: (ex, msg) => this._logger.LogError(ex, "Agent365ExporterAsync: {Message}", msg)
                 ).ConfigureAwait(false);
             }
             catch (OperationCanceledException)

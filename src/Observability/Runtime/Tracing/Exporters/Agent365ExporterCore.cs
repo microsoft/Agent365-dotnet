@@ -4,7 +4,6 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -24,6 +23,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// </summary>
     public static class Agent365ExporterCore
     {
+        private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
+
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
         /// </summary>
@@ -142,7 +143,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 {
                     logInformation?.Invoke($"Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
                     resp = await sendAsync(request).ConfigureAwait(false);
-                    logInformation?.Invoke($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}.");
+                    logInformation?.Invoke($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{Agent365ExporterCore.CorrelationIdHeaderKey}': '{resp.Headers.GetValues(Agent365ExporterCore.CorrelationIdHeaderKey).FirstOrDefault()}'.");
                     if (!resp.IsSuccessStatusCode)
                         return ExportResult.Failure;
                 }
