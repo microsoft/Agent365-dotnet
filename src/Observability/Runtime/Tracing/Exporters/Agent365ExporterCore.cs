@@ -48,12 +48,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             string[] keys = new[]
             {
-                "gen_ai.tool.arguments",
-                "gen_ai.event.content",
-                "gen_ai.input.messages",
-                "gen_ai.agent.invocation_input",
-                "gen_ai.output.messages",
-                "gen_ai.agent.invocation_output"
+                OpenTelemetryConstants.GenAiToolArgumentsKey,
+                OpenTelemetryConstants.GenAiEventContent,
+                OpenTelemetryConstants.GenAiInputMessagesKey,
+                OpenTelemetryConstants.GenAiInvocationInputKey,
+                OpenTelemetryConstants.GenAiOutputMessagesKey,
+                OpenTelemetryConstants.GenAiInvocationOutputKey
             };
 
             // Get all key/value sizes and log them
