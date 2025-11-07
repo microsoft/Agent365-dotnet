@@ -63,7 +63,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var value = activity.GetTagItem(key) as string;
                 int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
                 keySizes.Add((key, size, value));
-                logInformation?.Invoke($"Activity '{activity.DisplayName}': Key '{key}' size = {size} bytes.");
+                logInformation?.Invoke($"Activity '{activity.DisplayName}': Key '{key}' size = {size / 1024} KB.");
             }
 
             // Sort keys by size descending
@@ -77,8 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             foreach (var (key, size, _) in sorted)
             {
                 activity.SetTag(key, "TRUNCATED");
-                logInformation?.Invoke(
-                    $"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size} bytes.");
+                logInformation?.Invoke($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
 
                 // Re-check size after each truncation
                 json = ExportFormatter.FormatSingle(activity, resource);
