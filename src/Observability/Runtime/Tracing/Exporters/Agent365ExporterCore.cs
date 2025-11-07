@@ -72,8 +72,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 .OrderByDescending(k => k.Size)
                 .ToList();
 
-            bool truncated = false;
-
             foreach (var (key, size, _) in sorted)
             {
                 activity.SetTag(key, "TRUNCATED");
@@ -83,13 +81,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 json = ExportFormatter.FormatSingle(activity, resource);
                 if (Encoding.UTF8.GetByteCount(json) <= Agent365ExporterCore.MaxActivitySizeBytes)
                 {
-                    truncated = true;
                     break;
                 }
-                truncated = true;
             }
 
-            return truncated;
+            return true;
         }
 
         /// <summary>
