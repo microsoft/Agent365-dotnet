@@ -4,20 +4,13 @@
   "publicReleaseRefSpec": [
     "^refs/tags/v\\d+\\.\\d+\\.\\d+$"
   ],
-  "nuGetPackageVersion": {
-    "semVer": 2
-  },
   "cloudBuild": {
+    "setAllVariables": false,
     "buildNumber": {
-      "enabled": true,
-      "includeCommitId": {
-        "when": "nonPublicReleaseOnly",
-        "where": "buildMetadata"
-      }
+      "enabled": false
     }
   },
   "release": {
-    "branchName": "release/v{version}",
-    "versionIncrement": "minor"
+    "firstUnstableTag": "preview"
   }
 }
