@@ -62,13 +62,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 // Use the async core method, synchronously
                 return Agent365ExporterCore.ExportBatchCoreAsync(
-                    groups,
-                    _resource,
-                    _options,
-                    (agentId, tenantId) => _options.TokenResolver!(agentId, tenantId),
-                    request => _httpClient.SendAsync(request),
-                    msg => _logger.LogInformation(msg),
-                    (ex, msg) => _logger.LogError(ex, msg)
+                    groups: groups,
+                    resource: this._resource,
+                    options: this._options,
+                    tokenResolver: (agentId, tenantId) => this._options.TokenResolver!(agentId, tenantId),
+                    sendAsync: request => this._httpClient.SendAsync(request),
+                    logInformation: msg => this._logger.LogInformation("Agent365Exporter: {Message}", msg),
+                    logError: (ex, msg) => this._logger.LogError(ex, "Agent365Exporter: {Message}", msg)
                 ).GetAwaiter().GetResult();
             }
             catch (Exception exOuter)
