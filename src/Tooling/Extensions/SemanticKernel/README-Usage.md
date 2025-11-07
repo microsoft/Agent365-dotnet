@@ -132,9 +132,9 @@ var serviceProvider = services.BuildServiceProvider();
 var mcpConfigService = serviceProvider.GetRequiredService<IMcpServerConfigurationService>();
 var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationService>();
 
-// Use the services...
+// Use the services (agenticAppId will be extracted from turnContext)
 var servers = await mcpConfigService.ListMCPToolServersFromToolingGatewayAsync(
-    "agentUserId", 
+    "agenticAppId", 
     "environmentId", 
     "authToken");
 ```
@@ -175,7 +175,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListMCPToolServersFromToolingGatewayAsync(
-        string agentUserId, 
+        string agenticAppId, 
         string environmentId, 
         string authToken);
 }
@@ -188,11 +188,12 @@ Responsible for registering MCP tools with SemanticKernel.
 ```csharp
 public interface IMcpToolRegistrationService
 {
-    Kernel AddMCPToolServerToAgent(
+    void AddToolServersToAgent(
         Kernel kernel, 
-        string agentUserId, 
         string environmentId, 
-        string authToken);
+        UserAuthorization userAuthorization, 
+        ITurnContext turnContext, 
+        string? authToken = null);
 }
 ```
 

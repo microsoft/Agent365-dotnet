@@ -16,12 +16,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <summary>
         /// Gets the tooling gateway URL for the specified digital worker.
         /// </summary>
-        /// <param name="agentUserId">The unique identifier of the digital worker.</param>
+        /// <param name="agentInstanceId">The unique identifier of the digital worker.</param>
         /// <returns>The tooling gateway URL for the digital worker.</returns>
-        public static string GetToolingGatewayForDigitalWorker(string agentUserId)
+        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId)
         {
-            // The endpoint needs to be updated based on the environment (prod, dev, etc.)
-            return $"{GetMcpPlatformBaseUrl()}/agentGateway/agentApplicationInstances/{agentUserId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl()}/agents/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
@@ -31,18 +30,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         public static string GetMcpBaseUrl()
         {
             var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl();
-            var environment = RuntimeUtility.GetCurrentEnvironment();
-            if (environment.ToLowerInvariant() == "development")
+            if (!UseEnvironmentId())
             {
-                var toolsMode = GetToolsMode();
-                if (toolsMode == ToolsMode.MockMCPServer)
-                {
-                    return Environment.GetEnvironmentVariable("MOCK_MCP_SERVER_URL") ?? "http://localhost:5309/mcp-mock/agents/servers";
-                }
-
-                return Environment.GetEnvironmentVariable("MCP_DEVELOPMENT_BASE_URL")
-                       ?? $"{mcpPlatformBaseUrl}/mcp/environments";
+                return $"{mcpPlatformBaseUrl}/agents/servers";
             }
+
 
             return $"{mcpPlatformBaseUrl}/mcp/environments";
 
@@ -71,8 +63,8 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         {
             var baseUrl = GetMcpBaseUrl();
 
-            if (RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
-                && baseUrl.EndsWith("servers"))
+            if (!UseEnvironmentId() || ((RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
+                && baseUrl.EndsWith("servers"))))
             {
                 return $"{baseUrl}/{serverName}";
             }
@@ -94,6 +86,15 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 "mockmcpserver" => ToolsMode.MockMCPServer,
                 _ => ToolsMode.MCPPlatform
             };
+        }
+        /// <summary>
+        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID environment variable. 
+        /// </summary>
+        /// <returns>True if environment ID should be used; otherwise, false.</returns>
+        public static bool UseEnvironmentId()
+        {
+            var useEnvironmentId = Environment.GetEnvironmentVariable("USE_ENVIRONMENT_ID") ?? "true";
+            return useEnvironmentId.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

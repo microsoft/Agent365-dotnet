@@ -1,10 +1,15 @@
-﻿using OpenTelemetry.Resources;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using OpenTelemetry.Resources;
 using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -19,17 +24,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="activities">The collection of Activity spans to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the spans, containing resource attributes.</param>
         /// <returns>A JSON string representing the OTLP payload for the provided activities and resource.</returns>
-        public static string Format(IEnumerable<Activity> activities, Resource resource)
+        public static string FormatMany(IEnumerable<Activity> activities, Resource resource)
         {
-            var resourceAttributes = new Dictionary<string, object?>();
-            foreach (var kvp in resource.Attributes)
-            {
-                resourceAttributes[kvp.Key] = kvp.Value;
-            }
-
-            // Common service.* attributes (if present) are surfaced explicitly in many backends
-            var serviceName = resource.Attributes.FirstOrDefault(a => a.Key == "service.name").Value?.ToString();
-            var serviceVersion = resource.Attributes.FirstOrDefault(a => a.Key == "service.version").Value?.ToString();
+            var resourceAttributes = GetResourceAttributes(resource);
+            var serviceName = GetServiceName(resource);
+            var serviceVersion = GetServiceVersion(resource);
 
             var scopeMap = new Dictionary<(string Name, string? Version), List<OtlpSpan>>();
 
@@ -41,27 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                     spans = new List<OtlpSpan>();
                     scopeMap[key] = spans;
                 }
-
-                var span = new OtlpSpan
-                {
-                    TraceId = ToHex(activity.TraceId),
-                    SpanId = ToHex(activity.SpanId),
-                    ParentSpanId = activity.ParentSpanId != default ? ToHex(activity.ParentSpanId) : null,
-                    Name = activity.DisplayName,
-                    Kind = activity.Kind,
-                    StartTimeUnixNano = ToUnixNanos(activity.StartTimeUtc),
-                    EndTimeUnixNano = ToUnixNanos(activity.StartTimeUtc + activity.Duration),
-                    Attributes = MapAttributes(activity),
-                    Events = MapEvents(activity),
-                    Links = MapLinks(activity),
-                    Status = new Dictionary<string, object>
-                    {
-                        { "code", activity.Status },
-                        { "message", activity.StatusDescription ?? "" }
-                    }
-                };
-
-                spans.Add(span);
+                spans.Add(BuildOtlpSpan(activity));
             }
 
             var scopeSpans = new List<ScopeSpans>(scopeMap.Count);
@@ -92,14 +71,113 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 }
             };
 
-            var payloadJson = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            return SerializePayload(payload);
+        }
+
+        /// <summary>
+        /// Formats a single Activity span into an OTLP JSON payload compatible with our Agent365 Observability ingestion service.
+        /// </summary>
+        /// <param name="activity">The Activity span to be formatted into the OTLP payload.</param>
+        /// <param name="resource">The OpenTelemetry resource associated with the span, containing resource attributes.</param>
+        /// <returns>A JSON string representing the OTLP payload for the provided activity and resource.</returns>
+        public static string FormatSingle(Activity activity, Resource resource)
+        {
+            var resourceAttributes = GetResourceAttributes(resource);
+            var serviceName = GetServiceName(resource);
+            var serviceVersion = GetServiceVersion(resource);
+
+            var resourceAttrs = MapResourceAttributes(resourceAttributes, serviceName, serviceVersion);
+
+            var payload = new ExportTraceEtwPayload
+            {
+                ResourceSpan = new EtwResourceSpan()
+                {
+                    Resource = new OtlpResource { Attributes = resourceAttrs },
+                    ScopeSpan = new EtwScopeSpan()
+                    {
+                        Scope = new InstrumentationScope
+                        {
+                            Name = activity.Source.Name,
+                            Version = activity.Source.Version
+                        },
+                        Span = BuildOtlpSpan(activity)
+                    }
+                }
+            };
+
+            return SerializePayload(payload);
+        }
+
+        /// <summary>
+        /// Formats the log data for the OTLP payload.
+        /// </summary>
+        /// <param name="data">The operation data containing the log information.</param>
+        /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
+        public static string FormatLogData(BaseData data)
+        {
+            var payload = new
+            {
+                data.Name,
+                data.Attributes,
+                StartTimeUnixNano = data.StartTime.HasValue ? ToUnixNanos(data.StartTime.Value.UtcDateTime) : 0,
+                EndTimeUnixNano = data.EndTime.HasValue ? ToUnixNanos(data.EndTime.Value.UtcDateTime) : 0,
+                data.SpanId,
+                data.ParentSpanId
+            };
+
+            return SerializePayload(payload);
+        }
+
+        private static Dictionary<string, object?> GetResourceAttributes(Resource resource)
+        {
+            var resourceAttributes = new Dictionary<string, object?>();
+            foreach (var kvp in resource.Attributes)
+            {
+                resourceAttributes[kvp.Key] = kvp.Value;
+            }
+            return resourceAttributes;
+        }
+
+        private static string? GetServiceName(Resource resource)
+        {
+            return resource.Attributes.FirstOrDefault(a => a.Key == "service.name").Value?.ToString();
+        }
+
+        private static string? GetServiceVersion(Resource resource)
+        {
+            return resource.Attributes.FirstOrDefault(a => a.Key == "service.version").Value?.ToString();
+        }
+
+        private static OtlpSpan BuildOtlpSpan(Activity activity)
+        {
+            return new OtlpSpan
+            {
+                TraceId = ToHex(activity.TraceId),
+                SpanId = ToHex(activity.SpanId),
+                ParentSpanId = activity.ParentSpanId != default ? ToHex(activity.ParentSpanId) : null,
+                Name = activity.DisplayName,
+                Kind = activity.Kind,
+                StartTimeUnixNano = ToUnixNanos(activity.StartTimeUtc),
+                EndTimeUnixNano = ToUnixNanos(activity.StartTimeUtc + activity.Duration),
+                Attributes = MapAttributes(activity),
+                Events = MapEvents(activity),
+                Links = MapLinks(activity),
+                Status = new Dictionary<string, object>
+                {
+                    { "code", activity.Status },
+                    { "message", activity.StatusDescription ?? "" }
+                }
+            };
+        }
+
+        private static string SerializePayload<T>(T payload)
+        {
+            return JsonSerializer.Serialize(payload, new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = null, // We use explicit JsonPropertyName with OTLP snake_case.
+                PropertyNamingPolicy = null,
                 WriteIndented = false
             });
-
-            return payloadJson;
         }
 
         private static string ToHex(ActivityTraceId id)
@@ -201,6 +279,30 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("resourceSpans")]
         public List<ResourceSpans> ResourceSpans { get; set; } = new List<ResourceSpans>();
+    }
+
+    internal sealed class ExportTraceEtwPayload
+    {
+        [JsonPropertyName("resourceSpan")]
+        public EtwResourceSpan ResourceSpan { get; set; } = new EtwResourceSpan();
+    }
+
+    internal sealed class EtwResourceSpan
+    {
+        [JsonPropertyName("resource")]
+        public OtlpResource? Resource { get; set; }
+        
+        [JsonPropertyName("scopeSpan")]
+        public EtwScopeSpan ScopeSpan { get; set; } = new EtwScopeSpan();
+    }
+
+    internal sealed class EtwScopeSpan
+    {
+        [JsonPropertyName("scope")]
+        public InstrumentationScope? Scope { get; set; }
+     
+        [JsonPropertyName("span")]
+        public OtlpSpan Span { get; set; } = new OtlpSpan();
     }
 
     internal sealed class ResourceSpans

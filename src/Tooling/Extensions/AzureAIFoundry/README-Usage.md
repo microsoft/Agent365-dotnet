@@ -135,7 +135,7 @@ var mcpToolService = serviceProvider.GetRequiredService<IMcpToolRegistrationServ
 
 // Use the services...
 var servers = await mcpConfigService.ListToolServers(
-    "agentUserId", 
+    "agentInstance", 
     "environmentId", 
     "authToken");
 ```
@@ -176,7 +176,7 @@ Responsible for managing MCP server configurations.
 public interface IMcpServerConfigurationService
 {
     Task<List<MCPServerConfig>> ListToolServers(
-        string agentUserId, 
+        string agentInstance, 
         string environmentId, 
         string authToken);
 }
@@ -191,20 +191,19 @@ public interface IMcpToolRegistrationService
 {
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         string? authToken = null);
 
     void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
         string? authToken = null);
 
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
-        string agentUserId,
+        string agenticAppId,
         string environmentId,
         string authToken);
 }
@@ -236,7 +235,7 @@ public class FoundryAgentExample
         _logger = logger;
     }
 
-    public async Task<string> ProcessRequestAsync(string userMessage, string agentUserId, string environmentId, string authToken)
+    public async Task<string> ProcessRequestAsync(string userMessage, string environmentId, string authToken, UserAuthorization userAuthorization, ITurnContext turnContext)
     {
         // Create Azure AI Project client
         var projectEndpoint = Environment.GetEnvironmentVariable("PROJECT_ENDPOINT");
@@ -251,11 +250,12 @@ public class FoundryAgentExample
                 name: "mcp-enabled-agent",
                 instructions: "You are a helpful assistant with access to MCP tools.");
 
-            // Add MCP tool servers to the agent
+            // Add MCP tool servers to the agent (agenticAppId extracted from turnContext)
             _mcpToolRegistrationService.AddToolServersToAgent(
                 agentClient, 
-                agentUserId, 
                 environmentId, 
+                userAuthorization,
+                turnContext,
                 authToken);
 
             // Create thread and send message

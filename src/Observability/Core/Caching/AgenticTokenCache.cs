@@ -1,3 +1,7 @@
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 ﻿using Azure.Core;
 using System.Collections.Concurrent;
 

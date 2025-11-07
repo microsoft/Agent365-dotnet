@@ -1,0 +1,2 @@
+# Agent Observability Agent Framework SDK for .NET
+This package enables integration between the Agent Framework and the Observability SDK, processing OpenTelemetry traces from the Agent Framework to align with the Observability schema.

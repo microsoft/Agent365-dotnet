@@ -77,7 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
             }
         }
-        
+
         /// <summary>
         /// Records response information for telemetry tracking.
         /// </summary>

@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using System.Runtime.Serialization;
+
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
     #pragma warning disable CS1591 // XML documentation not required for constant definitions.
@@ -11,7 +13,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
     public static class OpenTelemetryConstants
     {
         public const string EnableOpenTelemetrySwitch = "Azure.Experimental.EnableActivitySource";
-        public const string SourceName = "KairoSdk";
+        public const string SourceName = "Agent365Sdk";
 
         public const string ServerAddressKey = "server.address";
         public const string ServerPortKey = "server.port";
@@ -34,6 +36,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiInputMessagesKey = "gen_ai.input.messages";
         public const string GenAiOutputMessagesKey = "gen_ai.output.messages";
 
+        [DataContract]
+        public enum OperationNames
+        {
+            [EnumMember(Value = "InvokeAgent")]
+            InvokeAgent,
+
+            [EnumMember(Value = "ExecuteInference")]
+            ExecuteInference,
+
+            [EnumMember(Value = "ExecuteTool")]
+            ExecuteTool
+        }
 
         // AI invocation context dimensions
         public const string GenAiExecutionTypeKey = "gen_ai.execution.type";

@@ -11,7 +11,6 @@ using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Agents.A365.Runtime.Authentication;
-using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Handlers;
 using Microsoft.Agents.A365.Tooling;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -51,41 +50,19 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         _mcpServerConfigurationService = mcpToolServerConfigurationService;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Add new MCP servers to the agent by updating the PersistentAgentsClient.
+    /// </summary>
+    /// <param name="agentClient">PersistentAgentsClient instance for the agent.</param>
+    /// <param name="agentInstanceId">The ID of the agent instance.</param>
+    /// <param name="environmentId">The ID of the environment.</param>
+    /// <param name="userAuthorization">User authorization information.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="authToken">Authentication token for MCP server access.</param>
+    /// <exception cref="ArgumentNullException"></exception>
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
-        string agentUserId,
-        string environmentId,
-        string? authToken = null)
-    {
-        if (agentClient == null)
-        {
-            throw new ArgumentNullException(nameof(agentClient));
-        }
-
-        try
-        {
-            // Get the tool definitions and resources using the internal implementation
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
-
-            agentClient.Administration.UpdateAgent(
-                agentUserId,
-                tools: toolDefinitions,
-                toolResources: toolResources);
-
-            _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {AgentUserId}", agentUserId);
-            throw;
-        }
-    }
-
-    /// <inheritdoc />
-    public void AddToolServersToAgent(
-        PersistentAgentsClient agentClient,
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
         UserAuthorization userAuthorization,
         ITurnContext turnContext,
@@ -96,19 +73,13 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        // Acquire token if not explicitly supplied
-        if (authToken == null)
-        {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).Result;
-        }
-
         try
         {
-            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentUserId, environmentId, authToken ?? string.Empty).GetAwaiter().GetResult();
+            // Get the tool definitions and resources using the internal implementation
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
-                agentUserId,
+                agentInstanceId,
                 tools: toolDefinitions,
                 toolResources: toolResources);
 
@@ -116,7 +87,46 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {AgentUserId}", agentUserId);
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public void AddToolServersToAgent(
+        PersistentAgentsClient agentClient,
+        string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
+        string? authToken = null)
+    {
+        if (agentClient == null)
+        {
+            throw new ArgumentNullException(nameof(agentClient));
+        }
+
+        if (authToken == null)
+        {
+            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+        }
+
+        var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
+
+        try
+        {
+            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, environmentId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+
+            agentClient.Administration.UpdateAgent(
+                agenticAppId,
+                tools: toolDefinitions,
+                toolResources: toolResources);
+
+            _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agenticAppId}", agenticAppId);
             throw;
         }
     }
@@ -125,9 +135,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// Get MCP tool definitions and resources.
     /// </summary>
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
-        string agentUserId,
+        string agentInstanceId,
         string environmentId,
-        string authToken)
+        string authToken,
+        ITurnContext turnContext)
     {
         // TODO: Make this method private 
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
@@ -139,17 +150,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to list MCP tool servers for AgentUserId={AgentUserId}", agentUserId);
+            _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={agentInstanceId}", agentInstanceId);
             return (new List<MCPToolDefinition>(), null);
         }
 
         if (servers.Count == 0)
         {
-            _logger.LogInformation("No MCP servers configured for AgentUserId={AgentUserId}, EnvironmentId={EnvId}", agentUserId, environmentId);
+            _logger.LogInformation("No MCP servers configured for agentInstanceId={agentInstanceId}, EnvironmentId={EnvId}", agentInstanceId, environmentId);
             return (new List<MCPToolDefinition>(), null);
         }
 
@@ -188,8 +199,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
-            // Set environment ID header
-            resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            if (Utility.UseEnvironmentId())
+            {
+                // Set environment ID header
+                resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
+            }
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
@@ -205,7 +219,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await GetTools(server, environmentId, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)
@@ -230,97 +244,5 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             servers.Count, toolDefinitions.Count, combinedToolResources?.Mcp.Count ?? 0);
 
         return (toolDefinitions, combinedToolResources);
-    }
-
-    private async Task<IList<McpClientTool>> GetTools(MCPServerConfig mCPServerConfig, string environmentId, string authToken)
-    {
-        try
-        {
-            // Validate the server name
-            if (string.IsNullOrWhiteSpace(mCPServerConfig.mcpServerName))
-            {
-                throw new ArgumentException("MCP Server name cannot be null or empty", nameof(mCPServerConfig.mcpServerName));
-            }
-
-            // Use custom HTTP-based implementation since MCP client library doesn't work
-            var mcpClient = await CreateMcpClientWithAuthHandlers(new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, environmentId, authToken);
-            var tools = await mcpClient.ListToolsAsync();
-
-            return tools;
-        }
-        catch (HttpRequestException httpEx)
-        {
-            throw new InvalidOperationException($"HTTP error connecting to MCP server '{mCPServerConfig.mcpServerName}' at '{mCPServerConfig.url}': {httpEx.Message}", httpEx);
-        }
-        catch (ArgumentException argEx)
-        {
-            throw new InvalidOperationException($"Invalid configuration for MCP server '{mCPServerConfig.mcpServerName}': {argEx.Message}", argEx);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed to get tools from MCP server '{mCPServerConfig.mcpServerName}' at '{mCPServerConfig.url}': {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Creates an MCP client with authentication handlers similar to your reference implementation
-    /// </summary>
-    private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(Uri endpoint, string clientName, string environmentId, string authToken)
-    {
-        // Create HTTP client handler chain for MCP service authentication
-        var httpClientHandler = new HttpClientHandler();
-
-        // WARNING: Only use this in development/testing - never in production!
-        // This bypasses SSL certificate validation
-        var isDevScenario = IsDevScenario();
-        if (isDevScenario)
-        {
-            httpClientHandler.ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-        }
-
-        // Create a simple authentication handler that adds the bearer token
-        var authHandler = new BearerTokenHandler(authToken)
-        {
-            InnerHandler = httpClientHandler
-        };
-
-        // Create logging handler (optional - for debugging HTTP requests)
-        var loggingHandler = new HttpLoggingHandler(this._logger)
-        {
-            InnerHandler = authHandler
-        };
-
-        // Setup SSE client transport options without manual token management
-        var options = new SseClientTransportOptions
-        {
-            Endpoint = endpoint,
-            TransportMode = HttpTransportMode.AutoDetect,
-        };
-
-        // Create HTTP client with the authentication handler chain
-        var httpClient = new HttpClient(loggingHandler);
-        httpClient.DefaultRequestHeaders.Add(Constants.Headers.EnvironmentId, environmentId);
-
-        var clientTransport = new SseClientTransport(options, httpClient);
-
-        try
-        {
-            return await McpClientFactory.CreateAsync(clientTransport);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed to create MCP client for endpoint '{endpoint}': {ex.Message}", ex);
-        }
-    }
-
-    private static bool IsDevScenario()
-    {
-        // Check environment variable first, default to dev if not set
-        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                         Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
-                         "Development";
-
-        return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
     }
 }

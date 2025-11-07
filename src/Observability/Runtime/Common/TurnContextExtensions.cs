@@ -1,3 +1,7 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.Builder;
@@ -12,22 +16,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public static class TurnContextExtensions
     {
-        private static readonly string ChannelIdAgents = "agents";
-        private static readonly string EntityTypeWpxComment = "wpxcomment";
-        private static readonly string EntityTypeEmailNotification = "emailNotification";
-        private static readonly string WpxCommentConversationIdFormat = "{0}_{1}";
-        private static readonly string AgentRole = "agenticUser";
+        private const string ChannelIdAgents = "agents";
+        private const string EntityTypeWpxComment = "wpxcomment";
+        private const string EntityTypeEmailNotification = "emailNotification";
+        private const string WpxCommentConversationIdFormat = "{0}_{1}";
+        private const string AgentRole = "agenticUser";
+        private const string O11ySpanIdKey = "O11ySpanId";
+        private const string O11yTraceIdKey = "O11yTraceId";
 
         /// <summary>
         /// Extracts caller-related baggage key-value pairs from the provided turn context.
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetCallerBaggagePairs(this ITurnContext turnContext)
         {
-                yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerIdKey, turnContext.Activity?.From?.Id);
-                yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerNameKey, turnContext.Activity?.From?.Name);
-                yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUpnKey, turnContext.Activity?.From?.Name);
-                yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUserIdKey, turnContext.Activity?.From?.AgenticUserId ?? turnContext.Activity?.From?.AadObjectId);
-                yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerTenantIdKey, turnContext.Activity?.From?.TenantId);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerIdKey, turnContext.Activity?.From?.Id);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerNameKey, turnContext.Activity?.From?.Name);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUpnKey, turnContext.Activity?.From?.Name);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUserIdKey, turnContext.Activity?.From?.AgenticUserId ?? turnContext.Activity?.From?.AadObjectId);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerTenantIdKey, turnContext.Activity?.From?.TenantId);
         }
 
         /// <summary>
@@ -130,6 +136,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             string? itemLink = turnContext?.Activity?.ServiceUrl;
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationItemLinkKey, itemLink);
+        }
+
+        /// <summary>
+        /// Injects observability context into the turn context.
+        /// </summary>
+        public static void InjectObservabilityContext(this ITurnContext turnContext, OpenTelemetryScope observabilityScope)
+        {
+            turnContext.StackState[O11ySpanIdKey] = observabilityScope.Id;
+            turnContext.StackState[O11yTraceIdKey] = observabilityScope.TraceId;
         }
     }
 }

@@ -7,36 +7,8 @@ on:
     branches: main
 
 jobs:
-  version-number:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set current date in UTC as env variable
-        run: |
-          export CURRENT_DATE="$(date -u +'%Y.%m.%d')"
-          echo "Current date is ${CURRENT_DATE}"
-          echo "CURRENT_DATE=${CURRENT_DATE}" >> $GITHUB_ENV
-
-      - id: build_version
-        name: Generate Build Version
-        run: |
-          export BUILD_VERSION="$CURRENT_DATE.${{ github.run_number }}"
-          echo "Build version is ${BUILD_VERSION}"
-          echo "BUILD_VERSION=${BUILD_VERSION}" >> $GITHUB_OUTPUT
-
-      - id: package_version
-        name: Generate Package Version
-        run: |
-          export PACKAGE_VERSION="$CURRENT_DATE-preview.${{ github.run_number }}"
-          echo "Package version is ${PACKAGE_VERSION}"
-          echo "PACKAGE_VERSION=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
-
-    outputs:
-      BUILD_VERSION: ${{ steps.build_version.outputs.BUILD_VERSION }}
-      PACKAGE_VERSION: ${{ steps.package_version.outputs.PACKAGE_VERSION }}
-
   dotnet-sdk:
     name: .NET SDK
-    needs: version-number
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,6 +21,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for nbgv to calculate version
 
       - name: Setup .NET ${{ matrix.dotnet-version }}
         uses: actions/setup-dotnet@v4
@@ -62,14 +36,24 @@ jobs:
         run: dotnet restore Microsoft.Agents.A365.Sdk.sln
 
       - name: Build solution
-        run: dotnet build Microsoft.Agents.A365.Sdk.sln --no-restore --configuration Release /p:Version=${{ needs.version-number.outputs.BUILD_VERSION }}
+        run: dotnet build Microsoft.Agents.A365.Sdk.sln --no-restore --configuration Release
 
       - name: Run tests
         run: dotnet test Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --verbosity normal
 
       - name: Pack
-        run: dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output ../NuGetPackages /p:PackageVersion=${{ needs.version-number.outputs.PACKAGE_VERSION }}
+        run: dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output ../NuGetPackages
+        
+      - name: Copy NuGet packages
+        run: |
+          mkdir -p ~/drop/dotnet/NuGetPackages && cp -v ../NuGetPackages/*.nupkg $_
 
+      - name: Upload NuGet packages as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-packages-${{ github.run_number }}
+          path: ~/drop/dotnet/NuGetPackages/*
+        
       - name: Publish
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
