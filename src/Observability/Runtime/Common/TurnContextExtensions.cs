@@ -19,7 +19,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string ChannelIdAgents = "agents";
         private const string EntityTypeWpxComment = "wpxcomment";
         private const string EntityTypeEmailNotification = "emailNotification";
-        private const string WpxCommentConversationIdFormat = "{0}_{1}";
         private const string AgentRole = "agenticUser";
         private const string O11ySpanIdKey = "O11ySpanId";
         private const string O11yTraceIdKey = "O11yTraceId";
@@ -111,13 +110,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 var wpxCommentEntity = turnContext.Activity.Entities?.FirstOrDefault(e => (e as dynamic)?.type == EntityTypeWpxComment);
                 if (wpxCommentEntity != null)
                 {
-                    dynamic entity = wpxCommentEntity;
-                    string documentId = entity.documentId;
-                    string parentCommentId = entity.parentCommentId;
-                    if (!string.IsNullOrWhiteSpace(documentId) && !string.IsNullOrWhiteSpace(parentCommentId))
-                    {
-                        conversationId = string.Format(WpxCommentConversationIdFormat, documentId, parentCommentId);
-                    }
+                    conversationId = turnContext?.Activity?.Conversation?.Id;
                 }
                 else
                 {
