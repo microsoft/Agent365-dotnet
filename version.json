@@ -10,8 +10,7 @@
       "enabled": false
     }
   },
-  "nuGetPackageVersion": {
-    "semVer": 2,
-    "prereleaseVersionTag": "preview"
+  "release": {
+    "firstUnstableTag": "preview"
   }
 }
