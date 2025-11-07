@@ -24,6 +24,74 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public static class Agent365ExporterCore
     {
         private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
+        private const int MaxActivitySizeBytes = 250 * 1024;
+
+        /// <summary>
+        /// Truncates the largest-to-smallest of the specified activity attributes until the activity's serialized size is under 250 KB.
+        /// Logs the size of each key/value and each truncation.
+        /// </summary>
+        /// <param name="activity">The activity to check and potentially truncate.</param>
+        /// <param name="resource">The resource for serialization context.</param>
+        /// <param name="logInformation">Logger for informational messages.</param>
+        /// <returns>True if any truncation occurred, otherwise false.</returns>
+        public static bool TruncateActivityToMaxSize(
+            Activity activity,
+            Resource resource,
+            Action<string>? logInformation = null)
+        {
+            if (activity == null) return false;
+
+            // Check initial size
+            string json = ExportFormatter.FormatSingle(activity, resource);
+            if (Encoding.UTF8.GetByteCount(json) <= Agent365ExporterCore.MaxActivitySizeBytes)
+                return false;
+
+            string[] keys = new[]
+            {
+                "gen_ai.tool.arguments",
+                "gen_ai.event.content",
+                "gen_ai.input.messages",
+                "gen_ai.agent.invocation_input",
+                "gen_ai.output.messages",
+                "gen_ai.agent.invocation_output"
+            };
+
+            // Get all key/value sizes and log them
+            var keySizes = new List<(string Key, int Size, string? Value)>();
+            foreach (var key in keys)
+            {
+                var value = activity.GetTagItem(key) as string;
+                int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
+                keySizes.Add((key, size, value));
+                logInformation?.Invoke($"Activity '{activity.DisplayName}': Key '{key}' size = {size} bytes.");
+            }
+
+            // Sort keys by size descending
+            var sorted = keySizes
+                .Where(k => !string.IsNullOrEmpty(k.Value) && k.Size > 0)
+                .OrderByDescending(k => k.Size)
+                .ToList();
+
+            bool truncated = false;
+
+            foreach (var (key, size, _) in sorted)
+            {
+                activity.SetTag(key, "TRUNCATED");
+                logInformation?.Invoke(
+                    $"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size} bytes.");
+
+                // Re-check size after each truncation
+                json = ExportFormatter.FormatSingle(activity, resource);
+                if (Encoding.UTF8.GetByteCount(json) <= Agent365ExporterCore.MaxActivitySizeBytes)
+                {
+                    truncated = true;
+                    break;
+                }
+                truncated = true;
+            }
+
+            return truncated;
+        }
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
@@ -110,6 +178,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             foreach (var g in groups)
             {
                 var (tenantId, agentId, activities) = g;
+
+                // Truncate activities if needed before serialization
+                foreach (var activity in activities)
+                {
+                    Agent365ExporterCore.TruncateActivityToMaxSize(activity, resource, logInformation);
+                }
+
                 var json = ExportFormatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
