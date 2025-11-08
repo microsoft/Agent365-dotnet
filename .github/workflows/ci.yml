@@ -1,5 +1,8 @@
 name: CI - Build, Test, and Publish
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: main
@@ -10,6 +13,8 @@ jobs:
   dotnet-sdk:
     name: .NET SDK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: ./src
