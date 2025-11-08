@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.Observability.Runtime</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Observability.Runtime</RootNamespace>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
