@@ -113,16 +113,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         /// <param name="data">The operation data containing the log information.</param>
         /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
-        public static string FormatLogData(BaseData data)
+        public static string FormatLogData(IDictionary<string, object?> data)
         {
             var payload = new
             {
-                data.Name,
-                data.Attributes,
-                StartTimeUnixNano = data.StartTime.HasValue ? ToUnixNanos(data.StartTime.Value.UtcDateTime) : 0,
-                EndTimeUnixNano = data.EndTime.HasValue ? ToUnixNanos(data.EndTime.Value.UtcDateTime) : 0,
-                data.SpanId,
-                data.ParentSpanId
+                Name = data["Name"],
+                Attributes = data["Attributes"],
+                StartTimeUnixNano = data.TryGetValue("StartTimeUnixNano", out var startTimeUnixNanoObj) ? startTimeUnixNanoObj : 0,
+                EndTimeUnixNano = data.TryGetValue("EndTimeUnixNano", out var endTimeUnixNanoObj) ? endTimeUnixNanoObj : 0,
+                SpanId = data["SpanId"],
+                ParentSpanId = data["ParentSpanId"]
             };
 
             return SerializePayload(payload);

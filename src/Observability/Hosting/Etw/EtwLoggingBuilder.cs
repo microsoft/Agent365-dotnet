@@ -51,7 +51,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                     {
                         logging.AddConsoleExporter();
                     }
-                });
+                }, (options =>
+                {
+                    options.ParseStateValues = true;
+                }));
 
             _isBuilt = true;
         }

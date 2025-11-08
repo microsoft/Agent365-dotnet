@@ -1,5 +1,11 @@
-﻿using OpenTelemetry;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Common;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
+using System.Collections.Generic;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
@@ -13,7 +19,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         /// </summary>
         public override void OnEnd(LogRecord data)
         {
-            // TODO: Implement log formatting and emit ETW using LogJson.
+            var attributes = new Dictionary<string, object?>();
+            if (data.Attributes != null) {
+                foreach (var kvp in data.Attributes)
+                {
+                    attributes[kvp.Key] = kvp.Value;
+                }
+            }
+
+            var jsonContent = ExportFormatter.FormatLogData(attributes);
+
+            EtwEventSource.Log.LogJson(jsonContent);
         }
     }
 }

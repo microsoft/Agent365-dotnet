@@ -2,11 +2,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -70,7 +70,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             logger.Log(
                 LogLevel.Information,
                 InvokeAgentEventId,
-                data,
+                data.ToDictionary(),
                 null,
                 LogFormatter
             );
@@ -118,7 +118,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             logger.Log(
                 LogLevel.Information,
                 ExecuteInferenceEventId,
-                data,
+                data.ToDictionary(),
                 null,
                 LogFormatter
             );
@@ -163,15 +163,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             logger.Log(
                 LogLevel.Information,
                 ExecuteToolEventId,
-                data,
+                data.ToDictionary(),
                 null,
                 LogFormatter
             );
         }
 
-        private static string LogFormatter(BaseData data, Exception? ex)
+        private static string LogFormatter(Dictionary<string, object?> data, Exception? ex)
         {
-            return ExportFormatter.FormatLogData(data);
+            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}, SpanId: {data["SpanId"]}";
         }
     }
 }
