@@ -1,10 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk">
+ns<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Observability.SemanticKernel</AssemblyName>
-    <RootNamespace>Microsoft.Agents.A365.Observability.SemanticKernel</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Observability.Extensions.SemanticKernel</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Observability.Extensions.SemanticKernel</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <!-- NuGet Package Properties -->
-    <PackageId>Microsoft.Agents.A365.Observability.SemanticKernel</PackageId>
+    <PackageId>Microsoft.Agents.A365.Observability.Extensions.SemanticKernel</PackageId>
     <Title>Microsoft Agents A365 SDK Observability SemanticKernel</Title>
     <Description>SemanticKernel observability integration for Microsoft Agents A365 SDK, providing automatic tracing for ChatCompletionAgent operations.</Description>
     <Summary>Microsoft Agents A365 SDK Observability SemanticKernel - Automatic tracing for SemanticKernel agents</Summary>
@@ -18,6 +18,6 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-      <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
+    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
   </ItemGroup>
 </Project>
