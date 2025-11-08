@@ -5,10 +5,10 @@
     <TargetFramework>net8.0</TargetFramework>
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.Observability</PackageId>
-    <Title>Microsoft Agents A365 SDK Observability Common</Title>
-    <Description>Common observability components for Microsoft Agents A365 SDK, providing base OpenTelemetry tracing and monitoring functionality for AI agents and tools.</Description>
-    <Summary>Microsoft Agents A365 SDK Observability Common - Base tracing and monitoring components</Summary>
-    <Product>Microsoft Agents A365 SDK Observability Common</Product>
+    <Title>Microsoft Agent 365 Observability SDK</Title>
+    <Description>Common observability components for Microsoft Agent 365 SDK, providing base OpenTelemetry tracing and monitoring functionality for AI agents and tools.</Description>
+    <Summary>Microsoft Agent 365 Observability SDK - Base tracing and monitoring components</Summary>
+    <Product>Microsoft Agent 365 Observability SDK</Product>
     <PackageTags>Microsoft;Agents;A365;Observability;OpenTelemetry;AI;Agents;Tracing;Monitoring;Telemetry</PackageTags>
   </PropertyGroup>
   <ItemGroup>
@@ -37,3 +37,4 @@
     <ProjectReference Include="..\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
   </ItemGroup>
 </Project>
+
