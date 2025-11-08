@@ -11,6 +11,7 @@ on:
 
 jobs:
   dotnet-sdk:
+    name: .NET SDK
     runs-on: ubuntu-latest
     permissions:
       contents: write
