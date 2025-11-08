@@ -7,10 +7,10 @@
 
 		<!-- NuGet Package Properties -->
 		<PackageId>Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry</PackageId>
-		<Title>Microsoft Agents A365 Azure AI Foundry Integration</Title>
-		<Description>A .NET SDK that integrates Microsoft Agents A365 with Azure AI Foundry, providing tooling functionalities.</Description>
-		<Summary>Microsoft Agents A365 Azure AI Foundry Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
-		<Product>Microsoft Agents A365 SDK Azure AI Foundry Tooling Integration</Product>
+		<Title>Microsoft Agent 365 Azure AI Foundry Integration</Title>
+		<Description>A .NET SDK that integrates Microsoft Agent 365 with Azure AI Foundry, providing tooling functionalities.</Description>
+		<Summary>Microsoft Agent 365 Azure AI Foundry Tooling Integration - Provides a way to add Agent 365 MCP Servers</Summary>
+		<Product>Microsoft Agent 365 Azure AI Foundry Tooling SDK</Product>
 		<PackageTags>Microsoft;A365AzureAI;OpenTelemetry;AI;Agents;Tooling</PackageTags>
 	</PropertyGroup>
 
