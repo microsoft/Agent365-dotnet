@@ -7,7 +7,7 @@
 
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.Tooling.Extensions.AgentFramework</PackageId>
-    <Title>Microsoft Agent 365 Agent Framework Integration</Title>
+    <Title>Microsoft Agent 365 Agent Framework Tooling SDK</Title>
     <Description>A .NET SDK that integrates Microsoft Agent 365 with Agent Framework, providing tooling functionalities.</Description>
     <Summary>Microsoft Agent 365 Agent Framework Tooling Integration - Provides a way to add Agent 365 MCP Servers</Summary>
     <Product>Microsoft Agent 365 Agent Framework Tooling SDK</Product>
