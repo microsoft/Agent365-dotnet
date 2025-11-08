@@ -1,5 +1,8 @@
 name: CI - Build, Test, and Publish
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: main
