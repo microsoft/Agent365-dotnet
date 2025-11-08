@@ -16,10 +16,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public static class TurnContextExtensions
     {
-        private const string ChannelIdAgents = "agents";
-        private const string EntityTypeWpxComment = "wpxcomment";
-        private const string EntityTypeEmailNotification = "emailNotification";
-        private const string WpxCommentConversationIdFormat = "{0}_{1}";
         private const string AgentRole = "agenticUser";
         private const string O11ySpanIdKey = "O11ySpanId";
         private const string O11yTraceIdKey = "O11yTraceId";
@@ -105,34 +101,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetConversationIdAndItemLinkPairs(this ITurnContext turnContext)
         {
-            string? conversationId = null;
-            if (turnContext.Activity?.ChannelId == ChannelIdAgents)
-            {
-                var wpxCommentEntity = turnContext.Activity.Entities?.FirstOrDefault(e => (e as dynamic)?.type == EntityTypeWpxComment);
-                if (wpxCommentEntity != null)
-                {
-                    dynamic entity = wpxCommentEntity;
-                    string documentId = entity.documentId;
-                    string parentCommentId = entity.parentCommentId;
-                    if (!string.IsNullOrWhiteSpace(documentId) && !string.IsNullOrWhiteSpace(parentCommentId))
-                    {
-                        conversationId = string.Format(WpxCommentConversationIdFormat, documentId, parentCommentId);
-                    }
-                }
-                else
-                {
-                    var emailNotificationEntity = turnContext.Activity.Entities?.FirstOrDefault(e => (e as dynamic)?.type == EntityTypeEmailNotification);
-                    if (emailNotificationEntity != null)
-                    {
-                        dynamic entity = emailNotificationEntity;
-                        conversationId = entity.conversationId;
-                    }
-                }
-            }
-            else
-            {
-                conversationId = turnContext?.Activity?.Conversation?.Id;
-            }
+            string? conversationId = turnContext?.Activity?.Conversation?.Id;
             string? itemLink = turnContext?.Activity?.ServiceUrl;
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationItemLinkKey, itemLink);
