@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Tooling.AgentFramework</AssemblyName>
-    <RootNamespace>Microsoft.Agents.A365.Tooling.AgentFramework</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Tooling.Extensions.AgentFramework</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Tooling.Extensions.AgentFramework</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
 
     <!-- NuGet Package Properties -->
-    <PackageId>Microsoft.Agents.A365.Tooling.AgentFramework</PackageId>
-    <Title>Microsoft Agents A365 AgentFramework Integration</Title>
-    <Description>A .NET SDK that integrates Microsoft Agents A365 with AgentFramework, providing tooling functionalities.</Description>
-    <Summary>Microsoft Agents A365 AgentFramework Tooling Integration - Provides a way to add A365 MCP Servers</Summary>
-    <Product>Microsoft Agents A365 SDK AgentFramework Tooling Integration</Product>
+    <PackageId>Microsoft.Agents.A365.Tooling.Extensions.AgentFramework</PackageId>
+    <Title>Microsoft Agent 365 Agent Framework Integration</Title>
+    <Description>A .NET SDK that integrates Microsoft Agent 365 with Agent Framework, providing tooling functionalities.</Description>
+    <Summary>Microsoft Agent 365 Agent Framework Tooling Integration - Provides a way to add Agent 365 MCP Servers</Summary>
+    <Product>Microsoft Agent 365 Agent Framework Tooling SDK</Product>
     <PackageTags>Microsoft;A365AgentFramework;OpenTelemetry;AI;Agents;Tooling</PackageTags>
   </PropertyGroup>
 
