@@ -171,7 +171,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
         private static string LogFormatter(Dictionary<string, object?> data, Exception? ex)
         {
-            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}, SpanId: {data["SpanId"]}";
+            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}";
         }
     }
 }

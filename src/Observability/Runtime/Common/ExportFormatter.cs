@@ -119,8 +119,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             {
                 Name = data["Name"],
                 Attributes = data["Attributes"],
-                StartTimeUnixNano = data.TryGetValue("StartTimeUnixNano", out var startTimeUnixNanoObj) ? startTimeUnixNanoObj : 0,
-                EndTimeUnixNano = data.TryGetValue("EndTimeUnixNano", out var endTimeUnixNanoObj) ? endTimeUnixNanoObj : 0,
+                StartTimeUnixNano = data.TryGetValue("StartTime", out var startTimeObj) && startTimeObj != null ? ToUnixNanos(((DateTimeOffset)startTimeObj).UtcDateTime) : 0,
+                EndTimeUnixNano = data.TryGetValue("EndTime", out var endTimeObj) && endTimeObj != null ? ToUnixNanos(((DateTimeOffset)endTimeObj).UtcDateTime) : 0,
                 SpanId = data["SpanId"],
                 ParentSpanId = data["ParentSpanId"]
             };
