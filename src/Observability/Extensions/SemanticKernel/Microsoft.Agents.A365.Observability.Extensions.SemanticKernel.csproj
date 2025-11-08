@@ -1,4 +1,4 @@
-ns<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>Microsoft.Agents.A365.Observability.Extensions.SemanticKernel</AssemblyName>
     <RootNamespace>Microsoft.Agents.A365.Observability.Extensions.SemanticKernel</RootNamespace>
@@ -21,4 +21,3 @@ ns<Project Sdk="Microsoft.NET.Sdk">
     <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
   </ItemGroup>
 </Project>
-
