@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Observability.ExtensionsOpenAI</AssemblyName>
+    <AssemblyName>Microsoft.Agents.A365.Observability.Extensions.OpenAI</AssemblyName>
     <RootNamespace>Microsoft.Agents.A365.Observability.Extensions.OpenAI</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <!-- NuGet Package Properties -->
@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
   </ItemGroup>
 </Project>
+
 
 
