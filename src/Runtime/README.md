@@ -48,132 +48,63 @@ dotnet add package Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel
   - `TenantContextHelper`: Tenant and worker ID extraction from HttpContext
   - `Utility`: Common utility methods for runtime operations
 
-### Extensions
+## Package Structure
 
-- **Microsoft.Agents.A365.Runtime.Extensions.OpenAI** (`Extensions/OpenAI/`): Runtime extensions for OpenAI integration
-- **Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel** (`Extensions/SemanticKernel/`): Runtime extensions for Semantic Kernel integration
+The Runtime SDK provides multi-tenant utilities and framework extensions:
 
-## Quick Start
+### Core Package
 
-### Basic Tenant/Worker ID Extraction
+- **[Microsoft.Agents.A365.Runtime](Core/README.md)** - Core runtime utilities including TenantContextHelper, AgenticAuthorizationService, and Utility methods
 
-```csharp
-using Microsoft.Agents.A365.Runtime;
+### Framework Extensions
 
-app.MapPost("/api/agent", async (HttpContext context) =>
-{
-    // Extract tenant and worker context
-    var tenantId = TenantContextHelper.GetTenantId(context);
-    var workerId = TenantContextHelper.GetWorkerId(context);
-    
-    // Use with KernelProvider or other multi-tenant services
-    var kernel = kernelProvider.GetKernel(tenantId ?? "default", workerId ?? "default");
-    
-    // Process request with tenant isolation...
-});
-```
+- **Microsoft.Agents.A365.Runtime.Extensions.OpenAI** - Runtime extensions for OpenAI integration (coming soon)
+- **Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel** - Runtime extensions for Semantic Kernel integration (coming soon)
 
-### Integration with Authorization
+## Getting Started
 
-```csharp
-using Microsoft.Agents.A365.Runtime;
+The Runtime SDK helps extract tenant and worker context from HTTP requests for multi-tenant agent applications.
 
-app.MapPost("/api/process", async (
-    HttpContext context, 
-    IAgenticAuthorizationService authService) =>
-{
-    // Extract context
-    var tenantId = TenantContextHelper.GetTenantId(context);
-    var workerId = TenantContextHelper.GetWorkerId(context);
-    
-    // Apply authorization
-    var isAuthorized = await authService.AuthorizeAsync(tenantId, workerId);
-    
-    if (!isAuthorized)
-    {
-        return Results.Unauthorized();
-    }
-    
-    // Process authorized request...
-});
-```
+### Core Runtime Utilities
 
-## Context Sources
+See [Core Package](Core/README.md) for detailed examples on:
 
-The helper checks for tenant/worker IDs in this priority order:
+- Extracting tenant and worker IDs from HttpContext
+- Using TenantContextHelper for multi-tenant isolation
+- Integrating with authorization services
+- Working with kernel providers
 
-1. **User Claims**: `tenant_id`, `worker_id`
-2. **Request Headers**: `X-Tenant-Id`, `X-Worker-Id`
-3. **Request Items**: `TenantId`, `WorkerId`
+## Key Capabilities
 
-## Advanced Usage
+### Multi-Tenant Context Management
 
-### Custom Tenant Resolution
+- Extract tenant IDs from user claims, headers, or request items
+- Extract worker IDs for multi-worker scenarios
+- Null-safe extraction with proper validation
+- Performance-optimized with minimal overhead
 
-```csharp
-public class CustomTenantResolver
-{
-    public string? ResolveTenant(HttpContext context)
-    {
-        // Try standard extraction first
-        var tenantId = TenantContextHelper.GetTenantId(context);
-        
-        if (tenantId != null)
-            return tenantId;
-            
-        // Add custom resolution logic
-        // e.g., from subdomain, custom header, database lookup, etc.
-        
-        return null;
-    }
-}
-```
+### Authorization Services
 
-### Multi-Tenant Kernel Provider
+- AgenticAuthorizationService for agent-specific authorization
+- Integration with Microsoft Agents A365 security model
+- Support for tenant-level and worker-level permissions
 
-```csharp
-public class MultiTenantService
-{
-    private readonly IKernelProvider _kernelProvider;
-    
-    public async Task ProcessRequestAsync(HttpContext context)
-    {
-        var tenantId = TenantContextHelper.GetTenantId(context);
-        var workerId = TenantContextHelper.GetWorkerId(context);
-        
-        // Get tenant-specific kernel with proper isolation
-        var kernel = _kernelProvider.GetKernel(
-            tenantId ?? "default", 
-            workerId ?? "default");
-            
-        // Process with tenant-isolated resources
-        await kernel.InvokeAsync("ProcessData");
-    }
-}
-```
+### Utility Methods
 
-## Why Separate Packages?
+- Common helper methods for runtime operations
+- HTTP context manipulation
+- Request/response processing utilities
 
-The Runtime SDK is organized into separate packages to:
+## Package Documentation
 
-- **Avoid Unnecessary Dependencies**: Core runtime doesn't need web framework dependencies
-- **Enable Flexible Deployment**: Console apps and background services don't need ASP.NET Core
-- **Follow Single Responsibility**: Each package has a focused purpose
-- **Reduce Package Size**: Consumers only get what they need
-- **Improve Build Performance**: Smaller dependency graphs
+For detailed code examples and usage patterns, see the [Core Package README](Core/README.md).
 
 ## Related Packages
 
 - [Microsoft.Agents.A365.Observability](../Observability/README.md) - Monitoring and tracing for agent applications
 - [Microsoft.Agents.A365.Notifications](../Notification/README.md) - Agent notification services
 - [Microsoft.Agents.A365.Tooling](../Tooling/README.md) - Developer tools and utilities
-- [Microsoft.Agents.A365.DevTools.Analyzer](../DevTools/README.md) - Roslyn analyzers for governance enforcement
-
-## Documentation
-
-- [Core Runtime Documentation](Core/README.md)
-- [OpenAI Extensions](Extensions/OpenAI/README.md)
-- [Semantic Kernel Extensions](Extensions/SemanticKernel/README.md)
+- [Microsoft.Agents.A365.DevTools](../DevTools/README.md) - Roslyn analyzers for governance enforcement
 
 ## Support
 
@@ -181,10 +112,6 @@ For issues, questions, or feedback:
 
 - File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
 - See the [main documentation](../../README.md) for more information
-
-## Contributing
-
-This project welcomes contributions and suggestions. See the [Contributing Guide](../../README.md#contributing) for details.
 
 ## License
 

@@ -38,62 +38,47 @@ Analyzers are automatically activated once installed and will provide warnings a
 
 ## Package Structure
 
+## Package Structure
+
+The DevTools module provides Roslyn analyzers for enforcing best practices:
+
 ### Analyzers
 
-- **Microsoft.Agents.A365.DevTools.Analyzer.OpenAI** (`Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/`): Roslyn analyzers for OpenAI API usage
-- **Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel** (`Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/`): Roslyn analyzers for Semantic Kernel integration
+- **[Microsoft.Agents.A365.DevTools.Analyzer.OpenAI](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/README.md)** - Roslyn analyzers for OpenAI API usage and governance
+- **[Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/README.md)** - Roslyn analyzers for Semantic Kernel integration
 
-## Analyzer Rules
+## Key Capabilities
 
 ### OpenAI Analyzer
 
-The OpenAI analyzer detects and warns about:
+Enforces governance and best practices for OpenAI-based agent applications:
 
-- **Improper API Key Handling**: Hardcoded API keys or insecure storage
-- **Missing Error Handling**: Unhandled API exceptions
-- **Inefficient Token Usage**: Excessive token consumption patterns
-- **Deprecated API Usage**: Use of deprecated OpenAI API methods
-- **Rate Limiting Issues**: Missing rate limit handling
-- **Response Validation**: Improper response parsing and validation
-
-**Example**:
-
-```csharp
-// ❌ Warning: Hardcoded API key detected
-var client = new OpenAIClient("sk-hardcoded-key");
-
-// ✅ Correct: Use secure configuration
-var client = new OpenAIClient(configuration["OpenAI:ApiKey"]);
-```
+- Direct client access prevention (use provider pattern)
+- Hardcoded tenant/worker ID detection
+- Multi-tenant configuration validation
+- Provider registration pattern enforcement
+- See [OpenAI Analyzer README](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/README.md) for complete rule list and examples
 
 ### Semantic Kernel Analyzer
 
-The Semantic Kernel analyzer detects and warns about:
+Enforces governance and best practices for Semantic Kernel applications:
 
-- **Improper Kernel Configuration**: Missing or incorrect kernel setup
-- **Function Registration Issues**: Incorrect plugin or function registration
-- **Memory Management**: Improper memory store usage
-- **Prompt Template Errors**: Invalid prompt template syntax
-- **Service Registration**: Missing or duplicate service registrations
-- **Planner Usage**: Improper planner configuration and usage
+- Direct kernel access prevention (use provider pattern)
+- Proper function registration validation
+- Memory store usage enforcement
+- Multi-tenant isolation checks
+- See [Semantic Kernel Analyzer README](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/README.md) for complete rule list and examples
 
-**Example**:
+## Getting Started
 
-```csharp
-// ❌ Warning: Function registered without proper error handling
-kernel.ImportPluginFromType<MyPlugin>();
+Analyzers activate automatically when installed and provide real-time feedback in your IDE:
 
-// ✅ Correct: Proper function registration with validation
-try
-{
-    kernel.ImportPluginFromType<MyPlugin>();
-}
-catch (KernelException ex)
-{
-    _logger.LogError(ex, "Failed to register plugin");
-    throw;
-}
-```
+1. Install the appropriate analyzer package
+2. Analyzer rules appear as warnings or errors in Visual Studio/VS Code
+3. Review the package-specific README for detailed rule descriptions
+4. Configure severity levels via `.editorconfig` if needed
+
+For detailed examples of warnings and fixes, see the individual analyzer package READMEs.
 
 ## Configuration
 

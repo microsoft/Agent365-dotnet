@@ -47,227 +47,56 @@ dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
 
 - **Microsoft.Agents.A365.Tooling** (`Core/`): Core tooling functionality for MCP tool server management
 
-### Extensions
+## Package Structure
 
-- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** (`Extensions/SemanticKernel/`): Semantic Kernel integration for tool registration
-- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** (`Extensions/AgentFramework/`): Agent Framework integration
-- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** (`Extensions/AzureAIFoundry/`): Azure AI Foundry integration
+The Tooling module provides MCP tool server integration through multiple packages:
 
-## Quick Start
+### Core Package
 
-### Basic Tool Server Registration with Semantic Kernel
+- **[Microsoft.Agents.A365.Tooling](Core/README.md)** - Core MCP tool server configuration service and models
 
-```csharp
-using Microsoft.Agents.A365.Tooling;
-using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel;
-using Microsoft.SemanticKernel;
+### Framework Extensions
 
-// Register the MCP tool configuration service
-builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
+- **[Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel](Extensions/SemanticKernel/README.md)** - Semantic Kernel integration with automatic plugin registration
+- **[Microsoft.Agents.A365.Tooling.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Agent Framework integration returning immutable AIAgent
+- **[Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry](Extensions/AzureAIFoundry/README.md)** - Azure AI Foundry Persistent Agents integration
 
-// In your agent code
-public class ToolingAgent
-{
-    private readonly Kernel _kernel;
-    private readonly IMcpToolServerConfigurationService _mcpToolService;
-    
-    public ToolingAgent(
-        Kernel kernel, 
-        IMcpToolServerConfigurationService mcpToolService)
-    {
-        _kernel = kernel;
-        _mcpToolService = mcpToolService;
-    }
-    
-    public async Task InitializeAsync(
-        string environmentId,
-        UserAuthorization userAuthorization,
-        ITurnContext turnContext,
-        string? authToken = null)
-    {
-        // Register tool servers with the kernel
-        await _mcpToolService.AddToolServersToAgent(
-            _kernel,
-            environmentId,
-            userAuthorization,
-            turnContext,
-            authToken);
-    }
-}
-```
+## Getting Started
 
-### Agent Framework Integration
+This module enables MCP tool server discovery and registration. Choose the extension that matches your AI framework:
 
-```csharp
-using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework;
-using Microsoft.Extensions.AI;
+1. **For Semantic Kernel** - Tools are registered as kernel plugins with automatic 64-character name filtering. See [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
+2. **For Agent Framework** - Returns new AIAgent instances with tools (immutable pattern). See [Agent Framework Extension](Extensions/AgentFramework/README.md)
+3. **For Azure AI Foundry** - Updates Persistent Agents through Administration API. See [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
+4. **Core Service** - For custom integrations, use the core IMcpToolServerConfigurationService. See [Core Package](Core/README.md)
 
-// Register the service
-builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
+## Key Capabilities
 
-// Create agent with tools
-var mcpToolService = serviceProvider.GetRequiredService<IMcpToolServerConfigurationService>();
+### Automatic Tool Discovery
 
-var agent = await mcpToolService.AddToolServersToAgent(
-    chatClient,
-    agentInstructions: "You are a helpful assistant",
-    initialTools: new List<AITool>(),
-    agentUserId: userId,
-    environmentId: envId,
-    userAuthorization: userAuth,
-    turnContext: context);
-```
+- List available MCP tool servers for a given environment
+- Retrieve tool definitions and metadata
+- Support for both agentic and custom authentication
 
-### Azure AI Foundry Integration
+### Framework-Specific Registration
 
-```csharp
-using Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry;
-using Azure.AI.Projects;
+- **Semantic Kernel**: Tools registered as kernel plugins with 64-character name limit
+- **Agent Framework**: Returns new immutable AIAgent instances with tools included
+- **Azure AI Foundry**: Updates Persistent Agents through Administration API
 
-// Register the service
-builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
+### Authentication Support
 
-// Add tools to a Persistent Agent
-var mcpToolService = serviceProvider.GetRequiredService<IMcpToolServerConfigurationService>();
+- Agentic authentication (default) - Automatic token handling for agent-to-agent scenarios
+- Custom token authentication - Bring your own auth token for specialized scenarios
 
-await mcpToolService.AddToolServersToAgent(
-    agentClient,
-    agentInstanceId: "agent-123",
-    environmentId: envId,
-    userAuthorization: userAuth,
-    turnContext: context);
-```
+## Package Documentation
 
-### Configure Semantic Kernel Agent with Tool Support
+For detailed code examples, configuration, and usage patterns, refer to the individual package READMEs:
 
-```csharp
-// Define the agent with function calling enabled
-var agent = new ChatCompletionAgent
-{
-    Instructions = AgentInstructions(),
-    Name = AgentName,
-    Kernel = _kernel,
-    Arguments = new KernelArguments(new OpenAIPromptExecutionSettings()
-    {
-#pragma warning disable SKEXP0001
-        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
-            options: new() { RetainArgumentTypes = true }),
-#pragma warning restore SKEXP0001
-   #pragma warning restore SKEXP0001
-           ResponseFormat = "json_object", 
-       }),
-   };
-   ```
-
-   > [!IMPORTANT]
-   > The `RetainArgumentTypes = true` option is critical for proper tool parameter handling. Do not omit this configuration.
-
-### Using Custom Authentication
-
-```csharp
-// Use custom auth token instead of agentic authentication
-_mcpToolRegistrationService.AddToolServersToAgent(
-    kernel, 
-    environmentId, 
-    userAuthorization, 
-    turnContext, 
-    authToken: customToken);
-```
-
-### Listing Available Tool Servers
-
-```csharp
-public class ToolServerDiscovery
-{
-    private readonly IMcpToolRegistrationService _toolService;
-    
-    public async Task<IEnumerable<ToolServerInfo>> ListAvailableToolsAsync()
-    {
-        // Get list of all available MCP tool servers
-        var toolServers = await _toolService.ListToolServersAsync();
-        
-        foreach (var server in toolServers)
-        {
-            Console.WriteLine($"Tool Server: {server.Name}");
-            Console.WriteLine($"  Description: {server.Description}");
-            Console.WriteLine($"  Tools: {string.Join(", ", server.Tools)}");
-        }
-        
-        return toolServers;
-    }
-}
-```
-
-## Advanced Usage
-
-### Selective Tool Registration
-
-```csharp
-// Register only specific tool servers
-var selectedServers = new[] { "weather-tools", "database-tools" };
-
-_mcpToolRegistrationService.AddToolServersToAgent(
-    kernel,
-    environmentId,
-    userAuthorization,
-    turnContext,
-    toolServerNames: selectedServers);
-```
-
-### Tool Server Health Monitoring
-
-```csharp
-// Monitor tool server health and availability
-var healthStatus = await _mcpToolRegistrationService.CheckToolServerHealthAsync();
-
-foreach (var status in healthStatus)
-{
-    if (!status.IsHealthy)
-    {
-        _logger.LogWarning($"Tool server {status.Name} is unhealthy: {status.Message}");
-    }
-}
-```
-
-## Framework Integration
-
-Framework-specific integrations provide seamless tool server registration:
-
-### Semantic Kernel
-
-```csharp
-// Tools are automatically registered as Kernel functions
-await kernel.InvokeAsync("ToolName", new KernelArguments { ... });
-```
-
-### Agent Framework
-
-```csharp
-// Tools are available to all agents in the framework
-agentGroup.RegisterToolServers(toolServers);
-```
-
-### Azure AI Foundry
-
-```csharp
-// Tools are registered with Azure AI Foundry endpoints
-foundryClient.RegisterToolServers(toolServers, foundryEndpoint);
-```
-
-## Configuration
-
-### appsettings.json
-
-```json
-{
-  "ToolServer": {
-    "DiscoveryEndpoint": "https://toolserver.example.com/api/discovery",
-    "AuthenticationMode": "Agentic",
-    "TimeoutSeconds": 30,
-    "EnableCaching": true
-  }
-}
-```
+- [Core Package](Core/README.md) - IMcpToolServerConfigurationService interface and models
+- [Semantic Kernel Extension](Extensions/SemanticKernel/README.md) - Complete Semantic Kernel integration examples
+- [Agent Framework Extension](Extensions/AgentFramework/README.md) - Complete Agent Framework integration examples
+- [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md) - Complete Azure AI Foundry integration examples
 
 ## Useful Links
 

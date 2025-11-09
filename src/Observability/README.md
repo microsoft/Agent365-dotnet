@@ -29,140 +29,82 @@ Building production-ready AI agents requires robust observability to understand 
 ## Installation
 
 ```bash
+# Core packages
 dotnet add package Microsoft.Agents.A365.Observability
 dotnet add package Microsoft.Agents.A365.Observability.Runtime
 dotnet add package Microsoft.Agents.A365.Observability.Hosting
-```
 
-For framework-specific extensions:
-
-```bash
-# For OpenAI integration
+# Framework-specific extensions
 dotnet add package Microsoft.Agents.A365.Observability.Extensions.OpenAI
-
-# For Semantic Kernel integration
 dotnet add package Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
-
-# For Agent Framework integration
 dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 ```
 
-## Quick Start
+## Getting Started
 
-### Basic Configuration
+This module provides observability capabilities through multiple packages. Choose the packages that match your needs:
 
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add tracing with OpenTelemetry
-builder.Services.AddTracing();
-
-var app = builder.Build();
-```
-
-### Agent Tracing
-
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-
-var agentDetails = new AgentDetails(agentId: "my-agent");
-var tenantDetails = new TenantDetails(tenantId: myTenantGuid);
-
-using var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails);
-// Your agent logic here
-agentScope.Complete();
-```
-
-### Advanced Configuration with Framework Extensions
-
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime;
-using Microsoft.Agents.A365.Observability.Extensions.OpenAI;
-using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Configure observability with framework extensions
-var observabilityBuilder = Builder.Create(builder.Services);
-observabilityBuilder
-    .WithOpenAI()
-    .WithSemanticKernel()
-    .WithTracing()
-    .WithMetrics();
-
-builder.Services.AddTracing();
-
-var app = builder.Build();
-```
+1. **Start with Runtime** - For basic tracing setup, see [Runtime Package](Runtime/README.md)
+2. **Add Framework Extensions** - For OpenAI, Semantic Kernel, or Agent Framework, see the respective extension READMEs
+3. **Configure ETW (Optional)** - For Windows-based production monitoring, see [Hosting Package](Hosting/README.md)
+4. **Use Core Features** - For token caching and scope management, see [Core Package](Core/README.md)
 
 ## Package Structure
 
-The Observability module is organized into several packages:
+The Observability module is organized into several packages, each with detailed documentation:
 
 ### Core Packages
 
-- **Microsoft.Agents.A365.Observability** (`Core/`): Core observability functionality including tracing abstractions and base instrumentation
-- **Microsoft.Agents.A365.Observability.Runtime** (`Runtime/`): Runtime services for observability including DTOs and tracing utilities
-- **Microsoft.Agents.A365.Observability.Hosting** (`Hosting/`): ASP.NET Core hosting integration with ETW support
+- **[Microsoft.Agents.A365.Observability](Core/README.md)** - Core observability functionality including token caching and scope abstractions
+- **[Microsoft.Agents.A365.Observability.Runtime](Runtime/README.md)** - Runtime services with full tracing setup, exporters, and OpenTelemetry integration
+- **[Microsoft.Agents.A365.Observability.Hosting](Hosting/README.md)** - ETW (Event Tracing for Windows) support for production monitoring
 
-### Extensions
+### Framework Extensions
 
-- **Microsoft.Agents.A365.Observability.Extensions.AgentFramework** (`Extensions/AgentFramework/`): Integration with Microsoft Agent Framework
-- **Microsoft.Agents.A365.Observability.Extensions.OpenAI** (`Extensions/OpenAI/`): OpenAI-specific tracing and instrumentation
-- **Microsoft.Agents.A365.Observability.Extensions.SemanticKernel** (`Extensions/SemanticKernel/`): Semantic Kernel integration for enhanced observability
+- **[Microsoft.Agents.A365.Observability.Extensions.OpenAI](Extensions/OpenAI/README.md)** - OpenAI SDK tracing and ChatToolCall extensions
+- **[Microsoft.Agents.A365.Observability.Extensions.SemanticKernel](Extensions/SemanticKernel/README.md)** - Semantic Kernel integration with function invocation filtering
+- **[Microsoft.Agents.A365.Observability.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Microsoft Agent Framework integration with multi-source activity tracking
 
-## Key Features
+## Key Capabilities
 
 ### Distributed Tracing
 
-Track agent invocations across distributed systems with full context propagation:
+- Full context propagation across distributed systems
+- Agent invocation tracking with tenant and agent context
+- Tool execution monitoring with detailed telemetry
+- See [Runtime Package](Runtime/README.md) for setup details
 
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+### Framework Integration
 
-var agentDetails = new AgentDetails(agentId: "MyAgent");
-var tenantDetails = new TenantDetails(tenantId: myTenantGuid);
-
-using var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails);
-// Agent operations are automatically traced with full context
-agentScope.Complete();
-```
+- **OpenAI**: Automatic tracing for OpenAI API calls - [Documentation](Extensions/OpenAI/README.md)
+- **Semantic Kernel**: Function invocation filtering and agent tracing - [Documentation](Extensions/SemanticKernel/README.md)
+- **Agent Framework**: Multi-source activity tracking (AI, Agent, ChatClient) - [Documentation](Extensions/AgentFramework/README.md)
 
 ### Caching Instrumentation
 
-Monitor cache performance and efficiency:
+- Cache hit/miss tracking
+- Performance monitoring
+- Effectiveness analytics
+- See [Caching Documentation](Core/Caching/README.md)
 
-```csharp
-// Cache operations are automatically instrumented
-// View cache hit rates, latency, and effectiveness in your monitoring dashboard
-```
+### Production Monitoring
 
-### Middleware Integration
+- ETW event providers for Windows
+- High-performance event emission
+- Windows Performance Analyzer integration
+- See [Hosting Package](Hosting/README.md)
 
-Add request/response tracing to your ASP.NET Core application:
+## Package Documentation
 
-```csharp
-app.UseObservabilityMiddleware();
-```
+For detailed code examples, configuration, and usage patterns, refer to the individual package READMEs:
 
-## Sample Applications
-
-- **Basic Sample**: Simple ASP.NET Core web application with Microsoft Agents A365 integration
-- **Custom Engine**: Advanced agent implementation with custom engines and comprehensive tracing
-- **Hello World Agent**: Simple getting started example demonstrating core observability features
-- **Devin Agent**: Advanced AI agent implementation with full observability
-- **Semantic Kernel Multiturn**: Semantic Kernel sample with distributed tracing
-
-## Integration Guides
-
-- [Caching Documentation](Core/Caching/README.md)
-- [OpenAI Integration](Extensions/OpenAI/README.md)
-- [Semantic Kernel Integration](Extensions/SemanticKernel/README.md)
-- [Agent Framework Integration](Extensions/AgentFramework/README.md)
+- [Core Package](Core/README.md) - Token caching and scope management
+- [Runtime Package](Runtime/README.md) - Complete tracing setup with code examples
+- [Hosting Package](Hosting/README.md) - ETW integration for production
+- [Caching Documentation](Core/Caching/README.md) - Cache monitoring details
+- [OpenAI Extension](Extensions/OpenAI/README.md) - OpenAI integration with code examples
+- [Semantic Kernel Extension](Extensions/SemanticKernel/README.md) - Semantic Kernel integration with code examples
+- [Agent Framework Extension](Extensions/AgentFramework/README.md) - Agent Framework integration with code examples
 
 ## Useful Links
 
