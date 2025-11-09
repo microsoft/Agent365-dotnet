@@ -7,7 +7,7 @@ The Microsoft Agents A365 SDK focuses on four core areas:
 - **Observability**: Comprehensive tracing, caching, and monitoring capabilities for agent applications
 - **Notifications**: Agent notification services and models for handling user notifications
 - **Runtime**: Core utilities and extensions for agent runtime operations
-- **Tooling**: Developer tools including analyzers for OpenAI and Semantic Kernel integrations
+- **Tooling**: Developer tools and utilities for building sophisticated agent applications
 
 For more information about the core Microsoft 365 Agents SDK, please visit the [Microsoft 365 Agents SDK for .NET](https://github.com/microsoft/Agents-for-net).
 
@@ -60,17 +60,17 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 
 ## Project Structure
 
-- **src/DevTools**: Microsoft Agents A365 DevTools - Analyzers for OpenAI and Semantic Kernel
+- **src/DevTools**: Microsoft Agents A365 DevTools - Development tools and code analyzers
 - **src/Notification**: Microsoft Agents A365 Notifications - Agent notification services and models
 - **src/Observability**: Microsoft Agents A365 Observability - Tracing, caching, and monitoring capabilities
   - Core: Core observability functionality
-  - Extensions: Extensions for AgentFramework, OpenAI, and Semantic Kernel
+  - Extensions: Framework-specific extensions for various AI platforms
   - Hosting: ETW and hosting support
   - Runtime: Runtime observability services
 - **src/Runtime**: Microsoft Agents A365 Runtime - Core runtime utilities and extensions
   - Core: Core runtime functionality
-  - Extensions: OpenAI and Semantic Kernel runtime extensions
-- **src/Tooling**: Microsoft Agents A365 Tooling - Agent tooling and extensions
+  - Extensions: Runtime extensions for various AI frameworks
+- **src/Tooling**: Microsoft Agents A365 Tooling - Agent tooling and MCP integration
 - **src/Tests**: Unit and integration tests
 
 ## Support
