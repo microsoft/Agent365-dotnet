@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Runtime
 
-The Observability Runtime package provides runtime components for the Agent365 Observability SDK, including exporters, tracing utilities, DTOs, and scope management. This package bridges the core observability functionality with production telemetry systems.
+The Observability Runtime package provides runtime components for Microsoft Agents A365 Observability, including exporters, tracing utilities, DTOs, and scope management. This package bridges the core observability functionality with production telemetry systems.
 
 ## Overview
 
@@ -338,5 +338,7 @@ For issues, questions, or feedback:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
 

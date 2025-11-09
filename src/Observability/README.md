@@ -1,10 +1,10 @@
-# Microsoft Agents A365 Observability SDK for .NET
+# Microsoft Agents A365 Observability
 
-The Microsoft Agents A365 Observability SDK provides comprehensive monitoring, tracing, and diagnostics capabilities for AI agent applications. This SDK enables developers to gain deep insights into agent behavior, performance, and execution patterns through industry-standard observability tools.
+The Microsoft Agents A365 Observability module provides comprehensive monitoring, tracing, and diagnostics capabilities for AI agent applications. This module enables developers to gain deep insights into agent behavior, performance, and execution patterns through industry-standard observability tools.
 
 ## Overview
 
-Building production-ready AI agents requires robust observability to understand agent behavior, diagnose issues, and optimize performance. This SDK provides:
+Building production-ready AI agents requires robust observability to understand agent behavior, diagnose issues, and optimize performance. This module provides:
 
 - Distributed tracing for agent invocations and tool executions
 - Integration with OpenTelemetry and Azure Monitor
@@ -14,12 +14,12 @@ Building production-ready AI agents requires robust observability to understand 
 
 ## Features
 
-- **🔍 Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
-- **🛠️ Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
-- **📊 OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
-- **☁️ Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
-- **� Caching Instrumentation**: Monitor and optimize agent caching strategies
-- **🔌 Middleware Support**: ASP.NET Core middleware for request/response tracing
+- **Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
+- **Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
+- **OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
+- **Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
+- **Caching Instrumentation**: Monitor and optimize agent caching strategies
+- **Middleware Support**: ASP.NET Core middleware for request/response tracing
 
 ## Installation
 
@@ -90,7 +90,7 @@ var app = builder.Build();
 
 ## Package Structure
 
-The Observability SDK is organized into several packages:
+The Observability module is organized into several packages:
 
 ### Core Packages
 
@@ -147,11 +147,24 @@ app.UseObservabilityMiddleware();
 - [Semantic Kernel Integration](Extensions/SemanticKernel/README.md)
 - [Agent Framework Integration](Extensions/AgentFramework/README.md)
 
-## Related Packages
+## Useful Links
 
-- [Microsoft.Agents.A365.Notifications](../Notification/README.md) - Agent notification services
-- [Microsoft.Agents.A365.Runtime](../Runtime/README.md) - Core runtime utilities for agents
-- [Microsoft.Agents.A365.Tooling](../Tooling/README.md) - Developer tools and utilities
+### Microsoft Agents A365 SDK
+
+- [Microsoft Agents A365 Notifications](../Notification/README.md) - Agent notification services
+- [Microsoft Agents A365 Runtime](../Runtime/README.md) - Core runtime utilities for agents
+- [Microsoft Agents A365 Tooling](../Tooling/README.md) - Developer tools and utilities
+- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Code analyzers and development tools
+
+### Documentation
+
+- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
+
+### Related Repositories
+
+- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
+- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
+- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
 
 ## Support
 
@@ -166,4 +179,6 @@ This project welcomes contributions and suggestions. See the [Contributing Guide
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.

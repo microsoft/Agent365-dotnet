@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Hosting
 
-The Observability Hosting package provides ASP.NET Core integration and hosting utilities for the Agent365 Observability SDK. This package includes middleware, ETW (Event Tracing for Windows) support, and configuration helpers for web applications.
+The Observability Hosting package provides ASP.NET Core integration and hosting utilities for Microsoft Agents A365 Observability. This package includes middleware, ETW (Event Tracing for Windows) support, and configuration helpers for web applications.
 
 ## Overview
 
@@ -237,4 +237,6 @@ For issues, questions, or feedback:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.

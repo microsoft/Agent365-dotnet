@@ -14,12 +14,12 @@ This package contains the core abstractions and implementations for:
 
 ## Features
 
-- **🔍 Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
-- **🛠️ Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
-- **📊 OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
-- **☁️ Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
-- **� Caching Instrumentation**: Monitor caching operations and effectiveness
-- **🎯 Scope Management**: Hierarchical tracing scopes for complex agent operations
+- **Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
+- **Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
+- **OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
+- **Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
+- **Caching Instrumentation**: Monitor caching operations and effectiveness
+- **Scope Management**: Hierarchical tracing scopes for complex agent operations
 
 ## Installation
 
@@ -180,5 +180,7 @@ For issues, questions, or feedback:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
 

@@ -1,4 +1,6 @@
-# ServiceTokenCache - Token Expiration and Invalidation
+# Microsoft.Agents.A365.Observability - Caching
+
+Secure token caching with built-in expiration and invalidation features for Microsoft Agents A365 Observability exporters.
 
 ## Overview
 
@@ -6,18 +8,26 @@
 
 ## Features
 
-### 🔐 Security Features
+### Security Features
 
 - **Automatic Token Expiration**: Tokens expire after a configurable time period (default: 1 hour)
 - **Automatic Cleanup**: Expired tokens are automatically removed on access
 - **Manual Invalidation**: Support for explicit token removal (individual or all)
 - **Thread-Safe Operations**: All operations are thread-safe using `ConcurrentDictionary`
 
-### ⚙️ Configuration
+### Configuration
 
 - **Default Expiration**: Configurable default expiration time for all tokens
 - **Per-Token Expiration**: Ability to override expiration on a per-token basis
 - **Validation**: Comprehensive input validation with descriptive error messages
+
+## Installation
+
+This functionality is included in the core observability package:
+
+```bash
+dotnet add package Microsoft.Agents.A365.Observability
+```
 
 ## Usage
 
@@ -266,8 +276,23 @@ var cache = new ServiceTokenCache(TimeSpan.FromMinutes(30));
 cache.RegisterObservability("agent", "tenant", "token", scopes, TimeSpan.FromMinutes(10));
 ```
 
-## See Also
+## Related Documentation
 
 - [IExporterTokenCache Interface](../Core/Caching/IExporterTokenCache.cs)
 - [AgenticTokenCache](../Core/Caching/AgenticTokenCache.cs) - Alternative implementation for agentic scenarios
-- [Observability SDK Documentation](../README.md)
+- [Observability Core Package](../README.md)
+- [Observability Module Overview](../../README.md)
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../../README.md) for more information
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
+
