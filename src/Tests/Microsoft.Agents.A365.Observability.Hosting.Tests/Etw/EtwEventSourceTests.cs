@@ -1,3 +1,7 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using Microsoft.Agents.A365.Observability.Hosting.Etw;
 using System.Diagnostics.Tracing;
 
@@ -19,6 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
         [TestMethod]
         public void SpanStop_WritesExpectedEventData()
         {
+            // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
 
@@ -38,9 +43,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
                 ""status"": {{ ""code"": 1, ""message"": ""OK"" }}
             }}";
 
+            // Act
             EtwEventSource.Log.SpanStop(name, spanId, traceId, parentSpanId, content);
 
-            // Find the event with the expected event ID
+            // Assert
             var evt = listener.Events.Find(e => e.EventId == 1000);
 
             Assert.IsNotNull(evt);
@@ -55,6 +61,27 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.AreEqual(traceId, evt.Payload[2]);
             Assert.AreEqual(parentSpanId, evt.Payload[3]);
             Assert.AreEqual(content, evt.Payload[4]);
+        }
+
+        [TestMethod]
+        public void LogJson_WritesExpectedEventData()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            string message = @"{ ""event"": ""test_event"", ""value"": 42 }";
+
+            // Act
+            EtwEventSource.Log.LogJson(message);
+
+            // Assert
+            var evt = listener.Events.Find(e => e.EventId == 2000);
+            Assert.IsNotNull(evt);
+            Assert.AreEqual(EventLevel.Informational, evt.Level);
+            Assert.AreEqual("{0}", evt.Message);
+            Assert.IsNotNull(evt.Payload);
+            Assert.AreEqual(1, evt.Payload.Count);
+            Assert.AreEqual(message, evt.Payload[0]);
         }
     }
 }

@@ -72,5 +72,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public TimeSpan Duration => StartTime.HasValue && EndTime.HasValue
             ? EndTime.Value - StartTime.Value
             : TimeSpan.Zero;
+
+        /// <summary>
+        /// Converts the telemetry data to a dictionary representation.
+        /// </summary>
+        public Dictionary<string, object?> ToDictionary()
+        {
+            var dict = new Dictionary<string, object?>
+            {
+                { "Name", Name },
+                { "Attributes", Attributes },
+                { "StartTime", StartTime },
+                { "EndTime", EndTime },
+                { "SpanId", SpanId },
+                { "ParentSpanId", ParentSpanId },
+                { "Duration", Duration }
+            };
+
+            return dict;
+        }
     }
 }

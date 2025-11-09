@@ -27,5 +27,15 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
             Message = "A365 Otel span: Name={0} Id={1} Body={4}")]
         public void SpanStop(string name, string spanId, string traceId, string parentSpanId, string content) =>
             WriteEvent(1000, name, spanId, traceId, parentSpanId, content);
+
+        /// <summary>
+        /// Handler for logging JSON messages.
+        /// Writes an ETW event with the provided JSON message.
+        /// </summary>
+        [Event(2000, 
+            Level = EventLevel.Informational, 
+            Message = "{0}")]
+        public void LogJson(string message) =>
+            WriteEvent(2000, message);
     }
 }
