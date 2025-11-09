@@ -1,11 +1,11 @@
-# Microsoft.A365.Runtime.Common.AspNetCore
+# Microsoft.Agents.A365.Runtime
 
-ASP.NET Core integration helpers for Microsoft Microsoft Agents A365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
+ASP.NET Core integration helpers for Microsoft Agents A365 Runtime, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
 
 ## Features
 
 - **Tenant Context Extraction**: Extract tenant IDs from HttpContext using standardized patterns
-- **Worker Context Extraction**: Extract worker IDs from HttpContext for multi-worker scenarios  
+- **Worker Context Extraction**: Extract worker IDs from HttpContext for multi-worker scenarios
 - **Multiple Source Support**: Checks user claims, request headers, and request items
 - **Null Safety**: Proper null handling and validation
 - **Performance Optimized**: Minimal overhead for context extraction
@@ -13,7 +13,7 @@ ASP.NET Core integration helpers for Microsoft Microsoft Agents A365 SDK, provid
 ## Installation
 
 ```bash
-dotnet add package Microsoft.A365.Runtime.Common.AspNetCore
+dotnet add package Microsoft.Agents.A365.Runtime
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ dotnet add package Microsoft.A365.Runtime.Common.AspNetCore
 ### Basic Tenant/Worker ID Extraction
 
 ```csharp
-using Microsoft.A365.Runtime.Common.AspNetCore;
+using Microsoft.Agents.A365.Runtime;
 
 app.MapPost("/api/agent", async (HttpContext context) =>
 {
@@ -60,24 +60,33 @@ app.MapPost("/api/process", async (HttpContext context, IKernelProvider kernelPr
 The helper checks for tenant/worker IDs in this priority order:
 
 1. **User Claims**: `tenant_id`, `worker_id`
-2. **Request Headers**: `X-Tenant-Id`, `X-Worker-Id`  
+2. **Request Headers**: `X-Tenant-Id`, `X-Worker-Id`
 3. **Request Items**: `TenantId`, `WorkerId`
 
 ## Why Separate Package?
 
-This package is separate from the core SemanticKernel integration to:
+This package is separate from framework-specific integrations to:
 
-- **Avoid Unnecessary Dependencies**: Core SK integration doesn't need ASP.NET Core
+- **Avoid Unnecessary Dependencies**: Core runtime utilities don't need framework-specific dependencies
 - **Enable Flexible Deployment**: Console apps, background services don't need web dependencies
 - **Follow Single Responsibility**: Each package has a focused purpose
 - **Reduce Package Size**: Consumers only get what they need
 
-## Related Packages
+## Related Documentation
 
-- **Microsoft.A365.Runtime.SemanticKernel**: Core SemanticKernel integration and KernelProvider
-- **Microsoft.A365.DevTools.Analyzer.SemanticKernel**: Roslyn analyzers for governance enforcement
-- **Microsoft.A365.Observability**: Core observability and tracing infrastructure
+- [Runtime Module Overview](../README.md)
+- [Microsoft Agents A365 Observability](../../Observability/README.md)
+- [Microsoft Agents A365 DevTools](../../DevTools/README.md)
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../README.md) for more information
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
