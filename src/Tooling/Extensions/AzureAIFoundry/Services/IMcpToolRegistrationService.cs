@@ -25,7 +25,7 @@ public interface IMcpToolRegistrationService
     /// <param name="userAuthorization">User authorization context.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
-    void AddToolServersToAgent(
+    Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         string environmentId,
         UserAuthorization userAuthorization,

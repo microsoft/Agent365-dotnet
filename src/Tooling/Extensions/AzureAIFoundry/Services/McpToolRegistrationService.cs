@@ -21,6 +21,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Constants = Utils.Constants;
 using Utility = Utils.Utility;
+using Microsoft.Extensions.Configuration;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Foundry (Persistent Agents) scenarios.
@@ -33,6 +34,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -40,14 +42,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="logger">The logger instance.</param>
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
     /// <param name="mcpToolServerConfigurationService">The MCP tool server configuration service.</param>
+    /// <param name="configuration">The application configuration.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IServiceProvider serviceProvider,
-        IMcpToolServerConfigurationService mcpToolServerConfigurationService)
+        IMcpToolServerConfigurationService mcpToolServerConfigurationService,
+        IConfiguration configuration)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _mcpServerConfigurationService = mcpToolServerConfigurationService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -93,7 +98,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    public void AddToolServersToAgent(
+    public async Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         string environmentId,
         UserAuthorization userAuthorization,
@@ -107,7 +112,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (authToken == null)
         {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext, _configuration).ConfigureAwait(false);
         }
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
@@ -150,7 +155,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, environmentId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, environmentId, authToken);
         }
         catch (Exception ex)
         {
@@ -219,7 +224,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, environmentId, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)

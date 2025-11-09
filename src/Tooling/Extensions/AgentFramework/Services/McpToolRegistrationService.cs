@@ -14,6 +14,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using System;
@@ -29,16 +30,20 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="mcpServerConfigurationService">The MCP tool server configuration service.</param>
+    /// <param name="configuration">The application configuration.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
-        IMcpToolServerConfigurationService mcpServerConfigurationService)
+        IMcpToolServerConfigurationService mcpServerConfigurationService, 
+        IConfiguration configuration)
     {
+        _configuration = configuration;
         _logger = logger;
         _mcpServerConfigurationService = mcpServerConfigurationService;
     }
@@ -77,7 +82,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (authToken == null)
         {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext, _configuration).ConfigureAwait(false);
         }
 
         try
@@ -89,14 +94,14 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             updatedTools.AddRange(initialTools);
 
             // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServers(agentUserId, environmentId, authToken!);
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, environmentId, authToken!).ConfigureAwait(false);
             
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
                 try
                 {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken);
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, environmentId, authToken).ConfigureAwait(false);
                     // Add the MCP tools
                     updatedTools.AddRange(mcpTools.Cast<AITool>());
                     

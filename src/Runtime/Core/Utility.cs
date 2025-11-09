@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Configuration;
+
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
     /// <summary>
@@ -18,9 +20,9 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// The MCP platform authentication scope from environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
         /// or the default production scope if not set.
         /// </returns>
-        public static string GetMcpPlatformAuthenticationScope()
+        public static string GetMcpPlatformAuthenticationScope(IConfiguration configuration)
         {
-            return Environment.GetEnvironmentVariable("MCP_PLATFORM_AUTHENTICATION_SCOPE") ??
+            return configuration["MCP_PLATFORM_AUTHENTICATION_SCOPE"] ??
                    McpPlatformProdAuthenticationScope;
         }
 

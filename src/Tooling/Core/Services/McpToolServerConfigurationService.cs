@@ -42,7 +42,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        public async Task<List<MCPServerConfig>> ListToolServers(string agentInstanceId, string environmentId, string authToken)
+        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string environmentId, string authToken)
         {
             return IsDevScenario() ? GetMCPServersFromManifest(environmentId) : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, environmentId, authToken);
         }
@@ -56,7 +56,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="authToken">The authentication token.</param>
         /// <returns>MCP Client Tools</returns>
         /// <exception cref="InvalidOperationException"></exception>
-        public async Task<IList<McpClientTool>> GetMcpClientTools(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string environmentId, string authToken)
+        public async Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string environmentId, string authToken)
         {
             try
             {
