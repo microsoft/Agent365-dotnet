@@ -1,21 +1,21 @@
-# Microsoft Agents A365 Tooling SDK for .NET
+# Microsoft Agents A365 Tooling
 
-The Microsoft Agents A365 Tooling SDK provides developer tools and utilities for building sophisticated agent applications with Model Context Protocol (MCP) tool server integration. This SDK simplifies the discovery and registration of tool servers with popular AI orchestrators.
+The Microsoft Agents A365 Tooling module provides developer tools and utilities for building sophisticated agent applications with Model Context Protocol (MCP) tool server integration. This module simplifies the discovery and registration of tool servers with AI agent frameworks.
 
 ## Overview
 
-The Tooling SDK enables developers to:
+The Tooling module enables developers to:
 
 - Discover and list available MCP tool servers
-- Automatically register tool servers with agent orchestrators
-- Integrate tools seamlessly with Semantic Kernel and Agent Framework
+- Automatically register tool servers with agent frameworks
+- Integrate tools seamlessly with multiple AI frameworks
 - Support both agentic authentication and custom authorization
 - Manage tool server lifecycles and dependencies
 
 ## Features
 
 - **Tool Server Discovery**: List and discover MCP tool servers available to agents
-- **Automatic Registration**: Easy integration with popular orchestrators (Semantic Kernel, Agent Framework, Azure AI Foundry)
+- **Automatic Registration**: Easy integration with AI frameworks
 - **Authentication Support**: Both agentic authentication and custom token-based auth
 - **Type-Safe Integration**: Strongly-typed tool registration with compile-time safety
 - **Framework Extensions**: Ready-to-use extensions for multiple AI frameworks
@@ -50,7 +50,7 @@ dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
 
 ## Quick Start
 
-### Basic Tool Server Registration with Semantic Kernel
+### Basic Tool Server Registration
 
 1. **Register required services**:
 
@@ -181,9 +181,9 @@ foreach (var status in healthStatus)
 
 ## Framework Integration
 
-### Semantic Kernel
+Framework-specific integrations provide seamless tool server registration:
 
-The Semantic Kernel extension provides seamless integration with SK's function calling capabilities:
+### Semantic Kernel
 
 ```csharp
 // Tools are automatically registered as Kernel functions
@@ -192,16 +192,12 @@ await kernel.InvokeAsync("ToolName", new KernelArguments { ... });
 
 ### Agent Framework
 
-Integration with Microsoft Agent Framework for multi-agent scenarios:
-
 ```csharp
 // Tools are available to all agents in the framework
 agentGroup.RegisterToolServers(toolServers);
 ```
 
 ### Azure AI Foundry
-
-Integration with Azure AI Foundry for cloud-based tool orchestration:
 
 ```csharp
 // Tools are registered with Azure AI Foundry endpoints
@@ -223,18 +219,28 @@ foundryClient.RegisterToolServers(toolServers, foundryEndpoint);
 }
 ```
 
-## Related Packages
+## Useful Links
 
-- [Microsoft.Agents.A365.Runtime](../Runtime/README.md) - Core runtime utilities for agents
-- [Microsoft.Agents.A365.Observability](../Observability/README.md) - Monitoring and tracing for tool executions
-- [Microsoft.Agents.A365.Notifications](../Notification/README.md) - Agent notification services
+### Microsoft Agents A365 SDK
 
-## Documentation
+- [Microsoft Agents A365 Runtime](../Runtime/README.md) - Core runtime utilities for agents
+- [Microsoft Agents A365 Observability](../Observability/README.md) - Monitoring and tracing for tool executions
+- [Microsoft Agents A365 Notifications](../Notification/README.md) - Agent notification services
+- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Code analyzers and development tools
 
+### Documentation
+
+- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
 - [Core Tooling Documentation](Core/README.md)
 - [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
 - [Agent Framework Extension](Extensions/AgentFramework/README.md)
 - [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
+
+### Related Repositories
+
+- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
+- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
+- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
 
 ## Sample Applications
 
@@ -253,5 +259,6 @@ This project welcomes contributions and suggestions. See the [Contributing Guide
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
 
+Licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
