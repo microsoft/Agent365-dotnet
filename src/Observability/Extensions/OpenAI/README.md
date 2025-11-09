@@ -1,134 +1,73 @@
-# Microsoft.Agents.A365.Observability.Extensions.OpenAI# Microsoft.Agents.A365.Observability.Extensions.OpenAI
+# Microsoft.Agents.A365.Observability.Extensions.OpenAI
 
+OpenAI-specific tracing and instrumentation extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for OpenAI-based agent applications.
 
+## Overview
 
-OpenAI observability integration for Microsoft Agents A365 SDK.OpenAI-specific tracing and instrumentation extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for OpenAI-based agent applications.
+This extension package enables comprehensive monitoring and tracing of OpenAI API calls, token usage, model invocations, and other OpenAI-specific operations within your agent applications.
 
+## Features
 
-
-## Overview## Overview
-
-
-
-This package provides OpenAI integration for the Microsoft Agents A365 Observability framework, enabling automatic distributed tracing of OpenAI API calls through OpenTelemetry.This extension package enables comprehensive monitoring and tracing of OpenAI API calls, token usage, model invocations, and other OpenAI-specific operations within your agent applications.
-
-
-
-## Features## Features
-
-
-
-- **Automatic OpenAI Tracing**: Built-in OpenTelemetry tracing for OpenAI SDK operations- **OpenAI API Call Tracing**: Automatic instrumentation of OpenAI API requests and responses
-
-- **ChatToolCall Extensions**: Manual tracing support for tool execution scenarios- **Token Usage Tracking**: Monitor token consumption across requests
-
-- **OpenAI Span Processing**: Custom span processor for OpenAI-specific telemetry enrichment- **Model Performance Metrics**: Track model invocation latency and success rates
-
-- **Zero-Configuration Setup**: Automatic integration with OpenAI's experimental OpenTelemetry support- **Error Diagnostics**: Detailed error tracking for OpenAI-specific failures
-
-- **Cost Monitoring**: Track API usage for cost optimization
-
-## Installation
+- **OpenAI API Call Tracing**: Automatic instrumentation of OpenAI API requests and responses
+- **Token Usage Tracking**: Monitor token consumption across requests
+- **Model Performance Metrics**: Track model invocation latency and success rates
+- **Error Diagnostics**: Detailed error tracking for OpenAI-specific failures
+- **ChatToolCall Extensions**: Manual tracing support for tool execution scenarios
+- **OpenAI Span Processing**: Custom span processor for OpenAI-specific telemetry enrichment
+- **Zero-Configuration Setup**: Automatic integration with OpenAI's experimental OpenTelemetry support
 
 ## Installation
 
 ```bash
-
-dotnet add package Microsoft.Agents.A365.Observability.Extensions.OpenAI```bash
-
-```dotnet add package Microsoft.Agents.A365.Observability.Extensions.OpenAI
-
+dotnet add package Microsoft.Agents.A365.Observability.Extensions.OpenAI
 ```
-
-## Quick Start
 
 ## Quick Start
 
 ### Basic Setup with Builder Pattern
 
 ```csharp
-
-```csharpusing Microsoft.Agents.A365.Observability.Extensions.OpenAI;
-
+using Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 using Microsoft.Agents.A365.Observability.Runtime;
 
-using Microsoft.Agents.A365.Observability.Extensions.OpenAI;var builder = WebApplication.CreateBuilder(args);
+var builder = Builder.Create(services);
 
-
-
-var builder = Builder.Create(services);// Add observability with OpenAI extensions
-
-builder.Services.AddObservability(options =>
-
-// Add OpenAI observability with related tracing sources{
-
-builder.WithOpenAI(enableRelatedSources: true);    options.EnableOpenAITracing = true;
-
-});
+// Add OpenAI observability with related tracing sources
+builder.WithOpenAI(enableRelatedSources: true);
 
 var observability = builder.Build();
-
-```var app = builder.Build();
-
 ```
 
 ### Manual Tool Call Tracing
 
-## Configuration
-
 ```csharp
+using OpenAI.Chat;
+using Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
-using OpenAI.Chat;```csharp
+// When executing a tool call, create a trace scope
+var chatToolCall = // ... from ChatCompletion response
 
-using Microsoft.Agents.A365.Observability.Extensions.OpenAI;builder.Services.AddOpenAIObservability(options =>
-
-{
-
-// When executing a tool call, create a trace scope    options.TrackTokenUsage = true;
-
-var chatToolCall = // ... from ChatCompletion response    options.TrackModelPerformance = true;
-
-    options.EnableDetailedErrorLogging = true;
-
-using var scope = chatToolCall.Trace(});
-
-    agentId: "my-agent", ```
-
+using var scope = chatToolCall.Trace(
+    agentId: "my-agent", 
     tenantId: myTenantGuid
+);
 
-);## Related Documentation
+// Execute your tool logic
+var result = await ExecuteToolAsync(chatToolCall);
 
-
-
-// Execute your tool logic- [Observability Module Overview](../../README.md)
-
-var result = await ExecuteToolAsync(chatToolCall);- [Core Package](../../Core/README.md)
-
-
-
-// Scope automatically completes when disposed## Support
-
+// Scope automatically completes when disposed
 ```
 
-For issues, questions, or feedback:
-
 ## Configuration
 
-- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+### Enable OpenAI Tracing
 
-### Enable OpenAI Tracing- See the [main documentation](../../../../README.md) for more information
+The `WithOpenAI` extension method configures:
 
-
-
-The `WithOpenAI` extension method configures:## License
-
-
-
-- **OpenAI SDK Tracing**: Enables `OpenAI.Experimental.EnableOpenTelemetry` AppContext switchCopyright (c) Microsoft Corporation. All rights reserved.
-
+- **OpenAI SDK Tracing**: Enables `OpenAI.Experimental.EnableOpenTelemetry` AppContext switch
 - **Activity Source**: Adds `Azure.AI.OpenAI.*` activity source to OpenTelemetry
+- **Custom Processor**: Registers `OpenAISpanProcessor` for span enrichment
 
-- **Custom Processor**: Registers `OpenAISpanProcessor` for span enrichmentLicensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
 
 
 ```csharp

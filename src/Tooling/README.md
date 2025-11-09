@@ -3,6 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling/)
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.svg?label=Semantic%20Kernel)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel/)
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.svg?label=Agent%20Framework)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.AgentFramework/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.svg?label=Azure%20AI%20Foundry)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry/)
 [![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Tooling.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling/)
 
 The Microsoft Agents A365 Tooling module provides developer tools and utilities for building sophisticated agent applications with Model Context Protocol (MCP) tool server integration. This module simplifies the discovery and registration of tool servers with AI agent frameworks.

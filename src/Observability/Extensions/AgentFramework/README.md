@@ -1,135 +1,73 @@
-# Microsoft.Agents.A365.Observability.Extensions.AgentFramework# Microsoft.Agents.A365.Observability.Extensions.AgentFramework
+# Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 
+Microsoft Agent Framework integration extensions for Microsoft Agents A365 Observability. This package enables integration between the Agent Framework and the Observability module, processing OpenTelemetry traces from the Agent Framework to align with the Observability schema.
 
+## Overview
 
-Agent Framework observability integration for Microsoft Agents A365 SDK.Microsoft Agent Framework integration extensions for Microsoft Agents A365 Observability. This package enables integration between the Agent Framework and the Observability module, processing OpenTelemetry traces from the Agent Framework to align with the Observability schema.
+This extension package provides seamless integration with the Microsoft Agent Framework, automatically translating Agent Framework telemetry into the Microsoft Agents A365 Observability schema for unified monitoring and analysis.
 
+## Features
 
-
-## Overview## Overview
-
-
-
-This package provides Microsoft Agent Framework (Microsoft.Extensions.AI) integration for the Microsoft Agents A365 Observability framework, enabling automatic distributed tracing of agent operations through OpenTelemetry.This extension package provides seamless integration with the Microsoft Agent Framework, automatically translating Agent Framework telemetry into the Microsoft Agents A365 Observability schema for unified monitoring and analysis.
-
-
-
-## Features## Features
-
-
-
-- **Automatic Agent Framework Tracing**: Built-in OpenTelemetry tracing for Microsoft.Extensions.AI operations- **Agent Framework Integration**: Automatic instrumentation of Agent Framework operations
-
-- **Multi-Source Activity Tracking**: Traces agent, chat client, and general AI operations- **Schema Translation**: Converts Agent Framework telemetry to Observability schema
-
-- **Agent Framework Span Processing**: Custom span processor for Agent Framework-specific telemetry enrichment- **Turn Context Tracking**: Monitor conversation turns and context management
-
-- **Zero-Configuration Setup**: Simple builder pattern integration with automatic activity source registration- **Activity Processing**: Track bot activities and message flows
-
+- **Agent Framework Integration**: Automatic instrumentation of Agent Framework operations
+- **Schema Translation**: Converts Agent Framework telemetry to Observability schema
+- **Turn Context Tracking**: Monitor conversation turns and context management
+- **Activity Processing**: Track bot activities and message flows
+- **Multi-Source Activity Tracking**: Traces agent, chat client, and general AI operations
+- **Agent Framework Span Processing**: Custom span processor for Agent Framework-specific telemetry enrichment
+- **Zero-Configuration Setup**: Simple builder pattern integration with automatic activity source registration
 - **Middleware Integration**: Seamless integration with Agent Framework middleware
 
 ## Installation
 
-## Installation
-
 ```bash
-
-dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework```bash
-
-```dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework
-
+dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 ```
-
-## Quick Start
 
 ## Quick Start
 
 ### Basic Setup with Builder Pattern
 
 ```csharp
-
-```csharpusing Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
-
+using Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 using Microsoft.Agents.A365.Observability.Runtime;
 
-using Microsoft.Agents.A365.Observability.Extensions.AgentFramework;var builder = WebApplication.CreateBuilder(args);
+var builder = Builder.Create(services);
 
-
-
-var builder = Builder.Create(services);// Add observability with Agent Framework extensions
-
-builder.Services.AddObservability(options =>
-
-// Add Agent Framework observability with related tracing sources{
-
-builder.WithAgentFramework(enableRelatedSources: true);    options.EnableAgentFrameworkTracing = true;
-
-});
+// Add Agent Framework observability with related tracing sources
+builder.WithAgentFramework(enableRelatedSources: true);
 
 var observability = builder.Build();
-
-```var app = builder.Build();
-
 ```
 
 ### Web API with Agent Framework
 
-## Configuration
-
 ```csharp
+var builder = WebApplication.CreateBuilder(args);
 
-var builder = WebApplication.CreateBuilder(args);```csharp
+// Add observability services
+var observabilityBuilder = Builder.Create(builder.Services);
+observabilityBuilder
+    .WithAgentFramework()
+    .WithTracing()
+    .WithMetrics();
 
-builder.Services.AddAgentFrameworkObservability(options =>
-
-// Add observability services{
-
-var observabilityBuilder = Builder.Create(builder.Services);    options.TrackTurnContext = true;
-
-observabilityBuilder    options.TrackActivities = true;
-
-    .WithAgentFramework()    options.EnableSchemaTranslation = true;
-
-    .WithTracing()});
-
-    .WithMetrics();```
-
-
-
-// Add Agent Framework services## Related Documentation
-
+// Add Agent Framework services
 builder.Services.AddChatClient(/* configure your chat client */);
 
-- [Observability Module Overview](../../README.md)
-
-var app = builder.Build();- [Core Package](../../Core/README.md)
-
+var app = builder.Build();
 ```
-
-## Support
 
 ## Configuration Options
 
-For issues, questions, or feedback:
-
 ### Enable Agent Framework Tracing
 
-- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+The `WithAgentFramework` extension method configures:
 
-The `WithAgentFramework` extension method configures:- See the [main documentation](../../../../README.md) for more information
-
-
-
-- **Agent Framework Activity Sources**: Registers three activity sources:## License
-
+- **Agent Framework Activity Sources**: Registers three activity sources:
   - `Experimental.Microsoft.Agents.AI` - General AI operations
-
-  - `Experimental.Microsoft.Agents.AI.Agent` - Agent-specific operationsCopyright (c) Microsoft Corporation. All rights reserved.
-
+  - `Experimental.Microsoft.Agents.AI.Agent` - Agent-specific operations
   - `Experimental.Microsoft.Agents.AI.ChatClient` - Chat client operations
-
-- **Custom Processor**: Registers `AgentFrameworkSpanProcessor` for span enrichmentLicensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
-
+- **Custom Processor**: Registers `AgentFrameworkSpanProcessor` for span enrichment
 
 ```csharp
 // Enable with related sources (recommended)
@@ -248,3 +186,4 @@ For issues, questions, or feedback:
 Copyright (c) Microsoft Corporation. All rights reserved.
 
 Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
+

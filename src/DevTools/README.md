@@ -1,4 +1,4 @@
-# Microsoft Agents A365 DevTools for .NET
+# Microsoft Agents A365 DevTools
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.svg?label=OpenAI%20Analyzer)](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/)
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.svg?label=SK%20Analyzer)](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/)

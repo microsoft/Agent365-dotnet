@@ -1,136 +1,72 @@
-# Microsoft.Agents.A365.Observability.Extensions.SemanticKernel# Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
+# Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
 
+Semantic Kernel integration extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for Semantic Kernel-based agent applications.
 
+## Overview
 
-Semantic Kernel observability integration for Microsoft Agents A365 SDK.Semantic Kernel integration extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for Semantic Kernel-based agent applications.
+This extension package enables comprehensive monitoring and tracing of Semantic Kernel operations, including kernel invocations, plugin executions, and planner activities within your agent applications.
 
+## Features
 
+- **Kernel Invocation Tracing**: Automatic instrumentation of Semantic Kernel operations
+- **Plugin Execution Tracking**: Monitor plugin calls and performance
+- **Planner Activity Monitoring**: Track planner operations and decision-making
+- **Memory Operations**: Trace semantic memory operations and queries
+- **Function Call Analysis**: Detailed tracking of function invocations
+- **Agent Tracing Extensions**: Simple `WithTracing()` extension for ChatCompletionAgent
+- **Semantic Kernel Span Processing**: Custom span processor for Semantic Kernel-specific telemetry enrichment
+- **Zero-Configuration Setup**: Automatic integration with Semantic Kernel's experimental OpenTelemetry support
 
-## Overview## Overview
+## Installation
 
-
-
-This package provides Semantic Kernel integration for the Microsoft Agents A365 Observability framework, enabling automatic distributed tracing of Semantic Kernel operations through OpenTelemetry.This extension package enables comprehensive monitoring and tracing of Semantic Kernel operations, including kernel invocations, plugin executions, and planner activities within your agent applications.
-
-
-
-## Features## Features
-
-
-
-- **Automatic Semantic Kernel Tracing**: Built-in OpenTelemetry tracing for Semantic Kernel SDK operations- **Kernel Invocation Tracing**: Automatic instrumentation of Semantic Kernel operations
-
-- **Function Invocation Filtering**: Automatic instrumentation of kernel function calls- **Plugin Execution Tracking**: Monitor plugin calls and performance
-
-- **Agent Tracing Extensions**: Simple `WithTracing()` extension for ChatCompletionAgent- **Planner Activity Monitoring**: Track planner operations and decision-making
-
-- **Semantic Kernel Span Processing**: Custom span processor for Semantic Kernel-specific telemetry enrichment- **Memory Operations**: Trace semantic memory operations and queries
-
-- **Zero-Configuration Setup**: Automatic integration with Semantic Kernel's experimental OpenTelemetry support- **Function Call Analysis**: Detailed tracking of function invocations
-
-
-
-## Installation## Installation
-
-
-
-```bash```bash
-
-dotnet add package Microsoft.Agents.A365.Observability.Extensions.SemanticKerneldotnet add package Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
-
-``````
-
-
-
-## Quick Start## Quick Start
-
-
-
-### Basic Setup with Builder Pattern```csharp
-
-using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
-
-```csharp
-
-using Microsoft.Agents.A365.Observability.Runtime;var builder = WebApplication.CreateBuilder(args);
-
-using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
-
-// Add observability with Semantic Kernel extensions
-
-var builder = Builder.Create(services);builder.Services.AddObservability(options =>
-
-{
-
-// Add Semantic Kernel observability with related tracing sources    options.EnableSemanticKernelTracing = true;
-
-builder.WithSemanticKernel(enableRelatedSources: true);});
-
-
-
-var observability = builder.Build();var app = builder.Build();
-
-``````
-
-
-
-### Enable Tracing on ChatCompletionAgent## Configuration
-
-
-
-```csharp```csharp
-
-using Microsoft.SemanticKernel;builder.Services.AddSemanticKernelObservability(options =>
-
-using Microsoft.SemanticKernel.Agents;{
-
-using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;    options.TrackPluginExecutions = true;
-
-    options.TrackPlannerOperations = true;
-
-// Create your agent    options.TrackMemoryOperations = true;
-
-var agent = new ChatCompletionAgent    options.EnableDetailedFunctionLogging = true;
-
-{});
-
-    Name = "Assistant",```
-
-    Instructions = "You are a helpful assistant.",
-
-    Kernel = kernel## Related Documentation
-
-};
-
-- [Observability Module Overview](../../README.md)
-
-// Enable automatic tracing- [Core Package](../../Core/README.md)
-
-agent = agent.WithTracing();
-
-## Support
-
-// Now all function invocations will be traced
-
-await foreach (var message in agent.InvokeAsync(history))For issues, questions, or feedback:
-
-{
-
-    Console.WriteLine(message.Content);- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
-
-}- See the [main documentation](../../../../README.md) for more information
-
+```bash
+dotnet add package Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
 ```
 
-## License
+## Quick Start
+
+### Basic Setup with Builder Pattern
+
+```csharp
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+using Microsoft.Agents.A365.Observability.Runtime;
+
+var builder = Builder.Create(services);
+
+// Add Semantic Kernel observability with related tracing sources
+builder.WithSemanticKernel(enableRelatedSources: true);
+
+var observability = builder.Build();
+```
+
+### Enable Tracing on ChatCompletionAgent
+
+```csharp
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+
+// Create your agent
+var agent = new ChatCompletionAgent
+{
+    Name = "Assistant",
+    Instructions = "You are a helpful assistant.",
+    Kernel = kernel
+};
+
+// Enable automatic tracing
+agent = agent.WithTracing();
+
+// Now all function invocations will be traced
+await foreach (var message in agent.InvokeAsync(history))
+{
+    Console.WriteLine(message.Content);
+}
+```
 
 ## Configuration Options
 
-Copyright (c) Microsoft Corporation. All rights reserved.
-
 ### Enable Semantic Kernel Tracing
-
-Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
 
 The `WithSemanticKernel` extension method configures:
 
@@ -253,3 +189,4 @@ For issues, questions, or feedback:
 Copyright (c) Microsoft Corporation. All rights reserved.
 
 Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
+
