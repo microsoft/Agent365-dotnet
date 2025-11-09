@@ -1,135 +1,229 @@
 # Microsoft.Agents.A365.DevTools.Analyzer.OpenAI
 
-This package contains custom Roslyn analyzers for enforcing Microsoft Agents A365 SDK compliance and governance in OpenAI-based agent projects.
+A Roslyn analyzer package that enforces Microsoft Agents A365 SDK compliance and governance rules for OpenAI-based agent projects. This analyzer helps developers follow best practices for multi-tenant scenarios, security, and proper resource isolation.
 
-## Included Rules
-- A365OAI0001: Direct ChatClient access or storage is not allowed
-- A365OAI0002: Direct OpenAIClient access or storage is not allowed
-- A365OAI0004: Tenant/worker ID access enforcement
-- A365OAI0005: ChatClient provider must be configured properly for multi-tenant scenarios
-- A365OAI0006: Functions must be accessed via IOpenAIFunctionProvider for tenant isolation
-- A365OAI0008: Providers must be registered with delegate-based configuration
-- A365OAI0009: Tenant and Worker IDs must not be hardcoded
-- A365OAI0010: Data storage must be tenant-isolated to prevent cross-tenant access
-- A365OAI0011: Agent classes must use providers instead of direct OpenAI clients
+## Overview
 
-See AnalyzerDocumentation.md for details on rule enforcement and usage.
+This analyzer detects and prevents common issues in OpenAI-based agent applications, including:
 
-## 📦 Creating a Local NuGet Package
+- Direct client access that bypasses governance
+- Hardcoded tenant or worker IDs
+- Improper multi-tenant configuration
+- Missing tenant isolation in data storage
+- Incorrect provider registration patterns
 
-To build and generate a local NuGet package for this project:
+## Features
 
-1. **Ensure prerequisites:**
-   - .NET SDK 8.0 or later installed
-   - This repository cloned locally
-
-2. **Build and pack the project:**
-   - Open a terminal in the project directory:
-     ```pwsh
-     cd ./Microsoft.Agents.A365.DevTools.Analyzer.OpenAI
-     dotnet build -c Release
-     ```
-   - The build will automatically generate the NuGet package in `nupkgs/`.
-
-3. **Verify the package:**
-   - Check for the `.nupkg` file in:
-     ```
-     ./Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/nupkgs/
-     ```
-
-4. **Consume the package locally:**
-   - In your agent project, add the following to your `.csproj`:
-     ```xml
-     <PropertyGroup>
-       <RestoreSources>$(RestoreSources);../Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/nupkgs</RestoreSources>
-     </PropertyGroup>
-     <ItemGroup>
-       <PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.OpenAI" Version="1.0.0" />
-     </ItemGroup>
-     ```
-   - Run `dotnet restore` in your agent project to use the local package.
-
-## Analyzers
-
-### A365OAI0001 - ChatClient Direct Access
-Prevents direct usage of `ChatClient` in favor of `IChatClientProvider`.
-
-**Problem**: Direct ChatClient usage breaks multi-tenant isolation
-**Fix**: Use `IChatClientProvider.GetChatClient(tenantId, workerId)`
-
-### A365OAI0002 - OpenAIClient Direct Access  
-Prevents direct usage of `OpenAIClient` in favor of `IChatClientProvider`.
-
-**Problem**: Direct OpenAIClient usage breaks multi-tenant isolation
-**Fix**: Use `IChatClientProvider.GetChatClient(tenantId, workerId)`
-
-### A365OAI0004 - Tenant/Worker ID Access
-Ensures proper tenant/worker ID extraction via TenantContextHelper.
-
-**Problem**: Direct header/claim access is inconsistent
-**Fix**: Use `TenantContextHelper.GetTenantId(HttpContext)` and `TenantContextHelper.GetWorkerId(HttpContext)`
-
-### A365OAI0005 - ChatClient Provider Usage
-Ensures proper OpenAI provider registration and configuration.
-
-**Problem**: Missing or improper provider setup
-**Fix**: Register `IChatClientProvider` and `IOpenAIFunctionProvider` in DI
-
-### A365OAI0006 - Function Provider Enforcement
-Functions must be accessed via IOpenAIFunctionProvider for tenant isolation.
-
-**Problem**: Direct function operations bypass multi-tenant governance
-**Fix**: Use `IOpenAIFunctionProvider.GetAvailableTools()` and `ExecuteFunctionAsync()`
-
-### A365OAI0008 - Provider Registration Validation
-Providers must be registered with delegate-based configuration.
-
-**Problem**: Direct client registration bypasses governance-approved factory patterns
-**Fix**: Register providers using delegate-based factories with proper tenant isolation
-
-### A365OAI0009 - Hardcoded Tenant/Worker Prevention
-Tenant and Worker IDs must not be hardcoded.
-
-**Problem**: Hardcoded tenant/worker IDs bypass multi-tenant isolation and create security risks
-**Fix**: Extract tenant/worker IDs from HttpContext using TenantContextHelper methods
-
-### A365OAI0010 - Cross-Tenant Data Access Prevention
-Data storage must be tenant-isolated to prevent cross-tenant access.
-
-**Problem**: Shared storage without tenant isolation creates data leakage risks
-**Fix**: Use tenant-scoped storage patterns with tenantId/workerId in keys
-
-### A365OAI0011 - Agent Construction Validation
-Agent classes must use providers instead of direct OpenAI clients.
-
-**Problem**: Agent classes with direct client dependencies cannot support multi-tenancy
-**Fix**: Use provider-based dependency injection (IChatClientProvider, IOpenAIFunctionProvider)
-
-## Local Development Note
-If you want analyzer diagnostics to run immediately during development, add the analyzer DLL directly in your agent project's `.csproj`:
-
-```xml
-<ItemGroup>
-  <Analyzer Include="..\Microsoft.Agents.A365.DevTools.Analyzer.OpenAI\bin\Debug\netstandard2.0\Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.dll" />
-</ItemGroup>
-```
-This ensures analyzers run on every build, even if the NuGet package is not published or restored.
+- **Compile-Time Enforcement**: Catch governance violations during development
+- **Multi-Tenant Support**: Ensures proper tenant isolation patterns
+- **Security Best Practices**: Prevents hardcoded credentials and improper client access
+- **Provider Pattern Enforcement**: Validates correct usage of provider-based architecture
+- **IDE Integration**: Works seamlessly with Visual Studio and VS Code
 
 ## Installation
 
-```xml
-<PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.OpenAI" Version="1.0.0" />
+```bash
+dotnet add package Microsoft.Agents.A365.DevTools.Analyzer.OpenAI
 ```
 
-## Usage
+The analyzer is automatically activated once the package is installed.
 
-The analyzers automatically activate when you reference the package. No additional configuration required.
+## Analyzer Rules
 
-## Troubleshooting
-- If the package is not generated, ensure `<IsPackable>true</IsPackable>` and `<GeneratePackageOnBuild>true</GeneratePackageOnBuild>` are set in the `.csproj`.
-- If you change the version, rebuild to update the `.nupkg` file.
+### A365OAI0001: Direct ChatClient Access Not Allowed
 
-For more details on each rule, see the [AnalyzerDocumentation.md](./AnalyzerDocumentation.md).
+**Description**: Direct ChatClient access or storage is not allowed. Use IChatClientProvider instead.
+
+**Severity**: Error
+
+**Example**:
+
+```csharp
+// ❌ Incorrect
+private ChatClient _chatClient;
+
+// ✅ Correct
+private readonly IChatClientProvider _chatClientProvider;
+```
+
+### A365OAI0002: Direct OpenAIClient Access Not Allowed
+
+**Description**: Direct OpenAIClient access or storage is not allowed. Use IOpenAIClientProvider instead.
+
+**Severity**: Error
+
+**Example**:
+
+```csharp
+// ❌ Incorrect
+private OpenAIClient _openAIClient;
+
+// ✅ Correct
+private readonly IOpenAIClientProvider _openAIClientProvider;
+```
+
+### A365OAI0004: Tenant/Worker ID Access Enforcement
+
+**Description**: Tenant and worker IDs must be accessed through proper context mechanisms.
+
+**Severity**: Error
+
+### A365OAI0005: ChatClient Provider Configuration
+
+**Description**: ChatClient provider must be configured properly for multi-tenant scenarios.
+
+**Severity**: Error
+
+### A365OAI0006: Function Access via Provider
+
+**Description**: Functions must be accessed via IOpenAIFunctionProvider for tenant isolation.
+
+**Severity**: Error
+
+**Example**:
+
+```csharp
+// ❌ Incorrect
+var function = new MyFunction();
+
+// ✅ Correct
+var function = _functionProvider.GetFunction<MyFunction>(tenantId, workerId);
+```
+
+### A365OAI0008: Provider Registration Pattern
+
+**Description**: Providers must be registered with delegate-based configuration.
+
+**Severity**: Error
+
+**Example**:
+
+```csharp
+// ✅ Correct
+services.AddChatClientProvider((tenantId, workerId) => 
+{
+    return new ChatClient(endpoint, credential);
+});
+```
+
+### A365OAI0009: No Hardcoded IDs
+
+**Description**: Tenant and Worker IDs must not be hardcoded.
+
+**Severity**: Error
+
+**Example**:
+
+```csharp
+// ❌ Incorrect
+var tenantId = "12345";
+var workerId = "worker1";
+
+// ✅ Correct
+var tenantId = context.GetTenantId();
+var workerId = context.GetWorkerId();
+```
+
+### A365OAI0010: Tenant-Isolated Data Storage
+
+**Description**: Data storage must be tenant-isolated to prevent cross-tenant access.
+
+**Severity**: Error
+
+### A365OAI0011: Use Providers in Agent Classes
+
+**Description**: Agent classes must use providers instead of direct OpenAI clients.
+
+**Severity**: Error
+
+## Configuration
+
+### .editorconfig
+
+Configure analyzer severity and behavior:
+
+```ini
+[*.cs]
+
+# OpenAI Analyzer Rules
+dotnet_diagnostic.A365OAI0001.severity = error
+dotnet_diagnostic.A365OAI0002.severity = error
+dotnet_diagnostic.A365OAI0004.severity = error
+dotnet_diagnostic.A365OAI0005.severity = error
+dotnet_diagnostic.A365OAI0006.severity = error
+dotnet_diagnostic.A365OAI0008.severity = error
+dotnet_diagnostic.A365OAI0009.severity = error
+dotnet_diagnostic.A365OAI0010.severity = error
+dotnet_diagnostic.A365OAI0011.severity = error
+```
+
+### Suppressing Warnings
+
+For legitimate cases where analyzer warnings need to be suppressed:
+
+```csharp
+#pragma warning disable A365OAI0001 // Reason for suppression
+var testClient = new ChatClient(endpoint, credential);
+#pragma warning restore A365OAI0001
+```
+
+## Creating a Local NuGet Package
+
+To build and generate a local NuGet package for this project:
+
+### Prerequisites
+
+- .NET SDK 8.0 or later installed
+- This repository cloned locally
+
+### Build and Pack
+
+1. **Build the project:**
+
+   ```bash
+   cd ./src/DevTools/Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI
+   dotnet build -c Release
+   ```
+
+2. **Verify the package:**
+
+   The build will automatically generate the NuGet package in `nupkgs/`:
+
+   ```
+   ./Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/nupkgs/
+   ```
+
+### Consume Locally
+
+In your agent project, add the following to your `.csproj`:
+
+```xml
+<PropertyGroup>
+  <RestoreSources>$(RestoreSources);../Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/nupkgs</RestoreSources>
+</PropertyGroup>
+
+<ItemGroup>
+  <PackageReference Include="Microsoft.Agents.A365.DevTools.Analyzer.OpenAI" Version="1.0.0" />
+</ItemGroup>
+```
+
+Run `dotnet restore` in your agent project to use the local package.
+
+## Related Documentation
+
+- [DevTools Overview](../../../README.md)
+- [Analyzer Documentation](./AnalyzerDocumentation.md)
+- [Semantic Kernel Analyzer](../Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/README.md)
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../../README.md) for more information
 
 ## License
-Copyright (c) Microsoft. All rights reserved.
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
