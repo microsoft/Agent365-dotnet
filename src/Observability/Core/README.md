@@ -29,35 +29,73 @@ dotnet add package Microsoft.Agents.A365.Observability
 
 ## Quick Start
 
-### Basic Configuration
+### Basic Token Cache Configuration
 
-1. **Install the package**:
+The core package provides token caching for observability exports:
 
-   ```bash
-   dotnet add package Microsoft.Agents.A365.Observability
-   ```
+```csharp
+using Microsoft.Agents.A365.Observability;
+using Microsoft.Extensions.DependencyInjection;
 
-2. **Configure in your application**:
+var services = new ServiceCollection();
 
-   ```csharp
-   using Microsoft.Agents.A365.Observability;
-   
-   var builder = WebApplication.CreateBuilder(args);
-   
-   // Configure Microsoft Agents A365 with tracing
-   builder.Services.AddTracing();
-   
-   var app = builder.Build();
-   ```
+// Add agentic token handling for agent-to-agent scenarios
+services.AddAgenticTracingExporter(clusterCategory: "production");
 
-3. **Add agent tracing**:
+// OR add service token handling for service-to-service scenarios
+services.AddServiceTracingExporter(clusterCategory: "production");
 
-   ```csharp
-   using Microsoft.Agents.A365.Observability.Tracing;
-   
-   using var agentScope = ExecuteAgentScope.Start(agentId);
-   // Your agent logic here
-   ```
+var serviceProvider = services.BuildServiceProvider();
+```
+
+### Using with Runtime Package
+
+For complete tracing setup, combine with the Runtime package:
+
+```csharp
+using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Runtime;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add token caching from Core package
+builder.Services.AddAgenticTracingExporter();
+
+// Add full tracing from Runtime package
+builder.Services.AddTracing();
+
+var app = builder.Build();
+```
+
+### Agent Tracing Scopes
+
+The Core package provides scopes for tracing agent operations:
+
+```csharp
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+
+// Execute Agent Scope
+var agentDetails = new AgentDetails(agentId: "my-agent");
+var tenantDetails = new TenantDetails(tenantId: myTenantGuid);
+
+using var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails);
+// Your agent logic here
+agentScope.Complete();
+
+// Execute Tool Scope  
+var toolDetails = new ToolCallDetails(
+    functionName: "GetWeather",
+    functionArguments: "{\"location\":\"Seattle\"}",
+    toolCallId: "call_123",
+    modelId: "gpt-4",
+    toolType: "function"
+);
+
+using var toolScope = ExecuteToolScope.Start(toolDetails, agentDetails, tenantDetails);
+// Your tool execution logic
+toolScope.Complete();
+```
 
 ### Advanced Usage
 

@@ -55,59 +55,104 @@ dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
 
 ## Quick Start
 
-### Basic Tool Server Registration
+### Basic Tool Server Registration with Semantic Kernel
 
-1. **Register required services**:
+```csharp
+using Microsoft.Agents.A365.Tooling;
+using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel;
+using Microsoft.SemanticKernel;
 
-   ```csharp
-   using Microsoft.Agents.A365.Tooling;
-   using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel;
-   
-   builder.Services.AddSingleton<IMcpToolRegistrationService, McpToolRegistrationService>();
-   ```
+// Register the MCP tool configuration service
+builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
 
-2. **Create agent with tool server support**:
+// In your agent code
+public class ToolingAgent
+{
+    private readonly Kernel _kernel;
+    private readonly IMcpToolServerConfigurationService _mcpToolService;
+    
+    public ToolingAgent(
+        Kernel kernel, 
+        IMcpToolServerConfigurationService mcpToolService)
+    {
+        _kernel = kernel;
+        _mcpToolService = mcpToolService;
+    }
+    
+    public async Task InitializeAsync(
+        string environmentId,
+        UserAuthorization userAuthorization,
+        ITurnContext turnContext,
+        string? authToken = null)
+    {
+        // Register tool servers with the kernel
+        await _mcpToolService.AddToolServersToAgent(
+            _kernel,
+            environmentId,
+            userAuthorization,
+            turnContext,
+            authToken);
+    }
+}
+```
 
-   ```csharp
-   public class ToolingAgent
-   {
-       private readonly Kernel _kernel;
-       private readonly IMcpToolRegistrationService _mcpToolRegistrationService;
-       
-       public ToolingAgent(
-           Kernel kernel, 
-           IServiceProvider service, 
-           IMcpToolRegistrationService mcpToolRegistrationService, 
-           UserAuthorization userAuthorization, 
-           ITurnContext turnContext)
-       {
-           _kernel = kernel;
-           _mcpToolRegistrationService = mcpToolRegistrationService;
-           
-           // Register tool servers with agentic authentication
-           _mcpToolRegistrationService.AddToolServersToAgent(
-               kernel, 
-               environmentId, 
-               userAuthorization, 
-               turnContext);
-       }
-   }
-   ```
+### Agent Framework Integration
 
-3. **Configure agent with tool support**:
+```csharp
+using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework;
+using Microsoft.Extensions.AI;
 
-   ```csharp
-   // Define the agent with function calling enabled
-   var agent = new ChatCompletionAgent
-   {
-       Instructions = AgentInstructions(),
-       Name = AgentName,
-       Kernel = _kernel,
-       Arguments = new KernelArguments(new OpenAIPromptExecutionSettings()
-       {
-   #pragma warning disable SKEXP0001
-           FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
-               options: new() { RetainArgumentTypes = true }),
+// Register the service
+builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
+
+// Create agent with tools
+var mcpToolService = serviceProvider.GetRequiredService<IMcpToolServerConfigurationService>();
+
+var agent = await mcpToolService.AddToolServersToAgent(
+    chatClient,
+    agentInstructions: "You are a helpful assistant",
+    initialTools: new List<AITool>(),
+    agentUserId: userId,
+    environmentId: envId,
+    userAuthorization: userAuth,
+    turnContext: context);
+```
+
+### Azure AI Foundry Integration
+
+```csharp
+using Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry;
+using Azure.AI.Projects;
+
+// Register the service
+builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
+
+// Add tools to a Persistent Agent
+var mcpToolService = serviceProvider.GetRequiredService<IMcpToolServerConfigurationService>();
+
+await mcpToolService.AddToolServersToAgent(
+    agentClient,
+    agentInstanceId: "agent-123",
+    environmentId: envId,
+    userAuthorization: userAuth,
+    turnContext: context);
+```
+
+### Configure Semantic Kernel Agent with Tool Support
+
+```csharp
+// Define the agent with function calling enabled
+var agent = new ChatCompletionAgent
+{
+    Instructions = AgentInstructions(),
+    Name = AgentName,
+    Kernel = _kernel,
+    Arguments = new KernelArguments(new OpenAIPromptExecutionSettings()
+    {
+#pragma warning disable SKEXP0001
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(
+            options: new() { RetainArgumentTypes = true }),
+#pragma warning restore SKEXP0001
    #pragma warning restore SKEXP0001
            ResponseFormat = "json_object", 
        }),

@@ -51,44 +51,49 @@ dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 
 ### Basic Configuration
 
-1. **Configure in your application**:
-
-   ```csharp
-   using Microsoft.Agents.A365;
-   
-   var builder = WebApplication.CreateBuilder(args);
-   
-   // Configure Microsoft Agents A365 with Azure Monitor
-   builder.Services.AddTracing();
-   
-   var app = builder.Build();
-   ```
-
-2. **Add agent tracing**:
-
-   ```csharp
-   using Microsoft.Agents.A365.Tracing;
-   
-   using var agentScope = ExecuteAgentScope.Start(AgentId);
-   // Your agent logic here
-   ```
-
-### Advanced Configuration with Azure Monitor
-
 ```csharp
-using Microsoft.Agents.A365.Observability;
 using Microsoft.Agents.A365.Observability.Runtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add observability with Azure Monitor
-builder.Services.AddObservability(options =>
-{
-    options.EnableAzureMonitor = true;
-    options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
-    options.EnableCaching = true;
-    options.EnableTracing = true;
-});
+// Add tracing with OpenTelemetry
+builder.Services.AddTracing();
+
+var app = builder.Build();
+```
+
+### Agent Tracing
+
+```csharp
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+
+var agentDetails = new AgentDetails(agentId: "my-agent");
+var tenantDetails = new TenantDetails(tenantId: myTenantGuid);
+
+using var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails);
+// Your agent logic here
+agentScope.Complete();
+```
+
+### Advanced Configuration with Framework Extensions
+
+```csharp
+using Microsoft.Agents.A365.Observability.Runtime;
+using Microsoft.Agents.A365.Observability.Extensions.OpenAI;
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Configure observability with framework extensions
+var observabilityBuilder = Builder.Create(builder.Services);
+observabilityBuilder
+    .WithOpenAI()
+    .WithSemanticKernel()
+    .WithTracing()
+    .WithMetrics();
+
+builder.Services.AddTracing();
 
 var app = builder.Build();
 ```
@@ -116,8 +121,15 @@ The Observability module is organized into several packages:
 Track agent invocations across distributed systems with full context propagation:
 
 ```csharp
-using var agentScope = ExecuteAgentScope.Start("MyAgent");
-// Agent operations are automatically traced
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+
+var agentDetails = new AgentDetails(agentId: "MyAgent");
+var tenantDetails = new TenantDetails(tenantId: myTenantGuid);
+
+using var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails);
+// Agent operations are automatically traced with full context
+agentScope.Complete();
 ```
 
 ### Caching Instrumentation

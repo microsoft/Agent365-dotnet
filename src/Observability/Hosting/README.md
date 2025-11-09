@@ -1,25 +1,25 @@
 # Microsoft.Agents.A365.Observability.Hosting
 
-The Observability Hosting package provides ASP.NET Core integration and hosting utilities for Microsoft Agents A365 Observability. This package includes middleware, ETW (Event Tracing for Windows) support, and configuration helpers for web applications.
+The Observability Hosting package provides ETW (Event Tracing for Windows) integration for Microsoft Agents A365 Observability. This package enables high-performance event tracing on Windows platforms for production monitoring scenarios.
 
 ## Overview
 
-This package enables seamless integration of observability features into ASP.NET Core applications, providing:
+This package enables Event Tracing for Windows (ETW) integration, providing:
 
-- Request/response tracing middleware
-- ETW event providers for Windows-based hosting
-- Service registration extensions
-- Configuration management
-- Hosting environment integration
+- ETW event providers for Windows-based production monitoring
+- High-performance event emission with minimal overhead
+- Integration with Windows Performance Analyzer (WPA) and other ETW tools
+- Scope event processing for structured logging
+- OpenTelemetry to ETW bridging
 
 ## Features
 
-- **ASP.NET Core Middleware**: Automatic HTTP request/response tracing
-- **ETW Support**: Event Tracing for Windows integration for production monitoring
-- **Service Registration**: Simplified dependency injection setup
-- **Configuration Integration**: Seamless integration with ASP.NET Core configuration
-- **Health Checks**: Built-in health check support for observability components
-- **Logging Integration**: Automatic correlation between traces and logs
+- **ETW Event Provider**: Native Windows event tracing support
+- **Scope Event Processing**: Automatic ETW event generation from tracing scopes
+- **Performance Optimized**: Minimal overhead for high-throughput scenarios
+- **WPA Integration**: Compatible with Windows Performance Analyzer
+- **Production Ready**: Designed for production monitoring and diagnostics
+- **OpenTelemetry Integration**: Bridges OpenTelemetry spans to ETW events
 
 ## Installation
 
@@ -29,35 +29,36 @@ dotnet add package Microsoft.Agents.A365.Observability.Hosting
 
 ## Quick Start
 
-### Basic Setup
+### Basic ETW Configuration
 
 ```csharp
-using Microsoft.Agents.A365.Observability.Hosting;
+using Microsoft.Agents.A365.Observability.Hosting.Etw;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add observability hosting services
-builder.Services.AddObservabilityHosting();
+// Add OpenTelemetry tracing with ETW support
+builder.Services.AddTracingWithEtw();
 
 var app = builder.Build();
-
-// Use observability middleware
-app.UseObservabilityMiddleware();
-
 app.Run();
 ```
 
 ### Advanced Configuration
 
 ```csharp
-using Microsoft.Agents.A365.Observability.Hosting;
+using Microsoft.Agents.A365.Observability.Hosting.Etw;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure observability with hosting options
-builder.Services.AddObservabilityHosting(options =>
+// Configure ETW with custom settings
+builder.Services.AddTracingWithEtw(etwBuilder =>
 {
-    options.EnableRequestTracing = true;
+    // ETW builder automatically configures:
+    // - EtwEventSource for event emission
+    // - EtwScopeEventProcessor for scope processing
+    // - OpenTelemetry integration
+});
     options.EnableResponseTracing = true;
     options.EnableEtw = true;
     options.SensitiveDataLogging = false;
