@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using System.Linq;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
-using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
