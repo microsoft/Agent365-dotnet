@@ -47,11 +47,6 @@ The Runtime SDK provides multi-tenant utilities and framework extensions:
 
 - **[Microsoft.Agents.A365.Runtime](Core/README.md)** - Core runtime utilities including TenantContextHelper, AgenticAuthorizationService, and Utility methods
 
-### Framework Extensions
-
-- **Microsoft.Agents.A365.Runtime.Extensions.OpenAI** - Runtime extensions for OpenAI integration (coming soon)
-- **Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel** - Runtime extensions for Semantic Kernel integration (coming soon)
-
 ## Support
 
 For issues, questions, or feedback:
