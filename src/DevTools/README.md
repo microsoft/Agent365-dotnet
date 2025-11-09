@@ -45,10 +45,6 @@ The DevTools module provides Roslyn analyzers for enforcing best practices:
 - **[Microsoft.Agents.A365.DevTools.Analyzer.OpenAI](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/README.md)** - Roslyn analyzers for OpenAI API usage and governance
 - **[Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel](Analyzer/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/README.md)** - Roslyn analyzers for Semantic Kernel integration
 
-## Getting Started
-
-Analyzers activate automatically when installed and provide real-time feedback in your IDE. For detailed rule descriptions, configuration options, and code examples, see the individual analyzer package READMEs.
-
 ## Support
 
 For issues, questions, or feedback:
@@ -59,13 +55,6 @@ For issues, questions, or feedback:
 ## Contributing
 
 This project welcomes contributions and suggestions. See the [Contributing Guide](../../README.md#contributing) for details.
-
-Contributions for new analyzer rules are especially welcome! Please ensure:
-
-- New rules have clear diagnostic IDs
-- Rules include code fix providers where applicable
-- Comprehensive tests cover all scenarios
-- Documentation explains the rule and its rationale
 
 ## License
 

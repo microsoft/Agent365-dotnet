@@ -43,15 +43,6 @@ dotnet add package Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
 dotnet add package Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 ```
 
-## Getting Started
-
-This module provides observability capabilities through multiple packages. Choose the packages that match your needs:
-
-1. **Start with Runtime** - For basic tracing setup, see [Runtime Package](Runtime/README.md)
-2. **Add Framework Extensions** - For OpenAI, Semantic Kernel, or Agent Framework, see the respective extension READMEs
-3. **Configure ETW (Optional)** - For Windows-based production monitoring, see [Hosting Package](Hosting/README.md)
-4. **Use Core Features** - For token caching and scope management, see [Core Package](Core/README.md)
-
 ## Package Structure
 
 The Observability module is organized into several packages, each with detailed documentation:

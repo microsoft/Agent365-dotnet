@@ -21,16 +21,9 @@ The Notification module offers:
 dotnet add package Microsoft.Agents.A365.Notifications
 ```
 
-## Getting Started
+## Package Structure
 
-For detailed implementation examples, configuration options, and advanced usage patterns, see the [Notifications package documentation](./Microsoft.Agents.A365.Notifications/README.md).
-
-Quick overview of key capabilities:
-
-- **Email Notifications**: Respond when the agent receives email
-- **Document Comments**: Handle @-mentions in Word document comments
-- **Route Ranking**: Control handler priority with First/Normal/Last ranking
-- **Error Handling**: Built-in support for exception handling and logging
+- **[Microsoft.Agents.A365.Notifications](./Microsoft.Agents.A365.Notifications/README.md)** - Notification handling framework with event routing, type-safe models, and authentication support
 
 ## Support
 
