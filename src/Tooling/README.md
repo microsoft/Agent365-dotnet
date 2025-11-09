@@ -56,43 +56,6 @@ The Tooling module provides MCP tool server integration through multiple package
 - **[Microsoft.Agents.A365.Tooling.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Agent Framework integration returning immutable AIAgent
 - **[Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry](Extensions/AzureAIFoundry/README.md)** - Azure AI Foundry Persistent Agents integration
 
-## Getting Started
-
-This module enables MCP tool server discovery and registration. Choose the extension that matches your AI framework:
-
-1. **For Semantic Kernel** - See [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
-2. **For Agent Framework** - See [Agent Framework Extension](Extensions/AgentFramework/README.md)
-3. **For Azure AI Foundry** - See [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
-4. **Core Service** - For custom integrations, see [Core Package](Core/README.md)
-
-## Package Documentation
-
-For detailed code examples, configuration, and usage patterns, refer to the individual package READMEs:
-
-- [Core Package](Core/README.md) - IMcpToolServerConfigurationService interface and models
-- [Semantic Kernel Extension](Extensions/SemanticKernel/README.md) - Complete Semantic Kernel integration examples
-- [Agent Framework Extension](Extensions/AgentFramework/README.md) - Complete Agent Framework integration examples
-- [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md) - Complete Azure AI Foundry integration examples
-
-## Useful Links
-
-### Microsoft Agents A365 SDK
-
-- [Microsoft Agents A365 Runtime](../Runtime/README.md) - Core runtime utilities for agents
-- [Microsoft Agents A365 Observability](../Observability/README.md) - Monitoring and tracing for tool executions
-- [Microsoft Agents A365 Notifications](../Notification/README.md) - Agent notification services
-- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Code analyzers and development tools
-
-### Documentation
-
-- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
-
-### Related Repositories
-
-- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
-- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
-- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
-
 ## Support
 
 For issues, questions, or feedback:

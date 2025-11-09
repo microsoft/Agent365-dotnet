@@ -68,25 +68,6 @@ The Observability module is organized into several packages, each with detailed 
 - **[Microsoft.Agents.A365.Observability.Extensions.SemanticKernel](Extensions/SemanticKernel/README.md)** - Semantic Kernel integration with function invocation filtering
 - **[Microsoft.Agents.A365.Observability.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Microsoft Agent Framework integration with multi-source activity tracking
 
-## Useful Links
-
-### Microsoft Agents A365 SDK
-
-- [Microsoft Agents A365 Notifications](../Notification/README.md) - Agent notification services
-- [Microsoft Agents A365 Runtime](../Runtime/README.md) - Core runtime utilities for agents
-- [Microsoft Agents A365 Tooling](../Tooling/README.md) - Developer tools and utilities
-- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Code analyzers and development tools
-
-### Documentation
-
-- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
-
-### Related Repositories
-
-- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
-- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
-- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
-
 ## Support
 
 For issues, questions, or feedback:
