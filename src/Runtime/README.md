@@ -41,15 +41,6 @@ dotnet add package Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel
 
 ## Package Structure
 
-### Core Package
-
-- **Microsoft.Agents.A365.Runtime** (`Core/`): Core runtime utilities including:
-  - `AgenticAuthorizationService`: Authorization services for agent operations
-  - `TenantContextHelper`: Tenant and worker ID extraction from HttpContext
-  - `Utility`: Common utility methods for runtime operations
-
-## Package Structure
-
 The Runtime SDK provides multi-tenant utilities and framework extensions:
 
 ### Core Package
@@ -63,48 +54,26 @@ The Runtime SDK provides multi-tenant utilities and framework extensions:
 
 ## Getting Started
 
-The Runtime SDK helps extract tenant and worker context from HTTP requests for multi-tenant agent applications.
+The Runtime SDK helps extract tenant and worker context from HTTP requests for multi-tenant agent applications. See [Core Package](Core/README.md) for detailed examples and usage patterns.
 
-### Core Runtime Utilities
+## Useful Links
 
-See [Core Package](Core/README.md) for detailed examples on:
+### Microsoft Agents A365 SDK
 
-- Extracting tenant and worker IDs from HttpContext
-- Using TenantContextHelper for multi-tenant isolation
-- Integrating with authorization services
-- Working with kernel providers
+- [Microsoft Agents A365 Observability](../Observability/README.md) - Monitoring and tracing for agent applications
+- [Microsoft Agents A365 Notifications](../Notification/README.md) - Agent notification services
+- [Microsoft Agents A365 Tooling](../Tooling/README.md) - Developer tools and utilities
+- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Roslyn analyzers for governance enforcement
 
-## Key Capabilities
+### Documentation
 
-### Multi-Tenant Context Management
+- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
 
-- Extract tenant IDs from user claims, headers, or request items
-- Extract worker IDs for multi-worker scenarios
-- Null-safe extraction with proper validation
-- Performance-optimized with minimal overhead
+### Related Repositories
 
-### Authorization Services
-
-- AgenticAuthorizationService for agent-specific authorization
-- Integration with Microsoft Agents A365 security model
-- Support for tenant-level and worker-level permissions
-
-### Utility Methods
-
-- Common helper methods for runtime operations
-- HTTP context manipulation
-- Request/response processing utilities
-
-## Package Documentation
-
-For detailed code examples and usage patterns, see the [Core Package README](Core/README.md).
-
-## Related Packages
-
-- [Microsoft.Agents.A365.Observability](../Observability/README.md) - Monitoring and tracing for agent applications
-- [Microsoft.Agents.A365.Notifications](../Notification/README.md) - Agent notification services
-- [Microsoft.Agents.A365.Tooling](../Tooling/README.md) - Developer tools and utilities
-- [Microsoft.Agents.A365.DevTools](../DevTools/README.md) - Roslyn analyzers for governance enforcement
+- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
+- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
+- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
 
 ## Support
 

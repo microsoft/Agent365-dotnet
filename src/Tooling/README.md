@@ -44,12 +44,6 @@ dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
 
 ## Package Structure
 
-### Core Package
-
-- **Microsoft.Agents.A365.Tooling** (`Core/`): Core tooling functionality for MCP tool server management
-
-## Package Structure
-
 The Tooling module provides MCP tool server integration through multiple packages:
 
 ### Core Package
@@ -66,29 +60,10 @@ The Tooling module provides MCP tool server integration through multiple package
 
 This module enables MCP tool server discovery and registration. Choose the extension that matches your AI framework:
 
-1. **For Semantic Kernel** - Tools are registered as kernel plugins with automatic 64-character name filtering. See [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
-2. **For Agent Framework** - Returns new AIAgent instances with tools (immutable pattern). See [Agent Framework Extension](Extensions/AgentFramework/README.md)
-3. **For Azure AI Foundry** - Updates Persistent Agents through Administration API. See [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
-4. **Core Service** - For custom integrations, use the core IMcpToolServerConfigurationService. See [Core Package](Core/README.md)
-
-## Key Capabilities
-
-### Automatic Tool Discovery
-
-- List available MCP tool servers for a given environment
-- Retrieve tool definitions and metadata
-- Support for both agentic and custom authentication
-
-### Framework-Specific Registration
-
-- **Semantic Kernel**: Tools registered as kernel plugins with 64-character name limit
-- **Agent Framework**: Returns new immutable AIAgent instances with tools included
-- **Azure AI Foundry**: Updates Persistent Agents through Administration API
-
-### Authentication Support
-
-- Agentic authentication (default) - Automatic token handling for agent-to-agent scenarios
-- Custom token authentication - Bring your own auth token for specialized scenarios
+1. **For Semantic Kernel** - See [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
+2. **For Agent Framework** - See [Agent Framework Extension](Extensions/AgentFramework/README.md)
+3. **For Azure AI Foundry** - See [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
+4. **Core Service** - For custom integrations, see [Core Package](Core/README.md)
 
 ## Package Documentation
 
@@ -111,20 +86,12 @@ For detailed code examples, configuration, and usage patterns, refer to the indi
 ### Documentation
 
 - [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
-- [Core Tooling Documentation](Core/README.md)
-- [Semantic Kernel Extension](Extensions/SemanticKernel/README.md)
-- [Agent Framework Extension](Extensions/AgentFramework/README.md)
-- [Azure AI Foundry Extension](Extensions/AzureAIFoundry/README.md)
 
 ### Related Repositories
 
 - [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
 - [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
 - [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
-
-## Sample Applications
-
-- **Semantic Kernel Multiturn**: Demonstrates tool server integration with multi-turn conversations
 
 ## Support
 

@@ -68,47 +68,6 @@ The Observability module is organized into several packages, each with detailed 
 - **[Microsoft.Agents.A365.Observability.Extensions.SemanticKernel](Extensions/SemanticKernel/README.md)** - Semantic Kernel integration with function invocation filtering
 - **[Microsoft.Agents.A365.Observability.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Microsoft Agent Framework integration with multi-source activity tracking
 
-## Key Capabilities
-
-### Distributed Tracing
-
-- Full context propagation across distributed systems
-- Agent invocation tracking with tenant and agent context
-- Tool execution monitoring with detailed telemetry
-- See [Runtime Package](Runtime/README.md) for setup details
-
-### Framework Integration
-
-- **OpenAI**: Automatic tracing for OpenAI API calls - [Documentation](Extensions/OpenAI/README.md)
-- **Semantic Kernel**: Function invocation filtering and agent tracing - [Documentation](Extensions/SemanticKernel/README.md)
-- **Agent Framework**: Multi-source activity tracking (AI, Agent, ChatClient) - [Documentation](Extensions/AgentFramework/README.md)
-
-### Caching Instrumentation
-
-- Cache hit/miss tracking
-- Performance monitoring
-- Effectiveness analytics
-- See [Caching Documentation](Core/Caching/README.md)
-
-### Production Monitoring
-
-- ETW event providers for Windows
-- High-performance event emission
-- Windows Performance Analyzer integration
-- See [Hosting Package](Hosting/README.md)
-
-## Package Documentation
-
-For detailed code examples, configuration, and usage patterns, refer to the individual package READMEs:
-
-- [Core Package](Core/README.md) - Token caching and scope management
-- [Runtime Package](Runtime/README.md) - Complete tracing setup with code examples
-- [Hosting Package](Hosting/README.md) - ETW integration for production
-- [Caching Documentation](Core/Caching/README.md) - Cache monitoring details
-- [OpenAI Extension](Extensions/OpenAI/README.md) - OpenAI integration with code examples
-- [Semantic Kernel Extension](Extensions/SemanticKernel/README.md) - Semantic Kernel integration with code examples
-- [Agent Framework Extension](Extensions/AgentFramework/README.md) - Agent Framework integration with code examples
-
 ## Useful Links
 
 ### Microsoft Agents A365 SDK
