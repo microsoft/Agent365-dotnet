@@ -1,10 +1,10 @@
-# Microsoft Agents A365 Notifications SDK for .NET
+# Microsoft Agents A365 Notifications
 
-The Microsoft Agents A365 Notifications SDK provides a comprehensive framework for handling agent notification events in Microsoft 365 environments. This SDK enables agents to respond to various notification types including email notifications and document mentions.
+The Microsoft Agents A365 Notifications module provides a comprehensive framework for handling agent notification events in Microsoft 365 environments. This module enables agents to respond to various notification types including email notifications and document mentions.
 
 ## Overview
 
-This SDK simplifies the handling of notification events within AI agents, allowing developers to create responsive agents that can:
+This module simplifies the handling of notification events within AI agents, allowing developers to create responsive agents that can:
 
 - Receive and process email notifications
 - Handle @-mentions in Word documents
@@ -85,6 +85,21 @@ The SDK currently supports the following notification types:
 - **EmailNotification**: Triggered when the agent receives an email
 - **WpxComment**: Triggered when the agent is @-mentioned in a Word document comment
 
+## Configuration
+
+The notification handlers are configured during agent initialization using the `OnAgentNotification` method. You can specify route patterns, route ranks, and auto sign-in handlers as needed.
+
+### Example Configuration
+
+```csharp
+// Register notification handler with wildcard pattern
+this.OnAgentNotification("*", AgentNotificationActivityAsync, RouteRank.Last, autoSignInHandlers: autoSignInHandlers);
+
+// Register specific notification type handlers
+this.OnAgentNotification("email", HandleEmailNotificationAsync, RouteRank.First);
+this.OnAgentNotification("comment", HandleCommentNotificationAsync, RouteRank.First);
+```
+
 ## Package Structure
 
 - **AgentNotification.cs**: Core notification handling functionality
@@ -96,11 +111,24 @@ The SDK currently supports the following notification types:
 
 - **Semantic Kernel Multiturn**: Demonstrates notification handling with Semantic Kernel integration
 
-## Related Packages
+## Useful Links
 
-- [Microsoft.Agents.A365.Observability](../Observability/README.md) - Monitoring and tracing for agent applications
-- [Microsoft.Agents.A365.Runtime](../Runtime/README.md) - Core runtime utilities for agents
-- [Microsoft.Agents.A365.Tooling](../Tooling/README.md) - Developer tools and utilities
+### Microsoft Agents A365 SDK
+
+- [Microsoft Agents A365 Observability](../Observability/README.md) - Monitoring and tracing for agent applications
+- [Microsoft Agents A365 Runtime](../Runtime/README.md) - Core runtime utilities for agents
+- [Microsoft Agents A365 Tooling](../Tooling/README.md) - Developer tools and utilities
+- [Microsoft Agents A365 DevTools](../DevTools/README.md) - Code analyzers and development tools
+
+### Documentation
+
+- [Microsoft Agents A365 Developer Documentation](<https://learn.microsoft.com/en-us/microsoft-agent-365/developer/>)
+
+### Related Repositories
+
+- [Agent365-python](<https://github.com/microsoft/Agent365-python>) - Python SDK for Microsoft Agents A365
+- [Agent365-nodejs](<https://github.com/microsoft/Agent365-nodejs>) - Node.js SDK for Microsoft Agents A365
+- [Agent365-Samples](<https://github.com/microsoft/Agent365-Samples>) - Sample applications and code examples
 
 ## Support
 
@@ -115,4 +143,6 @@ This project welcomes contributions and suggestions. See the [Contributing Guide
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
