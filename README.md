@@ -9,8 +9,6 @@ The Microsoft Agents A365 SDK focuses on four core areas:
 - **Runtime**: Core utilities and extensions for agent runtime operations
 - **Tooling**: Developer tools and utilities for building sophisticated agent applications
 
-For more information about the core Microsoft 365 Agents SDK, please visit the [Microsoft 365 Agents SDK for .NET](https://github.com/microsoft/Agents-for-net).
-
 ## Current Project State
 
 This project is currently in active development. Packages are published to NuGet as they become available.
@@ -78,7 +76,7 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 For issues, questions, or feedback:
 
 - **Issues**: Please file issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
-- **Documentation**: See our [documentation](https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/)
+- **Documentation**: See the [Microsoft Agents A365 Developer Documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
 - **Security**: For security issues, please see [SECURITY.md](SECURITY.md)
 
 ## Contributing
@@ -95,11 +93,28 @@ This project may contain trademarks or logos for projects, products, or services
 
 ## Useful Links
 
+### Microsoft 365 Agents SDK
+
+The core SDK for building conversational AI agents for Microsoft 365 platforms.
+
 - [Microsoft 365 Agents SDK](https://aka.ms/agents)
 - [Agents-for-net Repository](https://github.com/Microsoft/Agents-for-net)
 - [Agents-for-js Repository](https://github.com/Microsoft/Agents-for-js)
 - [Agents-for-python Repository](https://github.com/Microsoft/Agents-for-python)
 - [Official Agents Documentation](https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/)
+
+### Microsoft Agents A365 SDK
+
+Enterprise-grade extensions for observability, notifications, runtime utilities, and developer tools.
+
+- [Agent365-dotnet Repository](https://github.com/microsoft/Agent365-dotnet) - You are here
+- [Agent365-python Repository](https://github.com/microsoft/Agent365-python)
+- [Agent365-nodejs Repository](https://github.com/microsoft/Agent365-nodejs)
+- [Agent365-Samples Repository](https://github.com/microsoft/Agent365-Samples)
+- [Microsoft Agents A365 Developer Documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
+
+### Additional Resources
+
 - [.NET Documentation](https://learn.microsoft.com/en-us/dotnet/api/?view=m365-agents-sdk&preserve-view=true)
 
 ## Data Collection Notice
