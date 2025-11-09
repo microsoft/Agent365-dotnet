@@ -1,5 +1,10 @@
 # Microsoft Agents A365 Runtime SDK for .NET
 
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.Extensions.OpenAI.svg?label=OpenAI)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime.Extensions.OpenAI/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel.svg?label=Semantic%20Kernel)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Runtime.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime/)
+
 The Microsoft Agents A365 Runtime SDK provides essential runtime utilities and services for building multi-tenant agent applications. This SDK includes ASP.NET Core integration helpers, authorization services, and extensions for popular AI frameworks.
 
 ## Overview

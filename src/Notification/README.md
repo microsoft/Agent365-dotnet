@@ -1,5 +1,8 @@
 # Microsoft Agents A365 Notifications
 
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)
+
 The Microsoft Agents A365 Notifications module provides a comprehensive framework for handling agent notification events in Microsoft 365 environments. This module enables agents to respond to various notification types including email notifications and document mentions.
 
 ## Overview

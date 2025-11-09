@@ -1,5 +1,9 @@
 # Microsoft Agents A365 DevTools for .NET
 
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.svg?label=OpenAI%20Analyzer)](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel.svg?label=SK%20Analyzer)](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Analyzer.OpenAI/)
+
 The Microsoft Agents A365 DevTools provide Roslyn analyzers and development tools for building robust AI agent applications. These analyzers help enforce best practices, detect potential issues at compile-time, and ensure proper usage of agent frameworks.
 
 ## Overview
