@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <summary>
         /// Gets the base URL for MCP servers based on the current environment.
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The base URL for MCP servers.</returns>
         public static string GetMcpBaseUrl(IConfiguration configuration)
         {
@@ -45,7 +46,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
 
         private static string GetMcpPlatformBaseUrl(IConfiguration configuration)
         {
-            // First check for environment variable (takes precedence)
+            // First check for configuration value (from any source, e.g., environment variable, appsettings.json, etc.)—takes precedence over default
             var environmentVariableValue = configuration["MCP_PLATFORM_ENDPOINT"];
             if (!string.IsNullOrEmpty(environmentVariableValue))
             {
@@ -81,6 +82,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <summary>
         /// Gets the configured tools mode from the configuration (e.g., environment variable TOOLS_MODE, appsettings.json, etc.).
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The configured tools mode, defaults to MCPPlatform if not set.</returns>
         public static ToolsMode GetToolsMode(IConfiguration configuration)
         {
@@ -92,8 +94,9 @@ namespace Microsoft.Agents.A365.Tooling.Utils
             };
         }
         /// <summary>
-        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID environment variable. 
+        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID value from the provided configuration.
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>True if environment ID should be used; otherwise, false.</returns>
         public static bool UseEnvironmentId(IConfiguration configuration)
         {
