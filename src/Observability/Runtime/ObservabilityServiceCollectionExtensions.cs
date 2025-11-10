@@ -25,8 +25,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             this IServiceCollection services,
             Action<Builder>? configure = null,
             bool useOpenTelemetryBuilder = true,
-            Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter,
-            bool enableOtlpExporter = false)
+            Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter)
         {
             var builder = new Builder(services: services, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType);
             configure?.Invoke(builder);
