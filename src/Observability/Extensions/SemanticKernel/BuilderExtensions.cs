@@ -31,7 +31,7 @@ public static class BuilderExtensions
                 .WithTracing(tracing => tracing
                     .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
                     .AddProcessor(new SemanticKernelSpanProcessor()))
-                    .UseOtlpExporter();
+                .UseOtlpExporter();
         }
 
         return builder;
