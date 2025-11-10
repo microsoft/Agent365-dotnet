@@ -448,7 +448,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
         private bool IsDevScenario()
         {
-            // Check environment variable first, default to dev if not set
+            // Determine environment from configuration (environment variables, appsettings.json, etc.), default to 'Development' if not set
             var environment = _configuration["ASPNETCORE_ENVIRONMENT"] ??
                              _configuration["DOTNET_ENVIRONMENT"] ??
                              "Development";
