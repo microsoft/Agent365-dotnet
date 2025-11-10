@@ -29,11 +29,12 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// <summary>
         /// Gets the current environment name.
         /// </summary>
+        /// <param name="configuration">The application configuration.</param>
         /// <returns>The current environment name.</returns>
-        public static string GetCurrentEnvironment()
+        public static string GetCurrentEnvironment(IConfiguration configuration)
         {
-            return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                   Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+            return configuration["ASPNETCORE_ENVIRONMENT"] ??
+                   configuration["DOTNET_ENVIRONMENT"] ??
                    "Development";
         }
     }

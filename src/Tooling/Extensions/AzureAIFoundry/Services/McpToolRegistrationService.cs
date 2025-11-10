@@ -102,6 +102,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         PersistentAgentsClient agentClient,
         string environmentId,
         UserAuthorization userAuthorization,
+        string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null)
     {
@@ -112,7 +113,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (authToken == null)
         {
-            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext, _configuration).ConfigureAwait(false);
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
@@ -150,7 +151,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // This workaround is temporary and will be removed once the Foundry SDK correctly updates agentClient with tool resources.
         // Eventually, we should retrieve tool resources directly from agentClient.
 
-        var toolsMode = Utility.GetToolsMode();
+        var toolsMode = Utility.GetToolsMode(_configuration);
 
         List<MCPServerConfig> servers;
         try
@@ -204,7 +205,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
-            if (Utility.UseEnvironmentId())
+            if (Utility.UseEnvironmentId(_configuration))
             {
                 // Set environment ID header
                 resource.UpdateHeader(Constants.Headers.EnvironmentId, environmentId);
