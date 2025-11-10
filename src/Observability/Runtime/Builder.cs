@@ -57,6 +57,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             return Environment.GetEnvironmentVariable("EnableAgent365Exporter") == "true";
         }
 
+        private bool IsOtlpExporterEnabled()
+        {
+            return Environment.GetEnvironmentVariable("EnableOtlpExporter") == "true";
+        }
         private void EnsureBuilt()
         {
             if (_isBuilt)
@@ -98,6 +102,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 .AddSource(OpenTelemetryConstants.SourceName)
                 .AddProcessor(new ActivityProcessor());
 
+            bool anyExporterAdded = false;
+
             if (IsAgent365ExporterEnabled())
             {
                 if (this._useOpenTelemetryBuilder)
@@ -108,8 +114,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 {
                     tracerProviderBuilder.AddAgent365Exporter(serviceCollection: this._services, exporterType: this._agent365ExporterType);
                 }
+                anyExporterAdded = true;
             }
-            else if (EnvironmentUtils.IsDevelopmentEnvironment())
+            if (IsOtlpExporterEnabled())
+            {
+                tracerProviderBuilder.AddOtlpExporter();
+                anyExporterAdded = true;
+            }
+            if (!anyExporterAdded && EnvironmentUtils.IsDevelopmentEnvironment())
             {
                 tracerProviderBuilder.AddConsoleExporter();
             }
