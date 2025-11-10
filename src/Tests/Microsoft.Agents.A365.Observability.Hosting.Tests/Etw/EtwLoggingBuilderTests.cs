@@ -158,8 +158,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
-            var services = new ServiceCollection();
-            services.AddLoggingWithEtw();
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var factory = provider.GetRequiredService<ILoggerFactory>();
@@ -185,9 +183,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
-            var services = new ServiceCollection();
-            services.AddLoggingWithEtw();
-            using var provider = services.BuildServiceProvider();
+            using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
