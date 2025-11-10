@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Runtime.Authentication
         /// </summary>
         /// <param name="userAuthorization">The user authorization instance.</param>
         /// <param name="turnContext">The turn context for the current conversation.</param>
-        /// <param name="configuration">The application configuration instance used to retrieve authentication settings.</param>
+        /// <param name="configuration">The application configuration.</param>
         /// <returns>The agentic user token as a string.</returns>
         public static async Task<string> GetAgenticUserTokenAsync(UserAuthorization userAuthorization, ITurnContext turnContext, IConfiguration configuration)
         {
