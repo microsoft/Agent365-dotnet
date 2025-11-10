@@ -1,4 +1,4 @@
-# Microsoft Agents A365 Observability
+# Microsoft Agents 365 Observability
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Observability/)
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.Runtime.svg?label=Runtime)](https://www.nuget.org/packages/Microsoft.Agents.A365.Observability.Runtime/)
@@ -8,7 +8,7 @@
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.Extensions.AgentFramework.svg?label=AgentFramework)](https://www.nuget.org/packages/Microsoft.Agents.A365.Observability.Extensions.AgentFramework/)
 [![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Observability.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Observability/)
 
-The Microsoft Agents A365 Observability module provides comprehensive monitoring, tracing, and diagnostics capabilities for AI agent applications. This module enables developers to gain deep insights into agent behavior, performance, and execution patterns through industry-standard observability tools.
+The Microsoft Agents 365 Observability module provides comprehensive monitoring, tracing, and diagnostics capabilities for AI agent applications. This module enables developers to gain deep insights into agent behavior, performance, and execution patterns through industry-standard observability tools.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Tooling
 
-Core tooling functionality for MCP (Model Context Protocol) tool server management in Microsoft Agents A365 applications. This package provides the foundation for discovering, registering, and managing tool servers across different AI frameworks.
+Core tooling functionality for MCP (Model Context Protocol) tool server management in Microsoft Agents 365 applications. This package provides the foundation for discovering, registering, and managing tool servers across different AI frameworks.
 
 ## Installation
 

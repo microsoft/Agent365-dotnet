@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel
 
-Semantic Kernel integration extensions for Microsoft Agents A365 Tooling. This package provides seamless MCP tool server integration with Semantic Kernel-based agent applications.
+Semantic Kernel integration extensions for Microsoft Agents 365 Tooling. This package provides seamless MCP tool server integration with Semantic Kernel-based agent applications.
 
 ## Installation
 

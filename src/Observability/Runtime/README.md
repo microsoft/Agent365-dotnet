@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Runtime
 
-The Observability Runtime package provides runtime components for Microsoft Agents A365 Observability, including exporters, tracing utilities, DTOs, and scope management.
+The Observability Runtime package provides runtime components for Microsoft Agents 365 Observability, including exporters, tracing utilities, DTOs, and scope management.
 
 ## Installation
 

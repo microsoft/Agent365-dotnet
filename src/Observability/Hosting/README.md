@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Hosting
 
-The Observability Hosting package provides ETW (Event Tracing for Windows) integration for Microsoft Agents A365 Observability. This package enables high-performance event tracing on Windows platforms for production monitoring scenarios.
+The Observability Hosting package provides ETW (Event Tracing for Windows) integration for Microsoft Agents 365 Observability. This package enables high-performance event tracing on Windows platforms for production monitoring scenarios.
 
 ## Installation
 

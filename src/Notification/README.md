@@ -1,4 +1,4 @@
-# Microsoft Agents A365 Notification
+# Microsoft Agents 365 Notification
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)
 [![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)

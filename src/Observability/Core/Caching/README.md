@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability - Caching
 
-Secure token caching with built-in expiration and invalidation features for Microsoft Agents A365 Observability exporters.
+Secure token caching with built-in expiration and invalidation features for Microsoft Agents 365 Observability exporters.
 
 ## Overview
 

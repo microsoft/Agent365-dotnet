@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Extensions.OpenAI
 
-OpenAI-specific tracing and instrumentation extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for OpenAI-based agent applications.
+OpenAI-specific tracing and instrumentation extensions for Microsoft Agents 365 Observability. This package provides specialized observability features for OpenAI-based agent applications.
 
 ## Installation
 

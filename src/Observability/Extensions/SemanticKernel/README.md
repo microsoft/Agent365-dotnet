@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Extensions.SemanticKernel
 
-Semantic Kernel integration extensions for Microsoft Agents A365 Observability. This package provides specialized observability features for Semantic Kernel-based agent applications.
+Semantic Kernel integration extensions for Microsoft Agents 365 Observability. This package provides specialized observability features for Semantic Kernel-based agent applications.
 
 ## Installation
 

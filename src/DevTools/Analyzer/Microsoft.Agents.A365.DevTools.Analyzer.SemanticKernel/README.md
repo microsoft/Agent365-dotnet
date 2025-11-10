@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.DevTools.Analyzer.SemanticKernel
 
-A Roslyn analyzer package that enforces Microsoft Agents A365 SDK compliance and governance rules for Semantic Kernel-based agent projects.
+A Roslyn analyzer package that enforces Microsoft Agents 365 SDK compliance and governance rules for Semantic Kernel-based agent projects.
 
 ## Installation
 

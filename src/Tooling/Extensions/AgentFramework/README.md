@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
 
-Microsoft Agent Framework integration extensions for Microsoft Agents A365 Tooling. This package provides seamless MCP tool server integration with Agent Framework-based agent applications.
+Microsoft Agent Framework integration extensions for Microsoft Agents 365 Tooling. This package provides seamless MCP tool server integration with Agent Framework-based agent applications.
 
 ## Installation
 

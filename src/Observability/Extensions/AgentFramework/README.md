@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability.Extensions.AgentFramework
 
-Microsoft Agent Framework integration extensions for Microsoft Agents A365 Observability. This package enables integration between the Agent Framework and the Observability module, processing OpenTelemetry traces from the Agent Framework to align with the Observability schema.
+Microsoft Agent Framework integration extensions for Microsoft Agents 365 Observability. This package enables integration between the Agent Framework and the Observability module, processing OpenTelemetry traces from the Agent Framework to align with the Observability schema.
 
 ## Installation
 

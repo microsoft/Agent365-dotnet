@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Runtime
 
-ASP.NET Core integration helpers for Microsoft Agents A365 Runtime, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
+ASP.NET Core integration helpers for Microsoft Agents 365 Runtime, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
 
 ## Features
 
@@ -75,8 +75,8 @@ This package is separate from framework-specific integrations to:
 ## Related Documentation
 
 - [Runtime Module Overview](../README.md)
-- [Microsoft Agents A365 Observability](../../Observability/README.md)
-- [Microsoft Agents A365 DevTools](../../DevTools/README.md)
+- [Microsoft Agents 365 Observability](../../Observability/README.md)
+- [Microsoft Agents 365 DevTools](../../DevTools/README.md)
 
 ## Support
 

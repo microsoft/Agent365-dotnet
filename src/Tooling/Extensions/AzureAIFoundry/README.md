@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
 
-Azure AI Foundry integration extensions for Microsoft Agents A365 Tooling. This package provides seamless MCP tool server integration with Azure AI Foundry-based agent applications.
+Azure AI Foundry integration extensions for Microsoft Agents 365 Tooling. This package provides seamless MCP tool server integration with Azure AI Foundry-based agent applications.
 
 ## Installation
 
