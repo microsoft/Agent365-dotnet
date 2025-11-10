@@ -5,6 +5,7 @@
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
     using Microsoft.Extensions.Configuration;
+    using System.Transactions;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
@@ -96,8 +97,17 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <returns>True if environment ID should be used; otherwise, false.</returns>
         public static bool UseEnvironmentId(IConfiguration configuration)
         {
-            var useEnvironmentId = configuration["USE_ENVIRONMENT_ID"] ?? "true";
-            return useEnvironmentId.Equals("true", StringComparison.OrdinalIgnoreCase);
+            bool useEnvironmentId = true;
+            if (bool.TryParse(configuration["USE_ENVIRONMENT_ID"], out bool tempUseEnvironmentId))
+                useEnvironmentId = tempUseEnvironmentId;
+
+            if (useEnvironmentId && string.IsNullOrEmpty(configuration["ENVIRONMENT_ID"]))
+            {
+                // if Use EnvironmentId is true, but ENVIRONMENT_ID is not set, default to false
+                System.Diagnostics.Trace.TraceWarning("USE_ENVIRONMENT_ID is set to true, but ENVIRONMENT_ID is not set. Defaulting USE_ENVIRONMENT_ID to false.");
+                return false; 
+            }
+            return useEnvironmentId;
         }
     }
 }
