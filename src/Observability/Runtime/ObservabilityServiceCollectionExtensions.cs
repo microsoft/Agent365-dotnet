@@ -20,7 +20,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// <param name="configure">Optional configuration delegate for the Builder.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder.</param>
         /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
-        /// <param name="enableOtlpExporter">Whether to enable the OTLP exporter.</param>
         /// <returns>The configured service collection.</returns>
         public static IServiceCollection AddTracing(
             this IServiceCollection services,
@@ -29,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter,
             bool enableOtlpExporter = false)
         {
-            var builder = new Builder(services: services, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType, enableOtlpExporter: enableOtlpExporter);
+            var builder = new Builder(services: services, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType);
             configure?.Invoke(builder);
             return builder.Build();
         }

@@ -101,8 +101,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 .AddSource(OpenTelemetryConstants.SourceName)
                 .AddProcessor(new ActivityProcessor());
 
-            bool anyExporterAdded = false;
-
             if (IsAgent365ExporterEnabled())
             {
                 if (this._useOpenTelemetryBuilder)
@@ -113,17 +111,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 {
                     tracerProviderBuilder.AddAgent365Exporter(serviceCollection: this._services, exporterType: this._agent365ExporterType);
                 }
-                anyExporterAdded = true;
             }
-            if (this._enableOtlpExporter)
-            {
-                tracerProviderBuilder.AddOtlpExporter();
-                anyExporterAdded = true;
-            }
-            if (!anyExporterAdded && EnvironmentUtils.IsDevelopmentEnvironment())
+            else if (EnvironmentUtils.IsDevelopmentEnvironment())
             {
                 tracerProviderBuilder.AddConsoleExporter();
             }
+
+            tracerProviderBuilder.AddOtlpExporter();
         }
     }
 }
