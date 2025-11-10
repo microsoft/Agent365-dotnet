@@ -44,9 +44,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
             SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceIdKey, request?.SourceMetadata?.Id);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceNameKey, request?.SourceMetadata?.Name);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request?.SourceMetadata?.Description);
+            SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
+            SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, request?.SourceMetadata?.Description);
             SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
             SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
