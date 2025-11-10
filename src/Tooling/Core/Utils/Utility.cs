@@ -78,7 +78,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Gets the configured tools mode from environment variable TOOLS_MODE.
+        /// Gets the configured tools mode from the configuration (e.g., environment variable TOOLS_MODE, appsettings.json, etc.).
         /// </summary>
         /// <returns>The configured tools mode, defaults to MCPPlatform if not set.</returns>
         public static ToolsMode GetToolsMode(IConfiguration configuration)
