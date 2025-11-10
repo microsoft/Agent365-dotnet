@@ -6,7 +6,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     /// <summary>
     /// Interface for ETW Logger
     /// </summary>
-    public interface IEtwLogger<T>
+    public interface IA365EtwLogger<T>
     {
         /// <summary>
         /// Logs an invoke_agent event.

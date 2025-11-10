@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     /// <summary>
     /// Provides ETW logging functionality for tracing events.
     /// </summary>
-    public class EtwLogger<T> : IEtwLogger<T>
+    public class A365EtwLogger<T> : IA365EtwLogger<T>
     {
         private ILogger logger { get; }
         private const string InvokeAgentEventName = "InvokeAgent";
@@ -20,10 +20,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EtwLogger{T}"/> class.
+        /// Initializes a new instance of the <see cref="A365EtwLogger{T}"/> class.
         /// </summary>
         /// <param name="factory">The logger factory.</param>
-        public EtwLogger(ILoggerFactory factory)
+        public A365EtwLogger(ILoggerFactory factory)
         {
             var baseCategory = typeof(T).FullName!;
             logger = factory.CreateLogger(Constants.EtwCategoryPrefix + baseCategory);
