@@ -91,9 +91,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetSourceMetadataBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiExecutionSourceIdKey, turnContext.Activity?.ChannelId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiExecutionSourceNameKey, turnContext.Activity?.ChannelId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, turnContext.Activity?.Type);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelNameKey, turnContext.Activity?.Type);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelLinkKey, turnContext.Activity?.Type);
         }
 
         /// <summary>

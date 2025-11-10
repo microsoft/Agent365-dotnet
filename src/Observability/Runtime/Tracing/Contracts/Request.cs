@@ -73,7 +73,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="name">Human-readable name of the source.</param>
         /// <param name="role">Optional role describing the source.</param>
         /// <param name="description">Optional description of the source.</param>
-        public SourceMetadata(string? id, string? name, Role? role = null, string? description = null)
+        public SourceMetadata(string? name, Role? role = null, string? description = null, string? id = null)
         {
             Id = id;
             Name = name;

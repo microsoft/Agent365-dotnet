@@ -29,7 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 "test content",
                 ExecutionType.HumanToAgent,
                 "session-456",
-                new SourceMetadata("source-id", "source-name", Role.Human, "source-description"));
+                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
             var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
             var conversationId = "conv-999";
@@ -73,7 +73,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 "test content",
                 ExecutionType.HumanToAgent,
                 "session-456",
-                new SourceMetadata("source-id", "source-name", Role.Human, "source-description"));
+                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
             var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
             var conversationId = "conv-999";
@@ -322,9 +322,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiConversationIdKey, conversationId)) return false;
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", inputMessages))) return false;
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", outputMessages))) return false;
-            if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiExecutionSourceIdKey, request.SourceMetadata?.Id)) return false;
-            if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiExecutionSourceNameKey, request.SourceMetadata?.Name)) return false;
-            if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request.SourceMetadata?.Description)) return false;
+            if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiChannelNameKey, request.SourceMetadata?.Name)) return false;
+            if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiChannelLinkKey, request.SourceMetadata?.Description)) return false;
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString())) return false;
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName)) return false;
             if (!TryGetAndEquals(attrs, OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId)) return false;

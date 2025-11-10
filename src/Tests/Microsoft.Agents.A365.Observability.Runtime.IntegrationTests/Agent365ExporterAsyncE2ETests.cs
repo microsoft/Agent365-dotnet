@@ -47,7 +47,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 executionType: ExecutionType.HumanToAgent,
                 sourceMetadata: new SourceMetadata(
                     name: "msteams",
-                    id: "https://testchannel.link"));
+                    description: "https://testchannel.link"));
 
             var expectedCallerDetails = new CallerDetails(
                 callerId: "caller-123",
@@ -86,8 +86,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
             this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint.Host);
-            this.GetAttribute(attributes, "gen_ai.execution.sourceMetadata.name").Should().Be(expectedRequest.SourceMetadata?.Name);
-            this.GetAttribute(attributes, "gen_ai.execution.sourceMetadata.id").Should().Be(expectedRequest.SourceMetadata?.Id);
+            this.GetAttribute(attributes, "gen_ai.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
+            this.GetAttribute(attributes, "gen_ai.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
             this.GetAttribute(attributes, "gen_ai.execution.type").Should().Be(expectedRequest.ExecutionType.ToString());
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedCallerDetails.CallerId);
@@ -279,7 +279,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             var request = new Request(
                 content: "Nested request",
                 executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata("nested", "nested-id"));
+                sourceMetadata: new SourceMetadata(name: "nested", description: "https://nestedchannel.link"));
 
             var toolCallDetails = new ToolCallDetails(
                 toolName: "NestedTool",
