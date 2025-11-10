@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
