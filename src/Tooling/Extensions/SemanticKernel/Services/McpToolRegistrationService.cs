@@ -49,7 +49,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// Adds the A365 MCP Tool Servers
         /// </summary>
         /// <param name="kernel">Kernel</param>
-        /// <param name="configuration"></param>
+        /// <param name="configuration">The application configuration.</param>
         /// <param name="environmentId">Environment Id for the environment</param>
         /// <param name="userAuthorization"></param>
         /// <param name="turnContext"></param>
