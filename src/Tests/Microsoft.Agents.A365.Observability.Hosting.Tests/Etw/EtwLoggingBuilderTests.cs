@@ -3,7 +3,6 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Hosting.Etw;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,15 +25,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             }
         }
 
+        private ServiceProvider BuildProvider() => new ServiceCollection().AddLoggingWithEtw().BuildServiceProvider();
+
         [TestMethod]
         public void Build_AddsEtwLogProcessor_AndWritesExpectedAttributes_FromInvokeAgent()
         {
             // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
-            var services = new ServiceCollection();
-            services.AddLoggingWithEtw();
-            var logger = services.BuildServiceProvider().GetRequiredService<ILogger<EtwLoggingBuilderTests>>();
+            using var provider = BuildProvider();
+            var logger = provider.GetRequiredService<IEtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
@@ -72,16 +72,15 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
-            var services = new ServiceCollection();
-            services.AddLoggingWithEtw();
-            var logger = services.BuildServiceProvider().GetRequiredService<ILogger<EtwLoggingBuilderTests>>();
+            using var provider = BuildProvider();
+            var logger = provider.GetRequiredService<IEtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             string conversationId = "conv-inf-1";
 
             // Act
-            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] {"hello"}, outputMessages: new[] {"world"});
+            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -115,9 +114,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             // Arrange
             using var listener = new TestEventListener();
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
-            var services = new ServiceCollection();
-            services.AddLoggingWithEtw();
-            var logger = services.BuildServiceProvider().GetRequiredService<ILogger<EtwLoggingBuilderTests>>();
+            using var provider = BuildProvider();
+            var logger = provider.GetRequiredService<IEtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
@@ -152,6 +150,62 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+        }
+
+        [TestMethod]
+        public void LoggerFilter_Allows_EtwCategoryPrefix_Only()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            var services = new ServiceCollection();
+            services.AddLoggingWithEtw();
+            using var provider = BuildProvider();
+            var etwLogger = provider.GetRequiredService<IEtwLogger<EtwLoggingBuilderTests>>();
+            var factory = provider.GetRequiredService<ILoggerFactory>();
+            var blockedLogger = factory.CreateLogger("Custom.Blocked");
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
+            string conversationId = "conv-123";
+
+            // Act
+            etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
+            blockedLogger.LogInformation("Blocked log");
+
+            // Assert
+            var payloads = listener.Events.Where(e => e.EventId == 2000).Select(e => e.Payload?[0] as string).Where(p => p != null).ToList();
+            Assert.IsTrue(payloads.Any(p => p!.Contains("InvokeAgent")), "Expected at least one InvokeAgent log to be exported");
+            Assert.IsFalse(payloads.Any(p => p!.Contains("Blocked")), "Blocked log without prefix should not be exported");
+        }
+
+        [TestMethod]
+        public void LoggerFilter_Allows_All_Our_CustomLogs()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            var services = new ServiceCollection();
+            services.AddLoggingWithEtw();
+            using var provider = services.BuildServiceProvider();
+            var etwLogger = provider.GetRequiredService<IEtwLogger<EtwLoggingBuilderTests>>();
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
+            var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
+            var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
+            string conversationId = "conv-123";
+
+            // Act
+            etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
+            etwLogger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
+            etwLogger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, @"{ ""value"": ""result"" }");
+
+            // Assert
+            var payloads = listener.Events.Where(e => e.EventId == 2000).Select(e => e.Payload?[0] as string).Where(p => p != null).ToList();
+            Assert.IsTrue(payloads.Any(p => p!.Contains("InvokeAgent")), "Expected at least one InvokeAgent log to be exported");
+            Assert.IsTrue(payloads.Any(p => p!.Contains("ExecuteInference")), "Expected at least one ExecuteInference log to be exported");
+            Assert.IsTrue(payloads.Any(p => p!.Contains("ExecuteTool")), "Expected at least one ExecuteTool log to be exported");
         }
     }
 }
