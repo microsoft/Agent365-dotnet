@@ -39,7 +39,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="mcpServerConfigurationService">
         /// MCP server configuration service.
         /// </param>
-        /// <param name="configuration">Configuration Service for The application</param>
+        /// <param name="configuration">Configuration Service for the application</param>
         public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolServerConfigurationService mcpServerConfigurationService, IConfiguration configuration)
         {
             _logger = logger;
