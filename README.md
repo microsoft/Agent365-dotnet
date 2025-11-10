@@ -1,4 +1,4 @@
-# Microsoft Agents A365 SDK - C# /.NET
+# Microsoft Agents 365 SDK - C# /.NET
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Observability.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
@@ -7,9 +7,12 @@
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Contributors](https://img.shields.io/github/contributors/microsoft/Agent365-dotnet?label=Contributors&logo=github)](https://github.com/microsoft/Agent365-dotnet/graphs/contributors)
 
-The Microsoft Agents A365 SDK extends the Microsoft 365 Agents SDK with enterprise-grade capabilities for building sophisticated agents. This SDK provides comprehensive tooling for observability, notifications, runtime utilities, and development tools that help developers create production-ready agents for platforms including M365, Teams, Copilot Studio, and Webchat.
+> #### Note:
+> Use the information in this README to contribute to this open-source project. To learn about using this SDK in your projects, refer to the [Microsoft Agents 365 Developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/).
 
-The Microsoft Agents A365 SDK focuses on four core areas:
+The Microsoft Agents 365 SDK extends the Microsoft 365 Agents SDK with enterprise-grade capabilities for building sophisticated agents. This SDK provides comprehensive tooling for observability, notifications, runtime utilities, and development tools that help developers create production-ready agents for platforms including M365, Teams, Copilot Studio, and Webchat.
+
+The Microsoft Agents 365 SDK focuses on four core areas:
 
 - **Observability**: Comprehensive tracing, caching, and monitoring capabilities for agent applications
 - **Notifications**: Agent notification services and models for handling user notifications
@@ -65,17 +68,17 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 
 ## Project Structure
 
-- **src/DevTools**: Microsoft Agents A365 DevTools - Development tools and code analyzers
-- **src/Notification**: Microsoft Agents A365 Notifications - Agent notification services and models
-- **src/Observability**: Microsoft Agents A365 Observability - Tracing, caching, and monitoring capabilities
+- **src/DevTools**: Microsoft Agents 365 DevTools - Development tools and code analyzers
+- **src/Notification**: Microsoft Agents 365 Notifications - Agent notification services and models
+- **src/Observability**: Microsoft Agents 365 Observability - Tracing, caching, and monitoring capabilities
   - Core: Core observability functionality
   - Extensions: Framework-specific extensions for various AI platforms
   - Hosting: ETW and hosting support
   - Runtime: Runtime observability services
-- **src/Runtime**: Microsoft Agents A365 Runtime - Core runtime utilities and extensions
+- **src/Runtime**: Microsoft Agents 365 Runtime - Core runtime utilities and extensions
   - Core: Core runtime functionality
   - Extensions: Runtime extensions for various AI frameworks
-- **src/Tooling**: Microsoft Agents A365 Tooling - Agent tooling and MCP integration
+- **src/Tooling**: Microsoft Agents 365 Tooling - Agent tooling and MCP integration
 - **src/Tests**: Unit and integration tests
 
 ## Support
@@ -83,7 +86,7 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 For issues, questions, or feedback:
 
 - **Issues**: Please file issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
-- **Documentation**: See the [Microsoft Agents A365 Developer Documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
+- **Documentation**: See the [Microsoft Agents 365 Developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/)
 - **Security**: For security issues, please see [SECURITY.md](SECURITY.md)
 
 ## Contributing
@@ -96,7 +99,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
 
 ## Useful Links
 
@@ -105,24 +108,24 @@ This project may contain trademarks or logos for projects, products, or services
 The core SDK for building conversational AI agents for Microsoft 365 platforms.
 
 - [Microsoft 365 Agents SDK](https://aka.ms/agents)
-- [Agents-for-net Repository](https://github.com/Microsoft/Agents-for-net)
-- [Agents-for-js Repository](https://github.com/Microsoft/Agents-for-js)
-- [Agents-for-python Repository](https://github.com/Microsoft/Agents-for-python)
-- [Official Agents Documentation](https://learn.microsoft.com/en-us/microsoft-365/agents-sdk/)
+- [Agents-for-net repository](https://github.com/Microsoft/Agents-for-net)
+- [Agents-for-js repository](https://github.com/Microsoft/Agents-for-js)
+- [Agents-for-python repository](https://github.com/Microsoft/Agents-for-python)
+- [Microsoft 365 Agents documentation](https://learn.microsoft.com/microsoft-365/agents-sdk/)
 
-### Microsoft Agents A365 SDK
+### Microsoft Agents 365 SDK
 
 Enterprise-grade extensions for observability, notifications, runtime utilities, and developer tools.
 
-- [Agent365-dotnet Repository](https://github.com/microsoft/Agent365-dotnet) - You are here
-- [Agent365-python Repository](https://github.com/microsoft/Agent365-python)
-- [Agent365-nodejs Repository](https://github.com/microsoft/Agent365-nodejs)
-- [Agent365-Samples Repository](https://github.com/microsoft/Agent365-Samples)
-- [Microsoft Agents A365 Developer Documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
+- [Agent365-dotnet repository](https://github.com/microsoft/Agent365-dotnet) - You are here
+- [Agent365-python repository](https://github.com/microsoft/Agent365-python)
+- [Agent365-nodejs repository](https://github.com/microsoft/Agent365-nodejs)
+- [Agent365-Samples repository](https://github.com/microsoft/Agent365-Samples)
+- [Microsoft Agents 365 developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/)
 
 ### Additional Resources
 
-- [.NET Documentation](https://learn.microsoft.com/en-us/dotnet/api/?view=m365-agents-sdk&preserve-view=true)
+[.NET documentation](https://learn.microsoft.com/dotnet/api/?view=m365-agents-sdk&preserve-view=true)
 
 ## Data Collection Notice
 
