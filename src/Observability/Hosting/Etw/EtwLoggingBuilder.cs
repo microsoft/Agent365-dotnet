@@ -41,6 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 return;
 
             _services
+                .AddSingleton(typeof(IEtwLogger<>), typeof(EtwLogger<>))
                 .AddOpenTelemetry()
                 .WithLogging(logging =>
                 {

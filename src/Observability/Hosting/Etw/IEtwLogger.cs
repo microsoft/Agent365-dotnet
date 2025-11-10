@@ -1,31 +1,16 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
-using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
-using System.Collections.Generic;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
     /// <summary>
-    /// Provides helper methods to log our scopes
+    /// Interface for ETW Logger
     /// </summary>
-    public static partial class LoggerExtensions
+    public interface IEtwLogger<T>
     {
-        private const string InvokeAgentEventName = "InvokeAgent";
-        private static readonly EventId InvokeAgentEventId = new EventId(1001, InvokeAgentEventName);
-        private const string ExecuteInferenceEventName = "ExecuteInference";
-        private static readonly EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
-        private const string ExecuteToolEventName = "ExecuteTool";
-        private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
-
         /// <summary>
         /// Logs an invoke_agent event.
         /// </summary>
-        /// <param name="logger"></param>
         /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
         /// <param name="tenantDetails">The tenant details.</param>
         /// <param name="conversationId">The required conversation ID.</param>
@@ -38,8 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="endTime">Optional end time of the inference.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
-        public static void LogInvokeAgent(
-            this ILogger logger,
+        public void LogInvokeAgent(
             InvokeAgentDetails invokeAgentDetails,
             TenantDetails tenantDetails,
             string conversationId,
@@ -51,35 +35,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
-        {
-            var data = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
-                conversationId,
-                request,
-                callerAgentDetails,
-                callerDetails,
-                inputMessages,
-                outputMessages,
-                startTime,
-                endTime,
-                spanId,
-                parentSpanId);
-
-            logger.Log(
-                LogLevel.Information,
-                InvokeAgentEventId,
-                data.ToDictionary(),
-                null,
-                LogFormatter
-            );
-        }
+            string? parentSpanId = null);
 
         /// <summary>
         /// Logs an inference event.
         /// </summary>
-        /// <param name="logger"></param>
         /// <param name="inferenceCallDetails">The details of the inference call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
@@ -90,8 +50,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="endTime">Optional end time of the inference.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
-        public static void LogInferenceCall(
-            this ILogger logger,
+        public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
@@ -101,33 +60,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
-        {
-            var data = ExecuteInferenceDataBuilder.Build(
-                inferenceCallDetails,
-                agentDetails,
-                tenantDetails,
-                conversationId,
-                inputMessages,
-                outputMessages,
-                startTime,
-                endTime,
-                spanId,
-                parentSpanId);
-
-            logger.Log(
-                LogLevel.Information,
-                ExecuteInferenceEventId,
-                data.ToDictionary(),
-                null,
-                LogFormatter
-            );
-        }
+            string? parentSpanId = null);
 
         /// <summary>
         /// Logs an execute_tool event.
         /// </summary>
-        /// <param name="logger"></param>
         /// <param name="toolCallDetails">The details of the tool call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
@@ -137,8 +74,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="endTime">Optional end time of the tool execution.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
-        public static void LogToolCall(
-            this ILogger logger,
+        public void LogToolCall(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
@@ -147,31 +83,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
-        {
-            var data = ExecuteToolDataBuilder.Build(
-                toolCallDetails,
-                agentDetails,
-                tenantDetails,
-                conversationId,
-                responseContent,
-                startTime,
-                endTime,
-                spanId,
-                parentSpanId);
-
-            logger.Log(
-                LogLevel.Information,
-                ExecuteToolEventId,
-                data.ToDictionary(),
-                null,
-                LogFormatter
-            );
-        }
-
-        private static string LogFormatter(Dictionary<string, object?> data, Exception? ex)
-        {
-            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}";
-        }
+            string? parentSpanId = null);
     }
 }
