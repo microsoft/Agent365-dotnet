@@ -8,6 +8,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
     using Microsoft.SemanticKernel;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Provides methods for managing tools in the Semantic Kernel.
