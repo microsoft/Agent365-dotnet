@@ -20,18 +20,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
 
         /// <summary>
-        /// Category prefix for ETW logs.
-        /// </summary>
-        public const string CategoryPrefix = "A365.Observability.Etw.";
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="EtwLogger{T}"/> class.
         /// </summary>
         /// <param name="factory">The logger factory.</param>
         public EtwLogger(ILoggerFactory factory)
         {
             var baseCategory = typeof(T).FullName!;
-            logger = factory.CreateLogger(CategoryPrefix + baseCategory);
+            logger = factory.CreateLogger(Constants.EtwCategoryPrefix + baseCategory);
         }
 
         /// <inheritdoc/>
