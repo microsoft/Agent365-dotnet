@@ -17,8 +17,8 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// Gets the MCP platform authentication scope.
         /// </summary>
         /// <returns>
-        /// The MCP platform authentication scope from environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
-        /// or the default production scope if not set.
+        /// The MCP platform authentication scope from configuration (e.g., environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
+        /// appsettings.json, or other configuration sources), or the default production scope if not set.
         /// </returns>
         public static string GetMcpPlatformAuthenticationScope(IConfiguration configuration)
         {
