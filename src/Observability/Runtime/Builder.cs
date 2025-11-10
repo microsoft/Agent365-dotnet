@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         private readonly IServiceCollection _services;
         private readonly bool _useOpenTelemetryBuilder;
         private readonly Agent365ExporterType _agent365ExporterType;
+        private readonly bool _enableOtlpExporter = false;
         private bool _isBuilt = false;
 
 
@@ -30,11 +31,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// <param name="services">The service collection to configure.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service colletion.</param>
         /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
-        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType)
+        /// <param name="enableOtlpExporter">Whether to enable the OTLP exporter.</param>
+        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType, bool enableOtlpExporter)
         {
             this._services = services;
             this._useOpenTelemetryBuilder = useOpenTelemetryBuilder;
             this._agent365ExporterType = agent365ExporterType;
+            this._enableOtlpExporter = enableOtlpExporter;
         }
 
         /// <summary>
@@ -57,10 +60,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             return Environment.GetEnvironmentVariable("EnableAgent365Exporter") == "true";
         }
 
-        private bool IsOtlpExporterEnabled()
-        {
-            return Environment.GetEnvironmentVariable("EnableOtlpExporter") == "true";
-        }
         private void EnsureBuilt()
         {
             if (_isBuilt)
@@ -116,7 +115,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 }
                 anyExporterAdded = true;
             }
-            if (IsOtlpExporterEnabled())
+            if (this._enableOtlpExporter)
             {
                 tracerProviderBuilder.AddOtlpExporter();
                 anyExporterAdded = true;
