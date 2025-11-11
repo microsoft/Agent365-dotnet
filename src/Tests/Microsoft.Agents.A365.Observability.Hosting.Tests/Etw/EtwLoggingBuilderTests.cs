@@ -61,6 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.AreEqual("example.com", attrsElement.GetProperty(OpenTelemetryConstants.ServerAddressKey).GetString());
             Assert.AreEqual("session-1", attrsElement.GetProperty(OpenTelemetryConstants.SessionIdKey).GetString());
             Assert.AreEqual(conversationId, attrsElement.GetProperty(OpenTelemetryConstants.GenAiConversationIdKey).GetString());
+            Assert.AreEqual("invoke_agent", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
@@ -98,7 +99,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.AreEqual("agent-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentIdKey).GetString());
             Assert.AreEqual("agent-name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentNameKey).GetString());
             Assert.AreEqual(conversationId, attrsElement.GetProperty(OpenTelemetryConstants.GenAiConversationIdKey).GetString());
-            Assert.AreEqual("Chat", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
+            Assert.AreEqual("chat", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             Assert.AreEqual("model-x", attrsElement.GetProperty(OpenTelemetryConstants.GenAiRequestModelKey).GetString());
             Assert.AreEqual("provider-y", attrsElement.GetProperty(OpenTelemetryConstants.GenAiProviderNameKey).GetString());
             Assert.AreEqual("hello", attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString());
@@ -147,6 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.AreEqual("desc", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolDescriptionKey).GetString());
             Assert.AreEqual("function", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolTypeKey).GetString());
             Assert.AreEqual(responseContent, attrsElement.GetProperty(OpenTelemetryConstants.GenAiEventContent).GetString());
+            Assert.AreEqual("execute_tool", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
