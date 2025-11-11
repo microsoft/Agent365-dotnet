@@ -4,7 +4,9 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
+using System;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
@@ -41,20 +43,25 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 return;
 
             _services
-                .AddOpenTelemetry()
-                .WithLogging(logging =>
+                .AddSingleton(typeof(IA365EtwLogger<>), typeof(A365EtwLogger<>))
+                .AddLogging(logging =>
                 {
-                    logging
-                        .AddProcessor(new EtwLogProcessor());
-
-                    if (EnvironmentUtils.IsDevelopmentEnvironment())
+                    logging.AddOpenTelemetry(otelLogging =>
                     {
-                        logging.AddConsoleExporter();
-                    }
-                }, (options =>
+                        otelLogging.ParseStateValues = true;
+                        otelLogging.AddProcessor(new EtwLogProcessor());
+
+                        if (EnvironmentUtils.IsDevelopmentEnvironment())
+                        {
+                            otelLogging.AddConsoleExporter();
+                        }
+                    });
+                })
+                .Configure<LoggerFilterOptions>(options =>
                 {
-                    options.ParseStateValues = true;
-                }));
+                    options.AddFilter<OpenTelemetryLoggerProvider>(
+                        (category, level) => category != null && category.StartsWith(Constants.EtwCategoryPrefix, StringComparison.Ordinal));
+                });
 
             _isBuilt = true;
         }
