@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
+using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
@@ -14,6 +15,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     /// </summary>
     public class ExecuteToolDataBuilder : BaseDataBuilder<ExecuteToolData>
     {
+        private const string ExecuteToolOperationName = "execute_tool";
+
         /// <summary>
         /// Builds complete data for an execute_tool operation.
         /// </summary>
@@ -54,6 +57,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
+
+            // Operation name
+            AddIfNotNull(attributes, GenAiOperationNameKey, ExecuteToolDataBuilder.ExecuteToolOperationName);
 
             // Agent & tenant
             AddAgentDetails(attributes, agentDetails);
