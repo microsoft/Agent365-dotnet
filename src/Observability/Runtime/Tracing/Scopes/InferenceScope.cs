@@ -3,9 +3,6 @@
 // ------------------------------------------------------------------------------
 
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
@@ -26,27 +23,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 ActivityKind.Client,
                 agentDetails,
                 tenantDetails,
-                GetOperationNameValue(details.OperationName),
-                $"{GetOperationNameValue(details.OperationName)} {details.Model}",
+                details.OperationName.ToString(),
+                $"{details.OperationName} {details.Model}",
                 parentId: parentId)
         {
-            SetTagMaybe(GenAiOperationNameKey, GetOperationNameValue(details.OperationName));
+            SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
             SetTagMaybe(GenAiProviderNameKey, details.ProviderName);
             SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
             SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
             SetTagMaybe(GenAiResponseIdKey, details.ResponseId);
-        }
-
-        /// <summary>
-        /// Gets the string value for an InferenceOperationType enum member.
-        /// </summary>
-        private static string GetOperationNameValue(InferenceOperationType operationType)
-        {
-            var memberInfo = typeof(InferenceOperationType).GetMember(operationType.ToString()).FirstOrDefault();
-            var enumMemberAttribute = memberInfo?.GetCustomAttribute<EnumMemberAttribute>();
-            return enumMemberAttribute?.Value ?? operationType.ToString();
         }
 
         /// <summary>

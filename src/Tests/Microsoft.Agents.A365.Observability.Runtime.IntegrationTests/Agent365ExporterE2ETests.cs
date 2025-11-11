@@ -230,7 +230,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
 
-            this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("chat");
+            this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be(inferenceDetails.OperationName.ToString());
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
@@ -342,7 +342,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         allOperationNames.Add(opName);
                 }
             }
-            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", "chat" }, "All three nested scopes should be exported, even if batched in fewer requests.");
+            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
         }
 
         private class TestHttpMessageHandler : HttpMessageHandler
