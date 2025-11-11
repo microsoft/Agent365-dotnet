@@ -342,7 +342,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         allOperationNames.Add(opName);
                 }
             }
-            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
+            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", "chat" }, "All three nested scopes should be exported, even if batched in fewer requests.");
         }
 
         private class TestHttpMessageHandler : HttpMessageHandler

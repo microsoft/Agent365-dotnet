@@ -33,6 +33,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 parentId: parentId)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint) = details;
+            SetTagMaybe(OpenTelemetryConstants.GenAiOperationNameKey, OperationName);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolTypeKey, toolType);

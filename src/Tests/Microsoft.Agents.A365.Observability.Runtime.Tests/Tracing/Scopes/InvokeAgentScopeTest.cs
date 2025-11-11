@@ -10,6 +10,17 @@ using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTele
 public sealed class InvokeAgentScopeTest : ActivityTest
 {
     [TestMethod]
+    public void Start_SetsOperationNameTag()
+    {
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+        });
+
+        activity.ShouldHaveTag(GenAiOperationNameKey, "invoke_agent");
+    }
+
+    [TestMethod]
     public void RecordResponse_ActivityTagSet()
     {
         const string expected = "response";

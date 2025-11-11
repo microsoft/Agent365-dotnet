@@ -26,7 +26,7 @@ public sealed class InferenceScopeTest : ActivityTest
             using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails());
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, details.OperationName.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, "chat");
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiRequestModelKey, details.Model);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiProviderNameKey, details.ProviderName);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, details.InputTokens!.Value.ToString());

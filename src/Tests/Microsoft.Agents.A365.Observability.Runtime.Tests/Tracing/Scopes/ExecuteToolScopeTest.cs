@@ -9,6 +9,17 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 public sealed class ExecuteToolScopeTest : ActivityTest
 {
     [TestMethod]
+    public void Start_SetsOperationNameTag()
+    {
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "x"), Util.GetAgentDetails(), Util.GetTenantDetails());
+        });
+        
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, "execute_tool");
+    }
+
+    [TestMethod]
     public void Start_Arguments_Set()
     {
         const string expected = "Input: 42";

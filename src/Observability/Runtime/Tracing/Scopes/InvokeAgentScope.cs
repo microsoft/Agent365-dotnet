@@ -42,6 +42,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
+            SetTagMaybe(OpenTelemetryConstants.GenAiOperationNameKey, OperationName);
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
             SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
             SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
