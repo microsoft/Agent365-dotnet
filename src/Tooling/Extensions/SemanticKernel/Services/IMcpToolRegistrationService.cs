@@ -6,7 +6,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.SemanticKernel;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Provides methods for managing tools in the Semantic Kernel.
@@ -18,11 +20,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// </summary>
         /// <param name="kernel">The kernel to which the tools will be added.</param>
         /// <param name="environmentId">Environment Id for the environment</param>
-        /// <param name="userAuthorization"></param>
+        /// <param name="userAuthorization">Agents SDK UserAuthorization System</param>
+        /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
         /// <param name="turnContext"></param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns a new object of the kernel</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        void AddToolServersToAgent(Kernel kernel, string environmentId, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null);
+        Task AddToolServersToAgentAsync(Kernel kernel, string environmentId, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null);
     }
 }

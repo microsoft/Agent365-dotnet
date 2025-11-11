@@ -18,8 +18,11 @@ using System.Threading.Tasks;
 public interface IMcpToolRegistrationService
 {
     /// <summary>
-    /// Creates a new AIAgent from the provided IChatClient with MCP tools added to existing tools.
-    /// Returns the new agent instance configured with existing tools plus MCP tools.
+    /// Add new MCP servers to the agent by creating a new Agent instance.
+    /// 
+    /// Note: Due to Microsoft.Extensions.AI framework limitations, MCP tools must be set during
+    /// Agent creation. If new tools are found, this method creates a new Agent
+    /// instance with all tools (existing + new) properly initialized.
     /// </summary>
     /// <param name="chatClient">The configured IChatClient to use for creating the agent.</param>
     /// <param name="agentInstructions">The agent instructions.</param>
@@ -28,8 +31,9 @@ public interface IMcpToolRegistrationService
     /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="turnContext">Turn context for the current request</param>
     /// <param name="userAuthorization">User authorization information</param>
+    /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
-    /// <returns>A new AIAgent instance with existing tools plus MCP tools.</returns>
+    /// <returns>New Agent instance with all MCP tools, or agent with original tools if no new servers</returns>
     Task<AIAgent> AddToolServersToAgent(
         IChatClient chatClient,
         string agentInstructions,
@@ -37,6 +41,7 @@ public interface IMcpToolRegistrationService
         string agentUserId,
         string environmentId,
         UserAuthorization userAuthorization,
+        string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null);
 }
