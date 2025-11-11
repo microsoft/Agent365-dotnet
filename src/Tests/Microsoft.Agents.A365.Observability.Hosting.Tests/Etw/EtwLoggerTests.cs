@@ -45,6 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.IsNotNull(payloadStr);
             var root = JsonDocument.Parse(payloadStr!).RootElement;
             Assert.AreEqual(OpenTelemetryConstants.OperationNames.InvokeAgent.ToString(), root.GetProperty("Name").GetString());
+            Assert.AreEqual("invoke_agent", root.GetProperty("Attributes").GetProperty("gen_ai.operation.name").ToString());
         }
 
         [TestMethod]
@@ -70,6 +71,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.IsNotNull(payloadStr);
             var root = JsonDocument.Parse(payloadStr!).RootElement;
             Assert.AreEqual(OpenTelemetryConstants.OperationNames.ExecuteInference.ToString(), root.GetProperty("Name").GetString());
+            Assert.AreEqual("chat", root.GetProperty("Attributes").GetProperty("gen_ai.operation.name").ToString());
         }
 
         [TestMethod]
@@ -96,6 +98,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.IsNotNull(payloadStr);
             var root = JsonDocument.Parse(payloadStr!).RootElement;
             Assert.AreEqual(OpenTelemetryConstants.OperationNames.ExecuteTool.ToString(), root.GetProperty("Name").GetString());
+            Assert.AreEqual("execute_tool", root.GetProperty("Attributes").GetProperty("gen_ai.operation.name").ToString());
         }
     }
 }
