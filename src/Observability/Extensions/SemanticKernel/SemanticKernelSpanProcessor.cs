@@ -9,6 +9,8 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
@@ -39,12 +41,23 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         break;
 
                     case SemanticKernelTelemetryConstants.ChatCompletionsOperation:
-                        activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
-                        activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
+                        var chatOperationName = GetEnumMemberValue(InferenceOperationType.Chat);
+                        activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, chatOperationName);
+                        activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, chatOperationName);
                         // Other tags set by SK SDK follow Microsoft Agents A365 schema.
                         break;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the string value for an InferenceOperationType enum member.
+    /// </summary>
+    private static string GetEnumMemberValue(InferenceOperationType operationType)
+    {
+        var memberInfo = typeof(InferenceOperationType).GetMember(operationType.ToString()).FirstOrDefault();
+        var enumMemberAttribute = memberInfo?.GetCustomAttribute<EnumMemberAttribute>();
+        return enumMemberAttribute?.Value ?? operationType.ToString();
     }
 }
