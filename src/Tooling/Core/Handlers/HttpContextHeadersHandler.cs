@@ -6,13 +6,13 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 {
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
+    using System;
     using System.Globalization;
     using System.Net.Http;
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using System;
 
     internal class HttpContextHeadersHandler : DelegatingHandler
     {
@@ -125,9 +125,9 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
                 return result;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                logger.LogWarning("Sanitization failed for input text. Using original text. Exception: {ExceptionMessage}", ex.Message);
+                logger?.LogWarning("Sanitization failed for input text. Using original text. Exception: {ExceptionMessage}", ex.Message);
                 return input;
             }
         }
