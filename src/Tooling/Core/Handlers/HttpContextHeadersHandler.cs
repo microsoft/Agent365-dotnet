@@ -4,10 +4,13 @@
 
 namespace Microsoft.Agents.A365.Tooling.Handlers
 {
+    using Microsoft.Agents.Builder;
+    using System.Globalization;
     using System.Net.Http;
+    using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Agents.Builder;
 
     internal class HttpContextHeadersHandler(ITurnContext turnContext) : DelegatingHandler
     {
@@ -32,7 +35,8 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
                 if (!string.IsNullOrEmpty(turnContext.Activity.Text))
                 {
-                    request.Headers.Add(UserMessageHeader, turnContext.Activity.Text);
+                    var sanitizedMessage = SanitizeTextForHeader(turnContext.Activity.Text);
+                    request.Headers.Add(UserMessageHeader, sanitizedMessage);
                 }
             }
 
@@ -52,6 +56,61 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
             }
 
             return base.SendAsync(request, cancellationToken);
+        }
+
+        public static string SanitizeTextForHeader(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            // Step 1: Normalize common non-breaking spaces and thin spaces
+            input = input
+                .Replace('\u00A0', ' ')  // NBSP
+                .Replace('\u202F', ' ')  // NNBSP
+                .Trim();
+
+            // Step 2: Normalize Unicode characters (é -> e)
+            string normalized = input.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(input.Length);
+
+            foreach (char c in normalized)
+            {
+                var category = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (category == UnicodeCategory.NonSpacingMark)
+                    continue;
+
+                // Convert common Unicode punctuation to ASCII equivalents
+                switch (c)
+                {
+                    case '’':
+                    case '‘':
+                        sb.Append('\'');
+                        break;
+                    case '“':
+                    case '”':
+                        sb.Append('"');
+                        break;
+                    case '–':
+                    case '—':
+                        sb.Append('-');
+                        break;
+                    case '…':
+                        sb.Append("...");
+                        break;
+                    default:
+                        // Keep only printable ASCII (32–126)
+                        if (c >= 32 && c <= 126)
+                            sb.Append(c);
+                        else
+                            sb.Append(' '); // Replace non-ASCII with a space
+                        break;
+                }
+            }
+
+            // Step 3: Collapse multiple spaces/tabs/newlines into one space
+            string result = Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+
+            return result;
         }
     }
 }
