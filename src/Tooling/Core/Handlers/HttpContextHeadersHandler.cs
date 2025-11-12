@@ -127,7 +127,6 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
             }
             catch(Exception ex)
             {
-                // CA2254: Use a constant message template and pass exception message as argument
                 logger.LogWarning("Sanitization failed for input text. Using original text. Exception: {ExceptionMessage}", ex.Message);
                 return input;
             }
