@@ -4,12 +4,17 @@
 
 namespace Microsoft.Agents.A365.Tooling.Handlers
 {
+    using Microsoft.Agents.Builder;
+    using Microsoft.Extensions.Logging;
+    using System;
+    using System.Globalization;
     using System.Net.Http;
+    using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Agents.Builder;
 
-    internal class HttpContextHeadersHandler(ITurnContext turnContext) : DelegatingHandler
+    internal class HttpContextHeadersHandler : DelegatingHandler
     {
         // Header names for passing context information in HTTP requests
         private const string ConversationIdHeader = "x-ms-conversation-id";
@@ -20,6 +25,15 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         // Keys set from Observability
         private const string O11ySpanIdKey = "O11ySpanId";
         private const string O11yTraceIdKey = "O11yTraceId";
+
+        private readonly ITurnContext turnContext;
+        private readonly ILogger logger;
+
+        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger)
+        {
+            this.turnContext = turnContext;
+            this.logger = logger;
+        }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -32,7 +46,8 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
                 if (!string.IsNullOrEmpty(turnContext.Activity.Text))
                 {
-                    request.Headers.Add(UserMessageHeader, turnContext.Activity.Text);
+                    var sanitizedMessage = SanitizeTextForHeader(turnContext.Activity.Text, logger);
+                    request.Headers.Add(UserMessageHeader, sanitizedMessage);
                 }
             }
 
@@ -52,6 +67,69 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
             }
 
             return base.SendAsync(request, cancellationToken);
+        }
+
+        public static string SanitizeTextForHeader(string input, ILogger logger)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(input))
+                    return string.Empty;
+
+                // Step 1: Normalize common non-breaking spaces and thin spaces
+                input = input
+                    .Replace('\u00A0', ' ')  // NBSP
+                    .Replace('\u202F', ' ')  // NNBSP
+                    .Trim();
+
+                // Step 2: Normalize Unicode characters (é -> e)
+                string normalized = input.Normalize(NormalizationForm.FormD);
+                var sb = new StringBuilder(input.Length);
+
+                foreach (char c in normalized)
+                {
+                    var category = CharUnicodeInfo.GetUnicodeCategory(c);
+                    if (category == UnicodeCategory.NonSpacingMark)
+                        continue;
+
+                    // Convert common Unicode punctuation to ASCII equivalents
+                    switch (c)
+                    {
+                        case '’':
+                        case '‘':
+                            sb.Append('\'');
+                            break;
+                        case '“':
+                        case '”':
+                            sb.Append('"');
+                            break;
+                        case '–':
+                        case '—':
+                            sb.Append('-');
+                            break;
+                        case '…':
+                            sb.Append("...");
+                            break;
+                        default:
+                            // Keep only printable ASCII (32–126)
+                            if (c >= 32 && c <= 126)
+                                sb.Append(c);
+                            else
+                                sb.Append(' '); // Replace non-ASCII with a space
+                            break;
+                    }
+                }
+
+                // Step 3: Collapse multiple spaces/tabs/newlines into one space
+                string result = Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning("Sanitization failed for input text. Using original text. Exception: {ExceptionMessage}", ex.Message);
+                return input;
+            }
         }
     }
 }
