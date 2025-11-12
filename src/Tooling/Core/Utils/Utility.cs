@@ -4,6 +4,8 @@
 
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
+    using Microsoft.Extensions.Configuration;
+    using System.Transactions;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
@@ -17,26 +19,28 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// Gets the tooling gateway URL for the specified digital worker.
         /// </summary>
         /// <param name="agentInstanceId">The unique identifier of the digital worker.</param>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The tooling gateway URL for the digital worker.</returns>
-        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId)
+        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId, IConfiguration configuration)
         {
-            return $"{GetMcpPlatformBaseUrl()}/agents/{agentInstanceId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
         /// Gets the base URL for MCP servers.
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The base URL for MCP servers.</returns>
-        public static string GetMcpBaseUrl()
+        public static string GetMcpBaseUrl(IConfiguration configuration)
         {
-            var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl();
+            var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl(configuration);
             return $"{mcpPlatformBaseUrl}/agents/servers";
         }
 
-        private static string GetMcpPlatformBaseUrl()
+        private static string GetMcpPlatformBaseUrl(IConfiguration configuration)
         {
-            // First check for environment variable (takes precedence)
-            var environmentVariableValue = Environment.GetEnvironmentVariable("MCP_PLATFORM_ENDPOINT");
+            // First check for configuration value (from any source, e.g., environment variable, appsettings.json, etc.)—takes precedence over default
+            var environmentVariableValue = configuration["MCP_PLATFORM_ENDPOINT"];
             if (!string.IsNullOrEmpty(environmentVariableValue))
             {
                 return environmentVariableValue;
@@ -50,20 +54,22 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// Constructs the full MCP server URL using the base URL and server name.
         /// </summary>
         /// <param name="serverName">The MCP server name.</param>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The full MCP server URL.</returns>
-        public static string BuildMcpServerUrl(string serverName)
+        public static string BuildMcpServerUrl(string serverName, IConfiguration configuration)
         {
-            var baseUrl = GetMcpBaseUrl();
+            var baseUrl = GetMcpBaseUrl(configuration);
             return $"{baseUrl}/{serverName}";
         }
 
         /// <summary>
-        /// Gets the configured tools mode from environment variable TOOLS_MODE.
+        /// Gets the configured tools mode from the configuration (e.g., environment variable TOOLS_MODE, appsettings.json, etc.).
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The configured tools mode, defaults to MCPPlatform if not set.</returns>
-        public static ToolsMode GetToolsMode()
+        public static ToolsMode GetToolsMode(IConfiguration configuration)
         {
-            var toolsMode = Environment.GetEnvironmentVariable("TOOLS_MODE") ?? "MCPPlatform";
+            var toolsMode = configuration["TOOLS_MODE"] ?? "MCPPlatform";
             return toolsMode.ToLowerInvariant() switch
             {
                 "mockmcpserver" => ToolsMode.MockMCPServer,

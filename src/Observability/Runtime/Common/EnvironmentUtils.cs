@@ -1,5 +1,8 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {

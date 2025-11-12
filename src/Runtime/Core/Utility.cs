@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Configuration;
+
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
     /// <summary>
@@ -15,23 +17,24 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// Gets the MCP platform authentication scope.
         /// </summary>
         /// <returns>
-        /// The MCP platform authentication scope from environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
-        /// or the default production scope if not set.
+        /// The MCP platform authentication scope from configuration (e.g., environment variable MCP_PLATFORM_AUTHENTICATION_SCOPE,
+        /// appsettings.json, or other configuration sources), or the default production scope if not set.
         /// </returns>
-        public static string GetMcpPlatformAuthenticationScope()
+        public static string GetMcpPlatformAuthenticationScope(IConfiguration configuration)
         {
-            return Environment.GetEnvironmentVariable("MCP_PLATFORM_AUTHENTICATION_SCOPE") ??
+            return configuration["MCP_PLATFORM_AUTHENTICATION_SCOPE"] ??
                    McpPlatformProdAuthenticationScope;
         }
 
         /// <summary>
         /// Gets the current environment name.
         /// </summary>
+        /// <param name="configuration">The application configuration.</param>
         /// <returns>The current environment name.</returns>
-        public static string GetCurrentEnvironment()
+        public static string GetCurrentEnvironment(IConfiguration configuration)
         {
-            return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                   Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ??
+            return configuration["ASPNETCORE_ENVIRONMENT"] ??
+                   configuration["DOTNET_ENVIRONMENT"] ??
                    "Development";
         }
     }

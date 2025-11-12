@@ -1,4 +1,8 @@
-﻿namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 {
     /// <summary>
     /// Represents details about the caller.

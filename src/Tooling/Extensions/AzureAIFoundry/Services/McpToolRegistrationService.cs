@@ -4,20 +4,18 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 
-using Azure.AI.Agents;
 using Azure.AI.Agents.Persistent; // MCPToolDefinition, MCPToolResource, MCPApproval
-using Microsoft.Agents.Builder;
-using Microsoft.Agents.Builder.App.UserAuth;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
+using Microsoft.Agents.Builder;
+using Microsoft.Agents.Builder.App.UserAuth;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Constants = Utils.Constants;
 using Utility = Utils.Utility;
@@ -33,6 +31,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -40,14 +39,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="logger">The logger instance.</param>
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
     /// <param name="mcpToolServerConfigurationService">The MCP tool server configuration service.</param>
+    /// <param name="configuration">The application configuration.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IServiceProvider serviceProvider,
-        IMcpToolServerConfigurationService mcpToolServerConfigurationService)
+        IMcpToolServerConfigurationService mcpToolServerConfigurationService,
+        IConfiguration configuration)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
         _mcpServerConfigurationService = mcpToolServerConfigurationService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -91,9 +93,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    public void AddToolServersToAgent(
+    public async Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
+        string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null)
     {
@@ -104,7 +107,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         if (authToken == null)
         {
-            authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
@@ -136,17 +139,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         string authToken,
         ITurnContext turnContext)
     {
-        // TODO: Make this method private 
+        // TODO: Make this method private
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
         // This workaround is temporary and will be removed once the Foundry SDK correctly updates agentClient with tool resources.
         // Eventually, we should retrieve tool resources directly from agentClient.
 
-        var toolsMode = Utility.GetToolsMode();
+        var toolsMode = Utility.GetToolsMode(_configuration);
 
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServers(agentInstanceId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken);
         }
         catch (Exception ex)
         {
@@ -209,7 +212,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)

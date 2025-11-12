@@ -1,7 +1,12 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
+using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
@@ -10,31 +15,35 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     /// </summary>
     public class ExecuteToolDataBuilder : BaseDataBuilder<ExecuteToolData>
     {
+        private const string ExecuteToolOperationName = "execute_tool";
+
         /// <summary>
         /// Builds complete data for an execute_tool operation.
         /// </summary>
         /// <param name="toolCallDetails">The details of the tool call.</param>
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
-        /// <param name="conversationId">Optional conversation id.</param>
+        /// <param name="conversationId">The conversation id.</param>
         /// <param name="responseContent">Optional response content from the tool.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
         public static ExecuteToolData Build(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId = null,
+            string conversationId,
             string? responseContent = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
+            string? parentSpanId = null,
+            IDictionary<string, object?>? extraAttributes = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -43,10 +52,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
-            string? conversationId,
-            string? responseContent)
+            string conversationId,
+            string? responseContent,
+            IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
+
+            // Operation name
+            AddIfNotNull(attributes, GenAiOperationNameKey, ExecuteToolDataBuilder.ExecuteToolOperationName);
 
             // Agent & tenant
             AddAgentDetails(attributes, agentDetails);
@@ -60,6 +73,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Response content if supplied
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiEventContent, responseContent);
+
+            // Add any extra attributes
+            AddExtraAttributes(attributes, extraAttributes);
 
             return attributes;
         }

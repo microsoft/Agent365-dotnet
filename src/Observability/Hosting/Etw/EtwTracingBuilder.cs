@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Common;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,18 +11,18 @@ using OpenTelemetry.Trace;
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
     /// <summary>
-    /// Builds the ETW + OpenTelemetry configuration.
+    /// Builds the ETW + OpenTelemetry tracing configuration.
     /// </summary>
-    public sealed class EtwBuilder
+    public sealed class EtwTracingBuilder
     {
         private readonly IServiceCollection _services;
         private bool _isBuilt = false;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EtwBuilder"/> class.
+        /// Initializes a new instance of the <see cref="EtwTracingBuilder"/> class.
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
-        internal EtwBuilder(IServiceCollection services)
+        internal EtwTracingBuilder(IServiceCollection services)
         {
             _services = services;
         }
@@ -43,9 +47,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 .WithTracing(tracing =>
                 {
                     tracing
-                    .AddSource(OpenTelemetryConstants.SourceName)
-                    .AddProcessor(new ActivityProcessor())
-                    .AddProcessor(new EtwScopeEventProcessor());
+                        .AddSource(OpenTelemetryConstants.SourceName)
+                        .AddProcessor(new ActivityProcessor())
+                        .AddProcessor(new EtwScopeEventProcessor());
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())
                     {

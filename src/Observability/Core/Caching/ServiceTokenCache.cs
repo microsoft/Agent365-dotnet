@@ -1,4 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using System.Collections.Concurrent;
 
 namespace Microsoft.Agents.A365.Observability.Caching;
 

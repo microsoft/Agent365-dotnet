@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
@@ -10,6 +14,51 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     /// </summary>
     public abstract class BaseDataBuilder<T> where T : BaseData
     {
+        // Reserved attribute keys managed by specific builder methods; extra attributes must NOT override these.
+        private static readonly HashSet<string> ReservedAttributeKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            OpenTelemetryConstants.GenAiInputMessagesKey,
+            OpenTelemetryConstants.GenAiOutputMessagesKey,
+            OpenTelemetryConstants.GenAiAgentIdKey,
+            OpenTelemetryConstants.GenAiAgentNameKey,
+            OpenTelemetryConstants.GenAiAgentDescriptionKey,
+            OpenTelemetryConstants.GenAiAgentAUIDKey,
+            OpenTelemetryConstants.GenAiAgentUPNKey,
+            OpenTelemetryConstants.GenAiAgentBlueprintIdKey,
+            OpenTelemetryConstants.TenantIdKey,
+            OpenTelemetryConstants.ServerAddressKey,
+            OpenTelemetryConstants.ServerPortKey,
+            OpenTelemetryConstants.GenAiChannelNameKey,
+            OpenTelemetryConstants.GenAiChannelLinkKey,
+            OpenTelemetryConstants.GenAiExecutionTypeKey,
+            OpenTelemetryConstants.GenAiCallerIdKey,
+            OpenTelemetryConstants.GenAiCallerUpnKey,
+            OpenTelemetryConstants.GenAiCallerNameKey,
+            OpenTelemetryConstants.GenAiCallerUserIdKey,
+            OpenTelemetryConstants.GenAiCallerTenantIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentNameKey,
+            OpenTelemetryConstants.GenAiCallerAgentIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey,
+            OpenTelemetryConstants.GenAiCallerAgentAUIDKey,
+            OpenTelemetryConstants.GenAiCallerAgentUPNKey,
+            OpenTelemetryConstants.GenAiCallerAgentTenantKey,
+            OpenTelemetryConstants.GenAiConversationIdKey,
+            OpenTelemetryConstants.SessionIdKey,
+            OpenTelemetryConstants.GenAiToolNameKey,
+            OpenTelemetryConstants.GenAiToolArgumentsKey,
+            OpenTelemetryConstants.GenAiToolCallIdKey,
+            OpenTelemetryConstants.GenAiToolDescriptionKey,
+            OpenTelemetryConstants.GenAiToolTypeKey,
+            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiOperationNameKey,
+            OpenTelemetryConstants.GenAiRequestModelKey,
+            OpenTelemetryConstants.GenAiProviderNameKey,
+            OpenTelemetryConstants.GenAiUsageInputTokensKey,
+            OpenTelemetryConstants.GenAiUsageOutputTokensKey,
+            OpenTelemetryConstants.GenAiResponseFinishReasonsKey,
+            OpenTelemetryConstants.GenAiResponseIdKey
+        };
+
         /// <summary>
         /// Adds attributes for input messages.
         /// </summary>
@@ -80,9 +129,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (request == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceIdKey, request.SourceMetadata?.Id);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceNameKey, request.SourceMetadata?.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request.SourceMetadata?.Description);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, request.SourceMetadata?.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, request.SourceMetadata?.Description);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString());
         }
 
@@ -123,6 +171,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             if (value != null)
             {
                 attributes[key] = value;
+            }
+        }
+
+        /// <summary>
+        /// Adds extra attributes to the attributes dictionary while ignoring reserved keys.
+        /// </summary>
+        protected static void AddExtraAttributes(IDictionary<string, object?> attributes, IDictionary<string, object?>? extraAttributes)
+        {
+            if (extraAttributes == null) return;
+
+            foreach (var kvp in extraAttributes)
+            {
+                if ((kvp.Value != null && !ReservedAttributeKeys.Contains(kvp.Key)))
+                {
+                    attributes[kvp.Key] = kvp.Value;
+                }
             }
         }
     }

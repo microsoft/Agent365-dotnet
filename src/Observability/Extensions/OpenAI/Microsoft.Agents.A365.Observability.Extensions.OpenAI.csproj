@@ -1,20 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Observability.OpenAI</AssemblyName>
-    <RootNamespace>Microsoft.Agents.A365.Observability.OpenAI</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Observability.Extensions.OpenAI</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Observability.Extensions.OpenAI</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <!-- NuGet Package Properties -->
-    <PackageId>Microsoft.Agents.A365.Observability.OpenAI</PackageId>
-    <Title>Microsoft Agents A365 SDK Observability OpenAI</Title>
-    <Description>OpenAI observability integration for Microsoft Agents A365 SDK, providing tracing and monitoring for OpenAI operations.</Description>
-    <Summary>Microsoft Agents A365 SDK Observability OpenAI - Tracing and monitoring for OpenAI agents</Summary>
-    <Product>Microsoft Agents A365 SDK Observability OpenAI</Product>
+    <PackageId>Microsoft.Agents.A365.Observability.Extensions.OpenAI</PackageId>
+    <Title>Microsoft Agent 365 OpenAI Observability SDK</Title>
+    <Description>OpenAI observability integration for Microsoft Agent 365 SDK, providing tracing and monitoring for OpenAI operations.</Description>
+    <Summary>Microsoft Agent 365 OpenAI Observability Integration - Tracing and monitoring for OpenAI agents</Summary>
+    <Product>Microsoft Agent 365 OpenAI Observability SDK</Product>
     <PackageTags>Microsoft;Agents;A365;Observability;OpenAI;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
-  <ItemGroup>    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
   </ItemGroup>
 </Project>
+
+
+

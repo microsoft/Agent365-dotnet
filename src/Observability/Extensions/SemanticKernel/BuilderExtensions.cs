@@ -1,9 +1,14 @@
-﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
 using Microsoft.SemanticKernel;
 using OpenTelemetry.Trace;
+using OpenTelemetry;
 
 /// <summary>
 /// Extension methods for configuring Builder with SemanticKernel integration.
@@ -25,7 +30,8 @@ public static class BuilderExtensions
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
                     .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
-                    .AddProcessor(new SemanticKernelSpanProcessor()));
+                    .AddProcessor(new SemanticKernelSpanProcessor()))
+                .UseOtlpExporter();
         }
 
         return builder;

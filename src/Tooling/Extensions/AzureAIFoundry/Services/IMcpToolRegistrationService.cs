@@ -22,11 +22,13 @@ public interface IMcpToolRegistrationService
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance.</param>
     /// <param name="userAuthorization">User authorization context.</param>
+    /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
-    void AddToolServersToAgent(
+    Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
+        string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null);
 

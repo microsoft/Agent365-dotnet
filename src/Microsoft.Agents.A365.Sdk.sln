@@ -47,13 +47,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Obser
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Runtime.Tests", "Tests\Runtime.Tests\Microsoft.Agents.A365.Runtime.Tests.csproj", "{7A8B9C0D-1E2F-4030-5142-6789ABCDEF01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry", "Tooling\Extensions\AzureFoundry\Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.csproj", "{C5A0294B-784B-456F-8C1A-A3FF4BB4C678}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry", "Tooling\Extensions\AzureAIFoundry\Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.csproj", "{C5A0294B-784B-456F-8C1A-A3FF4BB4C678}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensions", "Extensions", "{715DDBDC-9E00-40A7-AC63-654F609903C2}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensions", "Extensions", "{89AD1AA2-300A-483A-832E-9047201DD2BC}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureFoundry", "AzureFoundry", "{516CB904-1318-4C78-8EAB-7A56AB1A5EDF}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AzureAIFoundry", "AzureAIFoundry", "{516CB904-1318-4C78-8EAB-7A56AB1A5EDF}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SemanticKernel", "SemanticKernel", "{407C231E-438A-462B-8559-65A71551BD8B}"
 EndProject
@@ -76,6 +76,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AgentFramework", "AgentFramework", "{9D91710A-8176-98AC-53E1-B6BCC2C3DF3D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AgentFramework", "Tooling\Extensions\AgentFramework\Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.csproj", "{1BFA6B30-FC88-4C14-8F0A-9345611989C6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Runtime.IntegrationTests", "Tests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests.csproj", "{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -327,6 +329,18 @@ Global
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6}.Release|x64.Build.0 = Release|Any CPU
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6}.Release|x86.ActiveCfg = Release|Any CPU
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6}.Release|x86.Build.0 = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|x64.Build.0 = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Debug|x86.Build.0 = Debug|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x64.Build.0 = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.ActiveCfg = Release|Any CPU
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -363,6 +377,7 @@ Global
 		{05AD60B6-0E5A-F382-A03E-8805B36ED6B8} = {78E49660-FC50-4CC6-8391-7F857F5CCB6F}
 		{9D91710A-8176-98AC-53E1-B6BCC2C3DF3D} = {89AD1AA2-300A-483A-832E-9047201DD2BC}
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6} = {9D91710A-8176-98AC-53E1-B6BCC2C3DF3D}
+		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0B20062E-2453-4E32-B8A2-85A6013F83A0}

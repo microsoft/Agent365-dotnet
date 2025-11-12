@@ -21,9 +21,9 @@
     <Nullable>enable</Nullable>
     <Authors>Microsoft</Authors>
 
-    <BaseVersion>$([System.DateTime]::UtcNow.Year).$([System.DateTime]::UtcNow.Month).$([System.DateTime]::UtcNow.Day)</BaseVersion>
-    <PackageVersion>$(BaseVersion)-preview</PackageVersion>
-    <Version>$(BaseVersion).$([System.DateTime]::UtcNow.ToString("HHmm"))</Version>
+    <!-- Version is managed by Nerdbank.GitVersioning (nbgv) via version.json -->
+    <!-- PackageVersion and Version properties are set automatically by nbgv -->
+    
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <Company>Microsoft Corporation</Company>
     <RepositoryUrl>https://github.com/microsoft/Agent365-dotnet</RepositoryUrl>
@@ -44,6 +44,10 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Package references for all projects -->
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="$(RepositoryRoot)\LICENSE.md" Pack="true" PackagePath="" />
     <None Include="$(RepositoryRoot)\CHANGELOG.md" Pack="true" PackagePath="" />

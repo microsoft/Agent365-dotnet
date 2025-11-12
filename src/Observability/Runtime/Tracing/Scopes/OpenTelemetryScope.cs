@@ -231,5 +231,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// Gets the span ID for the current activity.
         /// </summary>
         public string Id => activity?.Id ?? string.Empty;
+
+        /// <summary>
+        /// Gets the trace ID for the current activity.
+        /// </summary>
+        public string TraceId => activity?.TraceId.ToHexString().ToLowerInvariant() ?? string.Empty;
     }
 }

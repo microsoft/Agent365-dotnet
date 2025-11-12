@@ -1,0 +1,145 @@
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+
+namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+{
+    /// <summary>
+    /// Provides ETW logging functionality for tracing events.
+    /// </summary>
+    public class A365EtwLogger<T> : IA365EtwLogger<T>
+    {
+        private ILogger logger { get; }
+        private const string InvokeAgentEventName = "InvokeAgent";
+        private static readonly EventId InvokeAgentEventId = new EventId(1001, InvokeAgentEventName);
+        private const string ExecuteInferenceEventName = "ExecuteInference";
+        private static readonly EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
+        private const string ExecuteToolEventName = "ExecuteTool";
+        private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="A365EtwLogger{T}"/> class.
+        /// </summary>
+        /// <param name="factory">The logger factory.</param>
+        public A365EtwLogger(ILoggerFactory factory)
+        {
+            var baseCategory = typeof(T).FullName!;
+            logger = factory.CreateLogger(Constants.EtwCategoryPrefix + baseCategory);
+        }
+
+        /// <inheritdoc/>
+        public void LogInferenceCall(
+            InferenceCallDetails inferenceCallDetails, 
+            AgentDetails agentDetails, 
+            TenantDetails tenantDetails, 
+            string conversationId, 
+            string[]? inputMessages, 
+            string[]? outputMessages, 
+            DateTimeOffset? startTime, 
+            DateTimeOffset? endTime, 
+            string? spanId, 
+            string? parentSpanId)
+        {
+            var data = ExecuteInferenceDataBuilder.Build(
+                inferenceCallDetails,
+                agentDetails,
+                tenantDetails,
+                conversationId,
+                inputMessages,
+                outputMessages,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+
+            logger.Log(
+                LogLevel.Information,
+                ExecuteInferenceEventId,
+                data.ToDictionary(),
+                null,
+                LogFormatter
+            );
+        }
+
+        /// <inheritdoc/>
+        public void LogInvokeAgent(
+            InvokeAgentDetails invokeAgentDetails, 
+            TenantDetails tenantDetails, 
+            string conversationId, 
+            Request? request, 
+            AgentDetails? callerAgentDetails, 
+            CallerDetails? callerDetails, 
+            string[]? inputMessages, 
+            string[]? outputMessages, 
+            DateTimeOffset? startTime, 
+            DateTimeOffset? endTime, 
+            string? spanId, 
+            string? parentSpanId)
+        {
+            var data = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                request,
+                callerAgentDetails,
+                callerDetails,
+                inputMessages,
+                outputMessages,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+
+            logger.Log(
+                LogLevel.Information,
+                InvokeAgentEventId,
+                data.ToDictionary(),
+                null,
+                LogFormatter
+            );
+        }
+
+        /// <inheritdoc/>
+        public void LogToolCall(
+            ToolCallDetails toolCallDetails, 
+            AgentDetails agentDetails, 
+            TenantDetails tenantDetails, 
+            string conversationId, 
+            string? responseContent, 
+            DateTimeOffset? startTime, 
+            DateTimeOffset? endTime, 
+            string? spanId, 
+            string? parentSpanId)
+        {
+            var data = ExecuteToolDataBuilder.Build(
+                toolCallDetails,
+                agentDetails,
+                tenantDetails,
+                conversationId,
+                responseContent,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+
+            logger.Log(
+                LogLevel.Information,
+                ExecuteToolEventId,
+                data.ToDictionary(),
+                null,
+                LogFormatter
+            );
+        }
+
+        private static string LogFormatter(Dictionary<string, object?> data, Exception? ex)
+        {
+            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}";
+        }
+    }
+}
