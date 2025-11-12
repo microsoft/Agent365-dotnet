@@ -1,0 +1,1074 @@
+name: AI-First Workflow
+
+# To disable workflow - comment 'on:' section to re-enable
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, labeled]
+        branches:
+          - 'users/*/aiFirstExperiments'
+          - 'users/*/aiFirstExperiments/**'
+          - 'aiFirstExperiments'
+          - 'aiFirstExperiments/**'
+        paths:
+          - 'src/**/*.cs'
+          - '!src/**/Tests/**'
+          - '!src/**/*.Tests.cs'
+
+# Prevent concurrent runs for the same PR
+# Uses PR number as the concurrency group, or falls back to ref for edge cases
+concurrency:
+  group: ai-first-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Repository mapping for different SDK platforms
+# This C# repo creates parity issues in the Python and Node.js repositories
+env:
+  REPO_MAP_PYTHON: "microsoft/Agent365-python"
+  REPO_MAP_TYPESCRIPT: "microsoft/Agent365-nodejs"
+
+# Token Usage Strategy:
+# - PAT_TOKEN_CODEGEN_EXPERIMENT: Used for creating issues with assignments, 
+#   adding reviewers/assignees to PRs, and @mentioning copilot (requires PAT for notifications)
+# - GITHUB_TOKEN (default): Used for posting PR comments (appears as github-actions[bot])
+
+jobs:
+    check-prerequisites:
+        name: Check Prerequisites
+        runs-on: ubuntu-latest
+        outputs:
+          should_run: ${{ steps.draft_check.outputs.is_draft == 'false' && steps.bot_check.outputs.is_bot == 'false' && steps.label_check.outputs.has_label == 'true' }}
+        permissions:
+          contents: read
+          pull-requests: read
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        
+        - name: Check if PR is draft
+          id: draft_check
+          run: |
+            echo "=================================================="
+            echo "Checking PR draft status"
+            echo "=================================================="
+            echo ""
+            
+            if [ "${{ github.event.pull_request.draft }}" == "true" ]; then
+              echo "⏭️ Skipping workflow - PR is in draft status"
+              echo ""
+              echo "This workflow only runs on open (non-draft) PRs."
+              echo "Please mark the PR as ready for review to enable this workflow."
+              echo ""
+              echo "is_draft=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "✅ PR is not a draft - proceeding with checks"
+            echo "is_draft=false" >> $GITHUB_OUTPUT
+            echo ""
+        
+        - name: Check if PR author is a bot
+          id: bot_check
+          run: |
+            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+            PR_AUTHOR_TYPE="${{ github.event.pull_request.user.type }}"
+            
+            echo "PR Author: $PR_AUTHOR"
+            echo "Author Type: $PR_AUTHOR_TYPE"
+            echo ""
+            
+            # Skip only if PR author is a bot AND specifically Copilot
+            # Note: github.event.pull_request.user.login returns "Copilot" for copilot-swe-agent PRs
+            if [ "$PR_AUTHOR_TYPE" == "Bot" ] && [ "$PR_AUTHOR" != "Copilot" ]; then
+              echo "⏭️ Skipping workflow - PR created by an unsupported bot"
+              echo "This workflow only runs for human-authored PRs or for Copilot-generated PRs triggered by humans."
+              echo "is_bot=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "✅ PR author is human or a different bot: $PR_AUTHOR"
+            echo "is_bot=false" >> $GITHUB_OUTPUT
+        
+        - name: Check for required label
+          id: label_check
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+          run: |
+            echo "=================================================="
+            echo "Checking for 'codegen-experiment' label"
+            echo "=================================================="
+            echo ""
+            
+            LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')
+            
+            echo "Current labels on PR #${{ github.event.pull_request.number }}:"
+            if [ -z "$LABELS" ]; then
+              echo "  (no labels)"
+            else
+              echo "$LABELS" | sed 's/^/  - /'
+            fi
+            echo ""
+            
+            if ! echo "$LABELS" | grep -q "codegen-experiment"; then
+              echo "⏭️ Skipping workflow - 'codegen-experiment' label not found"
+              echo ""
+              echo "This workflow only runs on PRs with the 'codegen-experiment' label."
+              echo ""
+              echo "To enable this workflow:"
+              echo "  1. Add the 'codegen-experiment' label to this PR"
+              echo "  2. The workflow will automatically run when the label is added"
+              echo "has_label=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            echo "✅ Label 'codegen-experiment' found - proceeding with workflow"
+            echo "has_label=true" >> $GITHUB_OUTPUT
+            echo ""
+    
+    ai-first:
+        name: AI-First Job
+        runs-on: ubuntu-latest
+        needs: check-prerequisites
+        if: needs.check-prerequisites.outputs.should_run == 'true'
+        permissions:
+          issues: write
+          contents: write
+          pull-requests: write
+          actions: read
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        
+        - name: Detect C# SDK changes
+          id: detect
+          env:
+            GITHUB_BASE_REF: ${{ github.base_ref }}
+          run: |
+            echo "=================================================="
+            echo "Detecting C# SDK Changes"
+            echo "=================================================="
+            echo "This is the C# repository (Agent365-dotnet)"
+            echo "PR number: ${{ github.event.pull_request.number }}"
+            echo "Base branch: $GITHUB_BASE_REF"
+            echo ""
+            
+            # Get changed files in this PR
+            echo "Analyzing changed files..."
+            git fetch origin "$GITHUB_BASE_REF"
+            CHANGED_FILES=$(git diff --name-only "origin/$GITHUB_BASE_REF"...HEAD)
+            
+            echo "Changed files in PR:"
+            echo "$CHANGED_FILES"
+            echo ""
+            
+            # Check for C# SDK changes (src/**/*.cs, excluding tests)
+            # Pattern: Match files under src/ that end with .cs but NOT in Tests/ directories
+            CSHARP_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^src/.*\.cs$' | grep -v '/Tests/' | grep -v '\.Tests\.cs$' | grep -v '/test/' || true)
+            
+            if [ -n "$CSHARP_CHANGES" ]; then
+              echo "✅ C# SDK changes detected:"
+              echo "$CSHARP_CHANGES" | sed 's/^/  - /'
+              echo ""
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "source_languages=csharp" >> $GITHUB_OUTPUT
+              echo "target_languages=python,typescript" >> $GITHUB_OUTPUT
+            else
+              echo "ℹ️  No C# SDK implementation changes detected"
+              echo "Only files under src/**/*.cs (excluding tests) trigger parity issues."
+              echo ""
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+              echo "source_languages=" >> $GITHUB_OUTPUT
+              echo "target_languages=" >> $GITHUB_OUTPUT
+            fi
+        
+        - name: Create parity issues for target languages
+          if: steps.detect.outputs.has_changes == 'true'
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            SOURCE_LANGUAGES: ${{ steps.detect.outputs.source_languages }}
+            TARGET_LANGUAGES: ${{ steps.detect.outputs.target_languages }}
+            PR_TITLE: ${{ github.event.pull_request.title }}
+            PR_BODY: ${{ github.event.pull_request.body }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            PR_URL: ${{ github.event.pull_request.html_url }}
+            PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          run: |
+            echo "=================================================="
+            echo "Creating Parity Issues for Target Languages"
+            echo "=================================================="
+            echo ""
+            
+            gh auth status
+            
+            # Verify token is set
+            if [ -z "$GH_TOKEN" ]; then
+              echo "Error: GH_TOKEN is not set"
+              exit 1
+            fi
+            
+            # Try to find linked issue from PR body
+            LINKED_ISSUE=""
+            LINKED_ISSUE_REPO=""
+            if [ -n "$PR_BODY" ]; then
+              # Look for cross-repo pattern first: "Closes owner/repo#123", "Fixes microsoft/Agent365#456", etc.
+              CROSS_REPO_MATCH=$(echo "$PR_BODY" | grep -oiP '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+([a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)#(\d+)' | head -1)
+              
+              if [ -n "$CROSS_REPO_MATCH" ]; then
+                # Extract repo and issue number from cross-repo reference
+                LINKED_ISSUE_REPO=$(echo "$CROSS_REPO_MATCH" | grep -oP '[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+(?=#)')
+                LINKED_ISSUE=$(echo "$CROSS_REPO_MATCH" | grep -oP '#\K\d+')
+                echo "✓ Found linked issue in external repo: $LINKED_ISSUE_REPO#$LINKED_ISSUE"
+              else
+                # Fall back to same-repo pattern: "Closes #123", "Fixes #123", etc.
+                LINKED_ISSUE=$(echo "$PR_BODY" | grep -oiP '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#\K\d+' | head -1)
+                
+                if [ -n "$LINKED_ISSUE" ]; then
+                  LINKED_ISSUE_REPO="${{ github.repository }}"
+                  echo "✓ Found linked issue in current repo: $LINKED_ISSUE_REPO#$LINKED_ISSUE"
+                else
+                  echo "ℹ️  No linked issue found in PR body"
+                fi
+              fi
+            fi
+            echo ""
+            
+            # Get source and target languages
+            echo "Source languages (changed): $SOURCE_LANGUAGES"
+            echo "Target languages (need parity): $TARGET_LANGUAGES"
+            echo ""
+            
+            # Validate source languages - must be exactly one
+            if [ -z "$SOURCE_LANGUAGES" ]; then
+              echo "❌ ERROR: No source language detected!"
+              echo "This workflow expects changes in exactly one SDK language."
+              echo "Please ensure your PR modifies files in python/, nodejs/, or dotnet/ directories."
+              exit 1
+            fi
+            
+            # Count number of source languages (split by comma)
+            IFS=',' read -ra SOURCE_LANGS_ARRAY <<< "$SOURCE_LANGUAGES"
+            SOURCE_COUNT=${#SOURCE_LANGS_ARRAY[@]}
+            
+            if [ $SOURCE_COUNT -gt 1 ]; then
+              echo "❌ ERROR: Multiple source languages detected: $SOURCE_LANGUAGES"
+              echo "This workflow expects changes in exactly ONE SDK language at a time."
+              echo ""
+              echo "Detected languages:"
+              for SLANG in "${SOURCE_LANGS_ARRAY[@]}"; do
+                echo "  - $SLANG"
+              done
+              echo ""
+              echo "Please split your PR into separate changes for each SDK language."
+              exit 1
+            fi
+            
+            echo "✓ Source language validation passed: $SOURCE_LANGUAGES"
+            echo ""
+            
+            if [ -z "$TARGET_LANGUAGES" ]; then
+              echo "No target languages detected. Skipping issue creation."
+              exit 0
+            fi
+            
+            LABELS="copilot,codegen-experiment"
+            ASSIGNEE="copilot-swe-agent"
+            
+            # Current repository (fallback default)
+            CURRENT_REPO="${{ github.repository }}"
+            
+            # Split target languages by comma
+            IFS=',' read -ra LANGS <<< "$TARGET_LANGUAGES"
+            
+            CREATED_ISSUES=""
+            NEW_ISSUES=""
+            EXISTING_ISSUES=""
+            
+            for LANG in "${LANGS[@]}"; do
+              # Trim whitespace
+              LANG=$(echo "$LANG" | xargs)
+              
+              # Map language to friendly name and repository
+              case "$LANG" in
+                typescript)
+                  LANG_NAME="Node.js/TypeScript"
+                  LANG_DIR="nodejs"
+                  LANG_REPO="${{ env.REPO_MAP_TYPESCRIPT }}"
+                  ;;
+                python)
+                  LANG_NAME="Python"
+                  LANG_DIR="python"
+                  LANG_REPO="${{ env.REPO_MAP_PYTHON }}"
+                  ;;
+                *)
+                  LANG_NAME="$LANG"
+                  LANG_DIR="$LANG"
+                  LANG_REPO=""
+                  ;;
+              esac
+              
+              # Use current repo if no specific repo is configured
+              if [ -z "$LANG_REPO" ]; then
+                LANG_REPO="$CURRENT_REPO"
+              fi
+              
+              echo "--------------------------------------------------"
+              echo "Processing: $LANG_NAME ($LANG)"
+              echo "Target repository: $LANG_REPO"
+              echo "--------------------------------------------------"
+              
+              # Create issue title with language and original PR title
+              ISSUE_TITLE="[SDK Parity] $LANG_NAME for PR $PR_NUMBER"
+              
+              # Define language-specific guidelines
+              case "$LANG" in
+                csharp)
+                  LANG_GUIDELINES="
+            ### Implementation Guidelines for .NET/C#
+            When implementing this feature in the .NET SDK:
+            - Review existing code in \`$LANG_DIR/\` to understand the codebase structure and patterns
+            - Follow the coding style, naming conventions, and architectural patterns used in the .NET SDK
+            - Check for configuration files (e.g., \`.editorconfig\`, \`Directory.Build.props\`) that define coding standards
+            - Ensure your implementation is consistent with existing SDK components
+            - Include appropriate tests following the testing patterns in the .NET SDK"
+                  ;;
+                typescript)
+                  LANG_GUIDELINES="
+            ### Implementation Guidelines for Node.js/TypeScript
+            When implementing this feature in the TypeScript SDK:
+            - Review existing code in \`$LANG_DIR/\` to understand the codebase structure and patterns
+            - Follow the coding style, naming conventions, and architectural patterns used in the TypeScript SDK
+            - Check for configuration files (e.g., \`.eslintrc.json\`, \`tsconfig.json\`, \`.prettierrc\`) that define coding standards
+            - Ensure your implementation is consistent with existing SDK components
+            - Include appropriate tests following the testing patterns in the TypeScript SDK"
+                  ;;
+                python)
+                  LANG_GUIDELINES="
+            ### Implementation Guidelines for Python
+            When implementing this feature in the Python SDK:
+            - Review existing code in \`$LANG_DIR/\` to understand the codebase structure and patterns
+            - Follow the coding style, naming conventions, and architectural patterns used in the Python SDK
+            - Check for configuration files (e.g., \`pyproject.toml\`, \`.flake8\`, \`mypy.ini\`) that define coding standards
+            - Ensure your implementation is consistent with existing SDK components
+            - Include appropriate tests following the testing patterns in the Python SDK"
+                  ;;
+                *)
+                  LANG_GUIDELINES="
+            ### Implementation Guidelines
+            When implementing this feature in the $LANG_NAME SDK:
+            - Review existing code in \`$LANG_DIR/\` to understand the codebase structure and patterns
+            - Follow the coding style, naming conventions, and architectural patterns used in this SDK
+            - Check for configuration files that define coding standards
+            - Ensure your implementation is consistent with existing SDK components"
+                  ;;
+              esac
+              
+              # Build parent issue reference if exists
+              PARENT_ISSUE_REF=""
+              if [ -n "$LINKED_ISSUE" ]; then
+                PARENT_ISSUE_REF="
+            ### Parent Issue
+            This parity task is related to issue $LINKED_ISSUE_REPO#$LINKED_ISSUE
+            "
+              fi
+              
+              # Create detailed issue body with original PR context
+              ISSUE_BODY="## SDK Parity Update Required
+
+            This issue was automatically created by the AI-First workflow to maintain SDK parity.
+            $PARENT_ISSUE_REF
+
+            ### Source PR Information
+            **Original PR:** #$PR_NUMBER - $PR_TITLE
+            **PR URL:** $PR_URL
+            **PR Author:** @$PR_AUTHOR
+
+            ### PR Description
+            $PR_BODY
+
+            ---
+
+            ### Parity Task
+            **Changes detected in:** $SOURCE_LANGUAGES SDK
+            **Target SDK:** $LANG_NAME (\`$LANG_DIR/\`)
+
+            ### Action Required
+            Please apply the changes described in the original PR (#$PR_NUMBER) to the $LANG_NAME SDK to maintain feature parity across all SDKs.
+
+            **Before implementing:**
+            - First, check if this feature already exists in the $LANG_NAME SDK
+            - If the feature is already implemented, close this issue with the \`wontfix\` label and add a comment explaining that parity already exists
+
+            **For bug fixes (IMPORTANT):**
+            - Bug fixes require extra caution - only act if the same bug exists in the $LANG_NAME SDK
+            - Carefully analyze whether the bug described in the original PR replicates in the target platform
+            - If the bug does NOT exist in the $LANG_NAME SDK, close this issue with the \`wontfix\` label and explain that the bug is not present
+            - Stay strictly in context - only fix the specific bug described, do not make additional changes or "improvements"
+            - Do not port bug fixes that are specific to the source SDK's language or platform constraints
+
+            **When creating the PR for this implementation:**
+            - Assign the PR to @$PR_AUTHOR (the author of the original PR)
+            - Reference this issue in the PR description
+            - Ensure the PR description explains what parity changes were made
+
+            $LANG_GUIDELINES
+
+            ### Related Information
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Trigger:** ${{ github.event_name }}
+            - **Branch:** ${{ github.ref_name }}
+            - **Commit:** ${{ github.sha }}
+
+            ---
+            *This is an automated issue. Please close with \`wontfix\` label if parity is not needed.*"
+              
+              # Search for existing open issues OR closed issues with "wontfix" label in target repo
+              echo "Checking for existing issues in $LANG_REPO..."
+              OPEN_ISSUE=$(gh issue list --repo "$LANG_REPO" --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number')
+              WONTFIX_ISSUE=$(gh issue list --repo "$LANG_REPO" --state closed --search "in:title \"$ISSUE_TITLE\" label:wontfix" --json number --jq '.[0].number')
+              
+              # Check if either exists
+              if [ -n "$OPEN_ISSUE" ]; then
+                echo "✓ Open issue already exists: $LANG_REPO#$OPEN_ISSUE"
+                echo "  Title: $ISSUE_TITLE"
+                CREATED_ISSUES="${CREATED_ISSUES}${LANG_REPO}#${OPEN_ISSUE} "
+                EXISTING_ISSUES="${EXISTING_ISSUES}${LANG_REPO}#${OPEN_ISSUE} "
+              elif [ -n "$WONTFIX_ISSUE" ]; then
+                echo "✓ Closed issue with 'wontfix' exists: $LANG_REPO#$WONTFIX_ISSUE"
+                echo "  Skipping - parity not needed for this SDK"
+              else
+                echo "Creating new issue in $LANG_REPO..."
+                # Create issue and capture the URL
+                ISSUE_URL=$(gh issue create \
+                  --repo "$LANG_REPO" \
+                  --title "$ISSUE_TITLE" \
+                  --body "$ISSUE_BODY" \
+                  --label "$LABELS" \
+                  --assignee "$ASSIGNEE" 2>&1)
+                
+                if [ $? -eq 0 ]; then
+                  # Extract issue number from URL
+                  NEW_ISSUE=$(echo "$ISSUE_URL" | grep -oP '\d+$')
+                  echo "✓ Created issue $LANG_REPO#$NEW_ISSUE"
+                  echo "  URL: $ISSUE_URL"
+                  CREATED_ISSUES="${CREATED_ISSUES}${LANG_REPO}#${NEW_ISSUE} "
+                  NEW_ISSUES="${NEW_ISSUES}${LANG_REPO}#${NEW_ISSUE} "
+                else
+                  echo "✗ Failed to create issue for $LANG_NAME in $LANG_REPO"
+                  echo "  Error: $ISSUE_URL"
+                fi
+              fi
+              echo ""
+            done
+            
+            echo "=================================================="
+            echo "Summary"
+            echo "=================================================="
+            echo "Issues processed: $CREATED_ISSUES"
+            echo ""
+            
+            # Export for next steps if needed
+            echo "PARITY_ISSUES=$CREATED_ISSUES" >> $GITHUB_ENV
+            echo "NEW_ISSUES=$NEW_ISSUES" >> $GITHUB_ENV
+            echo "EXISTING_ISSUES=$EXISTING_ISSUES" >> $GITHUB_ENV
+            echo "LINKED_ISSUE=$LINKED_ISSUE" >> $GITHUB_ENV
+            echo "LINKED_ISSUE_REPO=$LINKED_ISSUE_REPO" >> $GITHUB_ENV
+        
+        - name: Wait for Copilot PRs and assign to original author
+          if: steps.detect.outputs.has_changes == 'true'
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+            PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+            SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          run: |
+            echo "=================================================="
+            echo "Waiting for Copilot PRs and Auto-Assignment"
+            echo "=================================================="
+            echo ""
+            
+            if [ -z "$PARITY_ISSUES" ]; then
+              echo "No parity issues to monitor"
+              exit 0
+            fi
+            
+            # Polling configuration
+            MAX_WAIT_TIME=300  # 5 minutes
+            POLL_INTERVAL=30   # 30 seconds
+            
+            # Parse issue references (format: owner/repo#123 or #123)
+            # Extract all issue references from PARITY_ISSUES
+            ISSUE_REFS=($PARITY_ISSUES)
+            
+            if [ ${#ISSUE_REFS[@]} -eq 0 ]; then
+              echo "No issue references found in: $PARITY_ISSUES"
+              exit 0
+            fi
+            
+            echo "Monitoring ${#ISSUE_REFS[@]} issue(s) for Copilot PRs: ${ISSUE_REFS[*]}"
+            echo "Original PR author: @$PR_AUTHOR (Type: $PR_AUTHOR_TYPE)"
+            
+            # Check if original PR is authored by Copilot
+            HUMAN_REVIEWERS=""
+            if [ "$PR_AUTHOR_TYPE" == "Bot" ] && [ "$PR_AUTHOR" == "Copilot" ]; then
+              echo ""
+              echo "⚠️  Original PR is authored by Copilot - finding human reviewers..."
+              
+              # Get assignees and requested reviewers from the source PR
+              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --json assignees,reviewRequests --jq '{assignees: [.assignees[] | select(.type != "Bot") | .login], reviewers: [.reviewRequests[] | select(.type != "Bot") | .login]}' 2>/dev/null || echo "")
+              
+              if [ -n "$SOURCE_PR_DATA" ]; then
+                # Extract human users (assignees and reviewers)
+                ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]' 2>/dev/null || echo "")
+                REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewers[]' 2>/dev/null || echo "")
+                
+                # Combine and deduplicate
+                HUMAN_REVIEWERS=$(echo -e "$ASSIGNEES\n$REVIEWERS" | sort -u | grep -v '^$' | xargs)
+                
+                if [ -n "$HUMAN_REVIEWERS" ]; then
+                  echo "✓ Found human reviewers: $HUMAN_REVIEWERS"
+                else
+                  echo "⚠️  No human assignees or reviewers found on source PR"
+                fi
+              else
+                echo "⚠️  Could not fetch source PR data"
+              fi
+            fi
+            echo ""
+            
+            # Track which issues have been processed
+            declare -A PROCESSED_ISSUES
+            
+            ELAPSED_TIME=0
+            while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+              echo "⏱️  Polling at ${ELAPSED_TIME}s..."
+              
+              REMAINING_COUNT=0
+              
+              for ISSUE_REF in "${ISSUE_REFS[@]}"; do
+                # Parse repo and issue number from reference (format: owner/repo#123 or #123)
+                if [[ "$ISSUE_REF" =~ ^(.+/[^#]+)#([0-9]+)$ ]]; then
+                  # Cross-repo reference: owner/repo#123
+                  ISSUE_REPO="${BASH_REMATCH[1]}"
+                  ISSUE_NUM="${BASH_REMATCH[2]}"
+                elif [[ "$ISSUE_REF" =~ ^#([0-9]+)$ ]]; then
+                  # Same-repo reference: #123
+                  ISSUE_REPO="${{ github.repository }}"
+                  ISSUE_NUM="${BASH_REMATCH[1]}"
+                else
+                  echo "   ⚠️  Invalid issue reference format: $ISSUE_REF"
+                  continue
+                fi
+                
+                # Skip if already processed
+                if [ "${PROCESSED_ISSUES[$ISSUE_REF]}" = "1" ]; then
+                  continue
+                fi
+                
+                # Search for PRs that reference this issue and are created by copilot-swe-agent
+                echo "   Checking issue $ISSUE_REPO#$ISSUE_NUM for linked PRs..."
+                
+                # Search for PRs that mention this issue in the body
+                PR_LIST=$(gh pr list --repo "$ISSUE_REPO" --author "copilot-swe-agent[bot]" --state open --json number,body --jq ".[] | select(.body | test(\"#${ISSUE_NUM}\\\\b\")) | .number" 2>/dev/null || echo "")
+                
+                if [ -n "$PR_LIST" ]; then
+                  # Process each PR found (usually just one)
+                  for PR_NUM in $PR_LIST; do
+                    echo "   ✅ Found Copilot PR $ISSUE_REPO#$PR_NUM for issue $ISSUE_REPO#$ISSUE_NUM"
+                    
+                    # Determine who to assign/add as reviewers
+                    if [ "$PR_AUTHOR_TYPE" == "Bot" ] && [ "$PR_AUTHOR" == "Copilot" ]; then
+                      # Original PR is by Copilot - add human reviewers from source PR
+                      if [ -n "$HUMAN_REVIEWERS" ]; then
+                        echo "   👥 Adding human reviewers from source PR to $ISSUE_REPO#$PR_NUM..."
+                        
+                        for REVIEWER in $HUMAN_REVIEWERS; do
+                          echo "   📌 Requesting review from @$REVIEWER..."
+                          gh pr edit "$PR_NUM" --repo "$ISSUE_REPO" --add-reviewer "$REVIEWER" 2>/dev/null
+                          
+                          if [ $? -eq 0 ]; then
+                            echo "   ✅ Successfully requested review from @$REVIEWER"
+                          else
+                            echo "   ⚠️  Failed to request review from @$REVIEWER (may not be a collaborator)"
+                          fi
+                        done
+                        
+                        # Post a comment on the PR (using GITHUB_TOKEN so it appears from github-actions bot)
+                        REVIEWER_LIST=$(echo "$HUMAN_REVIEWERS" | sed 's/ /, @/g' | sed 's/^/@/')
+                        COMMENT="## 🤖 Auto-Assignment
+            
+            This PR is part of a parity chain that started with a Copilot-generated PR.
+            
+            **Human reviewers from the original PR have been added:** $REVIEWER_LIST
+            
+            **Reason:** This is a parity implementation for issue $ISSUE_REPO#${ISSUE_NUM}, which was triggered by Copilot's PR #${SOURCE_PR_NUMBER}.
+            
+            **Next Steps:**
+            - Reviewers: Please review this implementation to ensure it maintains parity
+            - Validate the parity changes are correct and complete
+            - Approve and merge when satisfied
+            
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+                        
+                        GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                        echo "   💬 Posted reviewer comment on PR $ISSUE_REPO#$PR_NUM"
+                      else
+                        echo "   ⚠️  No human reviewers found on source PR - skipping assignment"
+                        
+                        # Post a comment explaining the situation (using GITHUB_TOKEN so it appears from github-actions bot)
+                        COMMENT="## 🤖 Auto-Assignment
+            
+            This PR is part of a parity chain that started with a Copilot-generated PR (#${SOURCE_PR_NUMBER}).
+            
+            **Note:** No human reviewers were found on the source PR, so this PR was not automatically assigned.
+            
+            **Action Required:**
+            - Please manually assign reviewers who can validate this parity implementation
+            - Ensure the changes maintain consistency with the source PR
+            
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+                        
+                        GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                        echo "   💬 Posted notification comment on PR $ISSUE_REPO#$PR_NUM"
+                      fi
+                    else
+                      # Original PR is by a human - assign to them
+                      echo "   🔍 Checking if @$PR_AUTHOR is already assigned..."
+                      CURRENT_ASSIGNEES=$(gh pr view "$PR_NUM" --repo "$ISSUE_REPO" --json assignees --jq '.assignees[].login' 2>/dev/null || echo "")
+                      
+                      if echo "$CURRENT_ASSIGNEES" | grep -q "^${PR_AUTHOR}$"; then
+                        echo "   ℹ️  @$PR_AUTHOR is already assigned to PR $ISSUE_REPO#$PR_NUM - skipping"
+                      else
+                        echo "   📌 Assigning PR $ISSUE_REPO#$PR_NUM to @$PR_AUTHOR..."
+                        gh pr edit "$PR_NUM" --repo "$ISSUE_REPO" --add-assignee "$PR_AUTHOR" 2>/dev/null
+                        
+                        if [ $? -eq 0 ]; then
+                          echo "   ✅ Successfully assigned PR $ISSUE_REPO#$PR_NUM to @$PR_AUTHOR"
+                          
+                          # Post a comment on the PR (using GITHUB_TOKEN so it appears from github-actions bot)
+                          COMMENT="## 🤖 Auto-Assignment
+            
+            This PR was automatically assigned to @${PR_AUTHOR} for review.
+            
+            **Reason:** This is a parity implementation for issue $ISSUE_REPO#${ISSUE_NUM}, which was triggered by @${PR_AUTHOR}'s original PR.
+            
+            **Next Steps:**
+            - @${PR_AUTHOR}: Please review this implementation to ensure it matches your intent
+            - Validate the parity changes are correct and complete
+            - Approve and merge when satisfied
+            
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+                          
+                          GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                          echo "   💬 Posted assignment comment on PR $ISSUE_REPO#$PR_NUM"
+                        else
+                          echo "   ⚠️  Failed to assign PR $ISSUE_REPO#$PR_NUM (user may not be a collaborator)"
+                        fi
+                      fi
+                    fi
+                    
+                    # Mark this issue as processed
+                    PROCESSED_ISSUES[$ISSUE_REF]=1
+                  done
+                else
+                  echo "   ⏳ No PR found yet for issue $ISSUE_REPO#$ISSUE_NUM"
+                  REMAINING_COUNT=$((REMAINING_COUNT + 1))
+                fi
+              done
+              
+              # Check if all issues have been processed
+              if [ $REMAINING_COUNT -eq 0 ]; then
+                echo ""
+                echo "✅ All Copilot PRs detected and assigned!"
+                break
+              fi
+              
+              # Wait before next poll
+              echo "   Waiting ${POLL_INTERVAL}s before next check..."
+              echo ""
+              sleep $POLL_INTERVAL
+              ELAPSED_TIME=$((ELAPSED_TIME + POLL_INTERVAL))
+            done
+            
+            # Check if we timed out
+            if [ $ELAPSED_TIME -ge $MAX_WAIT_TIME ]; then
+              echo ""
+              echo "⏱️  Timeout: Stopped polling after ${MAX_WAIT_TIME}s"
+              echo ""
+              
+              # List unprocessed issues
+              UNPROCESSED=""
+              for ISSUE_REF in "${ISSUE_REFS[@]}"; do
+                if [ "${PROCESSED_ISSUES[$ISSUE_REF]}" != "1" ]; then
+                  UNPROCESSED="${UNPROCESSED}${ISSUE_REF} "
+                fi
+              done
+              
+              if [ -n "$UNPROCESSED" ]; then
+                echo "⚠️  The following issues did not have PRs created within the timeout period:"
+                echo "   $UNPROCESSED"
+                echo ""
+                echo "These PRs will need to be manually assigned when Copilot creates them."
+                echo "You can use the separate 'assign-copilot-prs.yml' workflow as a fallback."
+              fi
+            fi
+
+        - name: Notify existing Copilot PRs about new changes
+          if: github.event.action == 'synchronize' && steps.detect.outputs.has_changes == 'true'
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            PR_URL: ${{ github.event.pull_request.html_url }}
+            PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+            COMMIT_SHA: ${{ github.event.after }}
+          run: |
+            echo "=================================================="
+            echo "Notifying Existing Copilot PRs About New Changes"
+            echo "=================================================="
+            echo ""
+            echo "Event: synchronize (new commits pushed)"
+            echo "Original PR: #$PR_NUMBER"
+            echo ""
+            
+            if [ -z "$PARITY_ISSUES" ]; then
+              echo "No parity issues found. Skipping notification."
+              exit 0
+            fi
+            
+            # Only notify about existing issues, not newly created ones
+            if [ -z "$EXISTING_ISSUES" ]; then
+              echo "No existing issues found (all issues were just created in this run)."
+              echo "Skipping notification - Copilot PRs don't exist yet for newly created issues."
+              exit 0
+            fi
+            
+            # Parse issue references from EXISTING_ISSUES only (format: owner/repo#123 or #123)
+            ISSUE_REFS=($EXISTING_ISSUES)
+            
+            if [ ${#ISSUE_REFS[@]} -eq 0 ]; then
+              echo "No existing issue references found. Skipping notification."
+              exit 0
+            fi
+            
+            echo "Checking for existing Copilot PRs linked to pre-existing issues: ${ISSUE_REFS[*]}"
+            if [ -n "$NEW_ISSUES" ]; then
+              echo "Note: Skipping newly created issues: $NEW_ISSUES (Copilot PRs don't exist yet)"
+            fi
+            echo ""
+            
+            NOTIFIED_COUNT=0
+            
+            for ISSUE_REF in "${ISSUE_REFS[@]}"; do
+              # Parse repo and issue number from reference (format: owner/repo#123 or #123)
+              if [[ "$ISSUE_REF" =~ ^(.+/[^#]+)#([0-9]+)$ ]]; then
+                # Cross-repo reference: owner/repo#123
+                ISSUE_REPO="${BASH_REMATCH[1]}"
+                ISSUE_NUM="${BASH_REMATCH[2]}"
+              elif [[ "$ISSUE_REF" =~ ^#([0-9]+)$ ]]; then
+                # Same-repo reference: #123
+                ISSUE_REPO="${{ github.repository }}"
+                ISSUE_NUM="${BASH_REMATCH[1]}"
+              else
+                echo "  ⚠️  Invalid issue reference format: $ISSUE_REF"
+                continue
+              fi
+              
+              echo "Checking issue $ISSUE_REPO#$ISSUE_NUM for linked PRs..."
+              
+              # Search for open PRs created by copilot-swe-agent that reference this issue
+              PR_LIST=$(gh pr list --repo "$ISSUE_REPO" --author "copilot-swe-agent[bot]" --state open --json number,body --jq ".[] | select(.body | test(\"#${ISSUE_NUM}\\\\b\")) | .number" 2>/dev/null || echo "")
+              
+              if [ -n "$PR_LIST" ]; then
+                for COPILOT_PR in $PR_LIST; do
+                  echo "  ✅ Found Copilot PR $ISSUE_REPO#$COPILOT_PR for issue $ISSUE_REPO#$ISSUE_NUM"
+                  
+                  # Check if we've already posted an update notification (to avoid duplicates)
+                  EXISTING_NOTIFICATION=$(gh pr view "$COPILOT_PR" --repo "$ISSUE_REPO" --json comments --jq ".comments[] | select(.body | test(\"🔄 Original PR Updated\")) | .body" 2>/dev/null || echo "")
+                  
+                  if [ -n "$EXISTING_NOTIFICATION" ]; then
+                    echo "  ℹ️  Update notification already exists on PR $ISSUE_REPO#$COPILOT_PR"
+                    
+                    # Add a brief follow-up comment instead (using GITHUB_TOKEN so it appears from github-actions bot)
+                    FOLLOWUP_COMMENT="## 🔄 Additional Changes Detected
+            
+            New commits have been pushed to the original PR #${PR_NUMBER}.
+            
+            **Action Required:**
+            - Review the latest changes: ${PR_URL}/commits/${COMMIT_SHA}
+            - Update this PR if necessary to maintain parity
+            
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+                    
+                    GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
+                    echo "  💬 Posted follow-up notification on PR $ISSUE_REPO#$COPILOT_PR"
+                  else
+                    # Post the initial update notification (using PAT token because it mentions @copilot)
+                    UPDATE_COMMENT="## 🔄 Original PR Updated
+            
+            @copilot The original PR ${{ github.repository }}#${PR_NUMBER} has been updated with new commits.
+            
+            **Action Required:**
+            Please review the updated PR and ensure this parity implementation includes all relevant changes:
+            
+            1. 📖 **Review the latest changes**: ${PR_URL}/commits
+            2. 🔍 **Check for new features or fixes**: Look for additions that need to be ported
+            3. ✏️ **Update this PR if needed**: Add any missing functionality to maintain parity
+            4. ✅ **Verify completeness**: Ensure all changes from the original PR are reflected here
+            
+            **Original PR Details:**
+            - **PR:** ${{ github.repository }}#${PR_NUMBER}
+            - **Author:** @${PR_AUTHOR}
+            - **Latest commit:** \`${COMMIT_SHA:0:7}\`
+            - **View changes:** ${PR_URL}/files
+            
+            **Note:** This is an automated notification triggered by new commits. If the changes are not relevant to this parity task, you can ignore this message.
+            
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+                    
+                    # Use PAT token for this comment since it mentions @copilot
+                    GH_TOKEN="${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$UPDATE_COMMENT" 2>/dev/null
+                    
+                    if [ $? -eq 0 ]; then
+                      echo "  💬 Posted update notification on PR $ISSUE_REPO#$COPILOT_PR"
+                      NOTIFIED_COUNT=$((NOTIFIED_COUNT + 1))
+                    else
+                      echo "  ⚠️  Failed to post notification on PR $ISSUE_REPO#$COPILOT_PR"
+                    fi
+                  fi
+                done
+              else
+                echo "  ⏳ No Copilot PR found yet for issue $ISSUE_REPO#$ISSUE_NUM"
+              fi
+              echo ""
+            done
+            
+            echo "=================================================="
+            echo "Summary"
+            echo "=================================================="
+            echo "Copilot PRs notified: $NOTIFIED_COUNT"
+            echo ""
+
+        - name: Update parent issue with parity tasks
+          if: steps.detect.outputs.has_changes == 'true'
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+          run: |
+            echo "=================================================="
+            echo "Updating Parent Issue with Task List"
+            echo "=================================================="
+            echo ""
+            
+            if [ -z "$LINKED_ISSUE" ]; then
+              echo "No linked issue found. Skipping task list update."
+              exit 0
+            fi
+            
+            if [ -z "$LINKED_ISSUE_REPO" ]; then
+              echo "No linked issue repository found. Skipping task list update."
+              exit 0
+            fi
+            
+            if [ -z "$PARITY_ISSUES" ]; then
+              echo "No parity issues created. Skipping task list update."
+              exit 0
+            fi
+            
+            echo "Parent issue: $LINKED_ISSUE_REPO#$LINKED_ISSUE"
+            echo "Parity issues: $PARITY_ISSUES"
+            echo ""
+            
+            # Build task list
+            TASK_LIST="## 🔄 SDK Parity Tracking"$'\n\n'
+            TASK_LIST="${TASK_LIST}The following parity issues have been created to maintain SDK consistency:"$'\n\n'
+            
+            for ISSUE in $PARITY_ISSUES; do
+              TASK_LIST="${TASK_LIST}- [ ] ${ISSUE}"$'\n'
+            done
+            
+            TASK_LIST="${TASK_LIST}"$'\n'"*Updated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+            
+            # Post comment on parent issue in the correct repository
+            echo "Posting task list to parent issue $LINKED_ISSUE_REPO#$LINKED_ISSUE..."
+            echo "$TASK_LIST" | gh issue comment "$LINKED_ISSUE" --repo "$LINKED_ISSUE_REPO" --body-file -
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Task list posted to parent issue $LINKED_ISSUE_REPO#$LINKED_ISSUE"
+            else
+              echo "⚠️  Failed to post task list to parent issue"
+            fi
+        
+        - name: Post comment on PR
+          env:
+            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            HAS_CHANGES: ${{ steps.detect.outputs.has_changes }}
+            SOURCE_LANGUAGES: ${{ steps.detect.outputs.source_languages }}
+            TARGET_LANGUAGES: ${{ steps.detect.outputs.target_languages }}
+            EVENT_NAME: ${{ github.event_name }}
+            BRANCH_NAME: ${{ github.ref_name }}
+            PR_NUMBER_FROM_EVENT: ${{ github.event.pull_request.number }}
+          run: |
+            echo "=================================================="
+            echo "Finding PR Number and Posting Comment"
+            echo "=================================================="
+            echo "Event type: $EVENT_NAME"
+            echo "Branch: $BRANCH_NAME"
+            echo ""
+            
+            # Determine PR number based on event type
+            if [ "$EVENT_NAME" == "pull_request" ]; then
+              # For pull_request events, use the event context
+              PR_NUMBER="$PR_NUMBER_FROM_EVENT"
+              echo "PR number from event context: #$PR_NUMBER"
+            else
+              # For push events, search for PR with this branch as head
+              echo "Searching for PR with head branch: $BRANCH_NAME..."
+              PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+              
+              if [ -n "$PR_NUMBER" ]; then
+                echo "✓ Found PR #$PR_NUMBER for branch $BRANCH_NAME"
+              else
+                echo "ℹ️  No open PR found for branch $BRANCH_NAME"
+                echo "Skipping PR comment (this is likely a direct push to the branch)"
+                exit 0
+              fi
+            fi
+            
+            echo ""
+            
+            # Check if SDK changes were detected
+            if [ "$HAS_CHANGES" != "true" ]; then
+              # No SDK changes detected at all
+              COMMENT_BODY="## 🤖 SDK Parity Automation
+
+            ### Summary
+            This PR was analyzed for SDK parity requirements.
+
+            **Result:** ℹ️ No SDK implementation changes detected
+
+            **Reason:** This PR does not modify files in the monitored SDK implementation folders:
+            - \`python/libraries/**/*.py\`
+            - \`nodejs/packages/**/*.ts\`
+            - \`dotnet/sdk/**/*.cs\`
+
+            If you believe this is incorrect, please check the file paths in your PR.
+
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+            
+            elif [ -n "$TARGET_LANGUAGES" ]; then
+              # Map source language to friendly name
+              case "$SOURCE_LANGUAGES" in
+                csharp)
+                  SOURCE_NAME=".NET/C#"
+                  ;;
+                typescript)
+                  SOURCE_NAME="Node.js/TypeScript"
+                  ;;
+                python)
+                  SOURCE_NAME="Python"
+                  ;;
+                *)
+                  SOURCE_NAME="$SOURCE_LANGUAGES"
+                  ;;
+              esac
+              
+              # Build target languages list
+              TARGET_LIST=""
+              IFS=',' read -ra TARGETS <<< "$TARGET_LANGUAGES"
+              for TARGET in "${TARGETS[@]}"; do
+                TARGET=$(echo "$TARGET" | xargs)
+                case "$TARGET" in
+                  csharp)
+                    TARGET_LIST="${TARGET_LIST}- .NET/C#"$'\n'
+                    ;;
+                  typescript)
+                    TARGET_LIST="${TARGET_LIST}- Node.js/TypeScript"$'\n'
+                    ;;
+                  python)
+                    TARGET_LIST="${TARGET_LIST}- Python"$'\n'
+                    ;;
+                  *)
+                    TARGET_LIST="${TARGET_LIST}- $TARGET"$'\n'
+                    ;;
+                esac
+              done
+              
+              # Get issue numbers if available
+              ISSUE_LINKS=""
+              if [ -n "$PARITY_ISSUES" ]; then
+                for ISSUE in $PARITY_ISSUES; do
+                  ISSUE_LINKS="${ISSUE_LINKS}- ${ISSUE}"$'\n'
+                done
+              fi
+              
+              # Determine what action was taken (created vs existing)
+              ISSUES_ACTION=""
+              if [ -n "$NEW_ISSUES" ] && [ -n "$EXISTING_ISSUES" ]; then
+                # Both new and existing issues
+                ISSUES_ACTION="New parity issues have been created, and existing open issues were found, for the following target SDKs:"
+              elif [ -n "$NEW_ISSUES" ]; then
+                # Only new issues
+                ISSUES_ACTION="New parity issues have been created for the following target SDKs:"
+              elif [ -n "$EXISTING_ISSUES" ]; then
+                # Only existing issues
+                ISSUES_ACTION="Existing open parity issues were found for the following target SDKs:"
+              else
+                # Fallback (shouldn't happen)
+                ISSUES_ACTION="Parity issues are being tracked for the following target SDKs:"
+              fi
+              
+              # Create PR comment
+              COMMENT_BODY="## 🤖 SDK Parity Automation
+
+            ### Summary
+            This PR modifies the **$SOURCE_NAME** SDK. To maintain feature parity across all SDKs, $ISSUES_ACTION
+
+            $TARGET_LIST
+
+            ### What happens next?
+            1. ✅ **Parity issues ready**: GitHub Copilot agent (\`copilot-swe-agent\`) is assigned to these issues
+            2. 🤖 **Copilot will work on them**: The agent will analyze your changes and generate corresponding PRs for each target SDK
+            3. 👀 **Review required**: Once Copilot creates the PRs, they will need human review before merging
+
+            ### Parity Issues
+            $ISSUE_LINKS
+
+            ### Need to skip parity?
+            If parity is not needed for a particular SDK, close the corresponding issue with the \`wontfix\` label.
+
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+              
+            else
+              # No target languages (all SDKs already in sync or no SDK changes)
+              COMMENT_BODY="## 🤖 SDK Parity Automation
+
+            ### Summary
+            This PR was analyzed for SDK parity requirements.
+
+            **Result:** ✅ No parity issues created
+
+            **Reason:** Either all SDKs are already in sync, or the changes don't require cross-SDK updates.
+
+            ---
+            *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
+            fi
+            
+            # Post the comment using gh CLI (using GITHUB_TOKEN so it appears from github-actions bot)
+            echo "Posting comment to PR #$PR_NUMBER..."
+            echo ""
+            GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUMBER" --body-file - <<< "$COMMENT_BODY"
+            
+            if [ $? -eq 0 ]; then
+              echo "✅ Comment posted successfully!"
+            else
+              echo "⚠️  Failed to post comment"
+              exit 1
+            fi
