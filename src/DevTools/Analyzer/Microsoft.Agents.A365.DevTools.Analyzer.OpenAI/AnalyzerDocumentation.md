@@ -19,7 +19,7 @@ This document provides a comprehensive guide for developers creating and maintai
 ## Diagnostic ID System
 
 The analyzers use a structured diagnostic ID format: **A365OAI####**
-- **A365**: Microsoft Agents A365 prefix
+- **A365**: Microsoft Agent 365 prefix
 - **OAI**: OpenAI orchestrator code  
 - **####**: 4-digit sequence number
 

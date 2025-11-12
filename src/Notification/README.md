@@ -1,4 +1,4 @@
-# Microsoft Agents A365 Notifications SDK for .NET
+# Microsoft Agent 365 Notifications SDK for .NET
 
 ## 🚀 Features
 

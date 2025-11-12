@@ -106,4 +106,4 @@ When developing new analyzers:
 
 ## ?? Expected Analyzer Violations
 
-When you build this project, you should see numerous analyzer violations demonstrating common governance issues that developers might encounter in real-world Agents A365 applications.
+When you build this project, you should see numerous analyzer violations demonstrating common governance issues that developers might encounter in real-world Agent 365 applications.
