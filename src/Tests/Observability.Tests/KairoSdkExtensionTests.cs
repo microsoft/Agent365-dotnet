@@ -7,7 +7,7 @@ using Microsoft.Agents.A365.Observability.Caching;
 namespace Microsoft.Agents.A365.Observability.Tests;
 
 /// <summary>
-/// Tests for Agents A365 extension methods.
+/// Tests for Agent 365 extension methods.
 /// </summary>
 [TestClass]
 public sealed class AgentsA365SdkExtensionTests

@@ -1,10 +1,10 @@
 # Agent Tooling Agent Framework SDK for .NET
 
-This package provides integration between Microsoft Agents A365 and Agent Framework, enabling seamless tooling functionalities for AI agent development.
+This package provides integration between Microsoft Agent 365 and Agent Framework, enabling seamless tooling functionalities for AI agent development.
 
 ## Features
 
-- Integration with Agent Framework for Microsoft Agents A365
+- Integration with Agent Framework for Microsoft Agent 365
 - MCP (Model Context Protocol) server capabilities
 - Authentication and hosting support
 - Observability and runtime integration

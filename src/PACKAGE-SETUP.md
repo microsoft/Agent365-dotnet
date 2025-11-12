@@ -1,10 +1,10 @@
-﻿# Microsoft Agents A365 SDK - Package Setup Guide
+﻿# Microsoft Agent 365 SDK - Package Setup Guide
 
-This document provides a complete guide for building, validating, and publishing the Microsoft Agents A365 SDK NuGet packages.
+This document provides a complete guide for building, validating, and publishing the Microsoft Agent 365 SDK NuGet packages.
 
 ## Package Information
 
-The Microsoft Agents A365 SDK is organized into multiple NuGet packages:
+The Microsoft Agent 365 SDK is organized into multiple NuGet packages:
 
 - **Microsoft.Agents A365.Observability.Common** - Core observability and tracing infrastructure
 - **Microsoft.Agents.A365.Observability.SemanticKernel** - SemanticKernel observability integration

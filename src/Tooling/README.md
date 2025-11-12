@@ -1,4 +1,4 @@
-# Microsoft Agents A365 Tooling SDK for .NET
+# Microsoft Agent 365 Tooling SDK for .NET
 
 ## 🚀 Features
 

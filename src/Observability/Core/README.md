@@ -1,4 +1,4 @@
-# Microsoft Agents A365 Observability SDK for .NET
+# Microsoft Agent 365 Observability SDK for .NET
 
 ## 🚀 Features
 
@@ -22,7 +22,7 @@
    
    var builder = WebApplication.CreateBuilder(args);
    
-   // Configure Microsoft Agents A365 with Azure Monitor
+   // Configure Microsoft Agent 365 with Azure Monitor
    builder.Services.AddTracing();
    
    ...
@@ -39,7 +39,7 @@
 ### 🛠️ Sample Applications
 
 #### .NET Samples
-- **Basic Sample**: [`/dotnet/samples/basic_agent/`](../samples/basic_agent/) - ASP.NET Core web application with Microsoft Agents A365 integration
+- **Basic Sample**: [`/dotnet/samples/basic_agent/`](../samples/basic_agent/) - ASP.NET Core web application with Microsoft Agent 365 integration
 - **Custom Engine**: [`/dotnet/samples/agent_with_custom_engine/`](../samples/agent_with_custom_engine/) - Advanced agent implementation with custom engines
 - **Hello World Agent**: [`/dotnet/samples/hello_world_a365_agent/`](../samples/hello_world_a365_agent/) - Simple getting started example
 - **Devin Agent**: [`/dotnet/samples/devin_agent/`](../samples/devin_agent/) - Advanced AI agent implementation

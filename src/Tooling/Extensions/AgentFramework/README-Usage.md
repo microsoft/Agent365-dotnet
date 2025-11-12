@@ -1,6 +1,6 @@
-# Microsoft Agents A365 SDK - AgentFramework Tooling
+# Microsoft Agent 365 SDK - AgentFramework Tooling
 
-This library provides integration between Microsoft Agents A365 and Microsoft Extensions AI (AIAgent), enabling you to add MCP (Model Context Protocol) tool servers to your AI agents.
+This library provides integration between Microsoft Agent 365 and Microsoft Extensions AI (AIAgent), enabling you to add MCP (Model Context Protocol) tool servers to your AI agents.
 
 ## Installation
 

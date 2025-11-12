@@ -132,4 +132,4 @@ The side-by-side comparison shows that:
 - Use CompliantDemoApp as your template for new agent projects
 - Enable all governance analyzers in your build pipeline
 
-The combination of both demo apps provides a comprehensive learning experience for implementing OpenAI agents that follow Microsoft Microsoft Agents A365 SDK governance principles.
+The combination of both demo apps provides a comprehensive learning experience for implementing OpenAI agents that follow Microsoft Agent 365 SDK governance principles.

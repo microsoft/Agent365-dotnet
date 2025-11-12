@@ -1,6 +1,6 @@
 # Microsoft.A365.Runtime.Common.AspNetCore
 
-ASP.NET Core integration helpers for Microsoft Microsoft Agents A365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
+ASP.NET Core integration helpers for Microsoft Agent 365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
 
 ## Features
 
