@@ -8,7 +8,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
     #pragma warning disable CS1591 // XML documentation not required for constant definitions.
     /// <summary>
-    /// OpensTelemetry constant keys and values used across the Microsoft Agent 365 SDK.
+    /// OpenTelemetry constant keys and values used across the Microsoft Agent 365 SDK.
     /// </summary>
     public static class OpenTelemetryConstants
     {
