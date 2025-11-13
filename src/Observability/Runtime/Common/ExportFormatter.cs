@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     public class ExportFormatter
     {
         /// <summary>
-        /// Formats a collection of Activity spans into an OTLP JSON payload compatible with our Agent365 Observability ingestion service.
+        /// Formats a collection of Activity spans into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activities">The collection of Activity spans to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the spans, containing resource attributes.</param>
@@ -75,7 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Formats a single Activity span into an OTLP JSON payload compatible with our Agent365 Observability ingestion service.
+        /// Formats a single Activity span into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activity">The Activity span to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the span, containing resource attributes.</param>
