@@ -1,3 +1,3 @@
 # Observability Hosting
 
-This package provides the hosting components for the Agent365 Observability SDK, including service registration and configuration utilities.
+This package provides the hosting components for the Microsoft Agent 365 Observability SDK, including service registration and configuration utilities.
