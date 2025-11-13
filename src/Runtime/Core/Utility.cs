@@ -74,7 +74,7 @@ namespace Microsoft.Agents.A365.Runtime.Utils
             else
             {
                 // we need to get the broker app ID from the authToken here. 
-                agenticAppId = Runtime.Utils.Utility.GetAppIdFromToken(authToken);
+                agenticAppId = GetAppIdFromToken(authToken);
             }
             return agenticAppId; 
         }
