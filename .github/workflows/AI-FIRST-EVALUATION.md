@@ -480,10 +480,10 @@ gh run list --workflow=ai-first.yml --json conclusion,headBranch,event
 **What to measure**: Percentage of PRs that complete the full cycle successfully
 
 **Full Cycle Definition**:
-1. ✅ Source PR created with SDK changes
-2. ✅ Workflow detects changes correctly
-3. ✅ Parity issues created for all target SDKs
-4. ✅ Copilot creates PRs for all issues
+1. ✅ Source PR created in Agent365-dotnet with C# SDK changes
+2. ✅ Workflow detects C# SDK changes correctly
+3. ✅ Parity issues created in target repositories (Agent365-python and Agent365-nodejs)
+4. ✅ Copilot creates PRs in target repositories for all issues
 5. ✅ PRs assigned/reviewed appropriately based on source PR author:
    - Human-authored: PR assigned to original author
    - Copilot-authored: Human reviewers added (from source PR)
@@ -571,7 +571,7 @@ gh pr view <copilot-pr> --json createdAt,mergedAt
 1. Authentication failures (PAT token issues)
 2. API rate limit errors
 3. Network timeouts
-4. Script errors (language_detector.py)
+4. Git diff errors (change detection)
 5. GitHub API errors (issues, PRs, comments)
 6. Permission errors (cross-repo operations)
 
@@ -598,8 +598,8 @@ gh run list --workflow=ai-first.yml --json conclusion,databaseId \
 1. **Copilot doesn't create PR within 5 minutes**
    - Expected: Workflow continues, logs unprocessed issues, doesn't fail
    
-2. **Issue creation fails for one SDK**
-   - Expected: Creates issues for other SDKs, logs error for failed one
+2. **Issue creation fails for one target repository**
+   - Expected: Creates issue in other target repo, logs error for failed one
    
 3. **PR comment API fails**
    - Expected: Issues still created, error logged, workflow succeeds
@@ -607,8 +607,11 @@ gh run list --workflow=ai-first.yml --json conclusion,databaseId \
 4. **Token expires mid-workflow**
    - Expected: Clear error message, specific remediation steps
    
-5. **Parent issue doesn't exist**
+5. **Cross-repo parent issue doesn't exist**
    - Expected: Workflow continues, skips task list update
+   
+6. **Target repository not accessible**
+   - Expected: Clear error about repository access, workflow fails gracefully
 
 **Success Criteria**: All scenarios handle gracefully without complete failure
 
@@ -673,17 +676,20 @@ gh run list --workflow=ai-first.yml --json conclusion,databaseId \
 
 ### Phase 3: Cross-Repository Testing (Week 5)
 
-**Goal**: Validate multi-repo functionality
+**Goal**: Validate multi-repo functionality across Agent365-dotnet, Agent365-python, and Agent365-nodejs
 
 **Activities**:
-- Configure test repositories for each SDK
+- Verify issues are created in correct target repositories
 - Test all cross-repo scenarios (Section 1C)
 - Validate parent issue linking across repos (Section 1D)
 - Test notifications and assignments in external repos
+- Verify Copilot PRs are detected in target repositories
+- Test PAT token permissions across all three repos
 
 **Success Criteria**:
 - 100% cross-repo operations successful
-- No issues with permissions or references
+- No issues with permissions or repository access
+- All issue references use correct cross-repo format
 
 **Deliverable**: Cross-repo test matrix with results
 
@@ -735,41 +741,41 @@ Create a dashboard (GitHub Pages, internal tool, or Grafana) tracking:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                AI-First Workflow Metrics                     │
+│                AI-First Workflow Metrics                    │
 ├─────────────────────────────────────────────────────────────┤
-│ VOLUME METRICS                                              │
-│ • Total PRs processed: 47                                   │
-│ • Parity issues created: 94                                 │
-│ • Copilot PRs generated: 82 (87.2%)                        │
-│ • Merged parity PRs: 65 (79.3% of generated)               │
-│                                                              │
+│ VOLUME METRICS (Agent365-dotnet)                            │
+│ • Total C# PRs processed: 47                                │
+│ • Parity issues created: 94 (47 Python + 47 TypeScript)     │
+│ • Copilot PRs generated: 82 (87.2%)                         │
+│ • Merged parity PRs: 65 (79.3% of generated)                │
+│                                                             │
 │ TIMING METRICS                                              │
 │ • Avg workflow execution: 3.2 min                           │
-│ • Avg Copilot PR creation: 12.5 min                        │
-│ • Avg time to parity: 18.5 hours                           │
-│ • Avg review time: 4.2 hours                               │
-│                                                              │
+│ • Avg Copilot PR creation: 12.5 min                         │
+│ • Avg time to parity: 18.5 hours                            │
+│ • Avg review time: 4.2 hours                                │
+│                                                             │
 │ QUALITY METRICS                                             │
-│ • Avg code quality score: 4.1/5                            │
-│ • PRs requiring revisions: 42%                             │
-│ • Avg iterations to merge: 1.6                             │
+│ • Avg code quality score: 4.1/5                             │
+│ • PRs requiring revisions: 42%                              │
+│ • Avg iterations to merge: 1.6                              │
 │ • Build success rate: 95%                                   │
-│                                                              │
+│                                                             │
 │ RELIABILITY METRICS                                         │
-│ • Workflow failure rate: 1.2%                              │
-│ • Detection accuracy: 98.9%                                │
-│ • False positive rate: 3.1%                                │
-│ • Full pipeline completion: 72.3%                          │
-│                                                              │
+│ • Workflow failure rate: 1.2%                               │
+│ • Detection accuracy: 98.9%                                 │
+│ • False positive rate: 3.1%                                 │
+│ • Full pipeline completion: 72.3%                           │
+│                                                             │
 │ DEVELOPER EXPERIENCE                                        │
-│ • Avg satisfaction score: 4.3/5                            │
+│ • Avg satisfaction score: 4.3/5                             │
 │ • Would recommend: 87%                                      │
-│ • Time saved vs manual: ~6.5 hours/PR                      │
-│                                                              │
+│ • Time saved vs manual: ~6.5 hours/PR                       │
+│                                                             │
 │ TREND (Last 30 Days)                                        │
-│ • Quality: ↑ +0.3                                          │
-│ • Speed: ↑ -2.1 hours                                      │
-│ • Reliability: ↑ -0.5% failures                            │
+│ • Quality: ↑ +0.3                                           │
+│ • Speed: ↑ -2.1 hours                                       │
+│ • Reliability: ↑ -0.5% failures                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -863,25 +869,26 @@ Based on evaluation results:
 
 ## Appendix: Sample Test PRs
 
-### Test PR 1: Simple Python Addition
+### Test PR 1: Simple C# Addition
 ```
 Changed Files:
-- python/libraries/core/agent.py (+15, -3)
+- src/Runtime/Core/Agent.cs (+15, -3)
 
 Expected Outcome:
-- Detects: Python
-- Creates issues for: TypeScript, C#
+- Detects: C# SDK changes
+- Creates issues in: Agent365-python, Agent365-nodejs
 ```
 
-### Test PR 2: TypeScript Refactor
+### Test PR 2: C# Refactor with Multiple Files
 ```
 Changed Files:
-- nodejs/packages/agents-a365-runtime/src/engine.ts (+45, -30)
-- nodejs/packages/agents-a365-runtime/src/types.ts (+10, -5)
+- src/Runtime/Core/Engine.cs (+45, -30)
+- src/Runtime/Core/Types.cs (+10, -5)
+- src/Runtime/Core/IAgentProvider.cs (+8, -2)
 
 Expected Outcome:
-- Detects: TypeScript
-- Creates issues for: Python, C#
+- Detects: C# SDK changes
+- Creates issues in: Agent365-python, Agent365-nodejs
 ```
 
 ### Test PR 3: Documentation Only (Should Not Trigger)
@@ -891,21 +898,21 @@ Changed Files:
 - docs/getting-started.md (+100, -10)
 
 Expected Outcome:
-- No SDK changes detected
+- Workflow does not trigger (path filters)
 - No issues created
-- Informational comment on PR
 ```
 
-### Test PR 4: Mixed SDK (Should Fail)
+### Test PR 4: Test Files Only (Should Trigger But Not Create Issues)
 ```
 Changed Files:
-- python/libraries/core/agent.py (+15, -3)
-- nodejs/packages/agents-a365-runtime/src/engine.ts (+20, -10)
+- src/Tests/Runtime.Tests/AgentTests.cs (+30, -15)
+- src/Tests/Observability.Tests/TracingTests.cs (+20, -10)
 
 Expected Outcome:
-- Workflow fails validation
-- Error message: "Multiple source SDKs detected"
+- Workflow triggers (path filters match)
+- Detection finds no SDK changes (tests excluded)
 - No issues created
+- Comment explains no SDK implementation changes detected
 ```
 
 ### Test PR 5: Cross-Repo Parent Issue
@@ -914,16 +921,18 @@ PR Body:
 "Closes microsoft/planning-repo#456"
 
 Changed Files:
-- python/libraries/core/feature.py (+50, -10)
+- src/Runtime/Core/Feature.cs (+50, -10)
 
 Expected Outcome:
-- Creates issues for TypeScript, C#
-- Posts task list to microsoft/planning-repo#456
+- Detects: C# SDK changes
+- Creates issues in: Agent365-python, Agent365-nodejs
+- Posts task list to microsoft/planning-repo#456 (cross-repo)
 ```
 
 ### Test PR 6: Copilot-to-Copilot Chain
 ```
 PR Details:
+- Repository: Agent365-dotnet
 - Number: #200
 - Author: copilot-swe-agent[bot] (Type: Bot)
 - Assignees: @alice
@@ -931,17 +940,17 @@ PR Details:
 - PR Body: "Closes #123"
 
 Changed Files:
-- python/kairo/tooling/executor.py (+50, -10)
+- src/Tooling/Core/Executor.cs (+50, -10)
 
 Expected Outcome:
-- Detects: Python (Copilot-authored source)
-- Creates issues for: TypeScript (#520), C# (#521)
+- Detects: C# SDK changes (Copilot-authored source)
+- Creates issues in: Agent365-python (#520), Agent365-nodejs (#521)
 - Parity PR Assignment Behavior:
   - Does NOT assign to copilot-swe-agent[bot]
-  - Adds @alice as reviewer on PR #520
-  - Adds @bob as reviewer on PR #520
-  - Adds @alice as reviewer on PR #521
-  - Adds @bob as reviewer on PR #521
+  - Adds @alice as reviewer on Agent365-python PR
+  - Adds @bob as reviewer on Agent365-python PR
+  - Adds @alice as reviewer on Agent365-nodejs PR
+  - Adds @bob as reviewer on Agent365-nodejs PR
 - Posted Comments:
   - Should include: "This PR is part of a parity chain that started with a Copilot-generated PR"
   - Should include: "Human reviewers from the original PR have been added: @alice, @bob"
@@ -949,20 +958,21 @@ Expected Outcome:
   - Should reference parent issue: "#123"
 ```
 
-### Test PR 7: Copilot Chain without Human Reviewers
+### Test PR 7: Mixed SDK and Test Files
 ```
 PR Details:
+- Repository: Agent365-dotnet
 - Number: #300
-- Author: copilot-swe-agent[bot] (Type: Bot)
-- Assignees: (none)
-- Requested Reviewers: (none)
-- PR Body: "Implements new feature"
 
 Changed Files:
-- nodejs/src/identity/manager.ts (+30, -5)
+- src/Runtime/Core/Identity/Manager.cs (+30, -5)
+- src/Tests/Runtime.Tests/Identity/ManagerTests.cs (+45, -10)
+- README.md (+5, -2)
 
 Expected Outcome:
-- Detects: TypeScript (Copilot-authored source)
+- Detects: C# SDK changes (ignores tests and README)
+- Creates issues in: Agent365-python, Agent365-nodejs
+- Only SDK implementation file counted
 - Creates issues for: Python, C#
 - Parity PR Assignment Behavior:
   - Does NOT assign to anyone
@@ -978,8 +988,8 @@ Expected Outcome:
 
 ## Document Version
 
-- **Version**: 1.1
-- **Last Updated**: January 2025
+- **Version**: 0.1
+- **Last Updated**: Nov 2025
 - **Authors**: AI-First Workflow Team
-- **Status**: Updated for Copilot-to-Copilot Assignment Enhancement
+- **Status**: Draft
 

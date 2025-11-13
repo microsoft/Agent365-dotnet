@@ -17,7 +17,11 @@ To maintain feature parity across multiple SDK implementations by:
 
 The workflow triggers on:
 - **Event Type:** Pull request events (opened, synchronize, reopened, labeled)
-- **Target Branches:** `users/sergioe/aiFirstExperiments`
+- **Target Branches:**
+  - `users/*/aiFirstExperiments`
+  - `users/*/aiFirstExperiments/**`
+  - `aiFirstExperiments`
+  - `aiFirstExperiments/**`
 - **Path Filters:** Only when C# SDK implementation files are modified:
   - `src/**/*.cs` (excluding test files)
 
@@ -314,6 +318,7 @@ automatically assigned.
 
 **Condition:** 
 - Only runs on `synchronize` event (new commits pushed)
+- Only runs if `has_changes == true` (C# SDK changes detected)
 - Only processes `EXISTING_ISSUES` (not newly created issues)
 - Skips if all issues were just created in the current run
 
@@ -479,8 +484,10 @@ If parity is not needed for a particular SDK, close the corresponding issue with
 ```
 
 #### When No SDK Changes Detected
-- This scenario should not occur since the workflow only triggers on C# SDK file changes
-- Included for completeness and error handling
+- This can occur when the PR only modifies test files or other excluded patterns
+- The workflow triggers (due to path filters), but detection finds no SDK implementation changes
+- Workflow runs successfully but skips parity issue creation
+- A comment is posted explaining that no SDK implementation changes were detected
 
 ## 🔐 Authentication and Permissions
 
@@ -563,51 +570,50 @@ When parent issues live in different repositories:
 ## 📊 Example Scenario
 
 ### Developer Action
-A developer opens a PR that adds a new authentication method in the Python SDK:
+A developer opens a PR in **Agent365-dotnet** that adds a new authentication method in the C# SDK:
 
 **Changed Files:**
-- `python/libraries/example_lib/example_file.py` (new file)
-- `python/libraries/example_lib/__init__.py` (modified)
+- `src/Runtime/Core/AuthenticationService.cs` (new file)
+- `src/Runtime/Core/IAuthenticationProvider.cs` (modified)
 
 ### Workflow Execution
 
 **Step 1: Detection**
-- ✅ Detects source language: `python`
-- ✅ Calculates target languages: `csharp, typescript`
+- ✅ Detects C# SDK changes in `src/**/*.cs`
+- ✅ Sets source language: `csharp`
+- ✅ Sets target languages: `python, typescript`
 
-**Step 2: Validation**
-- ✅ Validates exactly one source language
-- ✅ Confirms target languages exist
+**Step 2: Issue Creation**
 
-**Step 3: Issue Creation**
-
-**Issue #485:** `[SDK Parity] .NET/C# for PR 123`
-- Body includes full PR context
-- .NET-specific implementation guidelines
+**Issue microsoft/Agent365-python#485:** `[SDK Parity] Python for PR 123`
+- Created in Agent365-python repository
+- Body includes full PR context from Agent365-dotnet
+- Python-specific implementation guidelines
 - Assigned to `copilot-swe-agent`
-- Labeled with `copilot`
+- Labeled with `copilot`, `codegen-experiment`
 
-**Issue #486:** `[SDK Parity] Node.js/TypeScript for PR 123`
-- Body includes full PR context
+**Issue microsoft/Agent365-nodejs#486:** `[SDK Parity] Node.js/TypeScript for PR 123`
+- Created in Agent365-nodejs repository
+- Body includes full PR context from Agent365-dotnet
 - TypeScript-specific implementation guidelines
 - Assigned to `copilot-swe-agent`
 - Labeled with `copilot`, `codegen-experiment`
 
-**Step 4: Monitoring and Auto-Assignment**
-Workflow polls every 30 seconds, monitoring issues #485 and #486:
-- ⏱️ 0s: Issues created, monitoring starts
+**Step 3: Monitoring and Auto-Assignment**
+Workflow polls every 30 seconds, monitoring both cross-repo issues:
+- ⏱️ 0s: Issues created in target repos, monitoring starts
 - ⏱️ 30s: Checking... no PRs yet
-- ⏱️ 60s: Checking... Copilot creates PR #500 for issue #485
+- ⏱️ 60s: Checking... Copilot creates PR microsoft/Agent365-python#500 for issue #485
   - ✅ Detects PR #500 references issue #485
   - 📌 Assigns PR #500 to original author
   - 💬 Posts assignment comment on PR #500
-- ⏱️ 90s: Checking... Copilot creates PR #501 for issue #486
+- ⏱️ 90s: Checking... Copilot creates PR microsoft/Agent365-nodejs#501 for issue #486
   - ✅ Detects PR #501 references issue #486
   - 📌 Assigns PR #501 to original author
   - 💬 Posts assignment comment on PR #501
 - ✅ All issues processed, monitoring complete
 
-**Step 5: Parent Issue Update**
+**Step 4: Parent Issue Update**
 Posts task list comment on original feature request (if linked)
 
 Example: If PR body contains `Closes #100`, the workflow posts a task list to issue #100:
@@ -616,42 +622,42 @@ Example: If PR body contains `Closes #100`, the workflow posts a task list to is
 
 The following parity issues have been created to maintain SDK consistency:
 
-- [ ] #485
-- [ ] #486
+- [ ] microsoft/Agent365-python#485
+- [ ] microsoft/Agent365-nodejs#486
 
 *Updated by [AI-First Workflow](...)*
 ```
 
 **Cross-Repository Example:** If PR body contains `Closes microsoft/planning#200`, the task list is posted to `microsoft/planning#200` instead.
 
-**Step 6: PR Comment**
-Posts comment on PR #123 with:
-- Summary: "This PR modifies the **Python** SDK"
-- Target SDKs list: .NET/C#, Node.js/TypeScript
-- Created issues links: #485, #486
+**Step 5: PR Comment**
+Posts comment on PR #123 in Agent365-dotnet with:
+- Summary: "This PR modifies the **C#** SDK"
+- Target SDKs list: Python, Node.js/TypeScript
+- Created issues links: microsoft/Agent365-python#485, microsoft/Agent365-nodejs#486
 - Next steps explanation
 
 ### Expected Outcome
 
 1. **Issues Created and Monitored:**
-   - Two parity issues created (#485 for .NET, #486 for TypeScript)
-   - Workflow begins polling for Copilot-generated PRs
+   - Two parity issues created in external repos (Agent365-python#485, Agent365-nodejs#486)
+   - Workflow begins polling for Copilot-generated PRs in those repositories
    - Original PR author receives notification of parity tracking
 
 2. **Copilot Implements Parity:**
-   - Copilot reads issue #485, analyzes Python PR changes
-   - Implements corresponding changes in .NET SDK
-   - Creates PR #500 linking to issue #485
-   - Repeats for TypeScript SDK (creates PR #501 for issue #486)
+   - Copilot reads issue Agent365-python#485, analyzes C# PR changes
+   - Implements corresponding changes in Python SDK
+   - Creates PR microsoft/Agent365-python#500 linking to issue #485
+   - Repeats for TypeScript SDK (creates PR microsoft/Agent365-nodejs#501 for issue #486)
 
 3. **Automatic Assignment:**
-   - Workflow detects PR #500 and #501 within polling period
+   - Workflow detects PRs #500 and #501 in their respective repos within polling period
    - Automatically assigns both PRs to the original author
    - Posts explanatory comments on both PRs
    - Original author receives GitHub notifications for assignment
 
 4. **Human Review:**
-   - Original author reviews Copilot-generated PRs #500 and #501
+   - Original author reviews Copilot-generated PRs in Agent365-python and Agent365-nodejs
    - Validates implementation correctness and intent
    - Approves and merges when satisfied
 
