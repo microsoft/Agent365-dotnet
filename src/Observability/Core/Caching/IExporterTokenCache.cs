@@ -17,5 +17,5 @@ public interface IExporterTokenCache<T> where T : class
     /// <summary>
     /// Returns an observability token (cached inside the credential) or null on failure/not registered.
     /// </summary>
-    string? GetObservabilityToken(string agentId, string tenantId);
+    Task<string?> GetObservabilityToken(string agentId, string tenantId);
 }

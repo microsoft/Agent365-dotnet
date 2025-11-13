@@ -80,7 +80,7 @@ public class ServiceTokenCache: IExporterTokenCache<string>
     /// <param name="agentId">The agent identifier.</param>
     /// <param name="tenantId">The tenant identifier.</param>
     /// <returns>The observability token if valid; otherwise, null.</returns>
-    public string? GetObservabilityToken(string agentId, string tenantId)
+    public async Task<string?> GetObservabilityToken(string agentId, string tenantId)
     {
         if (string.IsNullOrWhiteSpace(agentId) || string.IsNullOrWhiteSpace(tenantId))
             return null;
@@ -98,7 +98,7 @@ public class ServiceTokenCache: IExporterTokenCache<string>
             return null;
         }
 
-        return entry.Token;
+        return await Task.FromResult(entry.Token);
     }
 
     /// <summary>
