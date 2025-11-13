@@ -47,7 +47,7 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// <returns>AppId</returns>
         public static string GetAppIdFromToken(string token)
         {
-            if ( string.IsNullOrWhiteSpace(token))
+            if (string.IsNullOrWhiteSpace(token))
             {
                 return Guid.Empty.ToString();
             }
