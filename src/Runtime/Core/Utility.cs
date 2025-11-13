@@ -2,7 +2,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
@@ -36,6 +38,45 @@ namespace Microsoft.Agents.A365.Runtime.Utils
             return configuration["ASPNETCORE_ENVIRONMENT"] ??
                    configuration["DOTNET_ENVIRONMENT"] ??
                    "Development";
+        }
+
+        /// <summary>
+        /// Decodes the current token and retrieves the App ID (appid or azp claim).
+        /// </summary>
+        /// <param name="token">Token to Decode</param>
+        /// <returns>AppId</returns>
+        public static string GetAppIdFromToken(string token)
+        {
+            if ( string.IsNullOrWhiteSpace(token))
+            {
+                return Guid.Empty.ToString();
+            }
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            var appIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "appid" || c.Type == "azp");
+            return appIdClaim?.Value ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Resolves the agent identity from the turn context or auth token.
+        /// </summary>
+        /// <param name="context">Turn Context of the turn.</param>
+        /// <param name="authToken">Auth token if available.</param>
+        /// <returns></returns>
+        public static string ResolveAgentIdentity(ITurnContext context, string authToken)
+        {
+            string agenticAppId = "";
+            // App ID is required to pass to MCP server URL. 
+            if (context.Activity.IsAgenticRequest())
+            {
+                agenticAppId = context.Activity.GetAgenticInstanceId();
+            }
+            else
+            {
+                // we need to get the broker app ID from the authToken here. 
+                agenticAppId = Runtime.Utils.Utility.GetAppIdFromToken(authToken);
+            }
+            return agenticAppId; 
         }
     }
 }
