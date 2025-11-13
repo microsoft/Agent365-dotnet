@@ -27,21 +27,14 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Gets the base URL for MCP servers based on the current environment.
+        /// Gets the base URL for MCP servers.
         /// </summary>
         /// <param name="configuration">Configuration Collection</param>
         /// <returns>The base URL for MCP servers.</returns>
         public static string GetMcpBaseUrl(IConfiguration configuration)
         {
             var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl(configuration);
-            if (!UseEnvironmentId(configuration))
-            {
-                return $"{mcpPlatformBaseUrl}/agents/servers";
-            }
-
-
-            return $"{mcpPlatformBaseUrl}/mcp/environments";
-
+            return $"{mcpPlatformBaseUrl}/agents/servers";
         }
 
         private static string GetMcpPlatformBaseUrl(IConfiguration configuration)
@@ -58,25 +51,15 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Constructs the full MCP server URL using the base URL, environment ID, and server name.
+        /// Constructs the full MCP server URL using the base URL and server name.
         /// </summary>
-        /// <param name="environmentId">The environment ID.</param>
         /// <param name="serverName">The MCP server name.</param>
         /// <param name="configuration">Configuration Collection</param>
         /// <returns>The full MCP server URL.</returns>
-        public static string BuildMcpServerUrl(string environmentId, string serverName, IConfiguration configuration)
+        public static string BuildMcpServerUrl(string serverName, IConfiguration configuration)
         {
             var baseUrl = GetMcpBaseUrl(configuration);
-
-            if (!UseEnvironmentId(configuration) || ((RuntimeUtility.GetCurrentEnvironment(configuration).ToLowerInvariant() == "development"
-                && baseUrl.EndsWith("servers"))))
-            {
-                return $"{baseUrl}/{serverName}";
-            }
-            else
-            {
-                return $"{baseUrl}/{environmentId}/servers/{serverName}";
-            }
+            return $"{baseUrl}/{serverName}";
         }
 
         /// <summary>
@@ -92,25 +75,6 @@ namespace Microsoft.Agents.A365.Tooling.Utils
                 "mockmcpserver" => ToolsMode.MockMCPServer,
                 _ => ToolsMode.MCPPlatform
             };
-        }
-        /// <summary>
-        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID value from the provided configuration.
-        /// </summary>
-        /// <param name="configuration">Configuration Collection</param>
-        /// <returns>True if environment ID should be used; otherwise, false.</returns>
-        public static bool UseEnvironmentId(IConfiguration configuration)
-        {
-            bool useEnvironmentId = true;
-            if (bool.TryParse(configuration["USE_ENVIRONMENT_ID"], out bool tempUseEnvironmentId))
-                useEnvironmentId = tempUseEnvironmentId;
-
-            if (useEnvironmentId && string.IsNullOrEmpty(configuration["ENVIRONMENT_ID"]))
-            {
-                // if Use EnvironmentId is true, but ENVIRONMENT_ID is not set, default to false
-                System.Diagnostics.Trace.TraceWarning("USE_ENVIRONMENT_ID is set to true, but ENVIRONMENT_ID is not set. Defaulting USE_ENVIRONMENT_ID to false.");
-                return false; 
-            }
-            return useEnvironmentId;
         }
     }
 }

@@ -28,7 +28,6 @@ public interface IMcpToolRegistrationService
     /// <param name="agentInstructions">The agent instructions.</param>
     /// <param name="initialTools">The existing tools to keep and add MCP tools to.</param>
     /// <param name="agentUserId">Agent User Id for the agent.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="turnContext">Turn context for the current request</param>
     /// <param name="userAuthorization">User authorization information</param>
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
@@ -39,7 +38,6 @@ public interface IMcpToolRegistrationService
         string agentInstructions,
         IList<AITool> initialTools,
         string agentUserId,
-        string environmentId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,

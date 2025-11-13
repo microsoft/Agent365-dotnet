@@ -17,18 +17,16 @@ using System.Collections.Generic;
 public interface IMcpToolRegistrationService
 {
     /// <summary>
-    /// Loads/initializes configured MCP tool servers for the specified agent/environment with full context.
+    /// Loads/initializes configured MCP tool servers for the specified agent with full context.
     /// This is the primary method that customers should use in orchestrators with full authentication context.
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="userAuthorization">User authorization context.</param>
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
     Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
-        string environmentId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
@@ -38,13 +36,11 @@ public interface IMcpToolRegistrationService
     /// Get MCP tool definitions and resources asynchronously.
     /// </summary>
     /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
-    /// <param name="environmentId">Environment Id for the environment.</param>
     /// <param name="authToken">Auth token to access the MCP servers.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <returns>A tuple containing the list of MCP tool definitions and tool resources.</returns>
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
-        string environmentId,
         string authToken,
         ITurnContext turnContext);
 }

@@ -47,7 +47,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         }
 
         /// <inheritdoc />
-        public async Task AddToolServersToAgentAsync(Kernel kernel, string environmentId, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
         {
             if (kernel == null)
             {
@@ -60,13 +60,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             }
 
             var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, environmentId, authToken).ConfigureAwait(false);
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
 
             var toolsMode = Utility.GetToolsMode(_configuration);
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, environmentId, authToken).ConfigureAwait(false);
+                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
