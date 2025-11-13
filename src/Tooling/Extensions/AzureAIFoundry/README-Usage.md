@@ -1,6 +1,6 @@
-# Microsoft Agents 365 SDK - AzureFoundry Tooling
+# Microsoft Agent 365 SDK - AzureFoundry Tooling
 
-This library provides integration between Microsoft Agents 365 and Azure AI Foundry, enabling you to add MCP (Model Context Protocol) tool servers to your Azure Foundry agents using the Persistent Agents client.
+This library provides integration between Microsoft Agent 365 SDK and Azure AI Foundry, enabling you to add MCP (Model Context Protocol) tool servers to your Azure Foundry agents using the Persistent Agents client.
 
 ## Installation
 

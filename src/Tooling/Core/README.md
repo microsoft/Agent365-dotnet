@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Tooling
 
-Core tooling functionality for MCP (Model Context Protocol) tool server management in Microsoft Agents 365 applications. This package provides the foundation for discovering, registering, and managing tool servers across different AI frameworks.
+Core tooling functionality for MCP (Model Context Protocol) tool server management in Microsoft Agent 365 applications. This package provides the foundation for discovering, registering, and managing tool servers across different AI frameworks.
 
 ## Installation
 
@@ -8,41 +8,9 @@ Core tooling functionality for MCP (Model Context Protocol) tool server manageme
 dotnet add package Microsoft.Agents.A365.Tooling
 ```
 
-## Usage
+## Documentation
 
-### Tool Server Discovery
-
-```csharp
-using Microsoft.Agents.A365.Tooling.Services;
-
-var toolService = serviceProvider.GetRequiredService<IMcpToolServerConfigurationService>();
-
-// List all available tool servers for an agent
-var toolServers = await toolService.ListToolServers(agentInstanceId, environmentId, authToken);
-
-foreach (var server in toolServers)
-{
-    Console.WriteLine($"Tool Server: {server.mcpServerName}");
-    Console.WriteLine($"  Server URL: {server.url}");
-}
-```
-
-### Get MCP Client Tools
-
-```csharp
-// Get tools from a specific server
-var mcpTools = await toolService.GetMcpClientTools(
-    turnContext,
-    server,
-    environmentId,
-    authToken);
-```
-
-### Service Registration
-
-```csharp
-builder.Services.AddSingleton<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
-```
+For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Tooling documentation](https://review.learn.microsoft.com/en-us/microsoft-agent-365/developer/tooling?branch=main&tabs=dotnet).
 
 ## Support
 
@@ -50,6 +18,14 @@ For issues, questions, or feedback:
 
 - File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
 - See the [main documentation](../../../README.md) for more information
+
+## 📋 **Telemetry**
+ 
+Data Collection. The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of Microsoft's privacy statement. Our privacy statement is located at https://go.microsoft.com/fwlink/?LinkID=824704. You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
+ 
+## Trademarks
+ 
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
 
 ## License
 
