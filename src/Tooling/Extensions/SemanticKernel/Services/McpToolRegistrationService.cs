@@ -59,18 +59,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
-            string agenticAppId = "";
-            // App ID is required to pass to MCP server URL. 
-            if (turnContext.Activity.IsAgenticRequest())
-            {
-                agenticAppId = turnContext.Activity.GetAgenticInstanceId();
-            }
-            else
-            {
-                // we need to get the broker app ID from the authToken here. 
-                agenticAppId = Runtime.Utils.Utility.GetAppIdFromToken(authToken);
+            // resolve agent identity from context or token. 
+            string agenticAppId = Runtime.Utils.Utility.ResolveAgentIdentity(turnContext, authToken);
 
-            }
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, environmentId, authToken).ConfigureAwait(false);
 
             var toolsMode = Utility.GetToolsMode(_configuration);
