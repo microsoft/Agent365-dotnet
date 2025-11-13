@@ -65,17 +65,10 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// <returns></returns>
         public static string ResolveAgentIdentity(ITurnContext context, string authToken)
         {
-            string agenticAppId = "";
             // App ID is required to pass to MCP server URL. 
-            if (context.Activity.IsAgenticRequest())
-            {
-                agenticAppId = context.Activity.GetAgenticInstanceId();
-            }
-            else
-            {
-                // we need to get the broker app ID from the authToken here. 
-                agenticAppId = GetAppIdFromToken(authToken);
-            }
+            string agenticAppId = context.Activity.IsAgenticRequest()
+                ? context.Activity.GetAgenticInstanceId()
+                : Runtime.Utils.Utility.GetAppIdFromToken(authToken);
             return agenticAppId; 
         }
     }
