@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// <param name="services">The service collection to add to.</param>
         /// <param name="configure">Optional configuration delegate for the Builder.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder.</param>
-        /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
+        /// <param name="agent365ExporterType">The type of Agent 365 exporter to use.</param>
         /// <returns>The configured service collection.</returns>
         public static IServiceCollection AddTracing(
             this IServiceCollection services,
