@@ -62,7 +62,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             // resolve agent identity from context or token. 
             string agenticAppId = Runtime.Utils.Utility.ResolveAgentIdentity(turnContext, authToken);
 
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, environmentId, authToken).ConfigureAwait(false);
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
 
             var toolsMode = Utility.GetToolsMode(_configuration);
             foreach (var server in servers)
