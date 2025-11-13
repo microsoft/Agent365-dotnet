@@ -10,7 +10,7 @@ namespace Microsoft.Agents.A365.Observability.Tests;
 /// Tests for Agent 365 extension methods.
 /// </summary>
 [TestClass]
-public sealed class AgentsA365SdkExtensionTests
+public sealed class ObservabilityTests
 {
     /// <summary>
     /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()
