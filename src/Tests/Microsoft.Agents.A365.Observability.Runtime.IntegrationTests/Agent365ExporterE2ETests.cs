@@ -391,7 +391,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 return new Agent365ExporterOptions
                 {
                     UseS2SEndpoint = false,
-                    ClusterCategory = "test",
                     TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });

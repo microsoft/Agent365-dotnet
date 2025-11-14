@@ -20,9 +20,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public sealed class Agent365ExporterOptions
     {
         /// <summary>
-        /// Environment / cluster category
+        /// Cluster region argument. Defaults to production.
         /// </summary>
-        public string ClusterCategory { get; set; } = "preprod";
+        public string ClusterCategory { get; set; } = "production";
 
         /// <summary>
         /// Async delegate used to resolve the auth token. REQUIRED.

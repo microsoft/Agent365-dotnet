@@ -17,7 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Initializes a new instance of the <see cref="PowerPlatformApiDiscovery"/> class.
         /// </summary>
-        /// <param name="clusterCategory">The cluster category (e.g., "prod", "dev", "test").</param>
+        /// <param name="clusterCategory">The cluster category.</param>
         public PowerPlatformApiDiscovery(string clusterCategory)
         {
             this.clusterCategory = clusterCategory ?? throw new ArgumentNullException(nameof(clusterCategory));
@@ -89,6 +89,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             switch (clusterCategory)
             {
                 case "firstrelease":
+                case "production":
                 case "prod":
                     return 2;
                 default:
@@ -100,15 +101,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         {
             switch (clusterCategory)
             {
-                case "local":
-                    return "api.powerplatform.localhost";
-                case "dev":
-                    return "api.dev.powerplatform.com";
-                case "test":
-                    return "api.test.powerplatform.com";
-                case "preprod":
-                    return "api.preprod.powerplatform.com";
                 case "firstrelease":
+                case "production":
                 case "prod":
                     return "api.powerplatform.com";
                 case "gov":
