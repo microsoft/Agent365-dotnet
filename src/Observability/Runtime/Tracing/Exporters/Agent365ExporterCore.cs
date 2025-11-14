@@ -113,7 +113,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = ExportFormatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);
+                var ppapiDiscovery = new PowerPlatformApiDiscovery("prod");
                 var ppapiEndpoint = ppapiDiscovery.GetTenantIslandClusterEndpoint(tenantId);
 
                 var endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId, options.UseS2SEndpoint);
