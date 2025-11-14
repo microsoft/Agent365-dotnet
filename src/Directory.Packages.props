@@ -33,7 +33,7 @@
     <PackageVersion Include="OpenAI" Version="2.5.0" />
     <!-- Azure Foundry related package -->
     <PackageVersion Include="Azure.AI.Agents.Persistent" Version="1.2.0-beta.4" />
-    <!-- Agent Framewok packages -->
+    <!-- Agent Framework packages -->
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="9.10.0" />
@@ -73,9 +73,9 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.3" />
     <!-- Security packages -->
     <!-- Microsoft Agents packages (using latest available versions) -->
-    <PackageVersion Include="Microsoft.Agents.Builder" Version="1.3.126-beta" />
-    <PackageVersion Include="Microsoft.Agents.Authentication.Msal" Version="1.3.126-beta" />
-    <PackageVersion Include="Microsoft.Agents.Hosting.AspNetCore" Version="1.3.126-beta" />
+    <PackageVersion Include="Microsoft.Agents.Builder" Version="1.3.163-beta" />
+    <PackageVersion Include="Microsoft.Agents.Authentication.Msal" Version="1.3.163-beta" />
+    <PackageVersion Include="Microsoft.Agents.Hosting.AspNetCore" Version="1.3.163-beta" />
     <!-- Model Context Protocol packages - use only the core package -->
     <PackageVersion Include="ModelContextProtocol.Core" Version="0.2.0-preview.3" />
     <!-- MSTest Framework packages -->

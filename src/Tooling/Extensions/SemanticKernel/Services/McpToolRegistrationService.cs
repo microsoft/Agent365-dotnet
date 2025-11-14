@@ -59,7 +59,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
-            var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
+            // resolve agent identity from context or token. 
+            string agenticAppId = Runtime.Utils.Utility.ResolveAgentIdentity(turnContext, authToken);
+
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
 
             var toolsMode = Utility.GetToolsMode(_configuration);

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Caching;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Agents.A365.Observability.Tests.Caching;
 
@@ -42,13 +43,13 @@ public sealed class ServiceTokenCacheTests
     }
 
     [TestMethod]
-    public void RegisterObservability_WithValidParameters_ShouldSucceed()
+    public async Task RegisterObservability_WithValidParameters_ShouldSucceed()
     {
         var cache = new ServiceTokenCache();
         
         cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
         
-        var token = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        var token = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         token.Should().Be(TestToken);
     }
 
@@ -125,19 +126,19 @@ public sealed class ServiceTokenCacheTests
     }
 
     [TestMethod]
-    public void RegisterObservability_WithCustomExpiration_ShouldRespectExpiration()
+    public async Task RegisterObservability_WithCustomExpiration_ShouldRespectExpiration()
     {
         var cache = new ServiceTokenCache();
         var customExpiration = TimeSpan.FromSeconds(1);
         
         cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes, customExpiration);
-        
-        var tokenBefore = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+
+        var tokenBefore = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         tokenBefore.Should().Be(TestToken);
         
         Thread.Sleep(1100);
-        
-        var tokenAfter = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+
+        var tokenAfter = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         tokenAfter.Should().BeNull();
     }
 
@@ -154,7 +155,7 @@ public sealed class ServiceTokenCacheTests
     }
 
     [TestMethod]
-    public void RegisterObservability_Twice_ShouldUpdateToken()
+    public async Task RegisterObservability_Twice_ShouldUpdateToken()
     {
         var cache = new ServiceTokenCache();
         const string firstToken = "first-token";
@@ -162,43 +163,43 @@ public sealed class ServiceTokenCacheTests
         
         cache.RegisterObservability(TestAgentId, TestTenantId, firstToken, TestScopes);
         cache.RegisterObservability(TestAgentId, TestTenantId, secondToken, TestScopes);
-        
-        var token = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+
+        var token = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         token.Should().Be(secondToken);
     }
 
     [TestMethod]
-    public void GetObservabilityToken_WithNonExistentKey_ShouldReturnNull()
+    public async Task GetObservabilityToken_WithNonExistentKey_ShouldReturnNull()
+    {
+        var cache = new ServiceTokenCache();
+
+        var token = await cache.GetObservabilityToken("non-existent-agent", "non-existent-tenant");
+
+        token.Should().BeNull();
+    }
+
+    [TestMethod]
+    public async Task GetObservabilityToken_WithNullAgentId_ShouldReturnNull()
     {
         var cache = new ServiceTokenCache();
         
-        var token = cache.GetObservabilityToken("non-existent-agent", "non-existent-tenant");
+        var token = await cache.GetObservabilityToken(null!, TestTenantId);
         
         token.Should().BeNull();
     }
 
     [TestMethod]
-    public void GetObservabilityToken_WithNullAgentId_ShouldReturnNull()
+    public async Task GetObservabilityToken_WithEmptyTenantId_ShouldReturnNull()
     {
         var cache = new ServiceTokenCache();
         
-        var token = cache.GetObservabilityToken(null!, TestTenantId);
+        var token = await cache.GetObservabilityToken(TestAgentId, "");
         
         token.Should().BeNull();
     }
 
     [TestMethod]
-    public void GetObservabilityToken_WithEmptyTenantId_ShouldReturnNull()
-    {
-        var cache = new ServiceTokenCache();
-        
-        var token = cache.GetObservabilityToken(TestAgentId, "");
-        
-        token.Should().BeNull();
-    }
-
-    [TestMethod]
-    public void GetObservabilityToken_AfterExpiration_ShouldReturnNull()
+    public async Task GetObservabilityToken_AfterExpiration_ShouldReturnNull()
     {
         var cache = new ServiceTokenCache(TimeSpan.FromMilliseconds(500));
         
@@ -206,23 +207,23 @@ public sealed class ServiceTokenCacheTests
         
         Thread.Sleep(600);
         
-        var token = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        var token = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         token.Should().BeNull();
     }
 
     [TestMethod]
-    public void GetObservabilityToken_BeforeExpiration_ShouldReturnToken()
+    public async Task GetObservabilityToken_BeforeExpiration_ShouldReturnToken()
     {
         var cache = new ServiceTokenCache(TimeSpan.FromSeconds(10));
         
         cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
         
-        var token = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        var token = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         token.Should().Be(TestToken);
     }
 
     [TestMethod]
-    public void InvalidateToken_WithExistingToken_ShouldReturnTrueAndRemoveToken()
+    public async Task InvalidateToken_WithExistingToken_ShouldReturnTrueAndRemoveToken()
     {
         var cache = new ServiceTokenCache();
         cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
@@ -231,7 +232,7 @@ public sealed class ServiceTokenCacheTests
         
         result.Should().BeTrue();
         
-        var token = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        var token = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
         token.Should().BeNull();
     }
 
@@ -266,7 +267,7 @@ public sealed class ServiceTokenCacheTests
     }
 
     [TestMethod]
-    public void InvalidateAll_ShouldRemoveAllTokens()
+    public async Task InvalidateAll_ShouldRemoveAllTokens()
     {
         var cache = new ServiceTokenCache();
         cache.RegisterObservability("agent1", "tenant1", "token1", TestScopes);
@@ -275,13 +276,13 @@ public sealed class ServiceTokenCacheTests
         
         cache.InvalidateAll();
         
-        cache.GetObservabilityToken("agent1", "tenant1").Should().BeNull();
-        cache.GetObservabilityToken("agent2", "tenant2").Should().BeNull();
-        cache.GetObservabilityToken("agent3", "tenant3").Should().BeNull();
+        (await cache.GetObservabilityToken("agent1", "tenant1")).Should().BeNull();
+        (await cache.GetObservabilityToken("agent2", "tenant2")).Should().BeNull();
+        (await cache.GetObservabilityToken("agent3", "tenant3")).Should().BeNull();
     }
 
     [TestMethod]
-    public void RemoveExpiredTokens_WithNoExpiredTokens_ShouldReturnZero()
+    public async Task RemoveExpiredTokens_WithNoExpiredTokens_ShouldReturnZero()
     {
         var cache = new ServiceTokenCache(TimeSpan.FromHours(1));
         cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
@@ -289,11 +290,11 @@ public sealed class ServiceTokenCacheTests
         var removedCount = cache.RemoveExpiredTokens();
         
         removedCount.Should().Be(0);
-        cache.GetObservabilityToken(TestAgentId, TestTenantId).Should().Be(TestToken);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(TestToken);
     }
 
     [TestMethod]
-    public void RemoveExpiredTokens_WithExpiredTokens_ShouldRemoveThemAndReturnCount()
+    public async Task RemoveExpiredTokens_WithExpiredTokens_ShouldRemoveThemAndReturnCount()
     {
         var cache = new ServiceTokenCache(TimeSpan.FromMilliseconds(500));
         cache.RegisterObservability("agent1", "tenant1", "token1", TestScopes);
@@ -306,13 +307,13 @@ public sealed class ServiceTokenCacheTests
         var removedCount = cache.RemoveExpiredTokens();
         
         removedCount.Should().Be(2);
-        cache.GetObservabilityToken("agent1", "tenant1").Should().BeNull();
-        cache.GetObservabilityToken("agent2", "tenant2").Should().BeNull();
-        cache.GetObservabilityToken("agent3", "tenant3").Should().Be("token3");
+        (await cache.GetObservabilityToken("agent1", "tenant1")).Should().BeNull();
+        (await cache.GetObservabilityToken("agent2", "tenant2")).Should().BeNull();
+        (await cache.GetObservabilityToken("agent3", "tenant3")).Should().Be("token3");
     }
 
     [TestMethod]
-    public void RemoveExpiredTokens_WithMixedExpirations_ShouldOnlyRemoveExpired()
+    public async Task RemoveExpiredTokens_WithMixedExpirations_ShouldOnlyRemoveExpired()
     {
         var cache = new ServiceTokenCache();
         cache.RegisterObservability("agent1", "tenant1", "token1", TestScopes, TimeSpan.FromMilliseconds(500));
@@ -324,26 +325,26 @@ public sealed class ServiceTokenCacheTests
         var removedCount = cache.RemoveExpiredTokens();
         
         removedCount.Should().Be(2);
-        cache.GetObservabilityToken("agent1", "tenant1").Should().BeNull();
-        cache.GetObservabilityToken("agent2", "tenant2").Should().Be("token2");
-        cache.GetObservabilityToken("agent3", "tenant3").Should().BeNull();
+        (await cache.GetObservabilityToken("agent1", "tenant1")).Should().BeNull();
+        (await cache.GetObservabilityToken("agent2", "tenant2")).Should().Be("token2");
+        (await cache.GetObservabilityToken("agent3", "tenant3")).Should().BeNull();
     }
 
     [TestMethod]
-    public void MultipleAgentsTenants_ShouldBeIndependent()
+    public async Task MultipleAgentsTenants_ShouldBeIndependent()
     {
         var cache = new ServiceTokenCache();
         cache.RegisterObservability("agent1", "tenant1", "token1", TestScopes);
         cache.RegisterObservability("agent2", "tenant1", "token2", TestScopes);
         cache.RegisterObservability("agent1", "tenant2", "token3", TestScopes);
         
-        cache.GetObservabilityToken("agent1", "tenant1").Should().Be("token1");
-        cache.GetObservabilityToken("agent2", "tenant1").Should().Be("token2");
-        cache.GetObservabilityToken("agent1", "tenant2").Should().Be("token3");
+        (await cache.GetObservabilityToken("agent1", "tenant1")).Should().Be("token1");
+        (await cache.GetObservabilityToken("agent2", "tenant1")).Should().Be("token2");
+        (await cache.GetObservabilityToken("agent1", "tenant2")).Should().Be("token3");
     }
 
     [TestMethod]
-    public void ConcurrentAccess_ShouldBeThreadSafe()
+    public async Task ConcurrentAccess_ShouldBeThreadSafe()
     {
         var cache = new ServiceTokenCache();
         var tasks = new List<Task>();
@@ -366,7 +367,7 @@ public sealed class ServiceTokenCacheTests
             var tenantId = $"tenant-{i}";
             var expectedToken = $"token-{i}";
             
-            cache.GetObservabilityToken(agentId, tenantId).Should().Be(expectedToken);
+            (await cache.GetObservabilityToken(agentId, tenantId)).Should().Be(expectedToken);
         }
     }
 }

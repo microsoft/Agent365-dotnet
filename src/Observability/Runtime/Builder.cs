@@ -54,7 +54,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime
 
         private bool IsAgent365ExporterEnabled()
         {
-            return Environment.GetEnvironmentVariable("EnableAgent365Exporter") == "true";
+            string enabledEnv = Environment.GetEnvironmentVariable("EnableAgent365Exporter");
+            return string.IsNullOrEmpty(enabledEnv) ? false : enabledEnv.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
         private void EnsureBuilt()

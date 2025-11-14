@@ -30,7 +30,7 @@ public static class Observability
             return new Agent365ExporterOptions
             {
                 ClusterCategory = clusterCategory,
-                TokenResolver = (agentId, tenantId) => Task.FromResult(cache.GetObservabilityToken(agentId, tenantId))
+                TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId)
             };
         });
 
@@ -54,7 +54,7 @@ public static class Observability
             return new Agent365ExporterOptions
             {
                 ClusterCategory = clusterCategory,
-                TokenResolver = (agentId, tenantId) => Task.FromResult(cache.GetObservabilityToken(agentId, tenantId)),
+                TokenResolver = async (agentId, tenantId) => await (cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false)),
                 UseS2SEndpoint = true // Service-to-service uses S2S endpoint
             };
         });
