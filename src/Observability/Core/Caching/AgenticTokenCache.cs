@@ -46,7 +46,7 @@ public class AgenticTokenCache : IExporterTokenCache<AgenticTokenStruct>
     /// <returns>
     /// The observability token if available; otherwise, <c>null</c>.
     /// </returns>
-    public string? GetObservabilityToken(string agentId, string tenantId)
+    public async Task<string?> GetObservabilityToken(string agentId, string tenantId)
     {
         if (!_map.TryGetValue($"{agentId}:{tenantId}", out var entry))
             return null;
@@ -57,8 +57,11 @@ public class AgenticTokenCache : IExporterTokenCache<AgenticTokenStruct>
             var ctx = new TokenRequestContext(entry.Scopes);
             var userAuthorization = entry.AgenticTokenStruct.UserAuthorization;
             var turnContext = entry.AgenticTokenStruct.TurnContext;
-
-            var token = userAuthorization.ExchangeTurnTokenAsync(turnContext, "agentic", exchangeScopes: entry.Scopes).GetAwaiter().GetResult();
+            
+            var token = await userAuthorization.ExchangeTurnTokenAsync(turnContext, 
+                    entry.AgenticTokenStruct.AuthHandlerName, 
+                    exchangeConnection: entry.AgenticTokenStruct.ConnectionName!, 
+                    exchangeScopes: entry.Scopes).ConfigureAwait(false);
 
             return token;
         }

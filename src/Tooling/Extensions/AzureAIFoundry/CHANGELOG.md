@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Microsoft Agents A365 SDK will be documented in this file.
+All notable changes to the Microsoft Agent 365 SDK will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -25,9 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-01-16
 
 ### Added
-- Initial release of Microsoft Agents A365 SDK
+- Initial release of Microsoft Agent 365 SDK
 - OpenTelemetry integration for comprehensive telemetry and tracing
-- `Agents A365` extension methods for `IHostApplicationBuilder` configuration
+- `Agent 365` extension methods for `IHostApplicationBuilder` configuration
 - `A365SpanProcessor` for custom span processing with agent-specific metadata
 - Specialized tracing scopes:
   - `InvokeAgentScope` for tracking AI agent invocations

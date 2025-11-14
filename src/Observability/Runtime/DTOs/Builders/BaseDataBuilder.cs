@@ -28,9 +28,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.ServerAddressKey,
             OpenTelemetryConstants.ServerPortKey,
-            OpenTelemetryConstants.GenAiExecutionSourceIdKey,
-            OpenTelemetryConstants.GenAiExecutionSourceNameKey,
-            OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey,
+            OpenTelemetryConstants.GenAiChannelNameKey,
+            OpenTelemetryConstants.GenAiChannelLinkKey,
             OpenTelemetryConstants.GenAiExecutionTypeKey,
             OpenTelemetryConstants.GenAiCallerIdKey,
             OpenTelemetryConstants.GenAiCallerUpnKey,
@@ -130,9 +129,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (request == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceIdKey, request.SourceMetadata?.Id);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceNameKey, request.SourceMetadata?.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request.SourceMetadata?.Description);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, request.SourceMetadata?.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, request.SourceMetadata?.Description);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString());
         }
 

@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectReference Include="**/*.csproj" Exclude="**/AnalyzerDemoApp/**/*.csproj" />
+    <ProjectReference Include="**/*.csproj" />
   </ItemGroup>
 </Project>
+

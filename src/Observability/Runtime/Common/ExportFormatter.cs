@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     public class ExportFormatter
     {
         /// <summary>
-        /// Formats a collection of Activity spans into an OTLP JSON payload compatible with our Agent365 Observability ingestion service.
+        /// Formats a collection of Activity spans into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activities">The collection of Activity spans to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the spans, containing resource attributes.</param>
@@ -75,7 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Formats a single Activity span into an OTLP JSON payload compatible with our Agent365 Observability ingestion service.
+        /// Formats a single Activity span into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activity">The Activity span to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the span, containing resource attributes.</param>
@@ -113,16 +113,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         /// <param name="data">The operation data containing the log information.</param>
         /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
-        public static string FormatLogData(BaseData data)
+        public static string FormatLogData(IDictionary<string, object?> data)
         {
             var payload = new
             {
-                data.Name,
-                data.Attributes,
-                StartTimeUnixNano = data.StartTime.HasValue ? ToUnixNanos(data.StartTime.Value.UtcDateTime) : 0,
-                EndTimeUnixNano = data.EndTime.HasValue ? ToUnixNanos(data.EndTime.Value.UtcDateTime) : 0,
-                data.SpanId,
-                data.ParentSpanId
+                Name = data["Name"],
+                Attributes = data["Attributes"],
+                StartTimeUnixNano = data.TryGetValue("StartTime", out var startTimeObj) && startTimeObj != null ? ToUnixNanos(((DateTimeOffset)startTimeObj).UtcDateTime) : 0,
+                EndTimeUnixNano = data.TryGetValue("EndTime", out var endTimeObj) && endTimeObj != null ? ToUnixNanos(((DateTimeOffset)endTimeObj).UtcDateTime) : 0,
+                SpanId = data["SpanId"],
+                ParentSpanId = data["ParentSpanId"]
             };
 
             return SerializePayload(payload);

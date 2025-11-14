@@ -4,6 +4,8 @@
 
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
+    using Microsoft.Extensions.Configuration;
+    using System.Transactions;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
@@ -17,33 +19,28 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// Gets the tooling gateway URL for the specified digital worker.
         /// </summary>
         /// <param name="agentInstanceId">The unique identifier of the digital worker.</param>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The tooling gateway URL for the digital worker.</returns>
-        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId)
+        public static string GetToolingGatewayForDigitalWorker(string agentInstanceId, IConfiguration configuration)
         {
-            return $"{GetMcpPlatformBaseUrl()}/agents/{agentInstanceId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
-        /// Gets the base URL for MCP servers based on the current environment.
+        /// Gets the base URL for MCP servers.
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The base URL for MCP servers.</returns>
-        public static string GetMcpBaseUrl()
+        public static string GetMcpBaseUrl(IConfiguration configuration)
         {
-            var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl();
-            if (!UseEnvironmentId())
-            {
-                return $"{mcpPlatformBaseUrl}/agents/servers";
-            }
-
-
-            return $"{mcpPlatformBaseUrl}/mcp/environments";
-
+            var mcpPlatformBaseUrl = GetMcpPlatformBaseUrl(configuration);
+            return $"{mcpPlatformBaseUrl}/agents/servers";
         }
 
-        private static string GetMcpPlatformBaseUrl()
+        private static string GetMcpPlatformBaseUrl(IConfiguration configuration)
         {
-            // First check for environment variable (takes precedence)
-            var environmentVariableValue = Environment.GetEnvironmentVariable("MCP_PLATFORM_ENDPOINT");
+            // First check for configuration value (from any source, e.g., environment variable, appsettings.json, etc.)—takes precedence over default
+            var environmentVariableValue = configuration["MCP_PLATFORM_ENDPOINT"];
             if (!string.IsNullOrEmpty(environmentVariableValue))
             {
                 return environmentVariableValue;
@@ -54,47 +51,30 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Constructs the full MCP server URL using the base URL, environment ID, and server name.
+        /// Constructs the full MCP server URL using the base URL and server name.
         /// </summary>
-        /// <param name="environmentId">The environment ID.</param>
         /// <param name="serverName">The MCP server name.</param>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The full MCP server URL.</returns>
-        public static string BuildMcpServerUrl(string environmentId, string serverName)
+        public static string BuildMcpServerUrl(string serverName, IConfiguration configuration)
         {
-            var baseUrl = GetMcpBaseUrl();
-
-            if (!UseEnvironmentId() || ((RuntimeUtility.GetCurrentEnvironment().ToLowerInvariant() == "development"
-                && baseUrl.EndsWith("servers"))))
-            {
-                return $"{baseUrl}/{serverName}";
-            }
-            else
-            {
-                return $"{baseUrl}/{environmentId}/servers/{serverName}";
-            }
+            var baseUrl = GetMcpBaseUrl(configuration);
+            return $"{baseUrl}/{serverName}";
         }
 
         /// <summary>
-        /// Gets the configured tools mode from environment variable TOOLS_MODE.
+        /// Gets the configured tools mode from the configuration (e.g., environment variable TOOLS_MODE, appsettings.json, etc.).
         /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
         /// <returns>The configured tools mode, defaults to MCPPlatform if not set.</returns>
-        public static ToolsMode GetToolsMode()
+        public static ToolsMode GetToolsMode(IConfiguration configuration)
         {
-            var toolsMode = Environment.GetEnvironmentVariable("TOOLS_MODE") ?? "MCPPlatform";
+            var toolsMode = configuration["TOOLS_MODE"] ?? "MCPPlatform";
             return toolsMode.ToLowerInvariant() switch
             {
                 "mockmcpserver" => ToolsMode.MockMCPServer,
                 _ => ToolsMode.MCPPlatform
             };
-        }
-        /// <summary>
-        /// Determines whether to use environment ID based on the USE_ENVIRONMENT_ID environment variable. 
-        /// </summary>
-        /// <returns>True if environment ID should be used; otherwise, false.</returns>
-        public static bool UseEnvironmentId()
-        {
-            var useEnvironmentId = Environment.GetEnvironmentVariable("USE_ENVIRONMENT_ID") ?? "true";
-            return useEnvironmentId.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -11,59 +11,49 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public class EnvironmentUtils
     {
-        private const string TestObservabilityScope = "https://api.test.powerplatform.com/.default";
-        private const string PreprodObservabilityScope = "https://api.preprod.powerplatform.com/.default";
         private const string ProdObservabilityScope = "https://api.powerplatform.com/.default";
-
-        private const string TestObservabilityClusterCategory = "test";
-        private const string PreprodObservabilityClusterCategory = "preprod";
         private const string ProdObservabilityClusterCategory = "prod";
-
         private const string DevelopmentEnvironmentName = "development";
-        private const string TestEnvironmentName = "test";
-        private const string PreprodEnvironmentName = "preprod";
-        private const string ProductionEnvironmentName = "production";
-        private const string ProdEnvironmentName = "prod";
 
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
         /// </summary>
-        /// <param name="environment"> Optional environment name. Supported values "development", "test", "preprod", "production".</param>
-        /// <returns></returns>
-        public static string[] GetObservabilityAuthenticationScope(string? environment = null)
+        /// <returns>The authentication scope.</returns>
+        public static string[] GetObservabilityAuthenticationScope()
         {
-            environment = environment ?? GetCurrentEnvironment();
-
-            return environment.ToLowerInvariant() switch
-            {
-                // For now, map "development" to preprod scope for local testing
-                EnvironmentUtils.DevelopmentEnvironmentName => new[] { PreprodObservabilityScope },
-                EnvironmentUtils.TestEnvironmentName => new[] { TestObservabilityScope },
-                EnvironmentUtils.PreprodEnvironmentName => new[] { PreprodObservabilityScope },
-                EnvironmentUtils.ProductionEnvironmentName => new[] { ProdObservabilityScope },
-                EnvironmentUtils.ProdEnvironmentName => new[] { ProdObservabilityScope },
-                _ => new[] { ProdObservabilityScope },
-            };
+            return new[] { ProdObservabilityScope };
         }
+
+        /// <summary>
+        /// [Deprecated] Returns the scope for authenticating to the observability service based on the cluster category.
+        /// </summary>
+        /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
+        /// <returns>The authentication scope.</returns>
+        [Obsolete("Cluster category argument is deprecated and will be removed in future versions. Defaults to production.")]
+        public static string[] GetObservabilityAuthenticationScope(string clusterCategory = ProdObservabilityClusterCategory)
+        {
+            // clusterCategory is ignored; always returns production scope
+            return new[] { ProdObservabilityScope };
+        }
+
         /// <summary>
         /// Returns the cluster category for the observability service based on the current environment.
         /// </summary>
-        /// <param name="environment"> Optional environment name. Supported values "development", "test", "preprod", "production".</param>
         /// <returns></returns>
-        public static string GetObservabilityClusterCategory(string? environment = null)
+        public static string GetObservabilityClusterCategory()
         {
-            environment = environment ?? GetCurrentEnvironment();
+            return ProdObservabilityClusterCategory;
+        }
 
-            return environment.ToLowerInvariant() switch
-            {
-                // For now, map "development" to preprod scope for local testing
-                EnvironmentUtils.DevelopmentEnvironmentName => PreprodObservabilityClusterCategory,
-                EnvironmentUtils.TestEnvironmentName => TestObservabilityClusterCategory,
-                EnvironmentUtils.PreprodEnvironmentName => PreprodObservabilityClusterCategory,
-                EnvironmentUtils.ProductionEnvironmentName => ProdObservabilityClusterCategory,
-                EnvironmentUtils.ProdEnvironmentName => ProdObservabilityClusterCategory,
-                _ => ProdObservabilityClusterCategory,
-            };
+        /// <summary>
+        /// [Deprecated] Returns the cluster category for the observability service based on the cluster category.
+        /// </summary>
+        /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
+        /// <returns></returns>
+        public static string GetObservabilityClusterCategory(string clusterCategory = ProdObservabilityClusterCategory)
+        {
+            // clusterCategory is ignored; always returns production category
+            return ProdObservabilityClusterCategory;
         }
 
         /// <summary>

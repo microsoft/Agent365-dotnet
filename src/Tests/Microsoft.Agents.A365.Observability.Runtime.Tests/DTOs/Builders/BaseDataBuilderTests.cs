@@ -76,11 +76,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         [TestMethod]
         public void AddRequestDetails_PopulatesRequestKeys()
         {
-            var request = new Request("content", ExecutionType.HumanToAgent, "session", new SourceMetadata("src-id", "src-name", Role.Human, "src-desc"));
+            var request = new Request("content", ExecutionType.HumanToAgent, "session", new SourceMetadata(id: "src-id", name: "src-name", role: Role.Human, description: "src-desc"));
             var dict = TestBuilder.BuildAll(request: request);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionSourceIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionSourceNameKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionTypeKey);
         }
 

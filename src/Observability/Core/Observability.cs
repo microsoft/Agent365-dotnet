@@ -4,13 +4,12 @@
 
 namespace Microsoft.Agents.A365.Observability;
 
-using Microsoft.Agents.A365.Observability.Tracing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Caching;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 
 /// <summary>
-/// Provides extension methods for configuring Microsoft Agents A365 SDK with OpenTelemetry tracing.
+/// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
 /// </summary>
 public static class Observability
 {
@@ -18,9 +17,9 @@ public static class Observability
     /// Adds agentic token handling to the service collection.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
-    /// <param name="clusterCategory">The cluster category for the Microsoft Agents A365 exporter options.</param>
+    /// <param name="clusterCategory">The cluster category for the Microsoft Agent 365 exporter options. Defaults to production.</param>
     /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddAgenticTracingExporter(this IServiceCollection services, string clusterCategory = "production")
+    public static IServiceCollection AddAgenticTracingExporter(this IServiceCollection services, string? clusterCategory = "production")
     {
         services.AddSingleton<IExporterTokenCache<AgenticTokenStruct>, AgenticTokenCache>();
 
@@ -29,8 +28,8 @@ public static class Observability
             var cache = sp.GetRequiredService<IExporterTokenCache<AgenticTokenStruct>>();
             return new Agent365ExporterOptions
             {
-                ClusterCategory = clusterCategory,
-                TokenResolver = (agentId, tenantId) => Task.FromResult(cache.GetObservabilityToken(agentId, tenantId))
+                ClusterCategory = clusterCategory ?? "production",
+                TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId)
             };
         });
 
@@ -42,9 +41,9 @@ public static class Observability
     /// Uses the service-to-service (S2S) endpoint for trace exports.
     /// </summary>
     /// <param name="services">The service collection to add to.</param>
-    /// <param name="clusterCategory">The cluster category for the Microsoft Agents A365 exporter options.</param>
+    /// <param name="clusterCategory">The cluster category for the Microsoft Agent 365 exporter options. Defaults to production.</param>
     /// <returns>The updated service collection.</returns>
-    public static IServiceCollection AddServiceTracingExporter(this IServiceCollection services, string clusterCategory = "production")
+    public static IServiceCollection AddServiceTracingExporter(this IServiceCollection services, string? clusterCategory = "production")
     {
         services.AddSingleton<IExporterTokenCache<string>, ServiceTokenCache>();
 
@@ -53,8 +52,8 @@ public static class Observability
             var cache = sp.GetRequiredService<IExporterTokenCache<string>>();
             return new Agent365ExporterOptions
             {
-                ClusterCategory = clusterCategory,
-                TokenResolver = (agentId, tenantId) => Task.FromResult(cache.GetObservabilityToken(agentId, tenantId)),
+                ClusterCategory = clusterCategory ?? "production",
+                TokenResolver = async (agentId, tenantId) => await (cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false)),
                 UseS2SEndpoint = true // Service-to-service uses S2S endpoint
             };
         });

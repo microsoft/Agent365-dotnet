@@ -8,7 +8,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
     #pragma warning disable CS1591 // XML documentation not required for constant definitions.
     /// <summary>
-    /// OpensTelemetry constant keys and values used across the Microsoft Agents A365 SDK.
+    /// OpenTelemetry constant keys and values used across the Microsoft Agent 365 SDK.
     /// </summary>
     public static class OpenTelemetryConstants
     {
@@ -52,10 +52,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         // AI invocation context dimensions
         public const string GenAiExecutionTypeKey = "gen_ai.execution.type";
 
-        // AI source metadata dimensions
-        public const string GenAiExecutionSourceIdKey = "gen_ai.execution.sourceMetadata.id";
-        public const string GenAiExecutionSourceNameKey = "gen_ai.execution.sourceMetadata.name";
-        public const string GenAiExecutionSourceDescriptionKey = "gen_ai.execution.sourceMetadata.description";
+        // AI channel metadata dimensions
+        public const string GenAiChannelNameKey = "gen_ai.channel.name";
+        public const string GenAiChannelLinkKey = "gen_ai.channel.link";
 
         // Target agent dimensions
         public const string GenAiAgentIdKey = "gen_ai.agent.id";

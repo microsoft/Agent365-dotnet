@@ -7,6 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="**\*.Tests\*.csproj" Exclude="**\bin\**;**\obj\**" />
     <ProjectReference Include="**\*Test*\*.csproj" Exclude="**\bin\**;**\obj\**" />
-    <ProjectReference Include="**\AnalyzerDemoApp\*.csproj" Exclude="**\bin\**;**\obj\**" />
   </ItemGroup>
 </Project>
+

@@ -15,7 +15,7 @@ using Microsoft.Agents.A365.Notifications;
 namespace AgentNotification
 {
     /// <summary>
-    /// AgentsSdkExtension for Microsoft Agents A365.
+    /// AgentsSdkExtension for Microsoft Agent 365.
     /// </summary>
     public class AgentNotification : AgentExtension
     {
