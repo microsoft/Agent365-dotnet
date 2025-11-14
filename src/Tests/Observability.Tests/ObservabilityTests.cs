@@ -11,6 +11,14 @@ namespace Microsoft.Agents.A365.Observability.Tests;
 [TestClass]
 public sealed class ObservabilityTests
 {
+    /// <summary>
+    /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()
+    /// </summary>
+    private static readonly string[] ValidClusterCategories = new[]
+    {
+        "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
+    };
+
     [TestMethod]
     public void AddAgenticTracingExporter_RegistersRequiredServices()
     {

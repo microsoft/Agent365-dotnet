@@ -13,6 +13,14 @@ namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 [TestClass]
 public sealed class Agent365ExporterTests
 {
+    /// <summary>
+    /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()
+    /// </summary>
+    private static readonly string[] ValidClusterCategories = new[]
+    {
+        "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
+    };
+
     private static Activity CreateActivity(string? tenantId = null, string? agentId = null)
     {
         using var listener = new ActivityListener
@@ -934,6 +942,74 @@ public sealed class Agent365ExporterTests
 
         // Assert
         result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
+    }
+
+    [TestMethod]
+    public void Export_S2SEndpoint_WithDifferentClusterCategories_ProcessesCorrectly()
+    {
+        // Test with all valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix
+        foreach (var category in ValidClusterCategories)
+        {
+            // Arrange
+            var options = new Agent365ExporterOptions
+            {
+                ClusterCategory = category,
+                TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+                UseS2SEndpoint = true
+            };
+
+            var resource = ResourceBuilder.CreateEmpty()
+                .AddService("unit-test-service", serviceVersion: "1.0.0")
+                .Build();
+
+            var exporter = new Agent365Exporter(
+                NullLogger<Agent365Exporter>.Instance,
+                options,
+                resource);
+
+            using var activity = CreateActivity("tenant-123", "agent-456");
+            var batch = CreateBatch(activity);
+
+            // Act
+            var result = exporter.Export(in batch);
+
+            // Assert
+            result.Should().Be(ExportResult.Failure, $"cluster category '{category}' should be processed"); // Expected to fail due to no real endpoint
+        }
+    }
+
+    [TestMethod]
+    public void Export_StandardEndpoint_WithDifferentClusterCategories_ProcessesCorrectly()
+    {
+        // Test with all valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix
+        foreach (var category in ValidClusterCategories)
+        {
+            // Arrange
+            var options = new Agent365ExporterOptions
+            {
+                ClusterCategory = category,
+                TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+                UseS2SEndpoint = false
+            };
+
+            var resource = ResourceBuilder.CreateEmpty()
+                .AddService("unit-test-service", serviceVersion: "1.0.0")
+                .Build();
+
+            var exporter = new Agent365Exporter(
+                NullLogger<Agent365Exporter>.Instance,
+                options,
+                resource);
+
+            using var activity = CreateActivity("tenant-123", "agent-456");
+            var batch = CreateBatch(activity);
+
+            // Act
+            var result = exporter.Export(in batch);
+
+            // Assert
+            result.Should().Be(ExportResult.Failure, $"cluster category '{category}' should be processed"); // Expected to fail due to no real endpoint
+        }
     }
 
     #endregion

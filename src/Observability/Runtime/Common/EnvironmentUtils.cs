@@ -25,14 +25,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// [Deprecated] Returns the scope for authenticating to the observability service based on the cluster region.
+        /// [Deprecated] Returns the scope for authenticating to the observability service based on the cluster category.
         /// </summary>
-        /// <param name="clusterRegion">Cluster region (deprecated, defaults to production).</param>
+        /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
         /// <returns>The authentication scope.</returns>
-        [Obsolete("Cluster region argument is deprecated and will be removed in future versions. Defaults to production.")]
-        public static string[] GetObservabilityAuthenticationScope(string clusterRegion = ProdObservabilityClusterCategory)
+        [Obsolete("Cluster category argument is deprecated and will be removed in future versions. Defaults to production.")]
+        public static string[] GetObservabilityAuthenticationScope(string clusterCategory = ProdObservabilityClusterCategory)
         {
-            // clusterRegion is ignored; always returns production scope
+            // clusterCategory is ignored; always returns production scope
             return new[] { ProdObservabilityScope };
         }
 
@@ -46,14 +46,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// [Deprecated] Returns the cluster category for the observability service based on the cluster region.
+        /// [Deprecated] Returns the cluster category for the observability service based on the cluster category.
         /// </summary>
-        /// <param name="clusterRegion">Cluster region (deprecated, defaults to production).</param>
+        /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
         /// <returns></returns>
-        [Obsolete("Cluster region argument is deprecated and will be removed in future versions. Defaults to production.")]
-        public static string GetObservabilityClusterCategory(string clusterRegion = ProdObservabilityClusterCategory)
+        public static string GetObservabilityClusterCategory(string clusterCategory = ProdObservabilityClusterCategory)
         {
-            // clusterRegion is ignored; always returns production category
+            // clusterCategory is ignored; always returns production category
             return ProdObservabilityClusterCategory;
         }
 
