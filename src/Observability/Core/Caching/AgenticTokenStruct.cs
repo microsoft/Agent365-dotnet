@@ -21,4 +21,14 @@ public class AgenticTokenStruct
     /// ITurnContext instance used to acquire tokens.
     /// </summary>
     public required ITurnContext TurnContext { get; set;  }
+
+    /// <summary>
+    /// Handler name to use with the UserAuthorization system.
+    /// </summary>
+    public required string AuthHandlerName { get; set; }
+
+    /// <summary>
+    /// Connection name, if applicable, to use for the exchange. 
+    /// </summary>
+    public string? ConnectionName { get; set; }
 }

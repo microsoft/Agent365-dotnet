@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
     /// <summary>
-    /// Utility methods for Agent 365 trace exporters.
+    /// Utility methods for Agent365 trace exporters.
     /// Provides helpers for partitioning activities and building endpoint URIs.
     /// </summary>
     public static class Agent365ExporterCore

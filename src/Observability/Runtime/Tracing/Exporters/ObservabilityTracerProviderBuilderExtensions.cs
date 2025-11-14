@@ -13,15 +13,15 @@ using System.Net.Http;
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
     /// <summary>
-    /// Extension methods to add Agent 365 Exporter to OpenTelemetry TracerProviderBuilder.
+    /// Extension methods to add Agent365 Exporter to OpenTelemetry TracerProviderBuilder.
     /// </summary>
     public static class ObservabilityTracerProviderBuilderExtensions
     {
         /// <summary>
-        /// Adds the Agent 365 Exporter to the OpenTelemetry TracerProviderBuilder using deferred initialization.
+        /// Adds the Agent365 Exporter to the OpenTelemetry TracerProviderBuilder using deferred initialization.
         /// </summary>
         /// <param name="builder">The TracerProviderBuilder to configure.</param>
-        /// <param name="exporterType">The Agent 365 exporter type to use.</param>
+        /// <param name="exporterType">The Agent365 exporter type to use.</param>
         public static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
         {
             if (builder == null)
@@ -39,11 +39,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Adds the Agent 365 Exporter to the OpenTelemetry TracerProviderBuilder using the provided service collection.
+        /// Adds the Agent365 Exporter to the OpenTelemetry TracerProviderBuilder using the provided service collection.
         /// </summary>
         /// <param name="builder">The TracerProviderBuilder to configure.</param>
         /// <param name="serviceCollection">The service collection to use for dependency injection.</param>
-        /// <param name="exporterType">The Agent 365 exporter type to use.</param>
+        /// <param name="exporterType">The Agent365 exporter type to use.</param>
         public static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, IServiceCollection serviceCollection, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
         {
             if (builder == null)

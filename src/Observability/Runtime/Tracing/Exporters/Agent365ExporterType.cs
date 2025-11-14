@@ -5,7 +5,7 @@
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
     /// <summary>
-    /// Represents the supported Agent 365 exporter types.
+    /// Represents the supported Agent365 exporter types.
     /// </summary>
     public enum Agent365ExporterType
     {
