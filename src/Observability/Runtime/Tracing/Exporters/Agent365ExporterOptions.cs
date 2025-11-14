@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
@@ -23,6 +24,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// DEPRECATED: Environment / cluster category
         /// </summary>
         public string ClusterCategory { get; set; } = "production";
+
+        /// <summary>
+        /// [Deprecated] Cluster region argument. Defaults to production. Will be removed in future versions.
+        /// </summary>
+        [Obsolete("ClusterRegion is deprecated and will be removed in future versions. Defaults to production.")]
+        public string ClusterRegion
+        {
+            get => "production";
+            set { /* Deprecated: value is ignored, always defaults to production */ }
+        }
 
         /// <summary>
         /// Async delegate used to resolve the auth token. REQUIRED.
