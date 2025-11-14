@@ -1,10 +1,10 @@
 # Observability Runtime
 
-This package provides the runtime components for the Agent365 Observability SDK, including exporters and tracing utilities.
+This package provides the runtime components for the Agent 365 Observability SDK, including exporters and tracing utilities.
 
-## Agent365 Exporter
+## Agent 365 Exporter
 
-The Agent365 exporter allows you to send telemetry data to the Agent365 observability platform using OpenTelemetry's `BatchActivityExportProcessor`.
+The Agent 365 exporter allows you to send telemetry data to the Agent 365 observability platform using OpenTelemetry's `BatchActivityExportProcessor`.
 
 ### Configuration
 
@@ -24,7 +24,7 @@ builder.Services.AddTracing();
 
 ### Batching Parameters
 
-The Agent365 exporter uses OpenTelemetry's `BatchActivityExportProcessor` to batch telemetry data before exporting. You can customize the batching behavior by configuring the following parameters:
+The Agent 365 exporter uses OpenTelemetry's `BatchActivityExportProcessor` to batch telemetry data before exporting. You can customize the batching behavior by configuring the following parameters:
 
 ```csharp
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
