@@ -27,11 +27,23 @@ public static class BuilderExtensions
         if (enableRelatedSources)
         {
             AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
-            builder.Services.AddOpenTelemetry()
-                .WithTracing(tracing => tracing
-                    .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
-                    .AddProcessor(new SemanticKernelSpanProcessor()))
-                .UseOtlpExporter();
+            if (builder.Configuration != null
+                && !string.IsNullOrEmpty(builder.Configuration["EnabledOtlpExporter"])
+                && bool.TryParse(builder.Configuration["EnabledOtlpExporter"], out bool enabled) && enabled)
+            {
+                builder.Services.AddOpenTelemetry()
+                    .WithTracing(tracing => tracing
+                        .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
+                        .AddProcessor(new SemanticKernelSpanProcessor()))
+                    .UseOtlpExporter();
+            }
+            else
+            {
+                builder.Services.AddOpenTelemetry()
+                    .WithTracing(tracing => tracing
+                        .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
+                        .AddProcessor(new SemanticKernelSpanProcessor()));
+            }
         }
 
         return builder;

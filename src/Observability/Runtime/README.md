@@ -19,7 +19,7 @@ builder.Services.AddSingleton(new Agent365ExporterOptions
     TokenResolver = (agentId, tenantId) => GetAuthToken(agentId, tenantId)
 });
 
-builder.Services.AddTracing();
+builder.AddA365Tracing();
 ```
 
 ### Batching Parameters
@@ -41,7 +41,7 @@ builder.Services.AddSingleton(new Agent365ExporterOptions
     MaxExportBatchSize = 512                  // Maximum activities per batch
 });
 
-builder.Services.AddTracing();
+builder.AddA365Tracing();
 ```
 
 #### Batching Parameters Reference

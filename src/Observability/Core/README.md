@@ -23,7 +23,7 @@
    var builder = WebApplication.CreateBuilder(args);
    
    // Configure Microsoft Agent 365 with Azure Monitor
-   builder.Services.AddTracing();
+   builder.AddA365Tracing();
    
    ...
    ```

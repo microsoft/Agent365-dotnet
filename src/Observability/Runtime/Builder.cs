@@ -8,6 +8,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry;
     using OpenTelemetry.Trace;
@@ -23,18 +24,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         private readonly Agent365ExporterType _agent365ExporterType;
         private bool _isBuilt = false;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public readonly IConfiguration? Configuration;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Builder"/> class.
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
-        /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service colletion.</param>
+        /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service collection.</param>
         /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
-        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType)
+        /// <param name="configuration">The configuration instance.</param>
+        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType, IConfiguration? configuration)
         {
             this._services = services;
             this._useOpenTelemetryBuilder = useOpenTelemetryBuilder;
             this._agent365ExporterType = agent365ExporterType;
+            Configuration = configuration;
         }
 
         /// <summary>
@@ -54,8 +62,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime
 
         private bool IsAgent365ExporterEnabled()
         {
-            string enabledEnv = Environment.GetEnvironmentVariable("EnableAgent365Exporter");
-            return string.IsNullOrEmpty(enabledEnv) ? false : enabledEnv.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            if (Configuration != null && Configuration["EnableAgent365Exporter"] != null)
+            {
+                string enabledEnv = Configuration["EnableAgent365Exporter"]!;
+                return enabledEnv.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
         }
 
         private void EnsureBuilt()

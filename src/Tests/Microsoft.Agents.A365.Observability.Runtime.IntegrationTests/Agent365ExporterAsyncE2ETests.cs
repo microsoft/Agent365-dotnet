@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
@@ -384,9 +385,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
         private ServiceProvider CreateTestServiceProvider(HttpClient httpClient)
         {
-            var services = new ServiceCollection();
-            services.AddSingleton<HttpClient>(httpClient);
-            services.AddSingleton<Agent365ExporterOptions>(sp =>
+            HostApplicationBuilder builder = new HostApplicationBuilder();
+
+            //var services = new ServiceCollection();
+            builder.Services.AddSingleton<HttpClient>(httpClient);
+            builder.Services.AddSingleton<Agent365ExporterOptions>(sp =>
             {
                 return new Agent365ExporterOptions
                 {
@@ -395,8 +398,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });
-            services.AddTracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
-            return services.BuildServiceProvider();
+            //builder.Services.AddTracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+            builder.AddA365Tracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+            return builder.Services.BuildServiceProvider();
         }
         private void SetupExporterTest()
         {
