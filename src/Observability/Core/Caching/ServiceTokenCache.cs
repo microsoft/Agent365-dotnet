@@ -98,7 +98,7 @@ public class ServiceTokenCache: IExporterTokenCache<string>
             return null;
         }
 
-        return entry.Token;
+        return await Task.FromResult(entry.Token).ConfigureAwait(false);
     }
 
     /// <summary>
