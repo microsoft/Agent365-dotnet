@@ -7,7 +7,7 @@ This document provides a complete guide for building, validating, and publishing
 The Microsoft Agent 365 SDK is organized into multiple NuGet packages:
 
 - **Microsoft.Agents A365.Observability.Common** - Core observability and tracing infrastructure
-- **Microsoft.Agents.A365.Observability.SemanticKernel** - SemanticKernel observability integration
+- **Microsoft.Agents.A365.Observability.SemanticKernel** -  Semantic Kernel observability integration
 - **Microsoft.Agents.A365.Observability.OpenAI** - OpenAI observability integration
 - **Microsoft.Agents.A365.Runtime.SemanticKernel** - Runtime components for SemanticKernel
 - **Microsoft.Agents.A365.Runtime.Common.AspNetCore** - ASP.NET Core runtime components

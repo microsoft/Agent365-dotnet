@@ -1,6 +1,6 @@
 # Microsoft.Agents.A365.Observability - Caching
 
-Secure token caching with built-in expiration and invalidation features for Microsoft Agents A365 Observability exporters.
+Secure token caching with built-in expiration and invalidation features for Microsoft Agent 365 Observability exporters.
 
 ## Overview
 
@@ -29,252 +29,9 @@ This functionality is included in the core observability package:
 dotnet add package Microsoft.Agents.A365.Observability
 ```
 
-## Usage
+## Documentation
 
-### Basic Usage with Default Settings
-
-```csharp
-using Microsoft.Agents.A365.Observability.Caching;
-
-// Create cache with default 1-hour expiration
-var cache = new ServiceTokenCache();
-
-// Register a token
-cache.RegisterObservability(
-    agentId: "my-agent", 
-    tenantId: "my-tenant",
-    token: "observability-token-xyz",
-    observabilityScopes: new[] { "https://example.com/.default" }
-);
-
-// Retrieve the token (returns null if expired or not found)
-var token = cache.GetObservabilityToken("my-agent", "my-tenant");
-```
-
-### Custom Default Expiration
-
-```csharp
-// Create cache with custom default expiration (30 minutes)
-var cache = new ServiceTokenCache(TimeSpan.FromMinutes(30));
-
-cache.RegisterObservability(
-    agentId: "my-agent", 
-    tenantId: "my-tenant",
-    token: "observability-token-xyz",
-    observabilityScopes: new[] { "https://example.com/.default" }
-);
-```
-
-### Per-Token Custom Expiration
-
-```csharp
-var cache = new ServiceTokenCache();
-
-// Register a token with custom expiration (5 minutes)
-cache.RegisterObservability(
-    agentId: "my-agent", 
-    tenantId: "my-tenant",
-    token: "short-lived-token",
-    observabilityScopes: new[] { "https://example.com/.default" },
-    expiresIn: TimeSpan.FromMinutes(5)
-);
-```
-
-### Manual Token Invalidation
-
-```csharp
-var cache = new ServiceTokenCache();
-
-cache.RegisterObservability("agent1", "tenant1", "token1", scopes);
-cache.RegisterObservability("agent2", "tenant2", "token2", scopes);
-
-// Invalidate a specific token
-bool removed = cache.InvalidateToken("agent1", "tenant1");
-// removed = true if token was found and removed
-
-// Invalidate all tokens
-cache.InvalidateAll();
-```
-
-### Periodic Cleanup of Expired Tokens
-
-```csharp
-var cache = new ServiceTokenCache();
-
-// Register some tokens
-cache.RegisterObservability("agent1", "tenant1", "token1", scopes);
-cache.RegisterObservability("agent2", "tenant2", "token2", scopes);
-
-// ... wait for some to expire ...
-
-// Remove all expired tokens and get count
-int expiredCount = cache.RemoveExpiredTokens();
-Console.WriteLine($"Removed {expiredCount} expired tokens");
-```
-
-## Dependency Injection
-
-The recommended way to use `ServiceTokenCache` is through dependency injection:
-
-```csharp
-using Microsoft.Agents.A365.Observability;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-
-// Add service tracing exporter (automatically registers ServiceTokenCache)
-services.AddServiceTracingExporter(clusterCategory: "production");
-
-var serviceProvider = services.BuildServiceProvider();
-
-// Get the cache instance
-var cache = serviceProvider.GetRequiredService<IExporterTokenCache<string>>();
-```
-
-## Best Practices
-
-### 1. Choose Appropriate Expiration Times
-
-```csharp
-// For short-lived operations (testing, dev)
-var cache = new ServiceTokenCache(TimeSpan.FromMinutes(5));
-
-// For production (default)
-var cache = new ServiceTokenCache(TimeSpan.FromHours(1));
-
-// For long-lived tokens
-var cache = new ServiceTokenCache(TimeSpan.FromHours(24));
-```
-
-### 2. Handle Token Expiration Gracefully
-
-```csharp
-var token = cache.GetObservabilityToken(agentId, tenantId);
-if (token == null)
-{
-    // Token expired or not found - refresh and re-register
-    var newToken = await AcquireNewTokenAsync(agentId, tenantId);
-    cache.RegisterObservability(agentId, tenantId, newToken, scopes);
-    token = newToken;
-}
-```
-
-### 3. Periodic Cleanup in Background Services
-
-```csharp
-public class TokenCleanupService : BackgroundService
-{
-    private readonly IExporterTokenCache<string> _cache;
-    
-    public TokenCleanupService(IExporterTokenCache<string> cache)
-    {
-        _cache = cache;
-    }
-    
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            // Run cleanup every 5 minutes
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
-            
-            if (_cache is ServiceTokenCache serviceCache)
-            {
-                var removed = serviceCache.RemoveExpiredTokens();
-                if (removed > 0)
-                {
-                    Console.WriteLine($"Cleaned up {removed} expired tokens");
-                }
-            }
-        }
-    }
-}
-```
-
-### 4. Security Considerations
-
-- **Never log tokens**: Avoid logging the actual token values
-- **Use appropriate expiration**: Match expiration time with your security requirements
-- **Invalidate on logout**: Call `InvalidateToken` when a user logs out
-- **Clear cache on security events**: Use `InvalidateAll()` in response to security events
-
-```csharp
-// On user logout
-public void OnUserLogout(string agentId, string tenantId)
-{
-    cache.InvalidateToken(agentId, tenantId);
-}
-
-// On security breach detection
-public void OnSecurityBreach()
-{
-    cache.InvalidateAll();
-}
-```
-
-## Error Handling
-
-The cache validates all inputs and throws `ArgumentException` for invalid parameters:
-
-```csharp
-try
-{
-    cache.RegisterObservability(null, "tenant", "token", scopes);
-}
-catch (ArgumentException ex)
-{
-    // "Value cannot be null or whitespace. (Parameter 'agentId')"
-    Console.WriteLine(ex.Message);
-}
-
-try
-{
-    cache.RegisterObservability("agent", "tenant", "token", Array.Empty<string>());
-}
-catch (ArgumentException ex)
-{
-    // "Observability scopes cannot be null or empty. (Parameter 'observabilityScopes')"
-    Console.WriteLine(ex.Message);
-}
-```
-
-## Thread Safety
-
-All operations are thread-safe. You can safely use the same cache instance across multiple threads:
-
-```csharp
-var cache = new ServiceTokenCache();
-
-// Safe to call from multiple threads concurrently
-Parallel.For(0, 100, i =>
-{
-    cache.RegisterObservability(
-        $"agent-{i}", 
-        $"tenant-{i}", 
-        $"token-{i}", 
-        scopes
-    );
-});
-```
-
-## Migration from Previous Version
-
-If you're upgrading from a previous version without expiration support, no code changes are required. The default behavior maintains backward compatibility:
-
-```csharp
-// Old code - still works with default 1-hour expiration
-var cache = new ServiceTokenCache();
-cache.RegisterObservability("agent", "tenant", "token", scopes);
-var token = cache.GetObservabilityToken("agent", "tenant");
-```
-
-To opt-in to custom expiration:
-
-```csharp
-// New code - with custom expiration
-var cache = new ServiceTokenCache(TimeSpan.FromMinutes(30));
-cache.RegisterObservability("agent", "tenant", "token", scopes, TimeSpan.FromMinutes(10));
-```
+For detailed usage information, best practices, and examples, see the [Microsoft Agents 365 Observability documentation](https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet).
 
 ## Related Documentation
 
@@ -289,6 +46,14 @@ For issues, questions, or feedback:
 
 - File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
 - See the [main documentation](../../../../README.md) for more information
+
+## 📋 **Telemetry**
+ 
+Data Collection. The software may collect information about you and your use of the software and send it to Microsoft. Microsoft may use this information to provide services and improve our products and services. You may turn off the telemetry as described in the repository. There are also some features in the software that may enable you and Microsoft to collect data from users of your applications. If you use these features, you must comply with applicable law, including providing appropriate notices to users of your applications together with a copy of Microsoft's privacy statement. Our privacy statement is located at https://go.microsoft.com/fwlink/?LinkID=824704. You can learn more about data collection and use in the help documentation and our privacy statement. Your use of the software operates as your consent to these practices.
+ 
+## Trademarks
+ 
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
 
 ## License
 

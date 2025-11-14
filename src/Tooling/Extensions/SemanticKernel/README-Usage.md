@@ -1,6 +1,6 @@
-# Microsoft Agent 365 SDK - SemanticKernel Tooling
+# Microsoft Agent 365 SDK - Semantic Kernel Tooling
 
-This library provides integration between Microsoft Agent 365 and SemanticKernel, enabling you to add MCP (Model Context Protocol) tool servers to your SemanticKernel agents.
+This library provides integration between Microsoft Agent 365 SDK and Semantic Kernel, enabling you to add MCP (Model Context Protocol) tool servers to your Semantic Kernel agents.
 
 ## Installation
 
