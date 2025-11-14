@@ -363,49 +363,6 @@ In **Development** mode:
 In **Production** mode:
 - Fetches MCP server configurations from the Tooling Gateway endpoint
 
-### ToolingManifest.json Format
-
-For development scenarios, create a `ToolingManifest.json` file in your project output directory:
-
-```json
-{
-  "mcpServers": [
-    {
-      "mcpServerName": "mailMCPServer",
-      "mcpServerUniqueName": "mcp_MailTools"
-    },
-    {
-      "mcpServerName": "sharePointMCPServer",
-      "mcpServerUniqueName": "mcp_SharePointTools"
-    }
-  ]
-}
-```
-
-**Important Notes:**
-- The `mcpServerUniqueName` field should contain only the server name (e.g., `mcp_MailTools`), not the full URL
-- The library automatically constructs the full URL based on:
-  - Current environment (Development/Test/Production)
-  - Base URL for the current environment
-
-**URL Construction:**
-The library builds full URLs like:
-```
-{BaseURL}/agents/servers/{ServerName}
-```
-
-**Environment-Based Base URLs:**
-- **Development**: `https://localhost:8080/agents/servers`
-- **Test**: `https://test.agent365.svc.cloud.dev.microsoft/agents/servers`
-- **Staging**: `https://staging.agent365.svc.cloud.microsoft/agents/servers`
-- **Production**: `https://agent365.svc.cloud.microsoft/agents/servers`
-
-**Example:**
-For server name `mcp_MailTools` in Test environment:
-```
-https://test.agent365.svc.cloud.dev.microsoft/agents/servers/mcp_MailTools
-```
-
 ## Important Notes
 
 1. **Required Dependencies**: 
