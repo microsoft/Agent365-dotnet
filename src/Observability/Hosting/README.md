@@ -10,7 +10,7 @@ dotnet add package Microsoft.Agents.A365.Observability.Hosting
 
 ## Documentation
 
-For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Observability documentation](https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet).
+For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Observability documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/observability?tabs=dotnet).
 
 ## Support
 
