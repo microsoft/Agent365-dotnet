@@ -1,51 +1,71 @@
-# Microsoft Agent 365 Tooling SDK for .NET
 
-## 🚀 Features
+# Microsoft Agent 365 Tooling
 
-- **Listing tool servers**: Ability to list the tool servers that are available to the agent.
-- **Add tool server to orchestrator**: An easy way to add all selected tool servers directly to the most popular orchestrators.
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.svg?label=Semantic%20Kernel)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.svg?label=Agent%20Framework)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.AgentFramework/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.svg?label=Azure%20AI%20Foundry)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Tooling.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Tooling/)
 
-## 🚀 Quick Start
+The Microsoft Agent 365 Tooling SDK provides developer tools and utilities for building sophisticated agent applications with Model Context Protocol (MCP) tool server integration. This module simplifies the discovery and registration of tool servers with AI agent frameworks.
 
-TODO: This is currently only for Semantic Kernel. We need to add a sample for List tool servers and then provide a link to this Semantic Kernel-specific code.
+## Overview
 
-1. Register required types:
-2. Create a class with a constructor such as this:
-    ```csharp
-    public ToolingAgent(Kernel kernel, IServiceProvider service, IMcpToolRegistrationService mcpToolRegistrationService, UserAuthorization userAuthorization, ITurnContext turnContext)
-    ```
-3. Call `IMcpToolRegistrationService.AddToolServersToAgent(...)`:
-    ```csharp
-    // To use agentic authentication:
-    mcpToolRegistrationService.AddToolServersToAgent(kernel, userAuthorization, turnContext);
-    
-    // To use an auth token you specify yourself:
-    mcpToolRegistrationService.AddToolServersToAgent(kernel, userAuthorization, turnContext, authToken);
-    ```
-4. Define the agent:
-    ```csharp
-        // Define the agent
-        this._agent =
-            new()
-            {
-                Instructions = AgentInstructions(),
-                Name = AgentName,
-                Kernel = this._kernel,
-                Arguments = new KernelArguments(new OpenAIPromptExecutionSettings()
-                {
-    #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new() { RetainArgumentTypes = true }),
-    #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                    ResponseFormat = "json_object", 
-                }),
-            };
-    ```
-    
-> [!IMPORTANT]
-> This line is important, make sure not to omit it: `FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(options: new() { RetainArgumentTypes = true }),`
+The Tooling module enables developers to:
 
+- Discover and list available MCP tool servers
+- Automatically register tool servers with agent frameworks
+- Integrate tools seamlessly with multiple AI frameworks
+- Support both agentic authentication and custom authorization
+- Manage tool server lifecycles and dependencies
 
+## Installation
 
-## 🛠️ Sample Applications
+```bash
+# Core tooling package
+dotnet add package Microsoft.Agents.A365.Tooling
 
-- **Semantic Kernel Multiturn**: [`/dotnet/samples/semantic-kernel-multiturn/`](./dotnet/samples/semantic-kernel-multiturn/) - C# Semantic Kernel sample.
+# For Semantic Kernel integration
+dotnet add package Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel
+
+# For Agent Framework integration
+dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
+
+# For Azure AI Foundry integration
+dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
+```
+
+## Package Structure
+
+The Tooling module provides MCP tool server integration through multiple packages:
+
+### Core Package
+
+- **[Microsoft.Agents.A365.Tooling](Core/README.md)** - Core MCP tool server configuration service and models
+
+### Framework Extensions
+
+- **[Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel](Extensions/SemanticKernel/README.md)** - Semantic Kernel integration with automatic plugin registration
+- **[Microsoft.Agents.A365.Tooling.Extensions.AgentFramework](Extensions/AgentFramework/README.md)** - Agent Framework integration returning immutable AIAgent
+- **[Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry](Extensions/AzureAIFoundry/README.md)** - Azure AI Foundry Persistent Agents integration
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../README.md) for more information
+
+## Contributing
+
+This project welcomes contributions and suggestions. See the [Contributing Guide](../../README.md#contributing) for details.
+
+## Trademarks
+
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
