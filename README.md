@@ -78,7 +78,7 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 For issues, questions, or feedback:
 
 - **Issues**: Please file issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
-- **Documentation**: See the [Microsoft Agents 365 Developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/)
+- **Documentation**: See the [Microsoft Agents 365 Developer documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
 - **Security**: For security issues, please see [SECURITY.md](SECURITY.md)
 
 ## Contributing
