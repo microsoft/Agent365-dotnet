@@ -23,7 +23,7 @@ The Microsoft Agent 365 SDK focuses on four core areas:
 
 This project is currently in active development. Packages are published to NuGet as they become available.
 
-### Public Nuget feed
+### Public NuGet feed
 
 The best way to consume this SDK is via our NuGet packages found here: [nuget.org](https://www.nuget.org/packages?q=Microsoft.Agents.A365). All packages begin with **Microsoft.Agents.A365**.
 
