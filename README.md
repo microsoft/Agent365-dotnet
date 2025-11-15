@@ -8,7 +8,7 @@
 [![Contributors](https://img.shields.io/github/contributors/microsoft/Agent365-dotnet?label=Contributors&logo=github)](https://github.com/microsoft/Agent365-dotnet/graphs/contributors)
 
 > #### Note:
-> Use the information in this README to contribute to this open-source project. To learn about using this SDK in your projects, refer to the [Microsoft Agent 365 Developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/).
+> Use the information in this README to contribute to this open-source project. To learn about using this SDK in your projects, refer to the [Microsoft Agent 365 Developer documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/).
 
 The Microsoft Agent 365 SDK extends the Microsoft 365 Agents SDK with enterprise-grade capabilities for building sophisticated agents. This SDK provides comprehensive tooling for observability, notifications, runtime utilities, and development tools that help developers create production-ready agents for platforms including M365, Teams, Copilot Studio, and Webchat.
 
