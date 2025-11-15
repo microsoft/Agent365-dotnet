@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Agents.A365.Observability;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Caching;
 
@@ -17,8 +16,7 @@ public sealed class ObservabilityTests
     /// </summary>
     private static readonly string[] ValidClusterCategories = new[]
     {
-        "local", "dev", "test", "preprod", "firstrelease", "prod",
-        "gov", "high", "dod", "mooncake", "ex", "rx"
+        "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
     };
 
     [TestMethod]
@@ -28,7 +26,7 @@ public sealed class ObservabilityTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddAgenticTracingExporter("test");
+        services.AddAgenticTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -38,8 +36,7 @@ public sealed class ObservabilityTests
 
         var options = serviceProvider.GetService<Agent365ExporterOptions>();
         options.Should().NotBeNull();
-        options!.ClusterCategory.Should().Be("test");
-        options.TokenResolver.Should().NotBeNull();
+        options!.TokenResolver.Should().NotBeNull();
     }
 
     [TestMethod]
@@ -64,7 +61,7 @@ public sealed class ObservabilityTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddAgenticTracingExporter("test");
+        services.AddAgenticTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -79,7 +76,7 @@ public sealed class ObservabilityTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddServiceTracingExporter("test");
+        services.AddServiceTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -89,8 +86,7 @@ public sealed class ObservabilityTests
 
         var options = serviceProvider.GetService<Agent365ExporterOptions>();
         options.Should().NotBeNull();
-        options!.ClusterCategory.Should().Be("test");
-        options.TokenResolver.Should().NotBeNull();
+        options!.TokenResolver.Should().NotBeNull();
     }
 
     [TestMethod]
@@ -115,7 +111,7 @@ public sealed class ObservabilityTests
         var services = new ServiceCollection();
 
         // Act
-        services.AddServiceTracingExporter("test");
+        services.AddServiceTracingExporter( );
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -124,47 +120,11 @@ public sealed class ObservabilityTests
     }
 
     [TestMethod]
-    public void AddServiceTracingExporter_WithCustomClusterCategory_SetsCorrectly()
-    {
-        // Arrange - use all valid cluster categories from PowerPlatformApiDiscovery
-        foreach (var category in ValidClusterCategories)
-        {
-            // Act
-            var testServices = new ServiceCollection();
-            testServices.AddServiceTracingExporter(category);
-            var serviceProvider = testServices.BuildServiceProvider();
-
-            // Assert
-            var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-            options.ClusterCategory.Should().Be(category);
-            options.UseS2SEndpoint.Should().BeTrue();
-        }
-    }
-
-    [TestMethod]
-    public void AddAgenticTracingExporter_WithCustomClusterCategory_SetsCorrectly()
-    {
-        // Arrange - use all valid cluster categories from PowerPlatformApiDiscovery
-        foreach (var category in ValidClusterCategories)
-        {
-            // Act
-            var testServices = new ServiceCollection();
-            testServices.AddAgenticTracingExporter(category);
-            var serviceProvider = testServices.BuildServiceProvider();
-
-            // Assert
-            var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-            options.ClusterCategory.Should().Be(category);
-            options.UseS2SEndpoint.Should().BeFalse();
-        }
-    }
-
-    [TestMethod]
     public void AddServiceTracingExporter_TokenResolver_CanBeCalled()
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddServiceTracingExporter("test");
+        services.AddServiceTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
 
@@ -182,7 +142,7 @@ public sealed class ObservabilityTests
     {
         // Arrange
         var services = new ServiceCollection();
-        services.AddAgenticTracingExporter("test");
+        services.AddAgenticTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
 

@@ -19,7 +19,6 @@ public sealed class Agent365ExporterExtensionsTests
         // Configure custom batching parameters
         services.AddSingleton(new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             MaxQueueSize = 4096,
             ScheduledDelayMilliseconds = 10000,
@@ -56,7 +55,6 @@ public sealed class Agent365ExporterExtensionsTests
         // Configure with default batching parameters
         services.AddSingleton(new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
         });
 
