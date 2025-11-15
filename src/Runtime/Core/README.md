@@ -1,5 +1,5 @@
 
-# Microsoft Agent 365 Runtime SDK for .NET
+# Microsoft Agent 365 Runtime
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime/)
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.Extensions.OpenAI.svg?label=OpenAI)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime.Extensions.OpenAI/)

@@ -20,15 +20,6 @@ Building production-ready AI agents requires robust observability to understand 
 - Performance metrics and diagnostics
 - Caching instrumentation and monitoring
 
-## Features
-
-- **Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
-- **Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
-- **OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
-- **Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
-- **Caching Instrumentation**: Monitor and optimize agent caching strategies
-- **Middleware Support**: ASP.NET Core middleware for request/response tracing
-
 ## Installation
 
 ```bash
