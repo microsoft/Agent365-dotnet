@@ -25,7 +25,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         private bool _isBuilt = false;
 
         /// <summary>
-        /// 
+        /// Gets the configuration instance used for feature toggles and runtime settings.
         /// </summary>
         public readonly IConfiguration? Configuration;
 
