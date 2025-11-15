@@ -398,7 +398,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });
-            //builder.Services.AddTracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+            
             builder.AddA365Tracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
             return builder.Services.BuildServiceProvider();
         }
