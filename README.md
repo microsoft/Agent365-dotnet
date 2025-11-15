@@ -112,7 +112,7 @@ Enterprise-grade extensions for observability, notifications, runtime utilities,
 - [Microsoft Agent 365 SDK - Python repository](https://github.com/microsoft/Agent365-python) 
 - [Microsoft Agent 365 SDK - Node.js/TypeScript repository](https://github.com/microsoft/Agent365-nodejs)
 - [Microsoft Agent 365 SDK Samples repository](https://github.com/microsoft/Agent365-Samples)
-- [Microsoft Agent 365 developer documentation](https://learn.microsoft.com/microsoft-agent-365/developer/)
+- [Microsoft Agent 365 developer documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
 
 ### Additional Resources
 
