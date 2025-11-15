@@ -28,8 +28,8 @@ public static class BuilderExtensions
         {
             AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
             if (builder.Configuration != null
-                && !string.IsNullOrEmpty(builder.Configuration["EnabledOtlpExporter"])
-                && bool.TryParse(builder.Configuration["EnabledOtlpExporter"], out bool enabled) && enabled)
+                && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+                && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
             {
                 builder.Services.AddOpenTelemetry()
                     .WithTracing(tracing => tracing
