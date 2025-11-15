@@ -1,168 +1,30 @@
-# Observability Runtime
+# Microsoft.Agents.A365.Observability.Runtime
 
-This package provides the runtime components for the Agent 365 Observability SDK, including exporters and tracing utilities.
+The Runtime package provides runtime components for the Microsoft Agent 365 Observability SDK, including exporters, tracing utilities, DTOs, and scope management.
 
-## Agent 365 Exporter
+## Installation
 
-The Agent 365 exporter allows you to send telemetry data to the Agent 365 observability platform using OpenTelemetry's `BatchActivityExportProcessor`.
-
-### Configuration
-
-Configure the exporter by registering `Agent365ExporterOptions` in your service collection:
-
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-
-builder.Services.AddSingleton(new Agent365ExporterOptions
-{
-    ClusterCategory = "preprod",
-    TokenResolver = (agentId, tenantId) => GetAuthToken(agentId, tenantId)
-});
-
-builder.Services.AddTracing();
+```bash
+dotnet add package Microsoft.Agents.A365.Observability.Runtime
 ```
 
-### Batching Parameters
+## Documentation
 
-The Agent 365 exporter uses OpenTelemetry's `BatchActivityExportProcessor` to batch telemetry data before exporting. You can customize the batching behavior by configuring the following parameters:
+For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Observability documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/observability?tabs=dotnet).
 
-```csharp
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+## Support
 
-builder.Services.AddSingleton(new Agent365ExporterOptions
-{
-    ClusterCategory = "preprod",
-    TokenResolver = (agentId, tenantId) => GetAuthToken(agentId, tenantId),
-    
-    // Batching parameters (optional, defaults shown)
-    MaxQueueSize = 2048,                      // Maximum number of activities to queue
-    ScheduledDelayMilliseconds = 5000,        // Delay between batch exports (5 seconds)
-    ExporterTimeoutMilliseconds = 30000,      // Timeout for export operations (30 seconds)
-    MaxExportBatchSize = 512                  // Maximum activities per batch
-});
+For issues, questions, or feedback:
 
-builder.Services.AddTracing();
-```
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../README.md) for more information
 
-#### Batching Parameters Reference
+## Trademarks
 
-- **MaxQueueSize** (default: 2048)
-  - Maximum number of activities to queue before dropping.
-  - Increase for high-throughput scenarios to avoid data loss.
-  - Higher values use more memory.
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
 
-- **ScheduledDelayMilliseconds** (default: 5000)
-  - Time to wait before exporting a batch.
-  - Lower values provide more real-time data but increase network overhead.
-  - Higher values reduce network calls but increase latency.
+## License
 
-- **ExporterTimeoutMilliseconds** (default: 30000)
-  - Maximum time to wait for export to complete.
-  - Increase for slow network conditions or large batch sizes.
-  - Lower values fail faster but may cause unnecessary retries.
+Copyright (c) Microsoft Corporation. All rights reserved.
 
-- **MaxExportBatchSize** (default: 512)
-  - Maximum number of activities to include in a single export batch.
-  - Higher values reduce network overhead but increase memory usage and export duration.
-  - Lower values provide more frequent exports but increase network overhead.
-
-## Manual Scope Duration Setting
-
-The observability scopes support manual setting of start and end times, allowing you to create scopes for operations that occurred outside the normal execution flow. This is useful for:
-
-- Recording historical operations
-- Replaying telemetry from logs
-- Creating scopes for async operations that completed at different times
-
-You can set custom times via methods by calling `SetStartTime()` and/or `SetEndTime()` on the scope instance.
-
-### Usage Examples
-
-#### Setting Start Time via Method
-
-```csharp
-using System;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-
-// Create a scope and set a custom start time via method
-var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
-using var scope = ExecuteAgentScope.Start(
-    agentId: "my-agent",
-    tenantId: Guid.Parse("your-tenant-id"),
-    request: null
-);
-scope.SetStartTime(customStartTime);
-
-// The scope will calculate duration from the custom start time to now
-```
-
-#### Setting Both Start and End Times
-
-```csharp
-// Create a scope and set both custom start and end times
-var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-10);
-var customEndTime = DateTimeOffset.UtcNow.AddMinutes(-5);
-
-using (var scope = ExecuteAgentScope.Start(
-    agentId: "my-agent",
-    tenantId: Guid.Parse("your-tenant-id"),
-    request: null
-))
-{
-    // Set the custom start and end times via methods
-    scope.SetStartTime(customStartTime);
-    scope.SetEndTime(customEndTime);
-    
-    // The scope will record a duration of 5 minutes (customEndTime - customStartTime)
-}
-```
-
-#### Setting Only End Time
-
-```csharp
-// Create a scope and set only a custom end time
-using (var scope = ExecuteAgentScope.Start(
-    agentId: "my-agent",
-    tenantId: Guid.Parse("your-tenant-id"),
-    request: null
-))
-{
-    // Do some work...
-    
-    // Set a custom end time (uses the actual start time from scope creation)
-    scope.SetEndTime(DateTimeOffset.UtcNow.AddSeconds(10));
-}
-```
-
-#### All Scope Types Support Manual Duration
-
-All scope types support manual start/end times via methods:
-
-```csharp
-var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
-var customEndTime = DateTimeOffset.UtcNow.AddMinutes(-3);
-
-// ExecuteAgentScope
-var agentScope = ExecuteAgentScope.Start(agentDetails, tenantDetails, request);
-agentScope.SetStartTime(customStartTime);
-agentScope.SetEndTime(customEndTime);
-
-// InvokeAgentScope
-var invokeScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request);
-invokeScope.SetStartTime(customStartTime);
-invokeScope.SetEndTime(customEndTime);
-
-// ExecuteToolScope
-var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
-toolScope.SetStartTime(customStartTime);
-toolScope.SetEndTime(customEndTime);
-
-// InferenceScope
-var inferenceScope = InferenceScope.Start(inferenceCallDetails, agentDetails, tenantDetails);
-inferenceScope.SetStartTime(customStartTime);
-inferenceScope.SetEndTime(customEndTime);
-```
-inferenceScope.SetStartTime(customStartTime);
-inferenceScope.SetEndTime(customEndTime);
-```
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.
