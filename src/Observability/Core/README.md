@@ -1,46 +1,30 @@
-# Microsoft Agent 365 Observability SDK for .NET
+# Microsoft.Agents.A365.Observability - Core
 
-## 🚀 Features
+The core observability package provides fundamental tracing, monitoring, and instrumentation capabilities for AI agent applications.
 
-- **🔍 Agent Monitoring**: Specialized tracing for AI agent invocations with detailed telemetry
-- **🛠️ Tool Execution Tracking**: Monitor tool executions and function calls with comprehensive metrics
-- **📊 OpenTelemetry Integration**: Built-in OpenTelemetry tracing for standardized observability
-- **☁️ Azure Monitor Support**: Seamless integration with Azure Monitor for cloud-based monitoring
+## Installation
 
-### 🚀 Quick Start
+```bash
+dotnet add package Microsoft.Agents.A365.Observability
+```
 
-#### .NET Quick Start
+## Documentation
 
-1. **Install the package**:
-   ```bash
-   dotnet add package Microsoft.Agents.A365
-   ```
+For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Observability documentation](https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet).
 
-2. **Configure in your application**:
-   ```csharp
-   using Microsoft.Agents.A365;
-   
-   var builder = WebApplication.CreateBuilder(args);
-   
-   // Configure Microsoft Agent 365 with Azure Monitor
-   builder.Services.AddTracing();
-   
-   ...
-   ```
+## Support
 
-3. **Add agent tracing**:
-   ```csharp
-   using Microsoft.Agents.A365.Tracing;
-   
-   using var agentScope = ExecuteAgentScope.Start(AgentId);
-   // Your agent logic here
-   ```
+For issues, questions, or feedback:
 
-### 🛠️ Sample Applications
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../README.md) for more information
 
-#### .NET Samples
-- **Basic Sample**: [`/dotnet/samples/basic_agent/`](../samples/basic_agent/) - ASP.NET Core web application with Microsoft Agent 365 integration
-- **Custom Engine**: [`/dotnet/samples/agent_with_custom_engine/`](../samples/agent_with_custom_engine/) - Advanced agent implementation with custom engines
-- **Hello World Agent**: [`/dotnet/samples/hello_world_a365_agent/`](../samples/hello_world_a365_agent/) - Simple getting started example
-- **Devin Agent**: [`/dotnet/samples/devin_agent/`](../samples/devin_agent/) - Advanced AI agent implementation
-- **Semantic Kernel Multiturn**: [`/dotnet/samples/semantic-kernel-multiturn/`](../samples/semantic-kernel-multiturn/) - C# Semantic Kernel sample
+## Trademarks
+
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../LICENSE.md) file for details.

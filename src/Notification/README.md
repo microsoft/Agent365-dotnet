@@ -1,50 +1,47 @@
-# Microsoft Agent 365 Notifications SDK for .NET
+# Microsoft Agent 365 Notifications SDK
 
-## 🚀 Features
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Notifications.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Notifications/)
 
-- **OnAgentNotification**: Support to easily handle notification events (such as when agent receives an email, or when agent is @-mentioned in a Word document).
+The Notification module provides a comprehensive framework for handling agent notification events in Microsoft 365 environments. It enables agents to respond to email notifications, document mentions, and other M365 notification types with type-safe, event-driven architectures.
 
-## 🚀 Quick Start
+## Overview
 
-In your Agent class that extends `AgentApplication`:
-1. Add using directives (TODO: this needs to be cleaned up):
-    ```csharp
-    using AgentNotification;
-    using AgentNotification.Extensions;
-    using AgentNotification.Models;
-    using Microsoft.Agents.A365.AgentsSdkExtensions;
-    using Microsoft.Agents.A365.AgentsSdkExtensions.Models;
-    ```
-2. Create a method `AgentNotificationActivityAsync`:
-    ```csharp
-    private async Task AgentNotificationActivityAsync(ITurnContext turnContext, ITurnState turnState, AgentNotificationActivity activity, CancellationToken cancellationToken)
-    {
-        // Setup local service connection
-        ServiceCollection serviceCollection = [
-            new ServiceDescriptor(typeof(ITurnState), turnState),
-            new ServiceDescriptor(typeof(ITurnContext), turnContext),
-            new ServiceDescriptor(typeof(Kernel), _kernel),
-        ];
+The Notification module offers:
 
-        switch (activity.NotificationType)
-        {
-            case NotificationTypeEnum.EmailNotification:
-                // handle notification when the agent has received email
-                return;
-            case NotificationTypeEnum.WpxComment:
-                // handle notification when the agent has been @-mentioned in a comment in a Word document
-                return;
-        }
+- **Event-Driven Architecture**: Handle notifications asynchronously with pattern-based routing
+- **Multiple Notification Types**: Support for email notifications, Word document @-mentions, and more
+- **Type-Safe Models**: Strongly-typed notification models and enums for reliable development
+- **Flexible Handler Registration**: Easy-to-use `OnAgentNotification` extension method with route ranking
+- **Auto Sign-In Support**: Built-in authentication handler integration for secure notification processing
 
-        throw new NotImplementedException();
-    }
-    ```
-3. Register this method with Agents SDK, by calling `OnAgentNotification`:
-    ```csharp
-        // Register Agentic specific Activity routes.  These will only be used if the incoming Activity is Agentic.
-        this.OnAgentNotification("*", AgentNotificationActivityAsync,RouteRank.Last,  autoSignInHandlers: autoSignInHandlers);
-    ```
+## Installation
 
-## 🛠️ Sample Application
+```bash
+dotnet add package Microsoft.Agents.A365.Notifications
+```
 
-- **Semantic Kernel Multiturn**: [`/dotnet/samples/semantic-kernel-multiturn/`](./dotnet/samples/semantic-kernel-multiturn/) - C# Semantic Kernel sample.
+## Package Structure
+
+- **[Microsoft.Agents.A365.Notifications](./Microsoft.Agents.A365.Notifications/README.md)** - Notification handling framework with event routing, type-safe models, and authentication support
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../README.md) for more information
+
+## Contributing
+
+This project welcomes contributions and suggestions. See the [Contributing Guide](../../README.md#contributing) for details.
+
+## Trademarks
+
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
