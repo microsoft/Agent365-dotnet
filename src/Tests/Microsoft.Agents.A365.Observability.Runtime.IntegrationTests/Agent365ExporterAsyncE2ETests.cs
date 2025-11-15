@@ -387,7 +387,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         {
             HostApplicationBuilder builder = new HostApplicationBuilder();
 
-            //var services = new ServiceCollection();
             builder.Services.AddSingleton<HttpClient>(httpClient);
             builder.Services.AddSingleton<Agent365ExporterOptions>(sp =>
             {
