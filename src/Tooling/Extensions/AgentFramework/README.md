@@ -1,20 +1,31 @@
-# Agent Tooling Agent Framework SDK for .NET
 
-This package provides integration between Microsoft Agent 365 and Agent Framework, enabling seamless tooling functionalities for AI agent development.
+# Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
 
-## Features
+Microsoft Agent Framework integration extensions for the Microsoft Agent 365 Tooling SDK. This package provides seamless MCP tool server integration with Agent Framework-based agent applications.
 
-- Integration with Agent Framework for Microsoft Agent 365
-- MCP (Model Context Protocol) server capabilities
-- Authentication and hosting support
-- Observability and runtime integration
+## Installation
 
-## Getting Started
-
-```csharp
-// TODO: Add usage examples
+```bash
+dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
 ```
 
 ## Documentation
 
-For more detailed documentation and usage examples, please refer to the main [Agent365-dotnet repository](https://github.com/microsoft/Agent365-dotnet).
+For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Tooling documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/tooling?tabs=dotnet).
+
+## Support
+
+For issues, questions, or feedback:
+
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../../../README.md) for more information
+
+## Trademarks
+
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
+
+## License
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the MIT License - see the [LICENSE](../../../../LICENSE.md) file for details.
