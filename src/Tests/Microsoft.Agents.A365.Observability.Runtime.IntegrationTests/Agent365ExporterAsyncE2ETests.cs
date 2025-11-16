@@ -274,7 +274,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             var httpClient = new HttpClient(handler);
 
-            var provider = this.CreateTestServiceProvider(httpClient);
+            this.CreateTestServiceProvider(httpClient);
 
             var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
             var request = new Request(
