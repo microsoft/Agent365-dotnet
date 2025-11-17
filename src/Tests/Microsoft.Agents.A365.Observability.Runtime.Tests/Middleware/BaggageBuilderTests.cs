@@ -24,24 +24,28 @@ public sealed class BaggageBuilderTest
         var tenant = "tenant-1";
         var agent = "agent-1";
         var corr = "corr-1";
+        var session = "session-1";
 
         // Act
         using (new BaggageBuilder()
             .TenantId(tenant)
             .AgentId(agent)
             .CorrelationId(corr)
+            .SessionId(session)
             .Build())
         {
             // Assert inside scope
             Baggage.Current.GetBaggage(TenantIdKey).Should().Be(tenant);
             Baggage.Current.GetBaggage(GenAiAgentIdKey).Should().Be(agent);
             Baggage.Current.GetBaggage(CorrelationIdKey).Should().Be(corr);
+            Baggage.Current.GetBaggage(SessionIdKey).Should().Be(session);
         }
 
         // Assert after dispose (restored -> no values)
         Baggage.Current.GetBaggage(TenantIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiAgentIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(CorrelationIdKey).Should().BeNull();
+        Baggage.Current.GetBaggage(SessionIdKey).Should().BeNull();
     }
     
 }
