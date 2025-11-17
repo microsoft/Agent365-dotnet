@@ -2,12 +2,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.Builder;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -25,11 +25,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetCallerBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerIdKey, turnContext.Activity?.From?.Id);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerNameKey, turnContext.Activity?.From?.Name);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUpnKey, turnContext.Activity?.From?.Name);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUserIdKey, turnContext.Activity?.From?.AgenticUserId ?? turnContext.Activity?.From?.AadObjectId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerTenantIdKey, turnContext.Activity?.From?.TenantId);
+            yield return new KeyValuePair<string, object?>(GenAiCallerIdKey, turnContext.Activity?.From?.Id);
+            yield return new KeyValuePair<string, object?>(GenAiCallerNameKey, turnContext.Activity?.From?.Name);
+            yield return new KeyValuePair<string, object?>(GenAiCallerUpnKey, turnContext.Activity?.From?.Name);
+            yield return new KeyValuePair<string, object?>(GenAiCallerUserIdKey, turnContext.Activity?.From?.AgenticUserId ?? turnContext.Activity?.From?.AadObjectId);
+            yield return new KeyValuePair<string, object?>(GenAiCallerTenantIdKey, turnContext.Activity?.From?.TenantId);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             var isAgenticRecipient = turnContext.Activity?.Recipient?.AgenticUserId != null
                 || (turnContext.Activity?.Recipient?.Role != null && turnContext.Activity.Recipient.Role.Equals(AgentRole, StringComparison.OrdinalIgnoreCase));
             var executionType = isAgenticRecipient && isAgenticCaller ? ExecutionType.Agent2Agent.ToString() : ExecutionType.HumanToAgent.ToString();
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiExecutionTypeKey, executionType);
+            yield return new KeyValuePair<string, object?>(GenAiExecutionTypeKey, executionType);
         }
 
         /// <summary>
@@ -50,11 +50,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetTargetAgentBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentIdKey, turnContext.Activity?.Recipient?.AgenticAppId ?? turnContext.Activity?.Recipient?.Id);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentNameKey, turnContext.Activity?.Recipient?.Name);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentAUIDKey, turnContext.Activity?.Recipient?.AgenticUserId ?? turnContext.Activity?.Recipient?.AadObjectId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentUPNKey, turnContext.Activity?.Recipient?.Name);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentDescriptionKey, turnContext.Activity?.Recipient?.Role);
+            yield return new KeyValuePair<string, object?>(GenAiAgentIdKey, turnContext.Activity?.Recipient?.AgenticAppId ?? turnContext.Activity?.Recipient?.Id);
+            yield return new KeyValuePair<string, object?>(GenAiAgentNameKey, turnContext.Activity?.Recipient?.Name);
+            yield return new KeyValuePair<string, object?>(GenAiAgentAUIDKey, turnContext.Activity?.Recipient?.AgenticUserId ?? turnContext.Activity?.Recipient?.AadObjectId);
+            yield return new KeyValuePair<string, object?>(GenAiAgentUPNKey, turnContext.Activity?.Recipient?.Name);
+            yield return new KeyValuePair<string, object?>(GenAiAgentDescriptionKey, turnContext.Activity?.Recipient?.Role);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 {
                 }
             }
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.TenantIdKey, tenantId);
+            yield return new KeyValuePair<string, object?>(TenantIdKey, tenantId);
         }
 
         /// <summary>
@@ -91,8 +91,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetSourceMetadataBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelNameKey, turnContext.Activity?.Type);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelLinkKey, turnContext.Activity?.Type);
+            yield return new KeyValuePair<string, object?>(GenAiChannelNameKey, turnContext.Activity?.Type);
+            yield return new KeyValuePair<string, object?>(GenAiChannelLinkKey, turnContext.Activity?.Type);
         }
 
         /// <summary>
@@ -102,8 +102,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         {
             string? conversationId = turnContext?.Activity?.Conversation?.Id;
             string? itemLink = turnContext?.Activity?.ServiceUrl;
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiConversationItemLinkKey, itemLink);
+            yield return new KeyValuePair<string, object?>(GenAiConversationIdKey, conversationId);
+            yield return new KeyValuePair<string, object?>(GenAiConversationItemLinkKey, itemLink);
         }
 
         /// <summary>

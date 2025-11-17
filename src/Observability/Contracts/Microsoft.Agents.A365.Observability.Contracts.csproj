@@ -14,6 +14,7 @@
 	<PackageTags>Microsoft;Agents;A365;Observability;OpenTelemetry;AI;Agents;Tracing;Monitoring;Telemetry</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 </Project>

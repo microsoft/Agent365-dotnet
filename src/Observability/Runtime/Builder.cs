@@ -7,11 +7,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Agents.A365.Observability.Runtime.Common;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
-    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry;
     using OpenTelemetry.Trace;
     using System;
+    using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
     /// <summary>
     /// Builder for configuring SDK with OpenTelemetry tracing.
@@ -96,7 +96,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                     rootSampler: new AlwaysOnSampler(),
                     localParentNotSampled: new AlwaysOnSampler(),
                     remoteParentNotSampled: new AlwaysOnSampler()))
-                .AddSource(OpenTelemetryConstants.SourceName)
+                .AddSource(SourceName)
                 .AddProcessor(new ActivityProcessor());
 
             if (IsAgent365ExporterEnabled())

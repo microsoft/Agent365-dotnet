@@ -1,12 +1,15 @@
-﻿using FluentAssertions;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Agents.A365.Observability.Contracts;
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 

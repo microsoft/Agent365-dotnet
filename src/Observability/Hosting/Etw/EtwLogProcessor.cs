@@ -3,7 +3,6 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Contracts;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using System.Collections.Generic;

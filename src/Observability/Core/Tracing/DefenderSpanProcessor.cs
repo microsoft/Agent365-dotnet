@@ -7,7 +7,7 @@ namespace Microsoft.Agents.A365.Observability.Tracing;
 using Azure.Monitor.Ingestion;
 using OpenTelemetry;
 using System.Diagnostics;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 /// <summary>
 /// Processor for sending activity data to Azure Analytics Workspace, inheriting from ActivityProcessor.

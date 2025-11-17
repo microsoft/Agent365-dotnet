@@ -1,0 +1,27 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Contracts.Details
+{
+    /// <summary>
+    /// Enum representing the source of an operation.
+    /// </summary>
+    public enum OperationSource
+    {
+        /// <summary>
+        /// Operation executed by SDK.
+        /// </summary>
+        SDK,
+
+        /// <summary>
+        /// Operation executed by Gateway.
+        /// </summary>
+        Gateway,
+
+        /// <summary>
+        /// Operation executed by MCP Server.
+        /// </summary>
+        MCPServer
+    }
+}

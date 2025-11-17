@@ -3,7 +3,8 @@
 // ------------------------------------------------------------------------------
 
 using System.Diagnostics;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -42,38 +43,38 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
-            SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
-            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
-            SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
-            SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, request?.SourceMetadata?.Description);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
-            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+            SetTagMaybe(SessionIdKey, sessionId);
+            SetTagMaybe(ServerAddressKey, endpoint.Host);
+            SetTagMaybe(GenAiChannelNameKey, request?.SourceMetadata?.Name);
+            SetTagMaybe(GenAiChannelLinkKey, request?.SourceMetadata?.Description);
+            SetTagMaybe(GenAiExecutionTypeKey, request?.ExecutionType.ToString());
+            SetTagMaybe(GenAiConversationIdKey, conversationId);
 
             // Only record port if it is different from 443
             if (endpoint.Port != 443)
             {
-                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                SetTagMaybe(ServerPortKey, endpoint.Port);
             }
 
             // Set caller details tags
             if (callerDetails != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUserIdKey, callerDetails.CallerUserId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+                SetTagMaybe(GenAiCallerIdKey, callerDetails.CallerId);
+                SetTagMaybe(GenAiCallerUpnKey, callerDetails.CallerUpn);
+                SetTagMaybe(GenAiCallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(GenAiCallerUserIdKey, callerDetails.CallerUserId);
+                SetTagMaybe(GenAiCallerTenantIdKey, callerDetails.TenantId);
             }
 
             // Set caller agent details tags
             if (callerAgentDetails != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
+                SetTagMaybe(GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
+                SetTagMaybe(GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
+                SetTagMaybe(GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
+                SetTagMaybe(GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
+                SetTagMaybe(GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
+                SetTagMaybe(GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
             }
         }
 
@@ -90,7 +91,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordInputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
+            SetTagMaybe(GenAiInputMessagesKey, string.Join(",", messages));
         }
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordOutputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+            SetTagMaybe(GenAiOutputMessagesKey, string.Join(",", messages));
         }
     }
 }

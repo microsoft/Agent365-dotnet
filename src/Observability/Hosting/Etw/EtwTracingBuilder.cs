@@ -4,9 +4,9 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Trace;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 {
@@ -47,7 +47,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 .WithTracing(tracing =>
                 {
                     tracing
-                        .AddSource(OpenTelemetryConstants.SourceName)
+                        .AddSource(SourceName)
                         .AddProcessor(new ActivityProcessor())
                         .AddProcessor(new EtwScopeEventProcessor());
 

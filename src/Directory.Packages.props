@@ -24,6 +24,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
     <!-- Other packages -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.0" />
     <PackageVersion Include="System.Security.Claims" Version="4.3.0" />
     <!-- Semantic Kernel packages -->
     <PackageVersion Include="Microsoft.SemanticKernel.Agents.Core" Version="1.66.0" />

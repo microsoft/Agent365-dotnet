@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using System;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw

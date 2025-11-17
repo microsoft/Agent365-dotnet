@@ -2,9 +2,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using Microsoft.Agents.A365.Observability.Hosting.Etw;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.Tracing;
 using System.Text.Json;

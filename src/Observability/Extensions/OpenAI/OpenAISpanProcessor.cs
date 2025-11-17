@@ -4,7 +4,7 @@
 
 namespace Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Contracts;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;

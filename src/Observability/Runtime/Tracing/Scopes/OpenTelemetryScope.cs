@@ -9,8 +9,8 @@ using System.Diagnostics.Metrics;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {

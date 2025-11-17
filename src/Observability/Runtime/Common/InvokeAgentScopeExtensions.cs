@@ -5,6 +5,7 @@
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.Builder;
 using System;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -96,7 +97,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public static InvokeAgentScope SetInputMessageTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
-            invokeAgentScope.SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, turnContext?.Activity?.Text);
+            invokeAgentScope.SetTagMaybe(GenAiInputMessagesKey, turnContext?.Activity?.Text);
             return invokeAgentScope;
         }
     }

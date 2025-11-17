@@ -3,7 +3,7 @@
 // ------------------------------------------------------------------------------
 
 using FluentAssertions;
-using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Agents.A365.Observability.Contracts.DTOs;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Contracts.Tests

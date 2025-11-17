@@ -4,7 +4,8 @@
 
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.SemanticKernel;
 using System.Diagnostics;

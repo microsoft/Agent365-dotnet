@@ -1,10 +1,12 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 [TestClass]
 public sealed class InvokeAgentScopeTest : ActivityTest

@@ -2,11 +2,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using OpenTelemetry;
 using System;
 using System.Collections.Generic;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -35,7 +35,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder OperationSource(OperationSource source)
         {
-            Set(OpenTelemetryConstants.OperationSourceKey, source.ToString());
+            Set(OperationSourceKey, source.ToString());
             return this;
         }
 
@@ -44,7 +44,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder TenantId(string? v)
         { 
-            Set(OpenTelemetryConstants.TenantIdKey, v); 
+            Set(TenantIdKey, v); 
             return this;
         }
 
@@ -53,7 +53,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentIdKey, v);
+            Set(GenAiAgentIdKey, v);
             return this;
         }
 
@@ -62,7 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiAgentNameKey, v);
+            Set(GenAiAgentNameKey, v);
             return this;
         }
 
@@ -71,7 +71,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentDescription(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiAgentDescriptionKey, v);
+            Set(GenAiAgentDescriptionKey, v);
             return this;
         }
 
@@ -80,7 +80,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentAuid(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentAUIDKey, v);
+            Set(GenAiAgentAUIDKey, v);
             return this;
         }
 
@@ -89,7 +89,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentUpn(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentUPNKey, v);
+            Set(GenAiAgentUPNKey, v);
             return this;
         }
 
@@ -98,7 +98,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentBlueprintIdKey, v);
+            Set(GenAiAgentBlueprintIdKey, v);
             return this;
         }
 
@@ -107,7 +107,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder CorrelationId(string? v)
         { 
-            Set(OpenTelemetryConstants.CorrelationIdKey, v);
+            Set(CorrelationIdKey, v);
             return this;
         }
 
@@ -116,7 +116,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder CallerId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiCallerIdKey, v);
+            Set(GenAiCallerIdKey, v);
             return this;
         }
 
@@ -125,7 +125,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder CallerUpn(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerUpnKey, v);
+            Set(GenAiCallerUpnKey, v);
             return this;
         }
 
@@ -134,7 +134,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder CallerName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerNameKey, v);
+            Set(GenAiCallerNameKey, v);
             return this;
         }
 
@@ -143,7 +143,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ConversationId(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiConversationIdKey, v);
+            Set(GenAiConversationIdKey, v);
             return this;
         }
 
@@ -152,7 +152,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ConversationItemLink(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiConversationItemLinkKey, v);
+            Set(GenAiConversationItemLinkKey, v);
             return this;
         }
 
@@ -161,7 +161,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ChannelName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelNameKey, v);
+            Set(GenAiChannelNameKey, v);
             return this;
         }
 
@@ -170,7 +170,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ChannelLink(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelLinkKey, v);
+            Set(GenAiChannelLinkKey, v);
             return this;
         }
 

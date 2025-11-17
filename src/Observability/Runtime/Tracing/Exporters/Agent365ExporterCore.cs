@@ -3,7 +3,6 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -14,6 +13,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -165,8 +165,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         {
             if (activity is null) return;
 
-            var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
-            var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
+            var tenant = activity.GetAttributeOrBaggage(TenantIdKey);
+            var agent = activity.GetAttributeOrBaggage(GenAiAgentIdKey);
 
             if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
                 return;

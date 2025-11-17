@@ -2,11 +2,11 @@
 
 using System.Diagnostics;
 using FluentAssertions;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
-using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
+using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 
 public abstract class ActivityTest
 {
