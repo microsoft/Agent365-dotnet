@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36429.23
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11205.157 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Extensions.SemanticKernel", "Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj", "{5F7CC289-B41F-48A3-A433-B1034CD68C2B}"
 EndProject
@@ -66,6 +66,17 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AgentFramework", "Tooling\Extensions\AgentFramework\Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.csproj", "{1BFA6B30-FC88-4C14-8F0A-9345611989C6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Runtime.IntegrationTests", "Tests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests.csproj", "{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9C12EEA2-F35C-42D2-914C-3DA53B58683B}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		Directory.Packages.props = Directory.Packages.props
+		dirs.proj = dirs.proj
+		global.json = global.json
+		LICENSE.md = LICENSE.md
+		PACKAGE-SETUP.md = PACKAGE-SETUP.md
+		SECURITY.md = SECURITY.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -318,4 +329,3 @@ Global
 		SolutionGuid = {0B20062E-2453-4E32-B8A2-85A6013F83A0}
 	EndGlobalSection
 EndGlobal
-
