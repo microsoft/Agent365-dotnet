@@ -110,4 +110,58 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw;
         }
     }
+
+    /// <inheritdoc />
+    public async Task<IList<AITool>> GetMcpToolsAsync(
+        string agentUserId, 
+        UserAuthorization userAuthorization, 
+        string authHandlerName, 
+        ITurnContext turnContext, 
+        string? authToken = null)
+    {
+        var a365ToolList = new List<AITool>();
+        try
+        {
+            if (authToken == null)
+            {
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+                if (authToken == null )
+                {
+                    throw new InvalidOperationException("Failed to obtain authentication token for MCP tool retrieval.");
+                }
+            }
+
+            // Get MCP tool server configurations
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!).ConfigureAwait(false);
+
+            // Retrieve MCP tools from all configured servers
+            foreach (var server in servers)
+            {
+                try
+                {
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
+                    // Add the MCP tools
+                    a365ToolList.AddRange(mcpTools.Cast<AITool>());
+
+                    _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
+                        mcpTools.Count, server.mcpServerName);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}",
+                        server.mcpServerName, ex.Message);
+                }
+            }
+
+            _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
+                a365ToolList.Count, agentUserId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add MCP tool servers for agent {AgentUserId}",
+                agentUserId);
+            throw;
+        }
+        return a365ToolList;
+    }
 }

@@ -42,4 +42,20 @@ public interface IMcpToolRegistrationService
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null);
+
+    /// <summary>
+    /// Returns a List of MCP tools to be added to the agent.
+    /// </summary>
+    /// <param name="agentUserId">Agent User Id for the agent.</param>
+    /// <param name="turnContext">Turn context for the current request</param>
+    /// <param name="userAuthorization">User authorization information</param>
+    /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
+    /// <param name="authToken">Optional auth token to access the MCP servers.</param>
+    /// <returns>List of AI Tools be added to an agent.</returns>
+    Task<IList<AITool>> GetMcpToolsAsync(
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null);
 }

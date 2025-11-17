@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Agents.Builder.App;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
+using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Agents.A365.Observability.Tests;
 
@@ -14,37 +15,37 @@ public sealed class BuilderPatternTests
     [TestMethod]
     public void AddTracing_WithLambdaConfiguration_ShouldWork()
     {
-        var services = new ServiceCollection();
+        HostApplicationBuilder builder = new HostApplicationBuilder();
 
         // Use the new lambda configuration approach
-        var result = services.AddTracing();
+        var result = builder.AddA365Tracing();
 
         // Should return the configured service collection directly (no Build() needed)
         result.Should().NotBeNull();
-        result.Should().BeSameAs(services);
-        result.Should().BeAssignableTo<IServiceCollection>();
+        result.Should().BeSameAs(builder);
+        result.Services.Should().BeAssignableTo<IServiceCollection>();
     }
 
     [TestMethod]
     public void AddTracing_WithNullLambda_ShouldWork()
     {
-        var services = new ServiceCollection();
+        HostApplicationBuilder builder = new HostApplicationBuilder();
 
-        var result = services.AddTracing(null);
+        var result = builder.AddA365Tracing(null);
 
         result.Should().NotBeNull();
-        result.Should().BeSameAs(services);
+        result.Should().BeSameAs(builder);
     }
 
     [TestMethod]
     public void AddTracing_WithEmptyLambda_ShouldWork()
     {
-        var services = new ServiceCollection();
+        HostApplicationBuilder builder = new HostApplicationBuilder();
 
         // Pass empty lambda - should work like no configuration
-        var result = services.AddTracing(_ => { });
+        var result = builder.AddA365Tracing(_ => { });
 
         result.Should().NotBeNull();
-        result.Should().BeSameAs(services);
+        result.Should().BeSameAs(builder);
     }
 }
