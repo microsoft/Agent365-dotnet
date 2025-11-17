@@ -1,83 +1,48 @@
-# Microsoft.A365.Runtime.Common.AspNetCore
 
-ASP.NET Core integration helpers for Microsoft Agent 365 SDK, providing HttpContext-based tenant and worker ID extraction for multi-tenant agent applications.
+# Microsoft Agent 365 Runtime
 
-## Features
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.svg?label=Core)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.Extensions.OpenAI.svg?label=OpenAI)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime.Extensions.OpenAI/)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel.svg?label=Semantic%20Kernel)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime.Extensions.SemanticKernel/)
+[![Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Runtime.svg)](https://www.nuget.org/packages/Microsoft.Agents.A365.Runtime/)
 
-- **Tenant Context Extraction**: Extract tenant IDs from HttpContext using standardized patterns
-- **Worker Context Extraction**: Extract worker IDs from HttpContext for multi-worker scenarios  
-- **Multiple Source Support**: Checks user claims, request headers, and request items
-- **Null Safety**: Proper null handling and validation
-- **Performance Optimized**: Minimal overhead for context extraction
+The Microsoft Agent 365 Runtime SDK provides essential runtime utilities and services for building multi-tenant agent applications. This SDK includes ASP.NET Core integration helpers, authorization services, and extensions for popular AI frameworks.
+
+## Overview
+
+The Runtime SDK simplifies building production-ready agent applications by providing:
+
+- Multi-tenant context extraction from HTTP requests
+- Authorization services for agentic operations
+- Performance-optimized helper methods
 
 ## Installation
 
 ```bash
-dotnet add package Microsoft.A365.Runtime.Common.AspNetCore
+# Core runtime utilities
+dotnet add package Microsoft.Agents.A365.Runtime
+
 ```
 
-## Usage
+## Package Structure
 
-### Basic Tenant/Worker ID Extraction
+The Runtime SDK provides multi-tenant utilities and framework extensions:
 
-```csharp
-using Microsoft.A365.Runtime.Common.AspNetCore;
+### Core Package
 
-app.MapPost("/api/agent", async (HttpContext context) =>
-{
-    // Extract tenant and worker context
-    var tenantId = TenantContextHelper.GetTenantId(context);
-    var workerId = TenantContextHelper.GetWorkerId(context);
-    
-    // Use with KernelProvider
-    var kernel = kernelProvider.GetKernel(tenantId ?? "default", workerId ?? "default");
-    
-    // Process request...
-});
-```
+- **[Microsoft.Agents.A365.Runtime](Core/README.md)** - Core runtime utilities including TenantContextHelper, AgenticAuthorizationService, and Utility methods
 
-### Integration with Governance
+## Support
 
-```csharp
-app.MapPost("/api/process", async (HttpContext context, IKernelProvider kernelProvider) =>
-{
-    // Apply governance first
-    await context.Services.ApplyGovernanceAsync(logger);
-    
-    // Extract context
-    var tenantId = TenantContextHelper.GetTenantId(context);
-    var workerId = TenantContextHelper.GetWorkerId(context);
-    
-    // Get governed kernel
-    var kernel = kernelProvider.GetKernel(tenantId ?? "default", workerId ?? "default");
-    
-    // Process with multi-tenant isolation...
-});
-```
+For issues, questions, or feedback:
 
-## Context Sources
+- File issues in the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues) section
+- See the [main documentation](../../README.md) for more information
 
-The helper checks for tenant/worker IDs in this priority order:
+## Trademarks
 
-1. **User Claims**: `tenant_id`, `worker_id`
-2. **Request Headers**: `X-Tenant-Id`, `X-Worker-Id`  
-3. **Request Items**: `TenantId`, `WorkerId`
-
-## Why Separate Package?
-
-This package is separate from the core SemanticKernel integration to:
-
-- **Avoid Unnecessary Dependencies**: Core SK integration doesn't need ASP.NET Core
-- **Enable Flexible Deployment**: Console apps, background services don't need web dependencies
-- **Follow Single Responsibility**: Each package has a focused purpose
-- **Reduce Package Size**: Consumers only get what they need
-
-## Related Packages
-
-- **Microsoft.A365.Runtime.SemanticKernel**: Core SemanticKernel integration and KernelProvider
-- **Microsoft.A365.DevTools.Analyzer.SemanticKernel**: Roslyn analyzers for governance enforcement
-- **Microsoft.A365.Observability**: Core observability and tracing infrastructure
+*Microsoft, Windows, Microsoft Azure and/or other Microsoft products and services referenced in the documentation may be either trademarks or registered trademarks of Microsoft in the United States and/or other countries. The licenses for this project do not grant you rights to use any Microsoft names, logos, or trademarks. Microsoft's general trademark guidelines can be found at http://go.microsoft.com/fwlink/?LinkID=254653.*
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](../../LICENSE.md) file for details.
