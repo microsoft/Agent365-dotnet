@@ -13,12 +13,11 @@
   </PropertyGroup>
     
   <ItemGroup>
-    <PackageReference Include="Microsoft.SemanticKernel" />
-    <PackageReference Include="OpenAI" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
-  <ItemGroup>    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
+	
+  <ItemGroup>    
+	<ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
   </ItemGroup>
 </Project>
