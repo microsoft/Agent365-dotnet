@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+	<AssemblyName>Microsoft.Agents.A365.Observability.Contracts</AssemblyName>
+	<RootNamespace>Microsoft.Agents.A365.Observability.Contracts</RootNamespace>
+	<TargetFramework>netstandard2.0</TargetFramework>
+	<LangVersion>8.0</LangVersion>
+	<ImplicitUsings>disable</ImplicitUsings>
+	<!-- NuGet Package Properties -->
+	<PackageId>Microsoft.Agents.A365.Observability.Contracts</PackageId>
+	<Title>Microsoft Agent 365 Observability Contracts SDK</Title>
+	<Description>Observability contracts components for Microsoft Agent 365 SDK, providing base OpenTelemetry tracing and monitoring functionality for AI agents and tools.</Description>
+	<Summary>Microsoft Agent 365 Observability Contracts SDK - Contracts components</Summary>
+	<Product>Microsoft Agent 365 Observability Contracts SDK</Product>
+	<PackageTags>Microsoft;Agents;A365;Observability;OpenTelemetry;AI;Agents;Tracing;Monitoring;Telemetry</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+</Project>

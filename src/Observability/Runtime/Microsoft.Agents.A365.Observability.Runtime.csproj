@@ -23,4 +23,7 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Contracts\Microsoft.Agents.A365.Observability.Contracts.csproj" />
+  </ItemGroup>
 </Project>

@@ -67,6 +67,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Runtime.IntegrationTests", "Tests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests\Microsoft.Agents.A365.Observability.Runtime.IntegrationTests.csproj", "{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contracts", "Contracts", "{A17A2709-F7F2-4804-9635-AF75A543E125}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Contracts", "Observability\Contracts\Microsoft.Agents.A365.Observability.Contracts.csproj", "{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Contracts.Tests", "Tests\Microsoft.Agents.A365.Observability.Contracts.Tests\Microsoft.Agents.A365.Observability.Contracts.Tests.csproj", "{57C21CBE-3C65-4130-85A6-E763D90CE9F7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -281,6 +287,30 @@ Global
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x64.Build.0 = Release|Any CPU
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.ActiveCfg = Release|Any CPU
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.Build.0 = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|x64.Build.0 = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Debug|x86.Build.0 = Debug|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|x64.ActiveCfg = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|x64.Build.0 = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|x86.ActiveCfg = Release|Any CPU
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF}.Release|x86.Build.0 = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|x64.Build.0 = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Debug|x86.Build.0 = Debug|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|x64.ActiveCfg = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|x64.Build.0 = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|x86.ActiveCfg = Release|Any CPU
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -313,6 +343,9 @@ Global
 		{9D91710A-8176-98AC-53E1-B6BCC2C3DF3D} = {89AD1AA2-300A-483A-832E-9047201DD2BC}
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6} = {9D91710A-8176-98AC-53E1-B6BCC2C3DF3D}
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
+		{A17A2709-F7F2-4804-9635-AF75A543E125} = {8675CB1F-2D41-4AAA-A40C-8EE2A37B64E4}
+		{53A38BF7-6BC2-211A-4CF5-EAF037EF98CF} = {A17A2709-F7F2-4804-9635-AF75A543E125}
+		{57C21CBE-3C65-4130-85A6-E763D90CE9F7} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0B20062E-2453-4E32-B8A2-85A6013F83A0}

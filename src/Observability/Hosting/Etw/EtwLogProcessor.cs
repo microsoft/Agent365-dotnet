@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -27,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 }
             }
 
-            var jsonContent = ExportFormatter.FormatLogData(attributes);
+            var jsonContent = LogSerializer.Serialize(attributes);
 
             EtwEventSource.Log.LogJson(jsonContent);
         }

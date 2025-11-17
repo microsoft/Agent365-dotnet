@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Agents.A365.Observability.Contracts;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -108,26 +108,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return SerializePayload(payload);
         }
 
-        /// <summary>
-        /// Formats the log data for the OTLP payload.
-        /// </summary>
-        /// <param name="data">The operation data containing the log information.</param>
-        /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
-        public static string FormatLogData(IDictionary<string, object?> data)
-        {
-            var payload = new
-            {
-                Name = data["Name"],
-                Attributes = data["Attributes"],
-                StartTimeUnixNano = data.TryGetValue("StartTime", out var startTimeObj) && startTimeObj != null ? ToUnixNanos(((DateTimeOffset)startTimeObj).UtcDateTime) : 0,
-                EndTimeUnixNano = data.TryGetValue("EndTime", out var endTimeObj) && endTimeObj != null ? ToUnixNanos(((DateTimeOffset)endTimeObj).UtcDateTime) : 0,
-                SpanId = data["SpanId"],
-                ParentSpanId = data["ParentSpanId"]
-            };
-
-            return SerializePayload(payload);
-        }
-
         private static Dictionary<string, object?> GetResourceAttributes(Resource resource)
         {
             var resourceAttributes = new Dictionary<string, object?>();
@@ -157,8 +137,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 ParentSpanId = activity.ParentSpanId != default ? ToHex(activity.ParentSpanId) : null,
                 Name = activity.DisplayName,
                 Kind = activity.Kind,
-                StartTimeUnixNano = ToUnixNanos(activity.StartTimeUtc),
-                EndTimeUnixNano = ToUnixNanos(activity.StartTimeUtc + activity.Duration),
+                StartTimeUnixNano = DatetimeHelper.ToUnixNanos(activity.StartTimeUtc),
+                EndTimeUnixNano = DatetimeHelper.ToUnixNanos(activity.StartTimeUtc + activity.Duration),
                 Attributes = MapAttributes(activity),
                 Events = MapEvents(activity),
                 Links = MapLinks(activity),
@@ -190,14 +170,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return id.ToHexString().ToLowerInvariant();
         }
 
-        private static ulong ToUnixNanos(DateTime utc)
-        {
-            var dt = utc.Kind == DateTimeKind.Utc ? utc : utc.ToUniversalTime();
-            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            var ns = (dt - unixEpoch).Ticks * 100;
-            return (ulong)ns;
-        }
-
         private static Dictionary<string, object> MapAttributes(Activity activity)
         {
             var dict = new Dictionary<string, object>();
@@ -224,7 +196,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
                 events.Add(new OtlpEvent
                 {
-                    TimeUnixNano = ToUnixNanos(ev.Timestamp.UtcDateTime),
+                    TimeUnixNano = DatetimeHelper.ToUnixNanos(ev.Timestamp.UtcDateTime),
                     Name = ev.Name,
                     Attributes = attrs.Count > 0 ? attrs : null
                 });
