@@ -175,6 +175,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the session ID baggage value.
+        /// </summary>
+        public BaggageBuilder SessionId(string? v)
+        {
+            Set(OpenTelemetryConstants.SessionIdKey, v);
+            return this;
+        }
+
+        /// <summary>
         /// Applies the collected baggage to the current context.
         /// </summary>
         public IDisposable Build()
