@@ -4,8 +4,7 @@
 
 using Microsoft.Agents.A365.Observability.Contracts.Details;
 
-namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
-
+namespace Microsoft.Agents.A365.Observability.Contracts.Tests;
 
 public static class Util
 {

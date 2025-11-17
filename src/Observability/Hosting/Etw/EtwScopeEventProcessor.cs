@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Contracts;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
@@ -30,7 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
         /// </summary>
         public override void OnEnd(Activity data)
         {
-            var activityContent = ExportFormatter.FormatSingle(data, _resource);
+            var activityContent = ActivitySerializer.FormatSingle(data, _resource);
 
             EtwEventSource.Log.SpanStop(
                 data.DisplayName,

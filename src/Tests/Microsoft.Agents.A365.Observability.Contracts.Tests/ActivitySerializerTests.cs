@@ -5,14 +5,11 @@
 using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Contracts.Details;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Tests.Tracing;
-using Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 using OpenTelemetry.Resources;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
+namespace Microsoft.Agents.A365.Observability.Contracts.Tests;
 
 public sealed class TestScope : OpenTelemetryScope
 {
@@ -21,7 +18,7 @@ public sealed class TestScope : OpenTelemetryScope
 }
 
 [TestClass]
-public partial class ExportFormatterTests : ActivityTest
+public partial class ActivitySerializerTests : ActivityTest
 {
     private static Resource CreateResource(Dictionary<string, object>? attributes = null)
     {
@@ -41,7 +38,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = ActivitySerializer.FormatMany(activities, resource);
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();
@@ -89,7 +86,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = ActivitySerializer.FormatMany(activities, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -141,7 +138,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = ActivitySerializer.FormatMany(activities, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -173,7 +170,7 @@ public partial class ExportFormatterTests : ActivityTest
         });
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = ActivitySerializer.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -199,7 +196,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = ResourceBuilder.CreateDefault().Build();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { activity! }, resource);
+        var json = ActivitySerializer.FormatMany(new[] { activity! }, resource);
 
         // Assert
         using var doc = JsonDocument.Parse(json);
@@ -219,7 +216,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = ActivitySerializer.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -239,7 +236,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = ActivitySerializer.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -286,7 +283,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
 
         // Act
-        var json = ExportFormatter.FormatSingle(activity, resource);
+        var json = ActivitySerializer.FormatSingle(activity, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -327,7 +324,7 @@ public partial class ExportFormatterTests : ActivityTest
         });
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = ActivitySerializer.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -348,7 +345,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = ActivitySerializer.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -368,7 +365,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = ActivitySerializer.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -388,7 +385,7 @@ public partial class ExportFormatterTests : ActivityTest
         var resource = CreateResource();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = ActivitySerializer.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);

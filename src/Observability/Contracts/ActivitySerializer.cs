@@ -9,14 +9,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Agents.A365.Observability.Contracts;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Contracts
 {
     /// <summary>
     /// Provides functionality to format Activity spans into OTLP JSON payloads.
     /// </summary>
-    public class ExportFormatter
+    public class ActivitySerializer
     {
         /// <summary>
         /// Formats a collection of Activity spans into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
@@ -263,7 +262,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("resource")]
         public OtlpResource? Resource { get; set; }
-        
+
         [JsonPropertyName("scopeSpan")]
         public EtwScopeSpan ScopeSpan { get; set; } = new EtwScopeSpan();
     }
@@ -272,7 +271,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("scope")]
         public InstrumentationScope? Scope { get; set; }
-     
+
         [JsonPropertyName("span")]
         public OtlpSpan Span { get; set; } = new OtlpSpan();
     }
@@ -381,3 +380,4 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     }
     #endregion
 }
+

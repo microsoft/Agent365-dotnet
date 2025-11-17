@@ -7,6 +7,7 @@ namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 using System.Diagnostics;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Contracts.Details;
+using Microsoft.Agents.A365.Observability.Contracts.Tests;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
 

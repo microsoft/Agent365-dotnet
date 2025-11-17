@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
 using FluentAssertions;
+using Microsoft.Agents.A365.Observability.Contracts.Tests;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 
 [TestClass]

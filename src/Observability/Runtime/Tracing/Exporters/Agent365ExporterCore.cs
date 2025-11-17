@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -110,7 +111,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             foreach (var g in groups)
             {
                 var (tenantId, agentId, activities) = g;
-                var json = ExportFormatter.FormatMany(activities, resource);
+                var json = ActivitySerializer.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);

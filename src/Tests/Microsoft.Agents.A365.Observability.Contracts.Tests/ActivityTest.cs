@@ -1,4 +1,6 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
 
 using System.Diagnostics;
 using FluentAssertions;
@@ -7,6 +9,8 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using static Microsoft.Agents.A365.Observability.Contracts.OpenTelemetryConstants;
+
+namespace Microsoft.Agents.A365.Observability.Contracts.Tests;
 
 public abstract class ActivityTest
 {

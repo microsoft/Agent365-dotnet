@@ -8,6 +8,7 @@ using System;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Contracts;
 using Microsoft.Agents.A365.Observability.Contracts.Details;
+using Microsoft.Agents.A365.Observability.Contracts.Tests;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 
 [TestClass]

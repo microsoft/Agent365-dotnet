@@ -21,5 +21,6 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Observability\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
+    <ProjectReference Include="..\Microsoft.Agents.A365.Observability.Contracts.Tests\Microsoft.Agents.A365.Observability.Contracts.Tests.csproj" />
   </ItemGroup>
 </Project>
