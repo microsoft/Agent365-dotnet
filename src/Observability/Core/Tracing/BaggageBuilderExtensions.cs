@@ -4,7 +4,6 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.Builder;
-using System;
 
 namespace Microsoft.Agents.A365.Observability.Common
 {
