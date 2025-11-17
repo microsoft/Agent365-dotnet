@@ -23,6 +23,7 @@
     <None Remove="SemanticKernel\**" />
   </ItemGroup>
   <ItemGroup>
+	<PackageReference Include="Microsoft.Agents.Builder" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" />

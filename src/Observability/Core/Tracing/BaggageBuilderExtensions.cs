@@ -2,10 +2,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.Builder;
 using System;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Common
 {
     /// <summary>
     /// Utility class for BaggageBuilder extensions.

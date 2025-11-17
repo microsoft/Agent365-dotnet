@@ -5,11 +5,8 @@
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.Builder;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Common
 {
     /// <summary>
     /// Extension methods for extracting values from ITurnContext.

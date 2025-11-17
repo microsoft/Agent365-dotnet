@@ -4,9 +4,8 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.Builder;
-using System;
 
-namespace Microsoft.Agents.A365.Observability.Runtime.Common
+namespace Microsoft.Agents.A365.Observability.Common
 {
     /// <summary>
     /// Extension methods for InvokeAgentScope.
