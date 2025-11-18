@@ -33,7 +33,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>See CHANGELOG.md for release notes.</PackageReleaseNotes>
     <PackageProjectUrl>https://learn.microsoft.com/microsoft-agent-365/developer</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/microsoft/Agent365-dotnet?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
 
     <!-- Build Configuration -->
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
