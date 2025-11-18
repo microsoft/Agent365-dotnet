@@ -1,2 +1,5 @@
 # This will eventually be replaced by security group
 * @microsoft/agent365-approvers
+/.github/ @microsoft/agent365-approvers
+/src/Observability/ @microsoft/agent365-observability-approvers
+/src/Tests/*Observability*/ @microsoft/agent365-observability-approvers
