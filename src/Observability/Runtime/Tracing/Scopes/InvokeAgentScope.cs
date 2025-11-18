@@ -75,6 +75,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
             }
+
+            // Set input messages 
+            if (request?.Content != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, request.Content);
+            }
         }
 
         /// <summary>
