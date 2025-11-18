@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
-            var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
             string conversationId = "conv-123";
 
             // Act
@@ -166,7 +166,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             var blockedLogger = factory.CreateLogger("Custom.Blocked");
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
-            var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
             string conversationId = "conv-123";
 
             // Act
@@ -189,7 +189,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
-            var invokeAgentDetails = new InvokeAgentDetails(new Uri("https://example.com/agent"), agentDetails, sessionId: "session-1");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
             string conversationId = "conv-123";

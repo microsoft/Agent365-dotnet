@@ -43,16 +43,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
-            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
+            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
             SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
             SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, request?.SourceMetadata?.Description);
             SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
             SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Only record port if it is different from 443
-            if (endpoint.Port != 443)
+            if (endpoint?.Port != 443)
             {
-                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint?.Port);
             }
 
             // Set caller details tags

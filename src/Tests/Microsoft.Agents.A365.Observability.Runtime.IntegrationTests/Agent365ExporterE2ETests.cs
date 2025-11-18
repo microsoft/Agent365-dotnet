@@ -40,7 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString());
             var endpoint = new Uri("https://test-agent-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, expectedAgentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: expectedAgentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
 
             var expectedRequest = new Request(
@@ -86,7 +86,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("scopeSpans")[0]
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
-            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint.Host);
+            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint?.Host);
             this.GetAttribute(attributes, "gen_ai.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
             this.GetAttribute(attributes, "gen_ai.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
             this.GetAttribute(attributes, "gen_ai.execution.type").Should().Be(expectedRequest.ExecutionType.ToString());
@@ -276,7 +276,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             var provider = this.CreateTestServiceProvider(httpClient);
 
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var request = new Request(
                 content: "Nested request",
                 executionType: ExecutionType.HumanToAgent,
