@@ -78,17 +78,14 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     [TestMethod]
     public void RequestContent_PopulatesInputMessagesAttribute()
     {
-        // Arrange
         const string requestContent = "This is the input message content";
         var request = new Request(requestContent);
 
-        // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails(), request);
         });
 
-        // Assert
         activity.ShouldHaveTag(GenAiInputMessagesKey, requestContent);
     }
 }
