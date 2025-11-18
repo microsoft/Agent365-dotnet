@@ -109,7 +109,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <summary>
         /// Adds endpoint details to the attributes dictionary.
         /// </summary>
-        protected static void AddEndpointDetails(IDictionary<string, object?> attributes, Uri endpoint)
+        protected static void AddEndpointDetails(IDictionary<string, object?> attributes, Uri? endpoint)
         {
             if (endpoint == null) return;
 

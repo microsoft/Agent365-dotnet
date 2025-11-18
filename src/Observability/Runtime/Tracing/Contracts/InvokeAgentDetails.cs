@@ -15,10 +15,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// Initializes a new instance of the <see cref="InvokeAgentDetails"/> class.
         /// </summary>
-        /// <param name="endpoint">Endpoint URI of the agent to invoke.</param>
         /// <param name="details">Agent metadata for the invocation.</param>
+        /// <param name="endpoint">Optional endpoint URI of the agent to invoke.</param>
         /// <param name="sessionId">Optional session identifier associated with the agent call.</param>
-        public InvokeAgentDetails(Uri endpoint, AgentDetails details, string? sessionId = null)
+        public InvokeAgentDetails(AgentDetails details, Uri? endpoint = null, string? sessionId = null)
         {
             Endpoint = endpoint;
             Details = details;
@@ -28,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// The endpoint URI for the AI agent.
         /// </summary>
-        public Uri Endpoint { get; }
+        public Uri? Endpoint { get; }
 
         /// <summary>
         /// Agent details associated with the invocation.
@@ -46,7 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="endpoint">Receives the endpoint URI.</param>
         /// <param name="details">Receives the agent details.</param>
         /// <param name="sessionId">Receives the session identifier.</param>
-        public void Deconstruct(out Uri endpoint, out AgentDetails details, out string? sessionId)
+        public void Deconstruct(out Uri? endpoint, out AgentDetails details, out string? sessionId)
         {
             endpoint = Endpoint;
             details = Details;
@@ -61,7 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 return false;
             }
 
-            return EqualityComparer<Uri>.Default.Equals(Endpoint, other.Endpoint) &&
+            return EqualityComparer<Uri?>.Default.Equals(Endpoint, other.Endpoint) &&
                    EqualityComparer<AgentDetails>.Default.Equals(Details, other.Details) &&
                    string.Equals(SessionId, other.SessionId, StringComparison.Ordinal);
         }
@@ -78,7 +78,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             unchecked
             {
                 int hash = 17;
-                hash = (hash * 31) + EqualityComparer<Uri>.Default.GetHashCode(Endpoint);
+                hash = (hash * 31) + EqualityComparer<Uri?>.Default.GetHashCode(Endpoint);
                 hash = (hash * 31) + EqualityComparer<AgentDetails>.Default.GetHashCode(Details);
                 hash = (hash * 31) + (SessionId != null ? StringComparer.Ordinal.GetHashCode(SessionId) : 0);
                 return hash;

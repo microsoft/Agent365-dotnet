@@ -14,7 +14,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var request = new Request(
                 "test content",
@@ -45,7 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-999";
 
@@ -66,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
             var conversationId = "conv-123";
@@ -91,7 +91,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
             var conversationId = "conv-123";
@@ -116,7 +116,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var inputMessages = new[] { "Hello", "How are you?" };
             var conversationId = "conv-123";
@@ -139,7 +139,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var outputMessages = new[] { "Hi there!", "I'm fine." };
             var conversationId = "conv-123";
@@ -162,7 +162,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var inputMessages = new[] { "Hello" };
             var outputMessages = new[] { "Hi" };
@@ -189,7 +189,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var inputMessages = new string[] { };
             var conversationId = "conv-123";
@@ -211,7 +211,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-123";
 
@@ -234,7 +234,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var startTime = DateTimeOffset.UtcNow.AddMinutes(-5);
             var endTime = DateTimeOffset.UtcNow;
@@ -260,7 +260,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var spanId = "abc123def456";
             var parentSpanId = "parent789ghi012";
@@ -293,7 +293,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 agentUPN: "agent@example.com",
                 agentBlueprintId: "blueprint-789",
                 tenantId: "tenant-999");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails, "session-456");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails, sessionId: "session-456");
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var request = new Request(
                 "test content",
@@ -344,7 +344,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var startTime = DateTimeOffset.UtcNow;
             var conversationId = "conv-123";
@@ -368,7 +368,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-extra", "ExtraAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-extra";
             var extras = new Dictionary<string, object?>
@@ -395,7 +395,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-resv", "ReservedAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-resv";
             var extras = new Dictionary<string, object?>
@@ -424,7 +424,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-null", "NullAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-null-extra";
             var extras = new Dictionary<string, object?>
