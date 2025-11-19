@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
+namespace Microsoft.Agents.A365.Observability.Hosting
 {
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Agents.A365.Observability.Hosting.Caching;
@@ -53,7 +53,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
                 return new Agent365ExporterOptions
                 {
                     ClusterCategory = clusterCategory ?? "production",
-                    TokenResolver = async (agentId, tenantId) => await (cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false)),
+                    TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false),
                     UseS2SEndpoint = true // Service-to-service uses S2S endpoint
                 };
             });

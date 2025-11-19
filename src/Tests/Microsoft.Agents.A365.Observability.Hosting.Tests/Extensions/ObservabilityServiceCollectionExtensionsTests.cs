@@ -2,7 +2,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Hosting.Caching;
-using Microsoft.Agents.A365.Observability.Hosting.Extensions;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Extensions;
 
