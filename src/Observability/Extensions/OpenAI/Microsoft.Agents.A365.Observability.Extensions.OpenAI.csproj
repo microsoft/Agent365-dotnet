@@ -16,7 +16,7 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
+    <ProjectReference Include="..\..\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
   </ItemGroup>
 </Project>
 

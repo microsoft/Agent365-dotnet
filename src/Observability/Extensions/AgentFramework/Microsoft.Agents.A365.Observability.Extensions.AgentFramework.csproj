@@ -16,8 +16,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
-	
-  <ItemGroup>    
-	<ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Observability.csproj" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
   </ItemGroup>
 </Project>
