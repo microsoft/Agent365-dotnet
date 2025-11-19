@@ -1,8 +1,7 @@
 using FluentAssertions;
-using Microsoft.Agents.A365.Observability.Caching;
-using System.Runtime.CompilerServices;
+using Microsoft.Agents.A365.Observability.Hosting.Caching;
 
-namespace Microsoft.Agents.A365.Observability.Tests.Caching;
+namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Caching;
 
 [TestClass]
 public sealed class ServiceTokenCacheTests

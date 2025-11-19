@@ -20,6 +20,11 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Observability\Core\Microsoft.Agents.A365.Observability.csproj" />
+    <ProjectReference Include="..\..\Observability\Hosting\Microsoft.Agents.A365.Observability.Hosting.csproj" />
+    <ProjectReference Include="..\..\Observability\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Caching\" />
   </ItemGroup>
 </Project> 

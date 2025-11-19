@@ -1,24 +1,17 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-using Microsoft.Agents.A365.Observability.Caching;
+using Microsoft.Agents.A365.Observability.Hosting.Caching;
+using Microsoft.Agents.A365.Observability.Hosting.Extensions;
 
-namespace Microsoft.Agents.A365.Observability.Tests;
+namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Extensions;
 
 /// <summary>
 /// Tests for Agent 365 extension methods.
 /// </summary>
 [TestClass]
-public sealed class ObservabilityTests
+public sealed class ObservabilityServiceCollectionExtensionsTests
 {
-    /// <summary>
-    /// All valid cluster categories from PowerPlatformApiDiscovery.GetEnvironmentApiHostNameSuffix()
-    /// </summary>
-    private static readonly string[] ValidClusterCategories = new[]
-    {
-        "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
-    };
-
     [TestMethod]
     public void AddAgenticTracingExporter_RegistersRequiredServices()
     {

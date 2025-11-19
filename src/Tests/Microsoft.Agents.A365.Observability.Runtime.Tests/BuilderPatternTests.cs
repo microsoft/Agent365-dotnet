@@ -1,7 +1,6 @@
 using FluentAssertions;
-using Microsoft.Agents.Builder.App;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Microsoft.Agents.A365.Observability.Tests;
