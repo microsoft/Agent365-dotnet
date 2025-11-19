@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Agents.A365.Observability.Hosting.Services;
+using Microsoft.Agents.A365.Observability.Hosting.Middleware;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Middleware;

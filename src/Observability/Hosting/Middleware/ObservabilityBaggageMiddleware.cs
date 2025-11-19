@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Threading.Tasks;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Services
+namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
 {
     /// <summary>
     /// ASP.NET Core middleware for setting per-request observability context (baggage).
