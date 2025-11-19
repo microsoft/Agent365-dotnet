@@ -27,8 +27,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Notification", "Notificatio
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{2150E333-8FDC-42A3-9474-1A3956D46DE8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Observability.Tests", "Tests\Observability.Tests\Microsoft.Agents.A365.Observability.Tests.csproj", "{A2B3C4D5-E6F7-4889-9AAB-1234567890BC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Observability.Runtime.Tests", "Tests\Microsoft.Agents.A365.Observability.Runtime.Tests\Microsoft.Agents.A365.Observability.Runtime.Tests.csproj", "{B3C4D5E6-F7A8-4B9C-0D1E-2F3041526374}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Agents.A365.Runtime.Tests", "Tests\Runtime.Tests\Microsoft.Agents.A365.Runtime.Tests.csproj", "{7A8B9C0D-1E2F-4030-5142-6789ABCDEF01}"
