@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using static Grpc.Core.Metadata;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
@@ -26,7 +25,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 Scopes = scopes;
             }
         }
-
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
 
         /// <summary>

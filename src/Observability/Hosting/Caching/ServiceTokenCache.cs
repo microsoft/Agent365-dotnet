@@ -6,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
-using static Grpc.Core.Metadata;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
