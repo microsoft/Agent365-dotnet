@@ -7,7 +7,7 @@ using OpenTelemetry.Trace;
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 
 [TestClass]
-public sealed class Agent365ExporterExtensionsTests
+public sealed class ObservabilityBuilderExtensionsTests
 {
     [TestMethod]
     public void AddAgent365Exporter_WithCustomBatchingParameters_ShouldConfigureProcessor()

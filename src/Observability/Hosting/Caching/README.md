@@ -24,7 +24,7 @@
 ### Basic Usage with Default Settings
 
 ```csharp
-using Microsoft.Agents.A365.Observability.Caching;
+using Microsoft.Agents.A365.Observability.Hosting.Caching;
 
 // Create cache with default 1-hour expiration
 var cache = new ServiceTokenCache();
@@ -107,7 +107,8 @@ Console.WriteLine($"Removed {expiredCount} expired tokens");
 The recommended way to use `ServiceTokenCache` is through dependency injection:
 
 ```csharp
-using Microsoft.Agents.A365.Observability;
+using Microsoft.Agents.A365.Observability.Hosting;
+using Microsoft.Agents.A365.Observability.Hosting.Caching;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection();
