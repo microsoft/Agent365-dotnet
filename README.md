@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Observability.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/microsoft/Agent365-dotnet/build.yml?branch=main&label=Build&logo=github)](https://github.com/microsoft/Agent365-dotnet/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/microsoft/Agent365-dotnet/.github/workflows/ci.yml?branch=main&label=Build&logo=github)](https://github.com/microsoft/Agent365-dotnet/actions)
 [![License](https://img.shields.io/github/license/microsoft/Agent365-dotnet?label=License)](LICENSE.md)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Contributors](https://img.shields.io/github/contributors/microsoft/Agent365-dotnet?label=Contributors&logo=github)](https://github.com/microsoft/Agent365-dotnet/graphs/contributors)
@@ -123,3 +123,4 @@ Enterprise-grade extensions for observability, notifications, runtime utilities,
 Copyright (c) Microsoft Corporation. All rights reserved.
 
 Licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+
