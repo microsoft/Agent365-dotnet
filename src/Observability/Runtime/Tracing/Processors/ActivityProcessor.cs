@@ -39,6 +39,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             OpenTelemetryConstants.GenAiProviderNameKey,
             OpenTelemetryConstants.GenAiSystemKey,
             OpenTelemetryConstants.SessionIdKey,
+            OpenTelemetryConstants.SessionDescriptionKey
         };
 
         private static readonly string[] InvokeAgentAttributeKeys = new[]
