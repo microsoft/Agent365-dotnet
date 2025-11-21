@@ -1,6 +1,6 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -14,6 +14,14 @@ using Newtonsoft.Json.Linq;
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
     private static readonly string TargetSourceName = SemanticKernelTelemetryConstants.SemanticKernelSource;
+
+    const string InvocationInputTagKey = "gen_ai.agent.invocation_input";
+    const string GenAiEventContentTagKey = "gen_ai.event.content";
+    const string GenAiUserMessageEventName = "gen_ai.user.message";
+    const string GenAiChoiceEventName = "gen_ai.choice";
+    const string GenAiInputMessagesTagKey = "gen_ai.input.messages";
+    const string GenAiOutputMessagesTagKey = "gen_ai.output.messages";
+
 
     public override void OnStart(Activity activity)
     {
@@ -43,13 +51,13 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
 
                         var userAndChoiceMessages = GetGenAiUserAndChoiceMessageContent(activity);
-                        if (userAndChoiceMessages["gen_ai.user.message"] is List<string> userMessages && userMessages.Count > 0)
+                        if (userAndChoiceMessages[GenAiUserMessageEventName] is List<string> userMessages && userMessages.Count > 0)
                         {
-                            activity.SetTag("gen_ai.input.messages", string.Join(", ", userMessages));
+                            activity.SetTag(GenAiInputMessagesTagKey, string.Join(", ", userMessages));
                         }
-                        if (userAndChoiceMessages["gen_ai.choice"] is List<string> choiceMessages && choiceMessages.Count > 0)
+                        if (userAndChoiceMessages[GenAiChoiceEventName] is List<string> choiceMessages && choiceMessages.Count > 0)
                         {
-                            activity.SetTag("gen_ai.output.messages", string.Join(", ", choiceMessages));
+                            activity.SetTag(GenAiOutputMessagesTagKey, string.Join(", ", choiceMessages));
                         }
                         // Other tags set by SK SDK follow Microsoft Agent A365 schema.
                         break;
@@ -58,25 +66,33 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
         }
     }
 
+    /// <summary>
+    /// Processes and filters the gen_ai.agent.invocation_input tag to remove system role messages.
+    /// </summary>
+    /// <param name="activity">The activity containing the tag to process.</param>
     private static void ProcessInvocationInputTag(Activity activity)
     {
         if (activity is { TagObjects: not null })
         {
-            foreach (var tagObj in activity.TagObjects)
+            var kvp = activity.TagObjects
+                    .OfType<KeyValuePair<string, object>>()
+                    .FirstOrDefault(k => k.Key == "gen_ai.agent.invocation_input");
+
+            if (!kvp.Equals(default(KeyValuePair<string, object>)))
             {
-                if (tagObj is KeyValuePair<string, object> kvp &&
-                    kvp.Key == "gen_ai.agent.invocation_input")
+                if (kvp.Value is string jsonString)
                 {
-                    if (kvp.Value is string jsonString)
-                    {
-                        TryFilterInvocationInput(activity, jsonString);
-                    }
-                    break;
+                    TryFilterInvocationInput(activity, jsonString);
                 }
             }
         }
     }
 
+    /// <summary>
+    /// Attempts to parse and filter the invocation input JSON string, removing system messages and encoding the result.
+    /// </summary>
+    /// <param name="activity">The activity to update with the filtered tag.</param>
+    /// <param name="jsonString">The JSON string to parse and filter.</param>
     private static void TryFilterInvocationInput(Activity activity, string jsonString)
     {
         try
@@ -92,15 +108,20 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 
                 var filteredString = filtered.ToString(Formatting.None);
                 var encoded = EncodeForJsonInHtml(filteredString);
-                activity.SetTag("gen_ai.agent.invocation_input", encoded);
+                activity.SetTag(InvocationInputTagKey, encoded);
             }
         }
         catch (JsonException)
         {
-            // Handle invalid JSON if necessary
+            //swallow exception and leave the original tag value
         }
     }
 
+    /// <summary>
+    /// Filters an invocation input element by removing system role messages and extracting user message content.
+    /// </summary>
+    /// <param name="e">The JSON token to filter.</param>
+    /// <returns>The filtered JObject, or null if the element should be excluded (e.g., system role).</returns>
     private static JObject? FilterInvocationInputElement(JToken e)
     {
         JObject? obj = null;
@@ -120,15 +141,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
         if (obj?["role"]?.ToString() == "system")
             return null;
 
-        if (obj?["role"]?.ToString() == "user" && obj["content"] is JValue contentVal)
-        {
-            var contentStr = contentVal.ToString();
-            var match = System.Text.RegularExpressions.Regex.Match(contentStr, @"Message:\s.*");
-            if (match.Success)
-            {
-                obj["content"] = match.Value;
-            }
-        }
+        FilterUserMessageContent(obj);
 
         return obj;
     }
@@ -150,9 +163,22 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 );
                 return JsonConvert.DeserializeObject<JObject>(fixedString);
             }
-            catch
+            catch(JsonException)
             {
                 return null;
+            }
+        }
+    }
+
+    static void FilterUserMessageContent(JObject? obj)
+    {
+        if (obj?["role"]?.ToString() == "user" && obj["content"] is JValue contentVal)
+        {
+            var contentStr = contentVal.ToString();
+            var match = System.Text.RegularExpressions.Regex.Match(contentStr, @"Message:\s.*");
+            if (match.Success)
+            {
+                obj["content"] = match.Value;
             }
         }
     }
@@ -168,62 +194,62 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
             .Replace("/", "\\u002f");
     }
 
+    /// <summary>
+    /// Extracts user messages and choice messages from activity events.
+    /// </summary>
+    /// <param name="activity">The activity containing the events to process.</param>
+    /// <returns>A dictionary containing lists of user messages and choice messages.</returns>
     private static Dictionary<string, List<string>> GetGenAiUserAndChoiceMessageContent(Activity activity)
     {
         var result = new Dictionary<string, List<string>>
         {
-            { "gen_ai.user.message", new List<string>() },
-            { "gen_ai.choice", new List<string>() }
+            { GenAiUserMessageEventName, new List<string>() },
+            { GenAiChoiceEventName, new List<string>() }
         };
 
-        if (activity == null || activity.Events == null)
+        if (activity.Events == null)
             return result;
 
         foreach (var activityEvent in activity.Events)
         {
-            if (activityEvent.Name == "gen_ai.user.message")
+            if (activityEvent.Name == GenAiUserMessageEventName)
             {
                 if (activityEvent.Tags != null)
                 {
                     foreach (var tag in activityEvent.Tags)
                     {
-                        if (tag.Key == "gen_ai.event.content" && tag.Value is string content && !string.IsNullOrEmpty(content))
+                        if (tag.Key == GenAiEventContentTagKey && tag.Value is string content && !string.IsNullOrEmpty(content))
                         {
                             // Try to parse the content as JSON and filter as required
                             try
                             {
                                 var jObj = JsonConvert.DeserializeObject<JObject>(content);
-                                if (jObj != null && jObj["role"]?.ToString() == "user" && jObj["content"] is JValue contentVal)
+                                if (jObj != null && jObj["role"]?.ToString() == "user" && jObj["content"] is JValue)
                                 {
-                                    var contentStr = contentVal.ToString();
-                                    var match = System.Text.RegularExpressions.Regex.Match(contentStr, @"Message:\s.*");
-                                    if (match.Success)
-                                    {
-                                        jObj["content"] = match.Value;
-                                    }
+                                    FilterUserMessageContent(jObj);
                                     // Only keep the filtered object
-                                    result["gen_ai.user.message"].Add(jObj.ToString(Formatting.None));
+                                    result[GenAiUserMessageEventName].Add(jObj.ToString(Formatting.None));
                                 }
                             }
-                            catch
+                            catch(JsonException)
                             {
                                 // If not JSON, fallback to original
-                                result["gen_ai.user.message"].Add(content);
+                                result[GenAiUserMessageEventName].Add(content);
                             }
                             break;
                         }
                     }
                 }
             }
-            else if (activityEvent.Name == "gen_ai.choice")
+            else if (activityEvent.Name == GenAiChoiceEventName)
             {
                 if (activityEvent.Tags != null)
                 {
                     foreach (var tag in activityEvent.Tags)
                     {
-                        if (tag.Key == "gen_ai.event.content" && tag.Value is string content && !string.IsNullOrEmpty(content))
+                        if (tag.Key == GenAiEventContentTagKey && tag.Value is string content && !string.IsNullOrEmpty(content))
                         {
-                            result["gen_ai.choice"].Add(content);
+                            result[GenAiChoiceEventName].Add(content);
                             break;
                         }
                     }
