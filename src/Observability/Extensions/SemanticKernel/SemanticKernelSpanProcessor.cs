@@ -8,8 +8,9 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
@@ -21,17 +22,20 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     const string GenAiChoiceEventName = "gen_ai.choice";
     const string GenAiInputMessagesTagKey = "gen_ai.input.messages";
     const string GenAiOutputMessagesTagKey = "gen_ai.output.messages";
-
-    private static readonly System.Text.RegularExpressions.Regex NameValueRegex =
-        new System.Text.RegularExpressions.Regex(
+    private static readonly Regex NameValueRegex =
+        new Regex(
             @"(""name"":\s*)([^""\s][^,}\s]*)",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    private static readonly System.Text.RegularExpressions.Regex UserMessageContentRegex =
-        new System.Text.RegularExpressions.Regex(
+            RegexOptions.Compiled);
+    private static readonly Regex UserMessageContentRegex =
+        new Regex(
             @"Message:\s.*",
-            System.Text.RegularExpressions.RegexOptions.Compiled);
+            RegexOptions.Compiled);
 
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
 
     public override void OnStart(Activity activity)
     {
@@ -82,19 +86,13 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     /// <param name="activity">The activity containing the tag to process.</param>
     private static void ProcessInvocationInputTag(Activity activity)
     {
-        if (activity is { TagObjects: not null })
-        {
-            var kvp = activity.TagObjects
-                    .OfType<KeyValuePair<string, object>>()
-                    .FirstOrDefault(k => k.Key == "gen_ai.agent.invocation_input");
+        var kvp = activity.TagObjects
+            .OfType<KeyValuePair<string, object>>()
+            .FirstOrDefault(k => k.Key == InvocationInputTagKey);
 
-            if (!kvp.Equals(default(KeyValuePair<string, object>)))
-            {
-                if (kvp.Value is string jsonString)
-                {
-                    TryFilterInvocationInput(activity, jsonString);
-                }
-            }
+        if (kvp is { } && !kvp.Equals(default(KeyValuePair<string, object>)) && kvp.Value is string jsonString)
+        {
+            TryFilterInvocationInput(activity, jsonString);
         }
     }
 
@@ -107,16 +105,17 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     {
         try
         {
-            var inputArray = JsonConvert.DeserializeObject<JArray>(jsonString);
+            var inputArray = JsonNode.Parse(jsonString) as JsonArray;
             if (inputArray != null)
             {
-                var filtered = new JArray(
+                var filtered = new JsonArray(
                     inputArray
                         .Select(e => FilterInvocationInputElement(e))
                         .Where(obj => obj != null)
+                        .ToArray()
                 );
 
-                var filteredString = filtered.ToString(Formatting.None);
+                var filteredString = filtered.ToJsonString(JsonOptions);
                 var encoded = EncodeForJsonInHtml(filteredString);
                 activity.SetTag(InvocationInputTagKey, encoded);
             }
@@ -131,24 +130,24 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     /// Filters an invocation input element by removing system role messages and extracting user message content.
     /// </summary>
     /// <param name="e">The JSON token to filter.</param>
-    /// <returns>The filtered JObject, or null if the element should be excluded (e.g., system role).</returns>
-    private static JObject? FilterInvocationInputElement(JToken e)
+    /// <returns>The filtered JsonObject, or null if the element should be excluded (e.g., system role).</returns>
+    private static JsonObject? FilterInvocationInputElement(JsonNode? e)
     {
-        JObject? obj = null;
-        if (e.Type == JTokenType.Object)
+        JsonObject? obj = null;
+        if (e is JsonObject jo)
         {
-            obj = (JObject)e;
+            obj = jo;
         }
-        else if (e.Type == JTokenType.String)
+        else if (e is JsonValue jv && jv.TryGetValue<string>(out var str))
         {
-            obj = TryParseJObjectFromString(e.Value<string>() ?? "");
+            obj = TryParseJsonObjectFromString(str);
         }
         else
         {
             return null;
         }
 
-        if (obj?["role"]?.ToString() == "system")
+        if (obj?["role"]?.GetValue<string>() == "system")
             return null;
 
         FilterUserMessageContent(obj);
@@ -156,34 +155,37 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
         return obj;
     }
 
-    private static JObject? TryParseJObjectFromString(string jstring)
+    private static JsonObject? TryParseJsonObjectFromString(string jstring)
     {
         try
         {
-            return JsonConvert.DeserializeObject<JObject>(jstring);
+            var node = JsonNode.Parse(jstring);
+            return node as JsonObject;
         }
-        catch
+        catch (JsonException)
         {
             try
             {
+                // Attempt to fix unquoted property names (not supported by System.Text.Json, but try to fix)
                 var fixedString = NameValueRegex.Replace(
                     jstring,
                     "$1\"$2\""
                 );
-                return JsonConvert.DeserializeObject<JObject>(fixedString);
+                var node = JsonNode.Parse(fixedString);
+                return node as JsonObject;
             }
-            catch(JsonException)
+            catch (JsonException)
             {
                 return null;
             }
         }
     }
 
-    static void FilterUserMessageContent(JObject? obj)
+    static void FilterUserMessageContent(JsonObject? obj)
     {
-        if (obj?["role"]?.ToString() == "user" && obj["content"] is JValue contentVal)
+        if (obj?["role"]?.GetValue<string>() == "user" && obj["content"] is JsonValue contentVal)
         {
-            var contentStr = contentVal.ToString();
+            var contentStr = contentVal.GetValue<string>();
             var match = UserMessageContentRegex.Match(contentStr);
             if (match.Success)
             {
@@ -232,15 +234,15 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                             // Try to parse the content as JSON and filter as required
                             try
                             {
-                                var jObj = JsonConvert.DeserializeObject<JObject>(content);
-                                if (jObj != null && jObj["role"]?.ToString() == "user" && jObj["content"] is JValue)
+                                var node = JsonNode.Parse(content);
+                                if (node is JsonObject jObj && jObj["role"]?.GetValue<string>() == "user" && jObj["content"] is JsonValue)
                                 {
                                     FilterUserMessageContent(jObj);
                                     // Only keep the filtered object
-                                    result[GenAiUserMessageEventName].Add(jObj.ToString(Formatting.None));
+                                    result[GenAiUserMessageEventName].Add(jObj.ToJsonString(JsonOptions));
                                 }
                             }
-                            catch(JsonException)
+                            catch (JsonException)
                             {
                                 // If not JSON, fallback to original
                                 result[GenAiUserMessageEventName].Add(content);
@@ -254,7 +256,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
             {
                 if (activityEvent.Tags != null)
                 {
-                    foreach (var tag in activityEvent.Tags)
+                    foreach (var tag in activityEvent.Tags ?? Enumerable.Empty<KeyValuePair<string, object?>>())
                     {
                         if (tag.Key == GenAiEventContentTagKey && tag.Value is string content && !string.IsNullOrEmpty(content))
                         {

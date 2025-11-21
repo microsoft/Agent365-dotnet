@@ -16,7 +16,6 @@
     <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
     <!-- Source Link Support -->
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
-    <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
