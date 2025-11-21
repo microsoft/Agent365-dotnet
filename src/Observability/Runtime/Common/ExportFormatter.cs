@@ -165,6 +165,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         {
             var span = BuildOtlpSpan(activity);
 
+            if (span.Attributes == null)
+                return span;
+
             // Check initial size
             if (Encoding.UTF8.GetByteCount(ExportFormatter.SerializePayload(span)) <= ExportFormatter.MaxSpanSizeBytes)
                 return span;
@@ -173,7 +176,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             var keySizes = new List<(string Key, int Size, string? Value)>();
             foreach (var key in ExportFormatter.LargePayloadAttributeKeys)
             {
-                if (span.Attributes != null && span.Attributes.TryGetValue(key, out var valueObj))
+                if (span.Attributes.TryGetValue(key, out var valueObj))
                 {
                     var value = valueObj as string;
                     int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
@@ -190,11 +193,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
             foreach (var (key, size, _) in sorted)
             {
-                if (span.Attributes != null)
-                {
-                    span.Attributes[key] = "TRUNCATED";
-                    logInformation?.Invoke($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
-                }
+                span.Attributes[key] = "TRUNCATED";
+                logInformation?.Invoke($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
 
                 // Re-check size after each truncation
                 var json = SerializePayload(span);
