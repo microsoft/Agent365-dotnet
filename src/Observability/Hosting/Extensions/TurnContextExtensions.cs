@@ -90,8 +90,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetSourceMetadataBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelNameKey, turnContext.Activity?.Type);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelLinkKey, turnContext.Activity?.Type);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelNameKey, turnContext.Activity?.ChannelId?.Channel);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiChannelLinkKey, turnContext.Activity?.ChannelId?.SubChannel);
         }
 
         /// <summary>
