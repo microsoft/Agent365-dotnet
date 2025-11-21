@@ -25,6 +25,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     {
         private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
         private const int MaxActivitySizeBytes = 250 * 1024;
+        private static readonly string[] LargePayloadAttributeKeys = new[]
+        {
+            OpenTelemetryConstants.GenAiToolArgumentsKey,
+            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiInputMessagesKey,
+            OpenTelemetryConstants.GenAiInvocationInputKey,
+            OpenTelemetryConstants.GenAiOutputMessagesKey,
+            OpenTelemetryConstants.GenAiInvocationOutputKey
+        };
 
         /// <summary>
         /// Truncates the largest-to-smallest of the specified activity attributes until the activity's serialized size is under 250 KB.
@@ -46,19 +55,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (Encoding.UTF8.GetByteCount(json) <= Agent365ExporterCore.MaxActivitySizeBytes)
                 return false;
 
-            string[] keys = new[]
-            {
-                OpenTelemetryConstants.GenAiToolArgumentsKey,
-                OpenTelemetryConstants.GenAiEventContent,
-                OpenTelemetryConstants.GenAiInputMessagesKey,
-                OpenTelemetryConstants.GenAiInvocationInputKey,
-                OpenTelemetryConstants.GenAiOutputMessagesKey,
-                OpenTelemetryConstants.GenAiInvocationOutputKey
-            };
-
             // Get all key/value sizes and log them
             var keySizes = new List<(string Key, int Size, string? Value)>();
-            foreach (var key in keys)
+            foreach (var key in Agent365ExporterCore.LargePayloadAttributeKeys)
             {
                 var value = activity.GetTagItem(key) as string;
                 int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
