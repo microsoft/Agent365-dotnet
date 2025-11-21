@@ -45,7 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Exports a batch of OpenTelemetry activities to the Microsoft Agents A365 observability platform asynchronously.
+        /// Exports a batch of OpenTelemetry activities to the Microsoft Agent 365 observability platform asynchronously.
         /// </summary>
         /// <param name="batch">The batch of activities to export.</param>
         /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>

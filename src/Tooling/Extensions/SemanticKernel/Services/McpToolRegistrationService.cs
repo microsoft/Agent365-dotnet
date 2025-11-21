@@ -4,17 +4,16 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using Microsoft.Agents.Builder;
-    using Microsoft.Agents.Builder.App.UserAuth;
-    using Microsoft.Extensions.Logging;
     using Microsoft.Agents.A365.Runtime.Authentication;
-    using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
     using Microsoft.Agents.A365.Tooling.Utils;
+    using Microsoft.Agents.Builder;
+    using Microsoft.Agents.Builder.App.UserAuth;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
+    using System;
+    using System.Linq;
 
     /// <summary>
     /// Provides services related to tools in the Semantic Kernel.
@@ -24,6 +23,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly ILogger<IMcpToolRegistrationService> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+        private readonly IConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -37,24 +37,17 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="mcpServerConfigurationService">
         /// MCP server configuration service.
         /// </param>
-        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolServerConfigurationService mcpServerConfigurationService)
+        /// <param name="configuration">Configuration Service for the application</param>
+        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolServerConfigurationService mcpServerConfigurationService, IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
             _mcpServerConfigurationService = mcpServerConfigurationService;
+            _configuration = configuration;
         }
 
-        /// <summary>
-        /// Adds the A365 MCP Tool Servers
-        /// </summary>
-        /// <param name="kernel">Kernel</param>
-        /// <param name="environmentId">Environment Id for the environment</param>
-        /// <param name="userAuthorization"></param>
-        /// <param name="turnContext"></param>
-        /// <param name="authToken">Auth token to access the MCP servers</param>
-        /// <returns>Returns a new object of the kernel</returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public void AddToolServersToAgent(Kernel kernel, string environmentId, UserAuthorization userAuthorization, ITurnContext turnContext, string? authToken = null)
+        /// <inheritdoc />
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
         {
             if (kernel == null)
             {
@@ -63,17 +56,19 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             if (authToken == null)
             {
-                authToken = AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, turnContext).GetAwaiter().GetResult();
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
-            var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
-            var servers = _mcpServerConfigurationService.ListToolServers(agenticAppId, environmentId, authToken).Result;
+            // resolve agent identity from context or token. 
+            string agenticAppId = Runtime.Utils.Utility.ResolveAgentIdentity(turnContext, authToken);
 
-            var toolsMode = Utility.GetToolsMode();
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
+
+            var toolsMode = Utility.GetToolsMode(_configuration);
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = _mcpServerConfigurationService.GetMcpClientTools(turnContext, server, environmentId, authToken).GetAwaiter().GetResult();
+                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

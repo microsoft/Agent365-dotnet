@@ -43,17 +43,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
-            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceIdKey, request?.SourceMetadata?.Id);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceNameKey, request?.SourceMetadata?.Name);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request?.SourceMetadata?.Description);
+            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
+            SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
+            SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, request?.SourceMetadata?.Description);
             SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
             SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Only record port if it is different from 443
-            if (endpoint.Port != 443)
+            if (endpoint?.Port != 443)
             {
-                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint?.Port);
             }
 
             // Set caller details tags
@@ -75,6 +74,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
+            }
+
+            // Set input messages 
+            if (request?.Content != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, request.Content);
             }
         }
 

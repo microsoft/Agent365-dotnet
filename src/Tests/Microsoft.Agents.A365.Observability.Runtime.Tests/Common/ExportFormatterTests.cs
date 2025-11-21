@@ -1,3 +1,7 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using System.Diagnostics;
 using System.Text.Json;
 using FluentAssertions;
@@ -423,7 +427,7 @@ public partial class ExportFormatterTests : ActivityTest
             parentSpanId);
 
         // Act
-        var json = ExportFormatter.FormatLogData(data);
+        var json = ExportFormatter.FormatLogData(data.ToDictionary());
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();
@@ -461,7 +465,7 @@ public partial class ExportFormatterTests : ActivityTest
             parentSpanId: null);
 
         // Act
-        var json = ExportFormatter.FormatLogData(data);
+        var json = ExportFormatter.FormatLogData(data.ToDictionary());
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();

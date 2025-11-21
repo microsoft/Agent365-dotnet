@@ -17,8 +17,7 @@ public sealed class Agent365ExporterTests
     /// </summary>
     private static readonly string[] ValidClusterCategories = new[]
     {
-        "local", "dev", "test", "preprod", "firstrelease", "prod",
-        "gov", "high", "dod", "mooncake", "ex", "rx"
+        "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
     };
 
     private static Activity CreateActivity(string? tenantId = null, string? agentId = null)
@@ -96,7 +95,6 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token")
         };
 
@@ -115,7 +113,6 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token")
         };
 
@@ -135,7 +132,6 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = null
         };
 
@@ -218,7 +214,6 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token")
         };
 
@@ -235,7 +230,6 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token"),
             MaxQueueSize = 4096,
             ScheduledDelayMilliseconds = 10000,
@@ -256,7 +250,6 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token")
         };
 
@@ -270,7 +263,6 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token"),
             UseS2SEndpoint = true
         };
@@ -285,7 +277,6 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("token"),
             UseS2SEndpoint = false
         };
@@ -302,7 +293,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -325,7 +315,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -356,7 +345,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -374,7 +362,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -392,7 +379,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -426,7 +412,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -463,7 +448,6 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (agentId, tenantId) =>
             {
                 capturedAgentId = agentId;
@@ -502,7 +486,6 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (agentId, tenantId) =>
             {
                 capturedAgentId = agentId;
@@ -538,7 +521,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>(null), // Return null token
             UseS2SEndpoint = true
         };
@@ -568,7 +550,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>(string.Empty), // Return empty token
             UseS2SEndpoint = true
         };
@@ -598,7 +579,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
             UseS2SEndpoint = true
         };
@@ -628,7 +608,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
             UseS2SEndpoint = false
         };
@@ -658,7 +637,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -690,7 +668,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -722,7 +699,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -752,7 +728,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -782,7 +757,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -812,7 +786,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -842,7 +815,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -876,7 +848,6 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
@@ -919,7 +890,6 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
@@ -954,7 +924,6 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            ClusterCategory = "test",
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };

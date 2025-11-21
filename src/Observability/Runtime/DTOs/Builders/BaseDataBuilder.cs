@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
@@ -24,9 +28,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.ServerAddressKey,
             OpenTelemetryConstants.ServerPortKey,
-            OpenTelemetryConstants.GenAiExecutionSourceIdKey,
-            OpenTelemetryConstants.GenAiExecutionSourceNameKey,
-            OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey,
+            OpenTelemetryConstants.GenAiChannelNameKey,
+            OpenTelemetryConstants.GenAiChannelLinkKey,
             OpenTelemetryConstants.GenAiExecutionTypeKey,
             OpenTelemetryConstants.GenAiCallerIdKey,
             OpenTelemetryConstants.GenAiCallerUpnKey,
@@ -106,7 +109,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <summary>
         /// Adds endpoint details to the attributes dictionary.
         /// </summary>
-        protected static void AddEndpointDetails(IDictionary<string, object?> attributes, Uri endpoint)
+        protected static void AddEndpointDetails(IDictionary<string, object?> attributes, Uri? endpoint)
         {
             if (endpoint == null) return;
 
@@ -126,9 +129,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (request == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceIdKey, request.SourceMetadata?.Id);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceNameKey, request.SourceMetadata?.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, request.SourceMetadata?.Description);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, request.SourceMetadata?.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, request.SourceMetadata?.Description);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString());
         }
 

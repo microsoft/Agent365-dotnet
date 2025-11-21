@@ -1,10 +1,10 @@
-﻿# Microsoft Agents A365 SDK - Package Setup Guide
+﻿# Microsoft Agent 365 SDK - Package Setup Guide
 
-This document provides a complete guide for building, validating, and publishing the Microsoft Agents A365 SDK NuGet packages.
+This document provides a complete guide for building, validating, and publishing the Microsoft Agent 365 SDK NuGet packages.
 
 ## Package Information
 
-The Microsoft Agents A365 SDK is organized into multiple NuGet packages:
+The Microsoft Agent 365 SDK is organized into multiple NuGet packages:
 
 - **Microsoft.Agents A365.Observability.Common** - Core observability and tracing infrastructure
 - **Microsoft.Agents.A365.Observability.SemanticKernel** - SemanticKernel observability integration
@@ -16,7 +16,7 @@ The Microsoft Agents A365 SDK is organized into multiple NuGet packages:
 - **Version**: 1.0.0
 - **Target Framework**: .NET 8.0
 - **License**: MIT
-- **Repository**: https://github.com/microsoft/Agent365
+- **Repository**: https://github.com/microsoft/Agent365-dotnet
 
 ## Building the Package
 
@@ -228,7 +228,7 @@ dotnet build Microsoft.Agents.A365.sln --verbosity detailed
 
 For issues with the package setup or build process:
 
-1. Check the [GitHub Issues](https://github.com/microsoft/Agent365/issues)
+1. Check the [GitHub Issues](https://github.com/microsoft/Agent365-dotnet/issues)
 2. Review the build logs in GitHub Actions
 3. Run validation script to verify package integrity
 4. Check NuGet.org for package availability after publishing

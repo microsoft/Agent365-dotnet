@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
@@ -89,7 +90,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             InferenceCallDetails inferenceCallDetails)
         {
             var (operationName, model, providerName, inputTokens, outputTokens, finishReasons, responseId) = inferenceCallDetails;
-            AddIfNotNull(attributes, GenAiOperationNameKey, operationName.ToString());
+            AddIfNotNull(attributes, GenAiOperationNameKey, operationName.ToString().ToLowerInvariant());
             AddIfNotNull(attributes, GenAiRequestModelKey, model);
             AddIfNotNull(attributes, GenAiProviderNameKey, providerName);
             AddIfNotNull(attributes, GenAiUsageInputTokensKey, inputTokens);

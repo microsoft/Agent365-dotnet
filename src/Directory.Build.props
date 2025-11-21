@@ -32,6 +32,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageReleaseNotes>See CHANGELOG.md for release notes.</PackageReleaseNotes>
+    <PackageProjectUrl>https://learn.microsoft.com/microsoft-agent-365/developer</PackageProjectUrl>
 
     <!-- Build Configuration -->
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -44,6 +45,10 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Package references for all projects -->
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="$(RepositoryRoot)\LICENSE.md" Pack="true" PackagePath="" />
     <None Include="$(RepositoryRoot)\CHANGELOG.md" Pack="true" PackagePath="" />

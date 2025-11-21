@@ -1,9 +1,13 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
 using OpenTelemetry.Trace;
+using OpenTelemetry;
 
 /// <summary>
 /// Extension methods for configuring Builder with Agent Framework integration.
@@ -35,12 +39,19 @@ public static class BuilderExtensions
     {
         if (enableRelatedSources)
         {
-            builder.Services.AddOpenTelemetry()
+            var telmConfig = builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
                     .AddSource(AgentFrameworkSource)
                     .AddSource(AgentFrameworkAgentSource)
                     .AddSource(AgentFrameworkChatClientSource)
                     .AddProcessor(new AgentFrameworkSpanProcessor()));
+
+            if (builder.Configuration != null
+                && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+                && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
+            {
+                telmConfig.UseOtlpExporter();
+            }
         }
 
         return builder;

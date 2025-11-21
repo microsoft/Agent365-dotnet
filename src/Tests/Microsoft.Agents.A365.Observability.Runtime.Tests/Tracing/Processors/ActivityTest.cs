@@ -13,8 +13,8 @@ public abstract class ActivityTest
     protected const string AgentId = "agentId";
     
     protected readonly InvokeAgentDetails Details = new(
-        new Uri("https://microsoft.com"),
-        new AgentDetails(AgentId));
+        endpoint: new Uri("https://microsoft.com"),
+        details: new AgentDetails(AgentId));
     
     protected ActivityTest()
     {

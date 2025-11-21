@@ -1,4 +1,8 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry;
 using System;
@@ -153,29 +157,38 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the execution source metadata ID (i.e. channel ID) baggage value.
+        /// Sets the channel name baggage value.
         /// </summary>
-        public BaggageBuilder SourceMetadataId(string? v)
+        public BaggageBuilder ChannelName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiExecutionSourceIdKey, v);
+            Set(OpenTelemetryConstants.GenAiChannelNameKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the execution source metadata name (i.e. channel name) baggage value.
+        /// Sets the channel link baggage value.
         /// </summary>
-        public BaggageBuilder SourceMetadataName(string? v)
+        public BaggageBuilder ChannelLink(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiExecutionSourceNameKey, v);
+            Set(OpenTelemetryConstants.GenAiChannelLinkKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the execution source metadata description (i.e. channel description) baggage value.
+        /// Sets the session ID baggage value.
         /// </summary>
-        public BaggageBuilder SourceMetadataDescription(string? v)
+        public BaggageBuilder SessionId(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiExecutionSourceDescriptionKey, v);
+            Set(OpenTelemetryConstants.SessionIdKey, v);
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the session description baggage value.
+        /// </summary>
+        public BaggageBuilder SessionDescription(string? v)
+        {
+            Set(OpenTelemetryConstants.SessionDescriptionKey, v);
             return this;
         }
 

@@ -1,1 +1,0 @@
-# Agent Tooling Azure Foundry SDK for .NET

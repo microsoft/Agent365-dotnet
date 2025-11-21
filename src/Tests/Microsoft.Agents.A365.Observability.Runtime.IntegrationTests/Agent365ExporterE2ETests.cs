@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
@@ -39,7 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString());
             var endpoint = new Uri("https://test-agent-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, expectedAgentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: expectedAgentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
 
             var expectedRequest = new Request(
@@ -47,7 +48,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 executionType: ExecutionType.HumanToAgent,
                 sourceMetadata: new SourceMetadata(
                     name: "msteams",
-                    id: "https://testchannel.link"));
+                    description: "https://testchannel.link"));
 
             var expectedCallerDetails = new CallerDetails(
                 callerId: "caller-123",
@@ -85,9 +86,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("scopeSpans")[0]
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
-            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint.Host);
-            this.GetAttribute(attributes, "gen_ai.execution.sourceMetadata.name").Should().Be(expectedRequest.SourceMetadata?.Name);
-            this.GetAttribute(attributes, "gen_ai.execution.sourceMetadata.id").Should().Be(expectedRequest.SourceMetadata?.Id);
+            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint?.Host);
+            this.GetAttribute(attributes, "gen_ai.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
+            this.GetAttribute(attributes, "gen_ai.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
             this.GetAttribute(attributes, "gen_ai.execution.type").Should().Be(expectedRequest.ExecutionType.ToString());
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedCallerDetails.CallerId);
@@ -275,11 +276,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             var provider = this.CreateTestServiceProvider(httpClient);
 
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
             var request = new Request(
                 content: "Nested request",
                 executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata("nested", "nested-id"));
+                sourceMetadata: new SourceMetadata(name: "nested", description: "https://nestedchannel.link"));
 
             var toolCallDetails = new ToolCallDetails(
                 toolName: "NestedTool",
@@ -480,19 +481,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
         private ServiceProvider CreateTestServiceProvider(HttpClient httpClient)
         {
-            var services = new ServiceCollection();
-            services.AddSingleton<HttpClient>(httpClient);
-            services.AddSingleton<Agent365ExporterOptions>(sp =>
+            HostApplicationBuilder builder = new HostApplicationBuilder();
+
+            builder.Services.AddSingleton<HttpClient>(httpClient);
+            builder.Services.AddSingleton<Agent365ExporterOptions>(sp =>
             {
                 return new Agent365ExporterOptions
                 {
                     UseS2SEndpoint = false,
-                    ClusterCategory = "test",
                     TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });
-            services.AddTracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
-            return services.BuildServiceProvider();
+            builder.AddA365Tracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+            return builder.Services.BuildServiceProvider();
         }
         private void SetupExporterTest()
         {

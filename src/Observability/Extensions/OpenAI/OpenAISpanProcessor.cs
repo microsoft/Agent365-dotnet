@@ -1,3 +1,7 @@
+// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 namespace Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -23,7 +27,7 @@ internal class OpenAISpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case OpenAITelemetryConstants.ChatOperation:
-                        // Span emitted by OpenAI SDK follows Microsoft Agents A365 schema, so no modification needed.
+                        // Span emitted by OpenAI SDK follows Microsoft Agent 365 schema, so no modification needed.
                         // Placeholder for any plumbing if needed in the future.
                         break;
                 }

@@ -1,9 +1,14 @@
-﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Agents.A365.Observability.Runtime;
 using Microsoft.SemanticKernel;
 using OpenTelemetry.Trace;
+using OpenTelemetry;
 
 /// <summary>
 /// Extension methods for configuring Builder with SemanticKernel integration.
@@ -22,10 +27,18 @@ public static class BuilderExtensions
         if (enableRelatedSources)
         {
             AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
-            builder.Services.AddOpenTelemetry()
+
+            var telmConfig = builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
-                    .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
-                    .AddProcessor(new SemanticKernelSpanProcessor()));
+                .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
+                .AddProcessor(new SemanticKernelSpanProcessor()));
+
+            if (builder.Configuration != null
+                && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+                && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
+            {
+                telmConfig.UseOtlpExporter();
+            }
         }
 
         return builder;

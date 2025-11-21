@@ -1,7 +1,12 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
+using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 {
@@ -10,6 +15,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     /// </summary>
     public class InvokeAgentDataBuilder : BaseDataBuilder<InvokeAgentData>
     {
+        private const string InvokeAgentOperationName = "invoke_agent";
+
         /// <summary>
         /// Builds complete data for an invoke_agent operation.
         /// </summary>
@@ -86,6 +93,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
+
+            // Operation name
+            AddIfNotNull(attributes, GenAiOperationNameKey, InvokeAgentDataBuilder.InvokeAgentOperationName);
 
             // Add base agent details
             AddAgentDetails(attributes, invokeAgentDetails.Details);
