@@ -22,6 +22,16 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     const string GenAiInputMessagesTagKey = "gen_ai.input.messages";
     const string GenAiOutputMessagesTagKey = "gen_ai.output.messages";
 
+    private static readonly System.Text.RegularExpressions.Regex NameValueRegex =
+        new System.Text.RegularExpressions.Regex(
+            @"(""name"":\s*)([^""\s][^,}\s]*)",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly System.Text.RegularExpressions.Regex UserMessageContentRegex =
+        new System.Text.RegularExpressions.Regex(
+            @"Message:\s.*",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
 
     public override void OnStart(Activity activity)
     {
@@ -156,9 +166,8 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
         {
             try
             {
-                var fixedString = System.Text.RegularExpressions.Regex.Replace(
+                var fixedString = NameValueRegex.Replace(
                     jstring,
-                    @"(""name"":\s*)([^""\s][^,}\s]*)",
                     "$1\"$2\""
                 );
                 return JsonConvert.DeserializeObject<JObject>(fixedString);
@@ -175,7 +184,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
         if (obj?["role"]?.ToString() == "user" && obj["content"] is JValue contentVal)
         {
             var contentStr = contentVal.ToString();
-            var match = System.Text.RegularExpressions.Regex.Match(contentStr, @"Message:\s.*");
+            var match = UserMessageContentRegex.Match(contentStr);
             if (match.Success)
             {
                 obj["content"] = match.Value;
