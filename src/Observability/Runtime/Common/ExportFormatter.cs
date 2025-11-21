@@ -2,14 +2,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry.Resources;
 using System;
-using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -18,13 +20,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public class ExportFormatter
     {
+        private const int MaxSpanSizeBytes = 250 * 1024;
+        private static readonly string[] LargePayloadAttributeKeys = new[]
+        {
+            OpenTelemetryConstants.GenAiToolArgumentsKey,
+            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiInputMessagesKey,
+            OpenTelemetryConstants.GenAiInvocationInputKey,
+            OpenTelemetryConstants.GenAiOutputMessagesKey,
+            OpenTelemetryConstants.GenAiInvocationOutputKey
+        };
+
         /// <summary>
         /// Formats a collection of Activity spans into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activities">The collection of Activity spans to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the spans, containing resource attributes.</param>
+        /// <param name="logInformation">An optional logger for informational messages.</param>
         /// <returns>A JSON string representing the OTLP payload for the provided activities and resource.</returns>
-        public static string FormatMany(IEnumerable<Activity> activities, Resource resource)
+        public static string FormatMany(IEnumerable<Activity> activities, Resource resource, Action<string>? logInformation = null)
         {
             var resourceAttributes = GetResourceAttributes(resource);
             var serviceName = GetServiceName(resource);
@@ -40,7 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                     spans = new List<OtlpSpan>();
                     scopeMap[key] = spans;
                 }
-                spans.Add(BuildOtlpSpan(activity));
+                spans.Add(BuildOtlpSpanWithTruncation(activity: activity, logInformation: logInformation));
             }
 
             var scopeSpans = new List<ScopeSpans>(scopeMap.Count);
@@ -146,6 +160,48 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private static string? GetServiceVersion(Resource resource)
         {
             return resource.Attributes.FirstOrDefault(a => a.Key == "service.version").Value?.ToString();
+        }
+
+        private static OtlpSpan BuildOtlpSpanWithTruncation(Activity activity, Action<string>? logInformation = null)
+        {
+            var span = BuildOtlpSpan(activity);
+
+            // Gather key sizes
+            var keySizes = new List<(string Key, int Size, string? Value)>();
+            foreach (var key in ExportFormatter.LargePayloadAttributeKeys)
+            {
+                if (span.Attributes != null && span.Attributes.TryGetValue(key, out var valueObj))
+                {
+                    var value = valueObj as string;
+                    int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
+                    keySizes.Add((key, size, value));
+                    logInformation?.Invoke($"Activity '{activity.DisplayName}': Key '{key}' size = {size / 1024} KB.");
+                }
+            }
+
+            // Sort keys by size descending
+            var sorted = keySizes
+                .Where(k => !string.IsNullOrEmpty(k.Value) && k.Size > 0)
+                .OrderByDescending(k => k.Size)
+                .ToList();
+
+            foreach (var (key, size, _) in sorted)
+            {
+                if (span.Attributes != null)
+                {
+                    span.Attributes[key] = "TRUNCATED";
+                    logInformation?.Invoke($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
+                }
+
+                // Re-check size after each truncation
+                var json = SerializePayload(span);
+                if (Encoding.UTF8.GetByteCount(json) <= ExportFormatter.MaxSpanSizeBytes)
+                {
+                    break;
+                }
+            }
+
+            return span;
         }
 
         private static OtlpSpan BuildOtlpSpan(Activity activity)
