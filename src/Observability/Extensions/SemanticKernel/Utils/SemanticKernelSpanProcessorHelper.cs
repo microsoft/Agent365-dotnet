@@ -5,7 +5,6 @@ namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Linq;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 
@@ -71,10 +70,9 @@ internal static class SemanticKernelSpanProcessorHelper
     }
 
     /// <summary>
-    /// Filters an invocation input element by removing system role messages and extracting user message content.
+    /// Filters an input element by removing system role messages and extracting user message content.
     /// </summary>
     /// <param name="invocationInput">The GenAiInvocationInput to filter.</param>
-    /// <returns>The filtered GenAiInvocationInput, or null if the element should be excluded (e.g., system role).</returns>
     private static void FilterUserMessageContent(GenAiInvocationInput? invocationInput)
     {
         if (invocationInput?.Role == "user" && !string.IsNullOrEmpty(invocationInput.Content))
@@ -148,7 +146,7 @@ internal static class SemanticKernelSpanProcessorHelper
             {
                 if (activityEvent.Tags != null)
                 {
-                    foreach (var tag in activityEvent.Tags ?? Enumerable.Empty<KeyValuePair<string, object?>>())
+                    foreach (var tag in activityEvent.Tags)
                     {
                         if (tag.Key == GenAiEventContentTagKey && tag.Value is string content && !string.IsNullOrEmpty(content))
                         {
