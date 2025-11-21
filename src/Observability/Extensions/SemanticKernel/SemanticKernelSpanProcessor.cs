@@ -1,4 +1,7 @@
-﻿namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -48,9 +51,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         {
                             activity.SetTag("gen_ai.output.messages", string.Join(", ", choiceMessages));
                         }
-
-                        // Other tags set by SK SDK follow Microsoft Agents A365 schema.
-
+                        // Other tags set by SK SDK follow Microsoft Agent A365 schema.
                         break;
                 }
             }
