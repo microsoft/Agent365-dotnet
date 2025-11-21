@@ -79,9 +79,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             using var doc = JsonDocument.Parse(this._receivedContent!);
             var root = doc.RootElement;
-
-
-
             var attributes = root
                 .GetProperty("resourceSpans")[0]
                 .GetProperty("scopeSpans")[0]
