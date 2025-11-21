@@ -372,11 +372,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 tenantId: Guid.NewGuid().ToString());
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://test-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint, agentDetails);
+            var invokeAgentDetails = new InvokeAgentDetails(details: agentDetails, endpoint: endpoint);
             var request = new Request(
                 content: "Test request content",
                 executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata("test", "test-id"));
+                sourceMetadata: new SourceMetadata(name: "test", id: "test-id"));
 
             var toolCallDetails = new ToolCallDetails(
                 toolName: "LargeFileTool",

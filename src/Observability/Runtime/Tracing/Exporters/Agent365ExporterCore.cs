@@ -110,7 +110,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             foreach (var g in groups)
             {
                 var (tenantId, agentId, activities) = g;
-                var json = ExportFormatter.FormatMany(activities, resource);
+                var json = ExportFormatter.FormatMany(activities, resource, logInformation);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);

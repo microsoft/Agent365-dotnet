@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry.Resources;
 using System;
@@ -165,6 +164,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private static OtlpSpan BuildOtlpSpanWithTruncation(Activity activity, Action<string>? logInformation = null)
         {
             var span = BuildOtlpSpan(activity);
+
+            // Check initial size
+            if (Encoding.UTF8.GetByteCount(ExportFormatter.SerializePayload(span)) <= ExportFormatter.MaxSpanSizeBytes)
+                return span;
 
             // Gather key sizes
             var keySizes = new List<(string Key, int Size, string? Value)>();
