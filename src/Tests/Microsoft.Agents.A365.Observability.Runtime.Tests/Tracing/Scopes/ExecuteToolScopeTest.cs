@@ -64,4 +64,26 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
 
+    [TestMethod]
+    public void AgentTypeTag_IsSetCorrectly()
+    {
+        // Arrange
+        var agentType = AgentType.MicrosoftCopilot;
+        var agentDetails = new AgentDetails(
+            agentId: "agent-xyz",
+            agentName: "ToolAgent",
+            agentType: agentType);
+
+        var toolCallDetails = new ToolCallDetails("TestTool", "args");
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
+    }
 }

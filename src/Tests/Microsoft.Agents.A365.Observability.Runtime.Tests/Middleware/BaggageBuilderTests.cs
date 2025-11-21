@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTelemetry;
 
@@ -34,6 +35,7 @@ public sealed class BaggageBuilderTest
             .CorrelationId(corr)
             .SessionId(session)
             .SessionDescription(sessionDescription)
+            .AgentType(AgentType.EntraEmbodied)
             .Build())
         {
             // Assert inside scope
@@ -42,6 +44,7 @@ public sealed class BaggageBuilderTest
             Baggage.Current.GetBaggage(CorrelationIdKey).Should().Be(corr);
             Baggage.Current.GetBaggage(SessionIdKey).Should().Be(session);
             Baggage.Current.GetBaggage(SessionDescriptionKey).Should().Be(sessionDescription);
+            Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().Be(AgentType.EntraEmbodied.ToString());
         }
 
         // Assert after dispose (restored -> no values)
@@ -49,6 +52,8 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(GenAiAgentIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(CorrelationIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(SessionIdKey).Should().BeNull();
+        Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
+        Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().BeNull();
     }
     
 }
