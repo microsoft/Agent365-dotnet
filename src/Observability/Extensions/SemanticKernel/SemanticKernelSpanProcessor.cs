@@ -14,11 +14,6 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
     private static readonly string TargetSourceName = SemanticKernelTelemetryConstants.SemanticKernelSource;
 
-    const string GenAiUserMessageEventName = "gen_ai.user.message";
-    const string GenAiChoiceEventName = "gen_ai.choice";
-    const string GenAiInputMessagesTagKey = "gen_ai.input.messages";
-    const string GenAiOutputMessagesTagKey = "gen_ai.output.messages";
-
     public override void OnStart(Activity activity)
     {
     }
@@ -37,7 +32,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         break;
 
                     case SemanticKernelTelemetryConstants.ExecuteToolOperation:
-                        // Span emitted by SK SDK follows Microsoft Agents A365 schema, so no modification needed.
+                        // Span emitted by SK SDK follows Microsoft Agent 365 schema, so no modification needed.
                         // FunctionInvocationFilter already adds other relevant tags.
                         // Placeholder for any plumbing if needed in the future.
                         break;
@@ -47,15 +42,15 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
 
                         var userAndChoiceMessages = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
-                        if (userAndChoiceMessages[GenAiUserMessageEventName] is List<string> userMessages && userMessages.Count > 0)
+                        if (userAndChoiceMessages[OpenTelemetryConstants.GenAiUserMessageEventName] is List<string> userMessages && userMessages.Count > 0)
                         {
-                            activity.SetTag(GenAiInputMessagesTagKey, string.Join(", ", userMessages));
+                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(", ", userMessages));
                         }
-                        if (userAndChoiceMessages[GenAiChoiceEventName] is List<string> choiceMessages && choiceMessages.Count > 0)
+                        if (userAndChoiceMessages[OpenTelemetryConstants.GenAiChoiceEventName] is List<string> choiceMessages && choiceMessages.Count > 0)
                         {
-                            activity.SetTag(GenAiOutputMessagesTagKey, string.Join(", ", choiceMessages));
+                            activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(", ", choiceMessages));
                         }
-                        // Other tags set by SK SDK follow Microsoft Agent A365 schema.
+                        // Other tags set by SK SDK follow Microsoft Agent 365 schema.
                         break;
                 }
             }

@@ -11,15 +11,6 @@ using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 
 internal static class SemanticKernelSpanProcessorHelper
 {
-    private static readonly Regex NameValueRegex =
-        new Regex(
-            @"(""name"":\s*)([^""\s][^,}\s]*)",
-            RegexOptions.Compiled);
-    private static readonly Regex UserMessageContentRegex =
-        new Regex(
-            @"Message:\s.*",
-            RegexOptions.Compiled);
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

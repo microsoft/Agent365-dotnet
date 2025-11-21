@@ -36,6 +36,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiProviderNameKey = "gen_ai.provider.name";
         public const string GenAiInputMessagesKey = "gen_ai.input.messages";
         public const string GenAiOutputMessagesKey = "gen_ai.output.messages";
+        public const string GenAiUserMessageEventName = "gen_ai.user.message";
+        public const string GenAiChoiceEventName = "gen_ai.choice";
 
         [DataContract]
         public enum OperationNames
