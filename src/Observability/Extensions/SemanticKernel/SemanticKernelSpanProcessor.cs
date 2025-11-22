@@ -42,11 +42,13 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                         activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
 
                         var userAndChoiceMessages = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
-                        if (userAndChoiceMessages[OpenTelemetryConstants.GenAiUserMessageEventName] is List<string> userMessages && userMessages.Count > 0)
+                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiUserMessageEventName, out var userObj) &&
+                            userObj is List<string> userMessages && userMessages.Count > 0)
                         {
                             activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(", ", userMessages));
                         }
-                        if (userAndChoiceMessages[OpenTelemetryConstants.GenAiChoiceEventName] is List<string> choiceMessages && choiceMessages.Count > 0)
+                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiChoiceEventName, out var choiceObj) &&
+                            choiceObj is List<string> choiceMessages && choiceMessages.Count > 0)
                         {
                             activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(", ", choiceMessages));
                         }
