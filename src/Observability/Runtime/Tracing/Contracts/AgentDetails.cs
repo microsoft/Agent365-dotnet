@@ -3,6 +3,7 @@
 // ------------------------------------------------------------------------------
 
 using System;
+using System.Net;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 {
@@ -23,6 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentBlueprintId">Optional Blueprint/Application ID for the agent.</param>
         /// <param name="tenantId">Optional Tenant ID for the agent.</param>
         /// <param name="agentType">Optional agent type.</param>
+        /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         public AgentDetails(
             string agentId,
             string? agentName = null,
@@ -32,7 +34,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             string? agentUPN = null,
             string? agentBlueprintId = null,
             string? tenantId = null,
-            AgentType? agentType = null)
+            AgentType? agentType = null,
+            IPAddress? agentClientIP = null)
         {
             AgentId = agentId;
             AgentName = agentName;
@@ -42,6 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             AgentBlueprintId = agentBlueprintId;
             TenantId = tenantId;
             AgentType = agentType;
+            AgentClientIP = agentClientIP;
         }
 
         /// <summary>
@@ -80,6 +84,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public AgentType? AgentType { get; }
 
         /// <summary>
+        /// Gets the client IP address of the agent.
+        /// </summary>
+        public IPAddress? AgentClientIP { get; }
+
+        /// <summary>
         /// Optional Tenant ID for the agent.
         /// </summary>
         public string? TenantId { get; }
@@ -95,6 +104,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentBlueprintId">Receives the agent Blueprint/Application ID.</param>
         /// <param name="agentType">Receives the agent type.</param>
         /// <param name="tenantId">Receives the tenant identifier.</param>
+        /// <param name="agentClientIP">Receives the client IP address.</param>
         public void Deconstruct(
             out string agentId,
             out string? agentName,
@@ -103,7 +113,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             out string? agentUPN,
             out string? agentBlueprintId,
             out AgentType? agentType,
-            out string? tenantId)
+            out string? tenantId,
+            out IPAddress? agentClientIP)
         {
             agentId = AgentId;
             agentName = AgentName;
@@ -113,6 +124,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             agentBlueprintId = AgentBlueprintId;
             agentType = AgentType;
             tenantId = TenantId;
+            agentClientIP = AgentClientIP;
         }
 
         /// <inheritdoc/>
@@ -130,7 +142,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                    string.Equals(AgentUPN, other.AgentUPN, StringComparison.Ordinal) &&
                    string.Equals(AgentBlueprintId, other.AgentBlueprintId, StringComparison.Ordinal) &&
                    AgentType == other.AgentType &&
-                   string.Equals(TenantId, other.TenantId, StringComparison.Ordinal);
+                   string.Equals(TenantId, other.TenantId, StringComparison.Ordinal) &&
+                   Equals(AgentClientIP, other.AgentClientIP);
         }
 
         /// <inheritdoc/>
@@ -153,6 +166,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (AgentBlueprintId != null ? StringComparer.Ordinal.GetHashCode(AgentBlueprintId) : 0);
                 hash = (hash * 31) + (AgentType?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (TenantId != null ? StringComparer.Ordinal.GetHashCode(TenantId) : 0);
+                hash = (hash * 31) + (AgentClientIP?.GetHashCode() ?? 0);
                 return hash;
             }
         }

@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Net;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
@@ -56,6 +57,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerId: "caller-123",
                 callerName: "Test Caller",
                 callerUpn: "caller-123@ztaitest12.onmicrosoft.com",
+                callerClientIP: IPAddress.Parse("203.0.113.42"),
                 tenantId: expectedAgentDetails.TenantId);
 
             // Act

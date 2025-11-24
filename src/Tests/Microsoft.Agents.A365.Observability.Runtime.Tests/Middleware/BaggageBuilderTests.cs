@@ -1,5 +1,6 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Tests.Middleware;
 
+using System.Net;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -27,6 +28,7 @@ public sealed class BaggageBuilderTest
         var corr = "corr-1";
         var session = "session-1";
         var sessionDescription = "Test Session";
+        var callerClientIp = IPAddress.Parse("203.0.113.42");
 
         // Act
         using (new BaggageBuilder()
@@ -36,6 +38,7 @@ public sealed class BaggageBuilderTest
             .SessionId(session)
             .SessionDescription(sessionDescription)
             .AgentType(AgentType.EntraEmbodied)
+            .CallerClientIp(callerClientIp)
             .Build())
         {
             // Assert inside scope
@@ -45,6 +48,7 @@ public sealed class BaggageBuilderTest
             Baggage.Current.GetBaggage(SessionIdKey).Should().Be(session);
             Baggage.Current.GetBaggage(SessionDescriptionKey).Should().Be(sessionDescription);
             Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().Be(AgentType.EntraEmbodied.ToString());
+            Baggage.Current.GetBaggage(GenAiCallerClientIpKey).Should().Be(callerClientIp.ToString());
         }
 
         // Assert after dispose (restored -> no values)
@@ -54,6 +58,7 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(SessionIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().BeNull();
+        Baggage.Current.GetBaggage(GenAiCallerClientIpKey).Should().BeNull();
     }
     
 }

@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Net;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
@@ -56,6 +57,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerId: "caller-123",
                 callerName: "Test Caller",
                 callerUpn: "caller-123@ztaitest12.onmicrosoft.com",
+                callerClientIP: IPAddress.Parse("203.0.113.42"),
                 tenantId: expectedAgentDetails.TenantId);
 
             // Act
@@ -94,6 +96,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedCallerDetails.CallerId);
             this.GetAttribute(attributes, "gen_ai.caller.upn").Should().Be(expectedCallerDetails.CallerUpn);
             this.GetAttribute(attributes, "gen_ai.caller.name").Should().Be(expectedCallerDetails.CallerName);
+            this.GetAttribute(attributes, "gen_ai.caller.client.ip").Should().Be(expectedCallerDetails.CallerClientIP?.ToString());
             this.GetAttribute(attributes, "gen_ai.caller.tenantid").Should().Be(expectedCallerDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Input message 1,Input message 2");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Output message 1");
