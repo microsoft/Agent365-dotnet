@@ -1,6 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
+using System.Net;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -122,5 +123,51 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(GenAiAgentTypeKey, agentType.ToString());
         activity.ShouldHaveTag(GenAiCallerAgentTypeKey, callerAgentType.ToString());
+    }
+
+    [TestMethod]
+    public void CallerClientIpTag_IsSetCorrectly()
+    {
+        var callerIp = IPAddress.Parse("203.0.113.42");
+        var callerDetails = new CallerDetails(
+            callerId: "caller-001",
+            callerName: "Test Caller",
+            callerUpn: "test.caller@contoso.com",
+            tenantId: "tenant-xyz",
+            callerClientIP: callerIp);
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails: Details,
+                tenantDetails: Util.GetTenantDetails(),
+                request: null,
+                callerAgentDetails: null,
+                callerDetails: callerDetails);
+        });
+
+        activity.ShouldHaveTag(GenAiCallerClientIpKey, callerIp.ToString());
+    }
+
+    [TestMethod]
+    public void CallerAgentClientIpTag_IsSetCorrectly()
+    {
+        var agentClientIp = IPAddress.Parse("198.51.100.24");
+        var callerAgentDetails = new AgentDetails(
+            agentId: "agent-002",
+            agentName: "CallerAgent",
+            agentType: AgentType.Foundry,
+            agentClientIP: agentClientIp);
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails: Details,
+                tenantDetails: Util.GetTenantDetails(),
+                request: null,
+                callerAgentDetails: callerAgentDetails);
+        });
+
+        activity.ShouldHaveTag(GenAiCallerAgentClientIpKey, agentClientIp.ToString());
     }
 }

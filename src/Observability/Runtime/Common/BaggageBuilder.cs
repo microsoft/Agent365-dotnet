@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry;
 using System;
 using System.Collections.Generic;
+using System.Net;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -144,6 +145,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         public BaggageBuilder CallerName(string? v)
         {
             Set(OpenTelemetryConstants.GenAiCallerNameKey, v);
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the caller client IP baggage value.
+        /// </summary>
+        public BaggageBuilder CallerClientIp(IPAddress v)
+        {
+            Set(OpenTelemetryConstants.GenAiCallerClientIpKey, v.ToString());
             return this;
         }
 
