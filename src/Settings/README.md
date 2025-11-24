@@ -1,6 +1,6 @@
 # Settings
 
-This folder contains the Agent 365 Settings SDK for managing agent configuration.
+This folder contains the Agent 365 Settings SDK for managing agent settings.
 
 ## Projects
 
