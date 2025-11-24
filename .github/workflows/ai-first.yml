@@ -94,7 +94,7 @@ jobs:
         - name: Check for required label
           id: label_check
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ github.token }}
           run: |
             echo "=================================================="
             echo "Checking for 'codegen-experiment' label"
