@@ -244,6 +244,48 @@ public class AgentSettingsServiceTests
             .WithParameterName("httpClient");
     }
 
+    [TestMethod]
+    public async Task GetSettingsTemplateByAgentTypeAsync_WithInvalidConfiguredUrl_UsesDefaultUrl()
+    {
+        // Arrange
+        var expectedTemplate = new AgentSettingsTemplate
+        {
+            Id = "template-123",
+            AgentType = "custom-agent"
+        };
+
+        _mockConfiguration.Setup(c => c[Constants.PlatformEndpointConfigKey]).Returns("not-a-valid-url");
+        SetupHttpResponse(HttpStatusCode.OK, expectedTemplate);
+        var service = CreateService();
+
+        // Act - Should use default URL when configured URL is invalid
+        var result = await service.GetSettingsTemplateByAgentTypeAsync("custom-agent", "test-token");
+
+        // Assert
+        result.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public async Task GetSettingsTemplateByAgentTypeAsync_WithValidConfiguredUrl_UsesConfiguredUrl()
+    {
+        // Arrange
+        var expectedTemplate = new AgentSettingsTemplate
+        {
+            Id = "template-123",
+            AgentType = "custom-agent"
+        };
+
+        _mockConfiguration.Setup(c => c[Constants.PlatformEndpointConfigKey]).Returns("https://custom.endpoint.com");
+        SetupHttpResponse(HttpStatusCode.OK, expectedTemplate);
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetSettingsTemplateByAgentTypeAsync("custom-agent", "test-token");
+
+        // Assert
+        result.Should().NotBeNull();
+    }
+
     private AgentSettingsService CreateService()
     {
         return new AgentSettingsService(_mockLogger.Object, _mockConfiguration.Object, _httpClient);

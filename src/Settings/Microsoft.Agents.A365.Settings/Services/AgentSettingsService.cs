@@ -45,19 +45,6 @@ namespace Microsoft.Agents.A365.Settings.Services
             };
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AgentSettingsService"/> class.
-        /// Uses a default HttpClient instance.
-        /// </summary>
-        /// <param name="logger">Logger instance for logging.</param>
-        /// <param name="configuration">Configuration collection.</param>
-        public AgentSettingsService(
-            ILogger<AgentSettingsService> logger,
-            IConfiguration configuration)
-            : this(logger, configuration, new HttpClient())
-        {
-        }
-
         /// <inheritdoc/>
         public async Task<AgentSettingsTemplate?> GetSettingsTemplateByAgentTypeAsync(
             string agentType,
@@ -238,6 +225,14 @@ namespace Microsoft.Agents.A365.Settings.Services
             var configuredUrl = _configuration[Constants.PlatformEndpointConfigKey];
             if (!string.IsNullOrEmpty(configuredUrl))
             {
+                // Validate the configured URL is a valid URI
+                if (!Uri.TryCreate(configuredUrl, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    _logger.LogWarning("Invalid platform URL configured: {Url}. Using default.", configuredUrl);
+                    return Constants.DefaultPlatformBaseUrl;
+                }
+
                 return configuredUrl.TrimEnd('/');
             }
 
