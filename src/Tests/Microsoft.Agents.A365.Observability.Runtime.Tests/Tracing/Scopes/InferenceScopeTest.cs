@@ -155,4 +155,31 @@ public sealed class InferenceScopeTest : ActivityTest
         var startTime = new DateTimeOffset(activity.StartTimeUtc);
         startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
+
+    [TestMethod]
+    public void AgentTypeTag_IsSetCorrectly()
+    {
+        // Arrange
+        var agentType = AgentType.MicrosoftCopilot;
+        var agentDetails = new AgentDetails(
+            agentId: "agent-abc",
+            agentName: "InferenceAgent",
+            agentType: agentType);
+
+        var inferenceDetails = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(inferenceDetails, agentDetails, tenantDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
+    }
 }

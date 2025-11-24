@@ -103,6 +103,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the agent type baggage value.
+        /// </summary>
+        public BaggageBuilder AgentType(AgentType? v)
+        { 
+            Set(OpenTelemetryConstants.GenAiAgentTypeKey, v?.ToString());
+            return this;
+        }
+
+        /// <summary>
         /// Sets the correlation ID baggage value.
         /// </summary>
         public BaggageBuilder CorrelationId(string? v)

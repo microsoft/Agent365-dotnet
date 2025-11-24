@@ -31,6 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
+            var expectedAgentType = AgentType.EntraEmbodied;
             var expectedAgentDetails = new AgentDetails(
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Test Agent",
@@ -38,7 +39,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentAUID: Guid.NewGuid().ToString(),
                 agentUPN: "testagent@ztaitest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
-                tenantId: Guid.NewGuid().ToString());
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: expectedAgentType);
             var endpoint = new Uri("https://test-agent-endpoint");
             var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: expectedAgentDetails);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
@@ -104,6 +106,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.agent.applicationid").Should().Be(expectedAgentDetails.AgentBlueprintId);
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
+            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
         }
 
         [TestMethod]
@@ -113,6 +116,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
+            var expectedAgentType = AgentType.EntraEmbodied;
             var expectedAgentDetails = new AgentDetails(
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Tool Agent",
@@ -120,7 +124,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentAUID: Guid.NewGuid().ToString(),
                 agentUPN: "toolagent@ztaitest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
-                tenantId: Guid.NewGuid().ToString());
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: expectedAgentType);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://tool-endpoint:8443");
             var toolCallDetails = new ToolCallDetails(
@@ -172,6 +177,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "server.address").Should().Be(endpoint.Host);
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
+            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
         }
 
         [TestMethod]
@@ -181,6 +187,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.SetupExporterTest();
             this._receivedRequest = false;
             this._receivedContent = null;
+            var expectedAgentType = AgentType.EntraEmbodied;
             var expectedAgentDetails = new AgentDetails(
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Inference Agent",
@@ -188,7 +195,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentAUID: Guid.NewGuid().ToString(),
                 agentUPN: "inferenceagent@ztaitest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
-                tenantId: Guid.NewGuid().ToString());
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: expectedAgentType);
             var tenantDetails = new TenantDetails(Guid.NewGuid());
 
             var inferenceDetails = new InferenceCallDetails(
@@ -245,6 +253,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.response.id").Should().Be("response-xyz");
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
+            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
         }
 
         [TestMethod]
@@ -253,6 +262,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             // Arrange
             List<string> receivedContents = new();
 
+            var agentType = AgentType.EntraEmbodied;
             var agentDetails = new AgentDetails(
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Nested Agent",
@@ -260,7 +270,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentAUID: Guid.NewGuid().ToString(),
                 agentUPN: "nestedagent@ztaitest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
-                tenantId: Guid.NewGuid().ToString());
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: agentType);
 
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://nested-endpoint");
@@ -324,6 +335,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             // Assert
             var allOperationNames = new List<string>();
+            var allAgentTypes = new List<string>();
             foreach (var content in receivedContents)
             {
                 using var doc = JsonDocument.Parse(content);
@@ -339,9 +351,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     var opName = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.operation.name");
                     if (opName != null)
                         allOperationNames.Add(opName);
+
+                    var agentTypeTag = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.agent.type");
+                    if (agentTypeTag != null)
+                        allAgentTypes.Add(agentTypeTag);
                 }
             }
             allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
+            allAgentTypes.Should().OnlyContain(t => t == agentType.ToString());
         }
 
         private class TestHttpMessageHandler : HttpMessageHandler

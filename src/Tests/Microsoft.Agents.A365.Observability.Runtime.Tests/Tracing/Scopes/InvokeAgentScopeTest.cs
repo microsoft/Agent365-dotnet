@@ -88,4 +88,39 @@ public sealed class InvokeAgentScopeTest : ActivityTest
 
         activity.ShouldHaveTag(GenAiInputMessagesKey, requestContent);
     }
+
+    [TestMethod]
+    public void AgentTypeTags_AreSetCorrectly_ForAgentAndCallerAgent()
+    {
+        // Arrange
+        var agentType = AgentType.MicrosoftCopilot;
+        var callerAgentType = AgentType.Foundry;
+
+        var agentDetails = new AgentDetails(
+            agentId: "agent-123",
+            agentName: "MainAgent",
+            agentType: agentType);
+
+        var callerAgentDetails = new AgentDetails(
+            agentId: "caller-agent-456",
+            agentName: "CallerAgent",
+            agentType: callerAgentType);
+
+        var invokeAgentDetails = new InvokeAgentDetails(agentDetails, new Uri("https://microsoft.com"));
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails,
+                request: null,
+                callerAgentDetails: callerAgentDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(GenAiAgentTypeKey, agentType.ToString());
+        activity.ShouldHaveTag(GenAiCallerAgentTypeKey, callerAgentType.ToString());
+    }
 }
