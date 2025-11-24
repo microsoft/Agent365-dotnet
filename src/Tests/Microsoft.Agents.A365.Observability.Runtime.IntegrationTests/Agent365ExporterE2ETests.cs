@@ -343,6 +343,102 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
         }
 
+        [TestMethod]
+        public async Task Exporter_Truncates_Scope()
+        {
+            // Arrange
+            this.SetupExporterTest();
+            this._receivedRequest = false;
+            this._receivedContent = null;
+
+            // Create a sample text file >250KB and base64 encode it
+            var tempFile = Path.GetTempFileName();
+            var fileBytes = new byte[300 * 1024]; // 300KB
+            new Random(42).NextBytes(fileBytes);
+            await File.WriteAllBytesAsync(tempFile, fileBytes);
+            var base64 = Convert.ToBase64String(await File.ReadAllBytesAsync(tempFile));
+            File.Delete(tempFile);
+
+            var agentDetails = new AgentDetails(
+                agentId: Guid.NewGuid().ToString(),
+                agentName: "Test Agent",
+                agentDescription: "Agent for truncation test.",
+                agentAUID: Guid.NewGuid().ToString(),
+                agentUPN: "testagent@contoso.com",
+                agentBlueprintId: Guid.NewGuid().ToString(),
+                tenantId: Guid.NewGuid().ToString());
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var endpoint = new Uri("https://test-endpoint");
+            var invokeAgentDetails = new InvokeAgentDetails(details: agentDetails, endpoint: endpoint);
+            var request = new Request(
+                content: "Test request content",
+                executionType: ExecutionType.HumanToAgent,
+                sourceMetadata: new SourceMetadata(name: "test", id: "test-id"));
+
+            var toolCallDetails = new ToolCallDetails(
+                toolName: "LargeFileTool",
+                arguments: base64,
+                toolCallId: "call-123",
+                description: "Test tool with large file content",
+                toolType: "file-upload",
+                endpoint: endpoint);
+
+            // Act: Start nested scopes
+            using (var agentScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            {
+                agentScope.RecordInputMessages(new[] { "Agent input" });
+                agentScope.RecordOutputMessages(new[] { "Agent output" });
+                using (var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails))
+                {
+                    toolScope.RecordResponse("Tool response");
+                }
+            }
+
+            // Wait for export
+            var timeout = TimeSpan.FromSeconds(10);
+            var start = DateTime.UtcNow;
+            while (!this._receivedRequest && DateTime.UtcNow - start < timeout)
+            {
+                await Task.Delay(500).ConfigureAwait(false);
+            }
+
+            this._receivedRequest.Should().BeTrue("Exporter should make the expected HTTP request.");
+            this._receivedContent.Should().NotBeNull("Exporter should send a request body.");
+
+            // Assert: Find both activities in the exported payload
+            using var doc = JsonDocument.Parse(this._receivedContent!);
+            var root = doc.RootElement;
+            var spans = root
+                .GetProperty("resourceSpans")[0]
+                .GetProperty("scopeSpans")[0]
+                .GetProperty("spans")
+                .EnumerateArray();
+
+            bool foundInvokeAgent = false;
+            bool foundExecuteTool = false;
+            foreach (var span in spans)
+            {
+                var attrs = span.GetProperty("attributes");
+                var opName = this.GetAttribute(attrs, "gen_ai.operation.name");
+                if (opName == "invoke_agent")
+                {
+                    foundInvokeAgent = true;
+                    // Should NOT be truncated
+                    var input = this.GetAttribute(attrs, "gen_ai.input.messages");
+                    input.Should().Be("Agent input");
+                }
+                if (opName == "execute_tool")
+                {
+                    foundExecuteTool = true;
+                    // Should be truncated
+                    var args = this.GetAttribute(attrs, "gen_ai.tool.arguments");
+                    args.Should().Be("TRUNCATED");
+                }
+            }
+            foundInvokeAgent.Should().BeTrue();
+            foundExecuteTool.Should().BeTrue();
+        }
+
         private class TestHttpMessageHandler : HttpMessageHandler
         {
             private Func<HttpRequestMessage, HttpResponseMessage> _handler;
