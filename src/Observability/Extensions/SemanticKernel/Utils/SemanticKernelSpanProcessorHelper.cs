@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Linq;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using System.Text.Encodings.Web;
 
 internal static class SemanticKernelSpanProcessorHelper
 {
@@ -27,7 +28,7 @@ internal static class SemanticKernelSpanProcessorHelper
             .OfType<KeyValuePair<string, object>>()
             .FirstOrDefault(k => k.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey);
 
-        if (kvp is { } && !kvp.Equals(default(KeyValuePair<string, object>)) && kvp.Value is string jsonString)
+        if (kvp.Value is string jsonString)
         {
             TryFilterInvocationInput(activity, jsonString);
         }
@@ -61,12 +62,12 @@ internal static class SemanticKernelSpanProcessorHelper
         }
         catch (JsonException)
         {
-            //Swallow exception and leave the original tag value
+            // Swallow exception and leave the original tag value
         }
     }
 
     /// <summary>
-    /// Filters an input element by removing system role messages and extracting user message content.
+    /// Extracts the message content from user role messages by trimming the prefix up to and including 'Message:'.
     /// </summary>
     /// <param name="invocationInput">The GenAiInvocationInput to filter.</param>
     private static void FilterUserMessageContent(GenAiInvocationInput? invocationInput)
@@ -83,7 +84,9 @@ internal static class SemanticKernelSpanProcessorHelper
 
     private static string EncodeForJsonInHtml(string input)
     {
-        return input
+        string encoded = HtmlEncoder.Default.Encode(input);
+
+        return encoded
             .Replace("&", "\\u0026")
             .Replace("<", "\\u003c")
             .Replace(">", "\\u003e")

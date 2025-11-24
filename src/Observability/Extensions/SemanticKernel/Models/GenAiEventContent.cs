@@ -11,19 +11,19 @@ namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 public class GenAiEventContent
 {
     /// <summary>
-    /// The role of the input, such as "user" or "assistant".
+    /// The role of the message, such as "user" or "assistant".
     /// </summary>
     [JsonPropertyName("role")]
     public string? Role { get; set; }
 
     /// <summary>
-    /// The content of the input.
+    /// The content of the event.
     /// </summary>
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
     /// <summary>
-    /// The name associated with the input.
+    /// The name associated with the message.
     /// </summary>
     [JsonPropertyName("name")]
     public string? Name { get; set; }
