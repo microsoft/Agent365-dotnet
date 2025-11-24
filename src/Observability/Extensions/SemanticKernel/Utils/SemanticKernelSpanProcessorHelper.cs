@@ -43,7 +43,7 @@ internal static class SemanticKernelSpanProcessorHelper
     {
         try
         {
-            var inputArray = JsonSerializer.Deserialize<List<GenAiInvocationInput>>(jsonString, JsonOptions);
+            var inputArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
             if (inputArray != null)
             {
                 var filtered = inputArray
@@ -69,15 +69,15 @@ internal static class SemanticKernelSpanProcessorHelper
     /// <summary>
     /// Extracts the message content from user role messages by trimming the prefix up to and including 'Message:'.
     /// </summary>
-    /// <param name="invocationInput">The GenAiInvocationInput to filter.</param>
-    private static void FilterUserMessageContent(GenAiInvocationInput? invocationInput)
+    /// <param name="message">The MessageContent to filter.</param>
+    private static void FilterUserMessageContent(MessageContent? message)
     {
-        if (invocationInput?.Role == "user" && !string.IsNullOrEmpty(invocationInput.Content))
+        if (message?.Role == "user" && !string.IsNullOrEmpty(message.Content))
         {
-            var idx = invocationInput.Content.IndexOf("Message:", StringComparison.OrdinalIgnoreCase);
+            var idx = message.Content.IndexOf("Message:", StringComparison.OrdinalIgnoreCase);
             if (idx >= 0)
             {
-                invocationInput.Content = invocationInput.Content[(idx + "Message:".Length)..].Trim();
+                message.Content = message.Content[(idx + "Message:".Length)..].Trim();
             }
         }
     }
@@ -124,7 +124,7 @@ internal static class SemanticKernelSpanProcessorHelper
                             // Try to parse the content as GenAiEventContent and filter as required
                             try
                             {
-                                var userMsg = JsonSerializer.Deserialize<GenAiEventContent>(content, JsonOptions);
+                                var userMsg = JsonSerializer.Deserialize<MessageContent>(content, JsonOptions);
                                 if (userMsg != null && userMsg.Role == "user" && !string.IsNullOrEmpty(userMsg.Content))
                                 {
                                     FilterUserMessageContent(userMsg);
@@ -157,18 +157,5 @@ internal static class SemanticKernelSpanProcessorHelper
             }
         }
         return result;
-    }
-
-    // Overload for GenAiEventContent filtering
-    private static void FilterUserMessageContent(GenAiEventContent? obj)
-    {
-        if (obj?.Role == "user" && !string.IsNullOrEmpty(obj.Content))
-        {
-            var idx = obj.Content.IndexOf("Message:", StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0)
-            {
-                obj.Content = obj.Content[(idx + "Message:".Length)..].Trim();
-            }
-        }
     }
 }

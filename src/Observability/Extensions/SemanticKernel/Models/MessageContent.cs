@@ -6,24 +6,24 @@ using System.Text.Json.Serialization;
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 
 /// <summary>
-/// Model for gen_ai.agent.invocation_input element.
+/// Model for gen_ai.event.content element.
 /// </summary>
-public class GenAiInvocationInput
+public class MessageContent
 {
     /// <summary>
-    /// The role of the invocation input, such as "user" or "assistant".
+    /// The role of the message, such as "user" or "assistant".
     /// </summary>
     [JsonPropertyName("role")]
     public string? Role { get; set; }
 
     /// <summary>
-    /// The content of the invocation input.
+    /// The content of the event.
     /// </summary>
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
     /// <summary>
-    /// The name associated with the invocation input.
+    /// The name associated with the message.
     /// </summary>
     [JsonPropertyName("name")]
     public string? Name { get; set; }
