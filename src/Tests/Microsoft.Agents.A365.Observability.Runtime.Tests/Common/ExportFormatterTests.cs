@@ -511,7 +511,7 @@ public partial class ExportFormatterTests : ActivityTest
     public void FormatMany_TruncatesSingleLargeKey()
     {
         // Arrange
-        using var activity = CreateActivity("tenant-1", "agent-1");
+        using var activity = CreateActivity("tenant-1", "agent-2");
         activity.SetTag("gen_ai.tool.arguments", new string('b', 300 * 1024)); // 300KB
         var resource = ResourceBuilder.CreateEmpty().Build();
         var logs = new List<string>();
