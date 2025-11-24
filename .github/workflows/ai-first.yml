@@ -9,6 +9,7 @@ on:
           - 'users/*/aiFirstExperiments/**'
           - 'aiFirstExperiments'
           - 'aiFirstExperiments/**'
+          - 'users/*/aiFirstWorkflow'
         paths:
           - 'src/**/*.cs'
           - '!src/**/Tests/**'
