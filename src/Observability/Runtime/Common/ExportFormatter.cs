@@ -25,9 +25,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             OpenTelemetryConstants.GenAiToolArgumentsKey,
             OpenTelemetryConstants.GenAiEventContent,
             OpenTelemetryConstants.GenAiInputMessagesKey,
-            OpenTelemetryConstants.GenAiInvocationInputKey,
             OpenTelemetryConstants.GenAiOutputMessagesKey,
-            OpenTelemetryConstants.GenAiInvocationOutputKey
+            AutoInstrumentationConstants.GenAiInvocationInputKey,
+            AutoInstrumentationConstants.GenAiInvocationOutputKey
         };
 
         /// <summary>
