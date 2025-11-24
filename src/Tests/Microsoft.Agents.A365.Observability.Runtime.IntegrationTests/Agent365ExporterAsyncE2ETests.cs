@@ -56,7 +56,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerId: "caller-123",
                 callerName: "Test Caller",
                 callerUpn: "caller-123@ztaitest12.onmicrosoft.com",
-                callerUserId: Guid.NewGuid().ToString(),
                 tenantId: expectedAgentDetails.TenantId);
 
             // Act
@@ -96,7 +95,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedCallerDetails.CallerId);
             this.GetAttribute(attributes, "gen_ai.caller.upn").Should().Be(expectedCallerDetails.CallerUpn);
             this.GetAttribute(attributes, "gen_ai.caller.name").Should().Be(expectedCallerDetails.CallerName);
-            this.GetAttribute(attributes, "gen_ai.caller.userid").Should().Be(expectedCallerDetails.CallerUserId);
             this.GetAttribute(attributes, "gen_ai.caller.tenantid").Should().Be(expectedCallerDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Input message 1,Input message 2");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Output message 1");

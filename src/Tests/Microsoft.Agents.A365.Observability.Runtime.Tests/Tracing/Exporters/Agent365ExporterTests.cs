@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;

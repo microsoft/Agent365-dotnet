@@ -86,12 +86,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         [TestMethod]
         public void AddCallerDetails_PopulatesCallerKeys()
         {
-            var caller = new CallerDetails("caller-1", "Caller Name", "caller@upn", callerUserId: "user-1", tenantId: "tenant-y");
+            var caller = new CallerDetails("caller-1", "Caller Name", "caller@upn", tenantId: "tenant-y");
             var dict = TestBuilder.BuildAll(caller: caller);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUserIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey);
         }
 
