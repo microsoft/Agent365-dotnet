@@ -27,9 +27,9 @@ env:
   REPO_MAP_TYPESCRIPT: "microsoft/Agent365-nodejs"
 
 # Token Usage Strategy:
-# - PAT_TOKEN_CODEGEN_EXPERIMENT: Used for creating issues with assignments, 
-#   adding reviewers/assignees to PRs, and @mentioning copilot (requires PAT for notifications)
-# - GITHUB_TOKEN (default): Used for posting PR comments (appears as github-actions[bot])
+# - PAT_TOKEN_CODEGEN_EXPERIMENT: Used for all cross-repo operations including creating issues,
+#   adding reviewers/assignees to PRs, posting comments on cross-repo PRs, and @mentioning users
+# - GITHUB_TOKEN (default): Used only for posting comments on PRs in the current repository
 
 jobs:
     check-prerequisites:
@@ -613,7 +613,7 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                         
-                        GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                        gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
                         echo "   💬 Posted reviewer comment on PR $ISSUE_REPO#$PR_NUM"
                       else
                         echo "   ⚠️  No human reviewers found on source PR - skipping assignment"
@@ -632,7 +632,7 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                         
-                        GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                        gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
                         echo "   💬 Posted notification comment on PR $ISSUE_REPO#$PR_NUM"
                       fi
                     else
@@ -664,7 +664,7 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                           
-                          GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
+                          gh pr comment "$PR_NUM" --repo "$ISSUE_REPO" --body-file - <<< "$COMMENT" 2>/dev/null
                           echo "   💬 Posted assignment comment on PR $ISSUE_REPO#$PR_NUM"
                         else
                           echo "   ⚠️  Failed to assign PR $ISSUE_REPO#$PR_NUM (user may not be a collaborator)"
@@ -805,7 +805,7 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                     
-                    GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
+                    gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
                     echo "  💬 Posted follow-up notification on PR $ISSUE_REPO#$COPILOT_PR"
                   else
                     # Post the initial update notification (using PAT token because it mentions @copilot)

@@ -518,17 +518,16 @@ The PAT must have:
 
 ### Default Token Usage
 **Token:** `GITHUB_TOKEN` (automatically provided by GitHub Actions)
-- **Purpose:** Used for posting PR comments to appear as `github-actions[bot]`
+- **Purpose:** Used for posting PR comments in the current repository only
 - **Required Permissions:** Already configured in workflow
+- **Scope:** Limited to the repository where the workflow runs
 
 **Used For:**
-- Posting assignment comments on Copilot-generated PRs
-- Posting update notifications (when not @mentioning)
-- Posting summary comments on source PRs
+- Posting summary comments on source PRs (current repository only)
 
 **Benefits:**
-- Comments appear from `github-actions[bot]` instead of the PAT owner
-- More professional and consistent appearance
+- Simple authentication for same-repo operations
+- No cross-repo permissions required
 - Separates automation identity from individual user accounts
 
 ### Token Strategy Summary
@@ -537,10 +536,9 @@ The PAT must have:
 |-----------|-----------|------------|---------|
 | Creating issues with assignment | `PAT_TOKEN` | PAT owner | Required to assign bots |
 | Adding reviewers/assignees to PRs | `PAT_TOKEN` | PAT owner | Required for user operations |
-| @mentioning @copilot | `PAT_TOKEN` | PAT owner | Ensures notification delivery |
-| Assignment comments on PRs | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance |
-| Update notifications | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance |
-| Source PR summary comments | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance |
+| Cross-repo PR comments | `PAT_TOKEN` | PAT owner | Required for cross-repo access |
+| @mentioning users | `PAT_TOKEN` | PAT owner | Ensures notification delivery |
+| Source PR summary comments (same repo) | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance |
 
 ### Workflow Permissions
 ```yaml
@@ -551,7 +549,7 @@ permissions:
   actions: read         # Access workflow run information
 ```
 
-**Note:** The `pull-requests: write` permission allows `GITHUB_TOKEN` to post comments on PRs, which is why most comments now appear from the bot.
+**Note:** The `pull-requests: write` permission allows `GITHUB_TOKEN` to post comments on PRs in the current repository only. For cross-repo PR comments, the PAT token must be used.
 
 ### Cross-Repository Considerations
 When SDK implementations live in separate repositories:
@@ -565,6 +563,11 @@ When parent issues live in different repositories:
 - PAT token must have permissions to post comments in the parent issue repository
 - GitHub's standard linking keywords work across repositories: `Closes owner/repo#123`
 - Task list will be posted to the correct repository automatically
+
+**Token Scope Limitations:**
+- The default `GITHUB_TOKEN` is scoped only to the repository where the workflow runs
+- It cannot access or modify resources (issues, PRs, comments) in other repositories
+- All cross-repo operations require `PAT_TOKEN_CODEGEN_EXPERIMENT` with appropriate permissions
 - Parity issues may reference multiple repositories in the task list
 
 ## 📊 Example Scenario
@@ -914,5 +917,5 @@ Verify issue titles haven't changed format. The workflow searches for existing i
 
 ---
 
-**Last Updated:** October 27, 2025  
+**Last Updated:** Nov 2025  
 **Maintained By:** Agent365 Team
