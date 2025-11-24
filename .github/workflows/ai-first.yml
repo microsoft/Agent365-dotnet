@@ -28,7 +28,7 @@ env:
   REPO_MAP_TYPESCRIPT: "microsoft/Agent365-nodejs"
 
 # Token Usage Strategy:
-# - PAT_TOKEN_CODEGEN_EXPERIMENT: Used for all cross-repo operations including creating issues,
+# - CROSS_REPO_CODEGEN_TOKEN: Used for all cross-repo operations including creating issues,
 #   adding reviewers/assignees to PRs, posting comments on cross-repo PRs, and @mentioning users
 # - GITHUB_TOKEN (default): Used only for posting comments on PRs in the current repository
 
@@ -188,7 +188,7 @@ jobs:
         - name: Create parity issues for target languages
           if: steps.detect.outputs.has_changes == 'true'
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
             SOURCE_LANGUAGES: ${{ steps.detect.outputs.source_languages }}
             TARGET_LANGUAGES: ${{ steps.detect.outputs.target_languages }}
             PR_TITLE: ${{ github.event.pull_request.title }}
@@ -480,7 +480,7 @@ jobs:
         - name: Wait for Copilot PRs and assign to original author
           if: steps.detect.outputs.has_changes == 'true'
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
             PR_AUTHOR: ${{ github.event.pull_request.user.login }}
             PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
             SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -722,7 +722,7 @@ jobs:
         - name: Notify existing Copilot PRs about new changes
           if: github.event.action == 'synchronize' && steps.detect.outputs.has_changes == 'true'
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
             PR_NUMBER: ${{ github.event.pull_request.number }}
             PR_URL: ${{ github.event.pull_request.html_url }}
             PR_AUTHOR: ${{ github.event.pull_request.user.login }}
@@ -834,7 +834,7 @@ jobs:
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                     
                     # Use PAT token for this comment since it mentions @copilot
-                    GH_TOKEN="${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$UPDATE_COMMENT" 2>/dev/null
+                    GH_TOKEN="${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$UPDATE_COMMENT" 2>/dev/null
                     
                     if [ $? -eq 0 ]; then
                       echo "  💬 Posted update notification on PR $ISSUE_REPO#$COPILOT_PR"
@@ -859,7 +859,7 @@ jobs:
         - name: Update parent issue with parity tasks
           if: steps.detect.outputs.has_changes == 'true'
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
           run: |
             echo "=================================================="
             echo "Updating Parent Issue with Task List"
@@ -907,7 +907,7 @@ jobs:
         
         - name: Post comment on PR
           env:
-            GH_TOKEN: ${{ secrets.PAT_TOKEN_CODEGEN_EXPERIMENT }}
+            GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
             HAS_CHANGES: ${{ steps.detect.outputs.has_changes }}
             SOURCE_LANGUAGES: ${{ steps.detect.outputs.source_languages }}
             TARGET_LANGUAGES: ${{ steps.detect.outputs.target_languages }}

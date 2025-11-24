@@ -492,7 +492,7 @@ If parity is not needed for a particular SDK, close the corresponding issue with
 ## 🔐 Authentication and Permissions
 
 ### Required Secret
-**Name:** `PAT_TOKEN_CODEGEN_EXPERIMENT`
+**Name:** `CROSS_REPO_CODEGEN_TOKEN`
 - **Type:** Personal Access Token (PAT)
 - **Purpose:** Authenticates with GitHub API for operations requiring elevated permissions
 - **Required Scopes:**
@@ -567,7 +567,7 @@ When parent issues live in different repositories:
 **Token Scope Limitations:**
 - The default `GITHUB_TOKEN` is scoped only to the repository where the workflow runs
 - It cannot access or modify resources (issues, PRs, comments) in other repositories
-- All cross-repo operations require `PAT_TOKEN_CODEGEN_EXPERIMENT` with appropriate permissions
+- All cross-repo operations require `CROSS_REPO_CODEGEN_TOKEN` with appropriate permissions
 - Parity issues may reference multiple repositories in the task list
 
 ## 📊 Example Scenario
@@ -839,7 +839,7 @@ This is intentional - split your PR into separate PRs, one per SDK, to enforce c
 The `copilot-swe-agent` must be added as a repository collaborator. Check repository Settings → Collaborators.
 
 ### "GH_TOKEN is not set" Error
-Configure the `PAT_TOKEN_CODEGEN_EXPERIMENT` secret in repository Settings → Secrets and variables → Actions.
+Configure the `CROSS_REPO_CODEGEN_TOKEN` secret in repository Settings → Secrets and variables → Actions.
 
 ### Duplicate Issues
 Verify issue titles haven't changed format. The workflow searches for existing issues by title pattern.
