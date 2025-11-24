@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>Microsoft.Agents.A365.Settings</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Settings</RootNamespace>
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.Settings</PackageId>
+    <Title>Microsoft Agent 365 Settings SDK</Title>
+    <Description>Microsoft Agent 365 Settings SDK, providing functionality to manage Agent 365 settings templates and instance settings.</Description>
+    <Summary>Microsoft Agent 365 Settings SDK - functionality to manage Agent 365 Settings</Summary>
+    <Product>Microsoft Agent 365 Settings SDK</Product>
+    <PackageTags>Microsoft;Agent365;A365;Settings;AgentsSDK;AI;Agents</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+</Project>
