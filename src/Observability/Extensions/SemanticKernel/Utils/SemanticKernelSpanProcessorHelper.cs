@@ -100,7 +100,7 @@ internal static class SemanticKernelSpanProcessorHelper
             if (inputArray != null)
             {
                 var filtered = inputArray
-                    .Where(e => e.Role != "system")
+                    .Where(e => !string.Equals(e.Role, "system", StringComparison.OrdinalIgnoreCase))
                     .Select(e =>
                     {
                         FilterUserMessageContent(e);
