@@ -28,7 +28,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case SemanticKernelTelemetryConstants.InvokeAgentOperation:
-                        SemanticKernelSpanProcessorHelper.ProcessInvocationInputTag(activity);
+                        SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
                         break;
 
                     case SemanticKernelTelemetryConstants.ExecuteToolOperation:

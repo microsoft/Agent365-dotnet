@@ -3,15 +3,21 @@
 
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 
-using System.Diagnostics;
-using System.Text.Json;
-using System.Linq;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using System.Text.Encodings.Web;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 internal static class SemanticKernelSpanProcessorHelper
 {
+    private static readonly Regex UnquotedPropertyValueRegex =
+        new Regex(
+            @"(""[a-zA-Z0-9_]+"":\s*)([^""\s][^,}\s]*)",
+            RegexOptions.Compiled);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -22,16 +28,52 @@ internal static class SemanticKernelSpanProcessorHelper
     /// Processes and filters the gen_ai.agent.invocation_input tag to remove system role messages.
     /// </summary>
     /// <param name="activity">The activity containing the tag to process.</param>
-    public static void ProcessInvocationInputTag(Activity activity)
+    public static void ProcessInvocationInputOutputTag(Activity activity)
     {
-        var kvp = activity.TagObjects
+        var intputKvp = activity.TagObjects
             .OfType<KeyValuePair<string, object>>()
             .FirstOrDefault(k => k.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey);
 
-        if (kvp.Value is string jsonString)
+        var outputKvp = activity.TagObjects
+            .OfType<KeyValuePair<string, object>>()
+            .FirstOrDefault(k => k.Key == OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
+
+        if (intputKvp.Value is string intputJsonString)
         {
-            TryFilterInvocationInput(activity, jsonString);
+            TryFilterInvocationMessage(activity, intputJsonString, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
         }
+
+        if (outputKvp.Value is string outputJsonString)
+        {
+            TryFilterInvocationMessage(activity, outputJsonString, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
+        }
+    }
+
+    private static string QuoteUnquotedPropertyValues(string json)
+    {
+        // Quotes unquoted property values in the JSON string
+        var quoted = UnquotedPropertyValueRegex.Replace(json, "$1\"$2\"");
+
+        // Handle double-encoded JSON strings (e.g., "\"{...}\"")
+        if (quoted.Length > 2 &&
+            quoted.StartsWith("\"", StringComparison.Ordinal) &&
+            quoted.EndsWith("\"", StringComparison.Ordinal))
+        {
+            try
+            {
+                var unescaped = JsonSerializer.Deserialize<string>(quoted);
+                if (!string.IsNullOrEmpty(unescaped))
+                {
+                    quoted = UnquotedPropertyValueRegex.Replace(unescaped, "$1\"$2\"");
+                }
+            }
+            catch (JsonException)
+            {
+                // If not a valid double-encoded string, continue with quoted
+            }
+        }
+
+        return quoted;
     }
 
     /// <summary>
@@ -39,11 +81,41 @@ internal static class SemanticKernelSpanProcessorHelper
     /// </summary>
     /// <param name="activity">The activity to update with the filtered tag.</param>
     /// <param name="jsonString">The JSON string to parse and filter.</param>
-    private static void TryFilterInvocationInput(Activity activity, string jsonString)
+    /// <param name="tagName">The name of the tag to update.</param>
+    private static void TryFilterInvocationMessage(Activity activity, string jsonString, string tagName)
     {
         try
         {
-            var inputArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
+            List<MessageContent>? inputArray = null;
+
+            var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
+            if (strList != null)
+            {
+                inputArray = strList
+                    .Select<string, MessageContent?>(s =>
+                    {
+                        try
+                        {
+                            return JsonSerializer.Deserialize<MessageContent>(s, JsonOptions);
+                        }
+                        catch (JsonException)
+                        {
+                            // Try to fix unquoted property values
+                            var fixedString = QuoteUnquotedPropertyValues(s);
+                            try
+                            {
+                                return JsonSerializer.Deserialize<MessageContent>(fixedString, JsonOptions);
+                            }
+                            catch (JsonException)
+                            {
+                                return null;
+                            }
+                        }
+                    })
+                    .Where(mc => mc != null)
+                    .ToList()!;
+            }
+
             if (inputArray != null)
             {
                 var filtered = inputArray
@@ -51,13 +123,12 @@ internal static class SemanticKernelSpanProcessorHelper
                     .Select(e =>
                     {
                         FilterUserMessageContent(e);
-                        return e;
+                        return e.Content;
                     })
                     .ToList();
 
                 var filteredString = JsonSerializer.Serialize(filtered, JsonOptions);
-                var encoded = EncodeForJsonInHtml(filteredString);
-                activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, encoded);
+                activity.SetTag(tagName, filteredString);
             }
         }
         catch (JsonException)
@@ -67,7 +138,7 @@ internal static class SemanticKernelSpanProcessorHelper
     }
 
     /// <summary>
-    /// Extracts the message content from user role messages by trimming the prefix up to and including 'Message:'.
+    /// Extracts the message content from messages by trimming the prefix up to and including 'Message:'.
     /// </summary>
     /// <param name="message">The MessageContent to filter.</param>
     private static void FilterUserMessageContent(MessageContent? message)
@@ -77,22 +148,29 @@ internal static class SemanticKernelSpanProcessorHelper
             var idx = message.Content.IndexOf("Message:", StringComparison.OrdinalIgnoreCase);
             if (idx >= 0)
             {
-                message.Content = message.Content[(idx + "Message:".Length)..].Trim();
+                message.Content = CleanMessageContent(message.Content[(idx + "Message:".Length)..].Trim());
             }
+        }
+        else if (message?.Role == "Assistant" && !string.IsNullOrEmpty(message.Content))
+        {
+            message.Content = CleanMessageContent(message.Content);
         }
     }
 
-    private static string EncodeForJsonInHtml(string input)
+    private static string CleanMessageContent(string input)
     {
-        string encoded = HtmlEncoder.Default.Encode(input);
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
 
-        return encoded
-            .Replace("&", "\\u0026")
-            .Replace("<", "\\u003c")
-            .Replace(">", "\\u003e")
-            .Replace("\"", "\\u0022")
-            .Replace("'", "\\u0027")
-            .Replace("/", "\\u002f");
+        // Remove <p> and </p> tags
+        var cleaned = input.Replace("<p>", string.Empty).Replace("</p>", string.Empty);
+
+        // Remove \n and \r characters
+        cleaned = cleaned.Replace("\n", string.Empty).Replace("\r", string.Empty);
+
+        return cleaned;
     }
 
     /// <summary>
@@ -128,7 +206,7 @@ internal static class SemanticKernelSpanProcessorHelper
                                 if (userMsg != null && userMsg.Role == "user" && !string.IsNullOrEmpty(userMsg.Content))
                                 {
                                     FilterUserMessageContent(userMsg);
-                                    result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(JsonSerializer.Serialize(userMsg, JsonOptions));
+                                    result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(userMsg.Content);
                                 }
                             }
                             catch (JsonException)
@@ -149,7 +227,7 @@ internal static class SemanticKernelSpanProcessorHelper
                     {
                         if (tag.Key == OpenTelemetryConstants.GenAiEventContent && tag.Value is string content && !string.IsNullOrEmpty(content))
                         {
-                            result[OpenTelemetryConstants.GenAiChoiceEventName].Add(content);
+                            FilterAiChoiceMessageContent(content, result[OpenTelemetryConstants.GenAiChoiceEventName]);
                             break;
                         }
                     }
@@ -157,5 +235,34 @@ internal static class SemanticKernelSpanProcessorHelper
             }
         }
         return result;
+    }
+
+    private static void FilterAiChoiceMessageContent(string content, List<string> choiceMessages)
+    {
+        try
+        {
+            var aiChoice = JsonSerializer.Deserialize<AiChoice>(content, JsonOptions);
+            if (aiChoice?.Message != null &&
+                aiChoice.Message.Role?.Equals("Assistant", StringComparison.OrdinalIgnoreCase) == true &&
+                aiChoice.Message.ToolCalls != null)
+            {
+                foreach (var toolCall in aiChoice.Message.ToolCalls)
+                {
+                    if (toolCall.Function?.Arguments?.MessageBody != null)
+                    {
+                        var messageBody = CleanMessageContent(toolCall.Function.Arguments.MessageBody);
+                        if (!string.IsNullOrEmpty(messageBody))
+                        {
+                            choiceMessages.Add(messageBody);
+                        }
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // If not JSON, fallback to original
+            choiceMessages.Add(content);
+        }
     }
 }
