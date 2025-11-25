@@ -27,8 +27,9 @@ The workflow triggers on:
 
 **Important:** The workflow does NOT run on:
 - Draft pull requests
-- Pull requests authored by bots (except when re-triggered by label)
+- Pull requests authored by bots (except Copilot)
 - Pull requests without the `codegen-experiment` label
+- **Pull requests from non-Microsoft organization members** (security measure)
 - Changes to test files (`**/Tests/**`, `*.Tests.cs`)
 - Changes to documentation, samples, or build files
 - Changes outside the `src/` directory
@@ -55,6 +56,13 @@ A dedicated job that validates whether the workflow should run. This job has thr
 - **Exception:** Allows PRs from `copilot-swe-agent[bot]` to proceed
 - Prevents infinite loops where bot PRs trigger more parity issues
 - Returns gracefully with success status
+
+**Organization Membership Check** (Security)
+- Verifies that human PR authors are members of the Microsoft GitHub organization
+- Blocks workflow execution for external contributors (security measure)
+- External PRs can still be submitted but won't trigger automation
+- Microsoft team members must review and re-trigger if needed
+- Returns gracefully with informative message if check fails
 
 **Label Check**
 - Checks if PR has the `codegen-experiment` label
@@ -493,11 +501,23 @@ If parity is not needed for a particular SDK, close the corresponding issue with
 
 ### Required Secret
 **Name:** `CROSS_REPO_CODEGEN_TOKEN`
-- **Type:** Personal Access Token (PAT)
-- **Purpose:** Authenticates with GitHub API for operations requiring elevated permissions
-- **Required Scopes:**
-  - `repo` (full repository access)
-  - `write:org` (if assigning to organization members)
+- **Type:** Fine-Grained Personal Access Token (PAT)
+- **Purpose:** Authenticates with GitHub API for cross-repository operations
+- **Repository Scope:**
+  - Agent365-dotnet (read)
+  - Agent365-python (issues/PRs read/write)
+  - Agent365-nodejs (issues/PRs read/write)
+- **Required Permissions:**
+  - Contents: Read-only
+  - Issues: Read and write
+  - Pull requests: Read and write
+  - Metadata: Read-only
+  - Organization members: Read (for membership verification)
+- **Security Configuration:**
+  - ✅ Belongs to a service account
+  - ✅ 90-day expiration with rotation schedule
+  - ✅ Scope limited to Agent365-* repositories only
+  - ✅ No admin or code write permissions
 
 **Used For:**
 - Creating issues with bot assignees (`copilot-swe-agent[bot]`)
