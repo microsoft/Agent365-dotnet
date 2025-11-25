@@ -6,7 +6,8 @@ using System.Text.Json.Serialization;
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 
 /// <summary>
-/// Model for gen_ai.event.content element.
+/// Represents the structure of a message as found in OpenTelemetry activity events and invocation input tags.
+/// Used in the <c>gen_ai.agent.invocation_input</c> tag and <c>gen_ai.event.content</c> attribute.
 /// </summary>
 public class MessageContent
 {
