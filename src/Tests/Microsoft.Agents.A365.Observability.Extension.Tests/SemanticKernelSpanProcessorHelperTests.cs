@@ -5,10 +5,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 
 namespace Microsoft.Agents.A365.Observability.Extension.Tests
 {
