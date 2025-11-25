@@ -1,11 +1,11 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;
@@ -28,8 +28,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case SemanticKernelTelemetryConstants.InvokeAgentOperation:
-                        // Span emitted by SK SDK follows Microsoft Agent 365 schema, so no modification needed.
-                        // Placeholder for any plumbing if needed in the future.
+                        SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
                         break;
 
                     case SemanticKernelTelemetryConstants.ExecuteToolOperation:
@@ -40,7 +39,19 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 
                     case SemanticKernelTelemetryConstants.ChatCompletionsOperation:
                         activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
-                        activity.DisplayName = activity.DisplayName.ToString().Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
+                        activity.DisplayName = activity.DisplayName.Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString());
+
+                        var userAndChoiceMessages = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
+                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiUserMessageEventName, out var userObj) &&
+                            userObj is List<string> userMessages && userMessages.Count > 0)
+                        {
+                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(", ", userMessages));
+                        }
+                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiChoiceEventName, out var choiceObj) &&
+                            choiceObj is List<string> choiceMessages && choiceMessages.Count > 0)
+                        {
+                            activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(", ", choiceMessages));
+                        }
                         // Other tags set by SK SDK follow Microsoft Agent 365 schema.
                         break;
                 }
