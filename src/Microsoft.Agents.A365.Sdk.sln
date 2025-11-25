@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36603.0 d17.14
+VisualStudioVersion = 17.14.36603.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Extensions.SemanticKernel", "Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj", "{5F7CC289-B41F-48A3-A433-B1034CD68C2B}"
 EndProject
@@ -73,6 +73,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		PACKAGE-SETUP.md = PACKAGE-SETUP.md
 		SECURITY.md = SECURITY.md
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Extension.Tests", "Tests\Microsoft.Agents.A365.Observability.Extension.Tests\Microsoft.Agents.A365.Observability.Extension.Tests.csproj", "{C992C8C8-106C-4DF5-A063-ECBFF74750F9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -264,6 +266,18 @@ Global
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x64.Build.0 = Release|Any CPU
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.ActiveCfg = Release|Any CPU
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C}.Release|x86.Build.0 = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|x64.Build.0 = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Debug|x86.Build.0 = Debug|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|x64.ActiveCfg = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|x64.Build.0 = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|x86.ActiveCfg = Release|Any CPU
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -294,6 +308,7 @@ Global
 		{9D91710A-8176-98AC-53E1-B6BCC2C3DF3D} = {89AD1AA2-300A-483A-832E-9047201DD2BC}
 		{1BFA6B30-FC88-4C14-8F0A-9345611989C6} = {9D91710A-8176-98AC-53E1-B6BCC2C3DF3D}
 		{B4B82E05-8C5C-A573-B04F-17517CAA6D1C} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
+		{C992C8C8-106C-4DF5-A063-ECBFF74750F9} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0B20062E-2453-4E32-B8A2-85A6013F83A0}

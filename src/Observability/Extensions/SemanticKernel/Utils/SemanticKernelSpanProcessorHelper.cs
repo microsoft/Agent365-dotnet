@@ -10,7 +10,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-internal static class SemanticKernelSpanProcessorHelper
+/// <summary>
+/// Provides helper methods for processing and filtering Semantic Kernel span tags and events.
+/// </summary>
+public static class SemanticKernelSpanProcessorHelper
 {
     private static readonly Regex UnquotedPropertyValueRegex =
         new Regex(
@@ -24,9 +27,9 @@ internal static class SemanticKernelSpanProcessorHelper
     };
 
     /// <summary>
-    /// Processes and filters the gen_ai.agent.invocation_input tag to remove system role messages.
+    /// Processes and filters the gen_ai.agent.invocation_input and gen_ai.agent.invocation_output tags to remove system role messages.
     /// </summary>
-    /// <param name="activity">The activity containing the tag to process.</param>
+    /// <param name="activity">The activity containing the tags to process.</param>
     public static void ProcessInvocationInputOutputTag(Activity activity)
     {
         var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
@@ -42,6 +45,12 @@ internal static class SemanticKernelSpanProcessorHelper
         }
     }
 
+    /// <summary>
+    /// Gets the value of a tag from the activity by key.
+    /// </summary>
+    /// <param name="activity">The activity containing the tag.</param>
+    /// <param name="key">The key of the tag to retrieve.</param>
+    /// <returns>The tag value as a string, or null if not found.</returns>
     private static string? GetTagValue(Activity activity, string key)
     {
         return activity.TagObjects
@@ -49,12 +58,15 @@ internal static class SemanticKernelSpanProcessorHelper
             .FirstOrDefault(k => k.Key == key).Value as string;
     }
 
+    /// <summary>
+    /// Quotes unquoted property values in the JSON string.
+    /// </summary>
+    /// <param name="json">The JSON string to process.</param>
+    /// <returns>The JSON string with quoted property values.</returns>
     private static string QuoteUnquotedPropertyValues(string json)
     {
-        // Quotes unquoted property values in the JSON string
         var quoted = UnquotedPropertyValueRegex.Replace(json, "$1\"$2\"");
 
-        // Handle double-encoded JSON strings (e.g., "\"{...}\"")
         if (quoted.Length > 2 &&
             quoted.StartsWith("\"", StringComparison.Ordinal) &&
             quoted.EndsWith("\"", StringComparison.Ordinal))
@@ -118,6 +130,11 @@ internal static class SemanticKernelSpanProcessorHelper
         }
     }
 
+    /// <summary>
+    /// Attempts to deserialize a string into a MessageContent object.
+    /// </summary>
+    /// <param name="s">The string to deserialize.</param>
+    /// <returns>The deserialized MessageContent object, or null if deserialization fails.</returns>
     private static MessageContent? TryDeserializeMessageContent(string s)
     {
         try
@@ -139,7 +156,7 @@ internal static class SemanticKernelSpanProcessorHelper
     }
 
     /// <summary>
-    /// Extracts the message content from messages by trimming the prefix up to and including 'Message:'.
+    /// Extracts the message content from user messages by trimming the prefix up to and including 'Message:'.
     /// </summary>
     /// <param name="message">The MessageContent to filter.</param>
     private static void FilterUserMessageContent(MessageContent? message)
@@ -178,7 +195,6 @@ internal static class SemanticKernelSpanProcessorHelper
 
             if (activityEvent.Name == OpenTelemetryConstants.GenAiUserMessageEventName)
             {
-                // Try to parse the content as GenAiEventContent and filter as required
                 try
                 {
                     var userMsg = JsonSerializer.Deserialize<MessageContent>(content, JsonOptions);
@@ -190,7 +206,6 @@ internal static class SemanticKernelSpanProcessorHelper
                 }
                 catch (JsonException)
                 {
-                    // If not JSON, fallback to original
                     result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(content);
                 }
             }
@@ -202,12 +217,22 @@ internal static class SemanticKernelSpanProcessorHelper
         return result;
     }
 
+    /// <summary>
+    /// Gets the content tag value from an activity event.
+    /// </summary>
+    /// <param name="activityEvent">The activity event to extract the tag from.</param>
+    /// <returns>The content tag value as a string, or null if not found.</returns>
     private static string? GetEventContentTag(ActivityEvent activityEvent)
     {
         return activityEvent.Tags?
             .FirstOrDefault(tag => tag.Key == OpenTelemetryConstants.GenAiEventContent).Value as string;
     }
 
+    /// <summary>
+    /// Filters AI choice message content and adds it to the provided list.
+    /// </summary>
+    /// <param name="content">The content to filter.</param>
+    /// <param name="choiceMessages">The list to add filtered messages to.</param>
     private static void FilterAiChoiceMessageContent(string content, List<string> choiceMessages)
     {
         try
@@ -232,7 +257,6 @@ internal static class SemanticKernelSpanProcessorHelper
         }
         catch (JsonException)
         {
-            // If not JSON, fallback to original
             choiceMessages.Add(content);
         }
     }
