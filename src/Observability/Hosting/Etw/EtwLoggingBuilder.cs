@@ -49,7 +49,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                     logging.AddOpenTelemetry(otelLogging =>
                     {
                         otelLogging.ParseStateValues = true;
-                        otelLogging.AddProcessor(new EtwLogProcessor());
+
+                        // Resolve ExportFormatter via the service provider and pass it to the processor
+                        var sp = _services.BuildServiceProvider();
+                        var exportFormatter = sp.GetService<ExportFormatter>() ?? new ExportFormatter(LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>());
+                        otelLogging.AddProcessor(new EtwLogProcessor(exportFormatter));
 
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
                         {

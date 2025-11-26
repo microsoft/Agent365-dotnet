@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -64,28 +65,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         private static TracerProviderBuilder ConfigureInternal(IServiceProvider serviceProvider, TracerProviderBuilder builder, Agent365ExporterType exporterType)
         {
+            // Ensure required services are registered
             var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-            var logger = null as ILogger<Agent365Exporter>;
-            try
-            {
-                logger = serviceProvider.GetRequiredService<ILogger<Agent365Exporter>>();
-            }
-            catch
-            {
-                var loggerFactory = LoggerFactory.Create(builder =>
-                {
-                    builder.AddConsole();
-                });
-                logger = loggerFactory.CreateLogger<Agent365Exporter>();
-            }
-
             var httpClient = serviceProvider.GetService<HttpClient>();
+
+            var fallbackLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
+            var logger = serviceProvider.GetService<ILogger<Agent365Exporter>>() ?? fallbackLoggerFactory.CreateLogger<Agent365Exporter>();
+            var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? fallbackLoggerFactory.CreateLogger<Agent365ExporterCore>();
+            var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? fallbackLoggerFactory.CreateLogger<ExportFormatter>();
+
+            // Register ExportFormatter and Agent365ExporterCore if not already registered
+            var exportFormatter = serviceProvider.GetService<ExportFormatter>() ??
+                new ExportFormatter(formatterLogger);
+            var exporterCore = serviceProvider.GetService<Agent365ExporterCore>() ??
+                new Agent365ExporterCore(exportFormatter, coreLogger);
 
             switch (exporterType)
             {
+
                 case Agent365ExporterType.Agent365ExporterAsync:
                     builder.AddProcessor(new BatchActivityExportProcessorAsync(
-                        new Agent365ExporterAsync(options: exporterOptions, resource: null, logger: logger, httpClient: httpClient),
+                        new Agent365ExporterAsync(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
                         maxQueueSize: exporterOptions.MaxQueueSize,
                         scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
                         maxExportBatchSize: exporterOptions.MaxExportBatchSize));
@@ -93,7 +93,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 case Agent365ExporterType.Agent365Exporter:
                     builder.AddProcessor(new BatchActivityExportProcessor(
-                        new Agent365Exporter(options: exporterOptions, resource: null, logger: logger, httpClient: httpClient),
+                        new Agent365Exporter( core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
                         maxQueueSize: exporterOptions.MaxQueueSize,
                         scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
                         exporterTimeoutMilliseconds: exporterOptions.ExporterTimeoutMilliseconds,
