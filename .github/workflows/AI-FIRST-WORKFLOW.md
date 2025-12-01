@@ -272,6 +272,25 @@ The workflow monitors PRs across different repositories based on where issues we
 - **No manual work:** Eliminates need to manually find and assign Copilot PRs
 - **Accountability chain:** Maintains traceability from feature → implementation → parity → review
 
+**Finding Human Reviewers (Copilot-Authored PRs):**
+
+When the source PR is authored by Copilot, the workflow looks for human assignees on that PR:
+
+1. **Fetches PR data** from the source repository
+2. **Filters out bots** using multiple patterns:
+   - Usernames ending with `[bot]` (e.g., `copilot-swe-agent[bot]`)
+   - Username exactly matching `Copilot` (case-insensitive)
+   - Username exactly matching `github-actions` (case-insensitive)
+3. **Extracts assignees** (reviewers require additional token permissions)
+4. **Falls back gracefully** if token lacks permissions
+
+**Token Permission Requirements:**
+- **Minimum**: Read access to pull requests (can fetch assignees)
+- **Optional**: Read access to review requests (can fetch requested reviewers)
+- If `reviewRequests` permission is missing, workflow automatically falls back to assignees only
+
+**Note**: Fine-Grained PATs may not have permission to read `reviewRequests` due to GitHub API restrictions. The workflow handles this gracefully by using only `assignees`.
+
 **Comments Posted on Copilot PR:**
 
 *When original PR is human-authored:*
@@ -517,6 +536,10 @@ If parity is not needed for a particular SDK, close the corresponding issue with
   - Pull requests: Read and write
   - Metadata: Read-only
   - Organization members: Read (for membership verification)
+- **Known Limitations:**
+  - ⚠️ Fine-Grained PATs may not have access to `reviewRequests` field due to GitHub API restrictions
+  - Workflow automatically falls back to using only `assignees` if `reviewRequests` is inaccessible
+  - This is expected behavior and does not affect functionality
 - **Security Configuration:**
   - ✅ Belongs to a service account
   - ✅ 90-day expiration with rotation schedule
@@ -527,7 +550,8 @@ If parity is not needed for a particular SDK, close the corresponding issue with
 - Creating issues with bot assignees (`copilot-swe-agent[bot]`)
 - Adding reviewers/assignees to PRs (requires PAT for bot/user operations)
 - @mentioning users (e.g., `@copilot`) to ensure notifications are sent
-- Querying PR data for reviewer extraction
+- Querying PR data for assignee extraction (reviewers if permissions allow)
+- Cross-repository API operations
 
 **Multi-Repository Support:**
 The workflow operates across three repositories:

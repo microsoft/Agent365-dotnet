@@ -550,20 +550,69 @@ jobs:
               # Get assignees and requested reviewers from the source PR
               echo "Fetching PR data for #$SOURCE_PR_NUMBER from ${{ github.repository }}..."
               
-              # Verify gh authentication
-              gh auth status 2>&1 | head -5
+              # Verify gh authentication (redirect to stderr to avoid polluting stdout)
+              echo "Authentication status:"
+              gh auth status 2>&1 | head -3 | sed 's/^/  /'
+              echo ""
               
-              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --repo "${{ github.repository }}" --json assignees,reviewRequests 2>&1)
-              FETCH_EXIT_CODE=$?
+              # Attempt to fetch PR data (assignees and reviewRequests)
+              echo "Running: gh pr view $SOURCE_PR_NUMBER --repo ${{ github.repository }} --json assignees,reviewRequests"
+              
+              # Capture to temp file to handle errors gracefully
+              if gh pr view "$SOURCE_PR_NUMBER" --repo "${{ github.repository }}" --json assignees,reviewRequests > /tmp/pr_data.json 2>&1; then
+                FETCH_EXIT_CODE=0
+                SOURCE_PR_DATA=$(cat /tmp/pr_data.json)
+              else
+                FETCH_EXIT_CODE=$?
+                SOURCE_PR_DATA=$(cat /tmp/pr_data.json 2>/dev/null || echo "")
+                
+                # Check if it's a permissions error for reviewRequests
+                if echo "$SOURCE_PR_DATA" | grep -q "reviewRequests"; then
+                  echo "⚠️  PAT token doesn't have permission to read reviewRequests"
+                  echo "  Falling back to assignees only..."
+                  
+                  # Try again with just assignees
+                  if gh pr view "$SOURCE_PR_NUMBER" --repo "${{ github.repository }}" --json assignees > /tmp/pr_data.json 2>&1; then
+                    FETCH_EXIT_CODE=0
+                    SOURCE_PR_DATA=$(cat /tmp/pr_data.json)
+                    echo "  ✓ Successfully fetched assignees"
+                  else
+                    echo "  ✗ Failed to fetch even assignees"
+                    SOURCE_PR_DATA=$(cat /tmp/pr_data.json 2>/dev/null || echo "")
+                  fi
+                fi
+              fi
+              
+              echo "Exit code: $FETCH_EXIT_CODE"
+              
+              # Debug: show first few lines of response
+              echo "Response preview:"
+              echo "$SOURCE_PR_DATA" | head -5 | sed 's/^/  /'
+              echo ""
               
               if [ $FETCH_EXIT_CODE -eq 0 ] && [ -n "$SOURCE_PR_DATA" ]; then
-                echo "✓ Successfully fetched PR data"
+                # Check if it's valid JSON
+                if echo "$SOURCE_PR_DATA" | jq empty 2>/dev/null; then
+                  echo "✓ Successfully fetched PR data (valid JSON)"
+                else
+                  echo "⚠️  Received data but it's not valid JSON"
+                  echo "Full response:"
+                  echo "$SOURCE_PR_DATA"
+                  # Try fallback
+                  FETCH_EXIT_CODE=1
+                fi
+              fi
+              
+              if [ $FETCH_EXIT_CODE -eq 0 ] && [ -n "$SOURCE_PR_DATA" ]; then
+                echo "✓ PR data validated"
                 
-                # Extract human users (assignees) - filter out bots by login pattern
-                ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                # Extract human users (assignees) - filter out bots
+                # Filter: ends with [bot] OR equals "Copilot" OR equals "github-actions"
+                ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]? | select(.login | test("\\[bot\\]$|^Copilot$|^github-actions$"; "i") | not) | .login' 2>/dev/null || echo "")
                 
-                # Extract human users (reviewers) - filter out bots by login pattern
-                REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewRequests[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                # Extract human users (reviewers) - filter out bots
+                # Note: reviewRequests might not be available depending on token permissions
+                REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewRequests[]?.requestedReviewer? | select(.login? | test("\\[bot\\]$|^Copilot$|^github-actions$"; "i") | not) | .login' 2>/dev/null || echo "")
                 
                 # Debug output
                 if [ -n "$ASSIGNEES" ]; then
@@ -897,8 +946,12 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                     
-                    GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
-                    echo "  💬 Posted follow-up notification on PR $ISSUE_REPO#$COPILOT_PR"
+                    # Use PAT token for cross-repo access
+                    if GH_TOKEN="${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>&1; then
+                      echo "  💬 Posted follow-up notification on PR $ISSUE_REPO#$COPILOT_PR"
+                    else
+                      echo "  ⚠️  Failed to post follow-up notification on PR $ISSUE_REPO#$COPILOT_PR (may be rate limited or permissions issue)"
+                    fi
                   else
                     # Post the initial update notification (using PAT token because it mentions @copilot)
                     UPDATE_COMMENT="## 🔄 Original PR Updated
@@ -925,13 +978,11 @@ jobs:
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                     
                     # Use PAT token for this comment since it mentions @copilot
-                    GH_TOKEN="${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$UPDATE_COMMENT" 2>/dev/null
-                    
-                    if [ $? -eq 0 ]; then
+                    if GH_TOKEN="${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$UPDATE_COMMENT" 2>&1; then
                       echo "  💬 Posted update notification on PR $ISSUE_REPO#$COPILOT_PR"
                       NOTIFIED_COUNT=$((NOTIFIED_COUNT + 1))
                     else
-                      echo "  ⚠️  Failed to post notification on PR $ISSUE_REPO#$COPILOT_PR"
+                      echo "  ⚠️  Failed to post notification on PR $ISSUE_REPO#$COPILOT_PR (may be rate limited or permissions issue)"
                     fi
                   fi
                 done
