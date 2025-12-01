@@ -119,7 +119,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint, useCustomDomain: options.UseCustomDomain);
                 var endpoint = options.UseCustomDomain
-                    ? new Agent365EndpointDiscovery(options.ClusterCategory).GetBaseHost()
+                    ? new Agent365EndpointDiscovery(options.ClusterCategory).GetHost()
                     : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
                 var requestUri = Agent365ExporterCore.BuildRequestUri(endpoint, endpointPath);
 

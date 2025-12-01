@@ -11,12 +11,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 public class Agent365EndpointDiscoveryTests
 {
     [TestMethod]
-    public void GetBaseHost_Mapping_IsCorrect()
+    public void GetHost_Mapping_IsCorrect()
     {
         var expected = new Dictionary<string, string>
         {
-            ["preprod"] = "preprod.agent365.svc.cloud.dev.microsoft",
-            ["firstrelease"] = "preprod.agent365.svc.cloud.dev.microsoft",
+            ["firstrelease"] = "agent365.svc.cloud.microsoft",
             ["production"] = "agent365.svc.cloud.microsoft",
             ["prod"] = "agent365.svc.cloud.microsoft",
         };
@@ -24,24 +23,24 @@ public class Agent365EndpointDiscoveryTests
         foreach (var kv in expected)
         {
             var disc = new Agent365EndpointDiscovery(kv.Key);
-            Assert.AreEqual(kv.Value, disc.GetBaseHost());
+            Assert.AreEqual(kv.Value, disc.GetHost());
         }
     }
 
     [TestMethod]
-    public void GetBaseHost_IsCaseInsensitive()
+    public void GetHost_IsCaseInsensitive()
     {
-        var disc1 = new Agent365EndpointDiscovery("PreProd");
-        Assert.AreEqual("preprod.agent365.svc.cloud.dev.microsoft", disc1.GetBaseHost());
+        var disc1 = new Agent365EndpointDiscovery("PRODUCTION");
+        Assert.AreEqual("agent365.svc.cloud.microsoft", disc1.GetHost());
 
         var disc2 = new Agent365EndpointDiscovery("PROD");
-        Assert.AreEqual("agent365.svc.cloud.microsoft", disc2.GetBaseHost());
+        Assert.AreEqual("agent365.svc.cloud.microsoft", disc2.GetHost());
     }
 
     [TestMethod]
-    public void GetBaseHost_DefaultsToProductionForUnknown()
+    public void GetHost_ThrowsForUnknown()
     {
         var disc = new Agent365EndpointDiscovery("unknown-category");
-        Assert.AreEqual("agent365.svc.cloud.microsoft", disc.GetBaseHost());
+        Assert.ThrowsException<System.ArgumentException>(() => disc.GetHost());
     }
 }

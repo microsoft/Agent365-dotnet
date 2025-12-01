@@ -25,18 +25,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Gets the base host for the specified cluster category.
         /// </summary>
-        public string GetBaseHost()
+        public string GetHost()
         {
             switch (this.clusterCategory?.ToLowerInvariant())
             {
-                case "preprod":
                 case "firstrelease":
-                    return "preprod.agent365.svc.cloud.dev.microsoft";
                 case "production":
                 case "prod":
                     return "agent365.svc.cloud.microsoft";
                 default:
-                    return "agent365.svc.cloud.microsoft";
+                    throw new ArgumentException($"Invalid ClusterCategory value: {clusterCategory}");
             }
         }
     }

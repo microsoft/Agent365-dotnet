@@ -1065,7 +1065,7 @@ public sealed class Agent365ExporterTests
         string? capturedPathAndQuery = null;
         string? capturedTenantHeader = null;
 
-        var expectedHost = new Agent365EndpointDiscovery(options.ClusterCategory).GetBaseHost();
+        var expectedHost = new Agent365EndpointDiscovery(options.ClusterCategory).GetHost();
 
         Task<HttpResponseMessage> sendAsync(HttpRequestMessage req)
         {
