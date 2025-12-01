@@ -357,7 +357,7 @@ When a developer pushes additional commits to their PR after parity issues were 
    - Handles PRs in different repositories from the source PR
    - Uses full repository qualifiers in messages (e.g., `microsoft/Agent365#123`)
 
-**First Notification Comment:**
+**First Notification Comment** (uses `CROSS_REPO_CODEGEN_TOKEN` for @copilot mention):
 ```markdown
 ## 🔄 Original PR Updated
 
@@ -381,7 +381,7 @@ Please review the updated PR and ensure this parity implementation includes all 
 If the changes are not relevant to this parity task, you can ignore this message.
 ```
 
-**Follow-up Notification Comment:**
+**Follow-up Notification Comment** (uses `GITHUB_TOKEN` - no @mention needed):
 ```markdown
 ## 🔄 Additional Changes Detected
 
@@ -391,6 +391,10 @@ New commits have been pushed to the original PR #123.
 - Review the latest changes: [link]
 - Update this PR if necessary to maintain parity
 ```
+
+**Token Usage Strategy:**
+- **First notification**: Uses `CROSS_REPO_CODEGEN_TOKEN` (PAT) because it mentions `@copilot`
+- **Follow-up notifications**: Uses `GITHUB_TOKEN` (no @mention, more efficient, appears as `github-actions[bot]`)
 
 **Benefits:**
 - Keeps Copilot agents informed of source PR changes
@@ -554,10 +558,10 @@ The PAT must have:
 
 | Operation | Token Used | Appears As | Reason |
 |-----------|-----------|------------|---------|
-| Creating issues with assignment | `PAT_TOKEN` | PAT owner | Required to assign bots |
-| Adding reviewers/assignees to PRs | `PAT_TOKEN` | PAT owner | Required for user operations |
-| Cross-repo PR comments | `PAT_TOKEN` | PAT owner | Required for cross-repo access |
-| @mentioning users | `PAT_TOKEN` | PAT owner | Ensures notification delivery |
+| Creating issues with assignment | `CROSS_REPO_CODEGEN_TOKEN` | PAT owner | Required to assign bots |
+| Adding reviewers/assignees to PRs | `CROSS_REPO_CODEGEN_TOKEN` | PAT owner | Required for user operations |
+| Cross-repo PR comments with @mentions | `CROSS_REPO_CODEGEN_TOKEN` | PAT owner | Required for @copilot mentions |
+| Cross-repo PR comments (no @mentions) | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance, no PAT needed |
 | Source PR summary comments (same repo) | `GITHUB_TOKEN` | `github-actions[bot]` | Professional appearance |
 
 ### Workflow Permissions

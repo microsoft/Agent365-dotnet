@@ -824,7 +824,7 @@ jobs:
                   if [ -n "$EXISTING_NOTIFICATION" ]; then
                     echo "  ℹ️  Update notification already exists on PR $ISSUE_REPO#$COPILOT_PR"
                     
-                    # Add a brief follow-up comment instead (using GITHUB_TOKEN so it appears from github-actions bot)
+                    # Add a brief follow-up comment instead (using GITHUB_TOKEN since no @mention)
                     FOLLOWUP_COMMENT="## 🔄 Additional Changes Detected
             
             New commits have been pushed to the original PR #${PR_NUMBER}.
@@ -836,7 +836,7 @@ jobs:
             ---
             *Automated by [AI-First Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*"
                     
-                    gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
+                    GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr comment "$COPILOT_PR" --repo "$ISSUE_REPO" --body-file - <<< "$FOLLOWUP_COMMENT" 2>/dev/null
                     echo "  💬 Posted follow-up notification on PR $ISSUE_REPO#$COPILOT_PR"
                   else
                     # Post the initial update notification (using PAT token because it mentions @copilot)
