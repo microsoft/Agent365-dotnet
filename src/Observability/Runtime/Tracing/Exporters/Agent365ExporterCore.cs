@@ -24,6 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public static class Agent365ExporterCore
     {
         private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
+        private const string TenantIdHeaderKey = "x-ms-tenant-id";
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
@@ -68,12 +69,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// </summary>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
+        /// <param name="useCustomDomain">Whether to use the custom domain.</param>
         /// <returns>The endpoint path string.</returns>
-        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint, bool useCustomDomain)
         {
-            return useS2SEndpoint
-                ? $"/maven/agent365/service/agents/{agentId}/traces"
-                : $"/maven/agent365/agents/{agentId}/traces";
+            return useCustomDomain
+                ? $"/agents/{agentId}/traces"
+                : useS2SEndpoint
+                    ? $"/maven/agent365/service/agents/{agentId}/traces"
+                    : $"/maven/agent365/agents/{agentId}/traces";
         }
 
         /// <summary>
@@ -113,11 +117,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = ExportFormatter.FormatMany(activities, resource, logInformation);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);
-                var ppapiEndpoint = ppapiDiscovery.GetTenantIslandClusterEndpoint(tenantId);
-
-                var endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId, options.UseS2SEndpoint);
-                var requestUri = Agent365ExporterCore.BuildRequestUri(ppapiEndpoint, endpointPath);
+                string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint, useCustomDomain: options.UseCustomDomain);
+                var endpoint = options.UseCustomDomain
+                    ? new Agent365EndpointDiscovery(options.ClusterCategory).GetBaseHost()
+                    : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+                var requestUri = Agent365ExporterCore.BuildRequestUri(endpoint, endpointPath);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
                 {
@@ -137,6 +141,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 if (!string.IsNullOrEmpty(token))
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                if (options.UseCustomDomain && !string.IsNullOrEmpty(tenantId))
+                {
+                    request.Headers.TryAddWithoutValidation(Agent365ExporterCore.TenantIdHeaderKey, tenantId);
+                }
 
                 HttpResponseMessage? resp = null;
                 try

@@ -59,5 +59,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Default is 512.
         /// </summary>
         public int MaxExportBatchSize { get; set; } = 512;
+
+        /// <summary>
+        /// When true the exporter targets the custom Agent365 domain instead of the PPAPI gateway derived tenant island endpoint.
+        /// Default is false to preserve existing behavior until the custom domain is fully adopted.
+        /// </summary>
+        public bool UseCustomDomain { get; set; } = false;
     }
 }
