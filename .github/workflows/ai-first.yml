@@ -548,12 +548,25 @@ jobs:
               echo "⚠️  Original PR is authored by Copilot - finding human reviewers..."
               
               # Get assignees and requested reviewers from the source PR
-              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --json assignees,reviewRequests --jq '{assignees: [.assignees[] | select(.type != "Bot") | .login], reviewers: [.reviewRequests[] | select(.type != "Bot") | .login]}' 2>/dev/null || echo "")
+              echo "Fetching PR data for #$SOURCE_PR_NUMBER..."
+              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --json assignees,reviewRequests 2>&1)
               
-              if [ -n "$SOURCE_PR_DATA" ]; then
-                # Extract human users (assignees and reviewers)
-                ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]' 2>/dev/null || echo "")
-                REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewers[]' 2>/dev/null || echo "")
+              if [ $? -eq 0 ] && [ -n "$SOURCE_PR_DATA" ]; then
+                echo "✓ Successfully fetched PR data"
+                
+                # Extract human users (assignees) - filter out bots by login pattern
+                ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                
+                # Extract human users (reviewers) - filter out bots by login pattern
+                REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewRequests[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                
+                # Debug output
+                if [ -n "$ASSIGNEES" ]; then
+                  echo "  Assignees found: $ASSIGNEES"
+                fi
+                if [ -n "$REVIEWERS" ]; then
+                  echo "  Reviewers found: $REVIEWERS"
+                fi
                 
                 # Combine and deduplicate
                 HUMAN_REVIEWERS=$(echo -e "$ASSIGNEES\n$REVIEWERS" | sort -u | grep -v '^$' | xargs)
@@ -561,10 +574,15 @@ jobs:
                 if [ -n "$HUMAN_REVIEWERS" ]; then
                   echo "✓ Found human reviewers: $HUMAN_REVIEWERS"
                 else
-                  echo "⚠️  No human assignees or reviewers found on source PR"
+                  echo "⚠️  No human assignees or reviewers found on source PR #$SOURCE_PR_NUMBER"
+                  echo "  This may be because:"
+                  echo "  - The PR has no assignees or reviewers yet"
+                  echo "  - All assignees/reviewers are bots"
+                  echo "  - The PR data could not be parsed correctly"
                 fi
               else
-                echo "⚠️  Could not fetch source PR data"
+                echo "⚠️  Could not fetch source PR data for #$SOURCE_PR_NUMBER"
+                echo "  Error: $SOURCE_PR_DATA"
               fi
             fi
             echo ""
