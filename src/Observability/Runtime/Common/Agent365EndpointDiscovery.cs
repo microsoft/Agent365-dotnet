@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// <summary>
     /// Provides discovery for Agent365 endpoints.
     /// </summary>
-    internal sealed class Agent365EndpointDiscovery
+    public sealed class Agent365EndpointDiscovery
     {
         private readonly string clusterCategory;
 
