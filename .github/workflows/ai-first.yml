@@ -548,10 +548,15 @@ jobs:
               echo "⚠️  Original PR is authored by Copilot - finding human reviewers..."
               
               # Get assignees and requested reviewers from the source PR
-              echo "Fetching PR data for #$SOURCE_PR_NUMBER..."
-              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --json assignees,reviewRequests 2>&1)
+              echo "Fetching PR data for #$SOURCE_PR_NUMBER from ${{ github.repository }}..."
               
-              if [ $? -eq 0 ] && [ -n "$SOURCE_PR_DATA" ]; then
+              # Verify gh authentication
+              gh auth status 2>&1 | head -5
+              
+              SOURCE_PR_DATA=$(gh pr view "$SOURCE_PR_NUMBER" --repo "${{ github.repository }}" --json assignees,reviewRequests 2>&1)
+              FETCH_EXIT_CODE=$?
+              
+              if [ $FETCH_EXIT_CODE -eq 0 ] && [ -n "$SOURCE_PR_DATA" ]; then
                 echo "✓ Successfully fetched PR data"
                 
                 # Extract human users (assignees) - filter out bots by login pattern
@@ -582,7 +587,45 @@ jobs:
                 fi
               else
                 echo "⚠️  Could not fetch source PR data for #$SOURCE_PR_NUMBER"
-                echo "  Error: $SOURCE_PR_DATA"
+                echo "  Exit code: $FETCH_EXIT_CODE"
+                echo "  Response/Error:"
+                echo "$SOURCE_PR_DATA" | head -20
+                echo ""
+                echo "  Attempting with GITHUB_TOKEN as fallback..."
+                
+                # Try with GITHUB_TOKEN as fallback
+                SOURCE_PR_DATA_FALLBACK=$(GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" gh pr view "$SOURCE_PR_NUMBER" --repo "${{ github.repository }}" --json assignees,reviewRequests 2>&1)
+                FALLBACK_EXIT_CODE=$?
+                
+                if [ $FALLBACK_EXIT_CODE -eq 0 ] && [ -n "$SOURCE_PR_DATA_FALLBACK" ]; then
+                  echo "  ✓ Fallback succeeded with GITHUB_TOKEN"
+                  SOURCE_PR_DATA="$SOURCE_PR_DATA_FALLBACK"
+                  
+                  # Extract human users (assignees) - filter out bots by login pattern
+                  ASSIGNEES=$(echo "$SOURCE_PR_DATA" | jq -r '.assignees[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                  
+                  # Extract human users (reviewers) - filter out bots by login pattern
+                  REVIEWERS=$(echo "$SOURCE_PR_DATA" | jq -r '.reviewRequests[]? | select(.login | test("\\[bot\\]$") | not) | .login' 2>/dev/null || echo "")
+                  
+                  # Debug output
+                  if [ -n "$ASSIGNEES" ]; then
+                    echo "  Assignees found: $ASSIGNEES"
+                  fi
+                  if [ -n "$REVIEWERS" ]; then
+                    echo "  Reviewers found: $REVIEWERS"
+                  fi
+                  
+                  # Combine and deduplicate
+                  HUMAN_REVIEWERS=$(echo -e "$ASSIGNEES\n$REVIEWERS" | sort -u | grep -v '^$' | xargs)
+                  
+                  if [ -n "$HUMAN_REVIEWERS" ]; then
+                    echo "  ✓ Found human reviewers: $HUMAN_REVIEWERS"
+                  fi
+                else
+                  echo "  ✗ Fallback also failed"
+                  echo "  Fallback exit code: $FALLBACK_EXIT_CODE"
+                  echo "  Fallback response: $SOURCE_PR_DATA_FALLBACK"
+                fi
               fi
             fi
             echo ""
