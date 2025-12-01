@@ -1,7 +1,8 @@
 ﻿using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
@@ -108,7 +109,6 @@ public sealed class Agent365ExporterTests
             resource);
     }
 
-    [TestMethod]
     public void Constructor_NullLogger_Throws()
     {
         var options = new Agent365ExporterOptions
@@ -1011,5 +1011,147 @@ public sealed class Agent365ExporterTests
         }
     }
 
+    #endregion
+
+    #region Build Endpoint and URI Tests
+    public void BuildEndpointPath_CustomDomain_UsesAgentsRoot()
+    {
+        var path = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true, useCustomDomain: true);
+        path.Should().Be("/agents/agent-123/traces");
+    }
+
+    [TestMethod]
+    public void BuildEndpointPath_NonCustomDomain_UsesServicePathsDependingOnS2S()
+    {
+        var s2s = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true, useCustomDomain: false);
+        var standard = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false, useCustomDomain: false);
+        s2s.Should().Be("/maven/agent365/service/agents/agent-123/traces");
+        standard.Should().Be("/maven/agent365/agents/agent-123/traces");
+    }
+
+    [TestMethod]
+    public void BuildRequestUri_ComposesCorrectly()
+    {
+        var uri = Agent365ExporterCore.BuildRequestUri("example.com", "/agents/agent-123/traces");
+        uri.Should().Be("https://example.com/agents/agent-123/traces?api-version=1");
+    }
+    #endregion
+
+    #region ExportBatchCoreAsync Request Uri and Headers Tests
+    [TestMethod]
+    public async Task ExportBatchCoreAsync_CustomDomain_UsesBaseHostAndAddsTenantHeader()
+    {
+        // Arrange
+        var tenantId = "tenant-xyz";
+        var agentId = "agent-abc";
+        var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>(null),
+            UseS2SEndpoint = true,
+            UseCustomDomain = true,
+            ClusterCategory = "prod"
+        };
+
+        // Create a fake activity with identity
+        using var activity = CreateActivity(tenantId: tenantId, agentId: agentId);
+        var groups = new List<(string TenantId, string AgentId, List<Activity> Activities)>
+        {
+            (tenantId, agentId, new List<Activity> { activity })
+        };
+
+        // Capture request details
+        string? capturedHost = null;
+        string? capturedPathAndQuery = null;
+        string? capturedTenantHeader = null;
+
+        var expectedHost = new Agent365EndpointDiscovery(options.ClusterCategory).GetBaseHost();
+
+        Task<HttpResponseMessage> sendAsync(HttpRequestMessage req)
+        {
+            capturedHost = req.RequestUri!.Host;
+            capturedPathAndQuery = req.RequestUri!.PathAndQuery;
+            req.Headers.TryGetValues("x-ms-tenant-id", out var vals);
+            capturedTenantHeader = vals?.FirstOrDefault();
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+            response.Headers.Add("x-ms-correlation-id", Guid.NewGuid().ToString());
+            return Task.FromResult(response);
+        }
+
+        // Act
+        var result = await Agent365ExporterCore.ExportBatchCoreAsync(
+            groups,
+            resource,
+            options,
+            (a, t) => Task.FromResult<string?>(null),
+            sendAsync,
+            logInformation: null,
+            logError: null);
+
+        // Assert
+        result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
+        capturedHost.Should().Be(expectedHost);
+        capturedPathAndQuery.Should().StartWith("/agents/" + agentId + "/traces");
+        capturedPathAndQuery.Should().EndWith("?api-version=1");
+        capturedTenantHeader.Should().Be(tenantId);
+    }
+
+    [TestMethod]
+    public async Task ExportBatchCoreAsync_NonCustomDomain_UsesPowerPlatformEndpoint()
+    {
+        // Arrange
+        var tenantId = "tenant-xyz";
+        var agentId = "agent-abc";
+        var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>(null),
+            UseS2SEndpoint = true,
+            UseCustomDomain = false,
+            ClusterCategory = "prod"
+        };
+
+        using var activity = CreateActivity(tenantId: tenantId, agentId: agentId);
+        var groups = new List<(string TenantId, string AgentId, List<Activity> Activities)>
+        {
+            (tenantId, agentId, new List<Activity> { activity })
+        };
+
+        string? capturedHost = null;
+        string? capturedPathAndQuery = null;
+        string? capturedTenantHeader = null;
+
+        var expectedHost = new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+
+        Task<HttpResponseMessage> sendAsync(HttpRequestMessage req)
+        {
+            capturedHost = req.RequestUri!.Host;
+            capturedPathAndQuery = req.RequestUri!.PathAndQuery;
+            if (req.Headers.TryGetValues("x-ms-tenant-id", out var vals))
+            {
+                capturedTenantHeader = vals.FirstOrDefault();
+            }
+            var response = new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+            response.Headers.Add("x-ms-correlation-id", Guid.NewGuid().ToString());
+            return Task.FromResult(response);
+        }
+
+        // Act
+        var result = await Agent365ExporterCore.ExportBatchCoreAsync(
+            groups,
+            resource,
+            options,
+            (a, t) => Task.FromResult<string?>(null),
+            sendAsync,
+            logInformation: null,
+            logError: null);
+
+        // Assert
+        result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
+        capturedHost.Should().Be(expectedHost);
+        capturedPathAndQuery.Should().StartWith("/maven/agent365/service/agents/" + agentId + "/traces");
+        capturedPathAndQuery.Should().EndWith("?api-version=1");
+        capturedTenantHeader.Should().BeNull();
+    }
     #endregion
 }
