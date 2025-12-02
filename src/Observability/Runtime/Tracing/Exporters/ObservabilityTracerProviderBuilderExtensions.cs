@@ -90,7 +90,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 case Agent365ExporterType.Agent365Exporter:
                     builder.AddProcessor(new BatchActivityExportProcessor(
-                        new Agent365Exporter( core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
+                        new Agent365Exporter(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
                         maxQueueSize: exporterOptions.MaxQueueSize,
                         scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
                         exporterTimeoutMilliseconds: exporterOptions.ExporterTimeoutMilliseconds,

@@ -40,7 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="logger">The logger instance used to log messages during the export formatting process.</param>
         public ExportFormatter(ILogger<ExportFormatter> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>
