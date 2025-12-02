@@ -45,17 +45,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 
             _services
                 .AddSingleton(typeof(IA365EtwLogger<>), typeof(A365EtwLogger<>))
+                .AddSingleton<ExportFormatter>(sp =>
+                {
+                    var logger = sp.GetService<ILogger<ExportFormatter>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<ExportFormatter>();
+                    return new ExportFormatter(logger);
+                })
                 .AddLogging(logging =>
                 {
                     logging.AddOpenTelemetry(otelLogging =>
                     {
                         otelLogging.ParseStateValues = true;
-
-                        using var sp = _services.BuildServiceProvider();
-                        var loggerFactory = sp.GetService<ILoggerFactory>() ?? EtwLoggingBuilder.FallbackConsoleLoggerFactory.Value;
-                        var exportFormatterLogger = sp.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
-                        var exportFormatter = new ExportFormatter(exportFormatterLogger);
-                        otelLogging.AddProcessor(new EtwLogProcessor(exportFormatter));
+                        otelLogging.AddProcessor(sp => new EtwLogProcessor(sp.GetRequiredService<ExportFormatter>()));
 
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
                         {
