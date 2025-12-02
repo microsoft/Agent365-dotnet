@@ -29,14 +29,14 @@ public partial class ExportFormatterTests : ActivityTest
     private static readonly NullLogger<ExportFormatter> NullLogger = NullLogger<ExportFormatter>.Instance;
     private static ExportFormatter CreateFormatter() => new ExportFormatter(NullLogger);
     private static Resource CreateResource(Dictionary<string, object>? attributes = null)
-{
-    var builder = ResourceBuilder.CreateEmpty();
-    if (attributes != null)
     {
-        builder.AddAttributes(attributes.AsEnumerable());
+        var builder = ResourceBuilder.CreateEmpty();
+        if (attributes != null)
+        {
+            builder.AddAttributes(attributes.AsEnumerable());
+        }
+        return builder.Build();
     }
-    return builder.Build();
-}
 
     [TestMethod]
     public void Format_EmptyActivities_ReturnsValidJson()
@@ -417,11 +417,11 @@ public partial class ExportFormatterTests : ActivityTest
         attrsProp.EnumerateObject().Should().BeEmpty();
     }
 
-private static ulong ToUnixNanos(DateTimeOffset dto)
-{
-    var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    return (ulong)((dto.UtcDateTime - epoch).Ticks * 100);
-}
+    private static ulong ToUnixNanos(DateTimeOffset dto)
+    {
+        var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        return (ulong)((dto.UtcDateTime - epoch).Ticks * 100);
+    }
 
     [TestMethod]
     public void FormatLogData_WithAllFields_ProducesExpectedJson()
