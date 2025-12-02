@@ -1,4 +1,7 @@
-﻿using FluentAssertions;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -107,6 +110,26 @@ public sealed class Agent365ExporterTests
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
+    }
+
+    private sealed class EnvVarReset : IDisposable
+    {
+        private readonly string? _previous;
+        private readonly string _name;
+        public EnvVarReset(string name, string? previous)
+        {
+            _name = name;
+            _previous = previous;
+        }
+        public void Dispose() => Environment.SetEnvironmentVariable(_name, _previous);
+    }
+
+    private static IDisposable SetCustomDomain(bool enabled)
+    {
+        const string name = "EnableAgent365CustomDomain";
+        var prev = Environment.GetEnvironmentVariable(name);
+        Environment.SetEnvironmentVariable(name, enabled ? bool.TrueString : bool.FalseString);
+        return new EnvVarReset(name, prev);
     }
 
     public void Constructor_NullLogger_Throws()
@@ -1014,17 +1037,20 @@ public sealed class Agent365ExporterTests
     #endregion
 
     #region Build Endpoint and URI Tests
+    [TestMethod]
     public void BuildEndpointPath_CustomDomain_UsesAgentsRoot()
     {
-        var path = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true, useCustomDomain: true);
+        using var _ = SetCustomDomain(true);
+        var path = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
         path.Should().Be("/agents/agent-123/traces");
     }
 
     [TestMethod]
     public void BuildEndpointPath_NonCustomDomain_UsesServicePathsDependingOnS2S()
     {
-        var s2s = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true, useCustomDomain: false);
-        var standard = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false, useCustomDomain: false);
+        using var _ = SetCustomDomain(false);
+        var s2s = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
+        var standard = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false);
         s2s.Should().Be("/maven/agent365/service/agents/agent-123/traces");
         standard.Should().Be("/maven/agent365/agents/agent-123/traces");
     }
@@ -1042,6 +1068,7 @@ public sealed class Agent365ExporterTests
     public async Task ExportBatchCoreAsync_CustomDomain_UsesBaseHostAndAddsTenantHeader()
     {
         // Arrange
+        using var _ = SetCustomDomain(true);
         var tenantId = "tenant-xyz";
         var agentId = "agent-abc";
         var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();
@@ -1049,7 +1076,6 @@ public sealed class Agent365ExporterTests
         {
             TokenResolver = (_, _) => Task.FromResult<string?>(null),
             UseS2SEndpoint = true,
-            UseCustomDomain = true,
             ClusterCategory = "prod"
         };
 
@@ -1100,6 +1126,7 @@ public sealed class Agent365ExporterTests
     public async Task ExportBatchCoreAsync_NonCustomDomain_UsesPowerPlatformEndpoint()
     {
         // Arrange
+        using var _ = SetCustomDomain(false);
         var tenantId = "tenant-xyz";
         var agentId = "agent-abc";
         var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();
@@ -1107,7 +1134,6 @@ public sealed class Agent365ExporterTests
         {
             TokenResolver = (_, _) => Task.FromResult<string?>(null),
             UseS2SEndpoint = true,
-            UseCustomDomain = false,
             ClusterCategory = "prod"
         };
 

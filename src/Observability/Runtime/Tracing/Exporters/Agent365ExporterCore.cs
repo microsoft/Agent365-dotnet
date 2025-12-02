@@ -4,6 +4,7 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -69,11 +70,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// </summary>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
-        /// <param name="useCustomDomain">Whether to use the custom domain.</param>
         /// <returns>The endpoint path string.</returns>
-        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint, bool useCustomDomain)
+        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
         {
-            return useCustomDomain
+            return Agent365ExporterCore.IsCustomDomainEnabled()
                 ? $"/agents/{agentId}/traces"
                 : useS2SEndpoint
                     ? $"/maven/agent365/service/agents/{agentId}/traces"
@@ -117,8 +117,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = ExportFormatter.FormatMany(activities, resource, logInformation);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint, useCustomDomain: options.UseCustomDomain);
-                var endpoint = options.UseCustomDomain
+                string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint);
+                var endpoint = Agent365ExporterCore.IsCustomDomainEnabled()
                     ? new Agent365EndpointDiscovery(options.ClusterCategory).GetHost()
                     : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
                 var requestUri = Agent365ExporterCore.BuildRequestUri(endpoint, endpointPath);
@@ -142,7 +142,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 if (!string.IsNullOrEmpty(token))
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-                if (options.UseCustomDomain && !string.IsNullOrEmpty(tenantId))
+                if (Agent365ExporterCore.IsCustomDomainEnabled() && !string.IsNullOrEmpty(tenantId))
                 {
                     request.Headers.TryAddWithoutValidation(Agent365ExporterCore.TenantIdHeaderKey, tenantId);
                 }
@@ -168,6 +168,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 }
             }
             return ExportResult.Success;
+        }
+
+        private static bool IsCustomDomainEnabled()
+        {
+            var value = Environment.GetEnvironmentVariable("EnableAgent365CustomDomain");
+            return string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
         private static void TryAddActivityToMap(Activity activity, Dictionary<(string tenant, string agent), List<Activity>> map)
