@@ -2,20 +2,18 @@
 // Licensed under the MIT License.
 
 using FluentAssertions;
-using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services;
+using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel;
 using Moq;
 
-namespace ToolingUnitTests.Extensions.SemanticKernel;
+namespace Microsoft.Agents.A365.Tooling.Tests.Extensions.AgentFramework;
 
 [TestClass]
 public class McpToolRegistrationServiceTests
 {
     private Mock<ILogger<IMcpToolRegistrationService>> _mockLogger = null!;
-    private Mock<IServiceProvider> _mockServiceProvider = null!;
     private Mock<IMcpToolServerConfigurationService> _mockConfigService = null!;
     private McpToolRegistrationService _service = null!;
 
@@ -24,9 +22,8 @@ public class McpToolRegistrationServiceTests
     {
         // Arrange
         _mockLogger = new Mock<ILogger<IMcpToolRegistrationService>>();
-        _mockServiceProvider = new Mock<IServiceProvider>();
         _mockConfigService = new Mock<IMcpToolServerConfigurationService>();
-        _service = new McpToolRegistrationService(_mockLogger.Object, _mockServiceProvider.Object, _mockConfigService.Object);
+        _service = new McpToolRegistrationService(_mockLogger.Object, _mockConfigService.Object);
     }
 
     [TestMethod]
@@ -34,11 +31,10 @@ public class McpToolRegistrationServiceTests
     {
         // Arrange
         var mockLogger = new Mock<ILogger<IMcpToolRegistrationService>>();
-        var mockServiceProvider = new Mock<IServiceProvider>();
         var mockConfigService = new Mock<IMcpToolServerConfigurationService>();
 
         // Act
-        var service = new McpToolRegistrationService(mockLogger.Object, mockServiceProvider.Object, mockConfigService.Object);
+        var service = new McpToolRegistrationService(mockLogger.Object, mockConfigService.Object);
 
         // Assert
         service.Should().NotBeNull();
@@ -48,7 +44,7 @@ public class McpToolRegistrationServiceTests
     public async Task ListToolServers_WithMailTools_ReturnsMailServerConfig()
     {
         // Arrange
-        var agentInstanceId = "test-agent";
+        var agentUserId = "test-user";
         var environmentId = "test-env";
         var authToken = "test-token";
 
@@ -63,11 +59,11 @@ public class McpToolRegistrationServiceTests
         };
 
         _mockConfigService
-            .Setup(x => x.ListToolServers(agentInstanceId, environmentId, authToken))
+            .Setup(x => x.ListToolServers(agentUserId, environmentId, authToken))
             .ReturnsAsync(new List<MCPServerConfig> { mailServerConfig });
 
         // Act
-        var result = await _mockConfigService.Object.ListToolServers(agentInstanceId, environmentId, authToken);
+        var result = await _mockConfigService.Object.ListToolServers(agentUserId, environmentId, authToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -78,7 +74,7 @@ public class McpToolRegistrationServiceTests
     public async Task ListToolServers_WithCalendarTools_ReturnsCalendarServerConfig()
     {
         // Arrange
-        var agentInstanceId = "test-agent";
+        var agentUserId = "test-user";
         var environmentId = "test-env";
         var authToken = "test-token";
 
@@ -93,11 +89,11 @@ public class McpToolRegistrationServiceTests
         };
 
         _mockConfigService
-            .Setup(x => x.ListToolServers(agentInstanceId, environmentId, authToken))
+            .Setup(x => x.ListToolServers(agentUserId, environmentId, authToken))
             .ReturnsAsync(new List<MCPServerConfig> { calendarServerConfig });
 
         // Act
-        var result = await _mockConfigService.Object.ListToolServers(agentInstanceId, environmentId, authToken);
+        var result = await _mockConfigService.Object.ListToolServers(agentUserId, environmentId, authToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -108,7 +104,7 @@ public class McpToolRegistrationServiceTests
     public async Task ListToolServers_WithSharePointTools_ReturnsSharePointServerConfig()
     {
         // Arrange
-        var agentInstanceId = "test-agent";
+        var agentUserId = "test-user";
         var environmentId = "test-env";
         var authToken = "test-token";
 
@@ -123,11 +119,11 @@ public class McpToolRegistrationServiceTests
         };
 
         _mockConfigService
-            .Setup(x => x.ListToolServers(agentInstanceId, environmentId, authToken))
+            .Setup(x => x.ListToolServers(agentUserId, environmentId, authToken))
             .ReturnsAsync(new List<MCPServerConfig> { sharePointServerConfig });
 
         // Act
-        var result = await _mockConfigService.Object.ListToolServers(agentInstanceId, environmentId, authToken);
+        var result = await _mockConfigService.Object.ListToolServers(agentUserId, environmentId, authToken);
 
         // Assert
         result.Should().HaveCount(1);
@@ -138,7 +134,7 @@ public class McpToolRegistrationServiceTests
     public async Task ListToolServers_WithMultipleTools_ReturnsAllServerConfigs()
     {
         // Arrange
-        var agentInstanceId = "test-agent";
+        var agentUserId = "test-user";
         var environmentId = "test-env";
         var authToken = "test-token";
 
@@ -174,11 +170,11 @@ public class McpToolRegistrationServiceTests
         };
 
         _mockConfigService
-            .Setup(x => x.ListToolServers(agentInstanceId, environmentId, authToken))
+            .Setup(x => x.ListToolServers(agentUserId, environmentId, authToken))
             .ReturnsAsync(servers);
 
         // Act
-        var result = await _mockConfigService.Object.ListToolServers(agentInstanceId, environmentId, authToken);
+        var result = await _mockConfigService.Object.ListToolServers(agentUserId, environmentId, authToken);
 
         // Assert
         result.Should().HaveCount(3);

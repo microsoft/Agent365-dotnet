@@ -6,7 +6,7 @@ using Microsoft.Agents.A365.Tooling;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Utils;
 
-namespace ToolingUnitTests.Core;
+namespace Microsoft.Agents.A365.Tooling.Tests.Core;
 
 [TestClass]
 public class UtilityTests

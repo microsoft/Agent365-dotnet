@@ -10,7 +10,7 @@ using Moq;
 using System.Reflection;
 using System.Text.Json;
 
-namespace ToolingUnitTests.Core;
+namespace Microsoft.Agents.A365.Tooling.Tests.Core;
 
 [TestClass]
 public class McpToolServerConfigurationServiceTests

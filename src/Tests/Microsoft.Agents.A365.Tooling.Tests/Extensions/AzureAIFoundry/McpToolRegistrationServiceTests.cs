@@ -10,7 +10,7 @@ using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace ToolingUnitTests.Extensions.AzureAIFoundry;
+namespace Microsoft.Agents.A365.Tooling.Tests.Extensions.AzureAIFoundry;
 
 [TestClass]
 public class McpToolRegistrationServiceTests

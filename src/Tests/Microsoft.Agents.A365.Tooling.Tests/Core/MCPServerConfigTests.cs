@@ -4,7 +4,7 @@
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Models;
 
-namespace ToolingUnitTests.Core;
+namespace Microsoft.Agents.A365.Tooling.Tests.Core;
 
 [TestClass]
 public class MCPServerConfigTests
