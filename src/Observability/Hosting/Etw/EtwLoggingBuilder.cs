@@ -51,8 +51,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                         otelLogging.ParseStateValues = true;
 
                         // Resolve ExportFormatter via the service provider and pass it to the processor
-                        var sp = _services.BuildServiceProvider();
-                        var exportFormatter = sp.GetService<ExportFormatter>() ?? new ExportFormatter(LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>());
+                        using var sp = _services.BuildServiceProvider();
+                        var exportFormatterLogger = sp.GetService<ILogger<ExportFormatter>>() ?? LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>();
+                        var exportFormatter = new ExportFormatter(exportFormatterLogger);
                         otelLogging.AddProcessor(new EtwLogProcessor(exportFormatter));
 
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
