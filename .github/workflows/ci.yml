@@ -58,9 +58,3 @@ jobs:
         with:
           name: dotnet-packages-${{ github.run_number }}
           path: ~/drop/dotnet/NuGetPackages/*
-        
-      - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
-        run: dotnet nuget push ../NuGetPackages/*.nupkg --api-key AzureDevOps --source https://pkgs.dev.azure.com/msazure/OneAgile/_packaging/Agent365/nuget/v3/index.json
