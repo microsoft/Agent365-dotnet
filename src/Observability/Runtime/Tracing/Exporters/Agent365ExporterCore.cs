@@ -35,8 +35,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="logger">The logger instance used to log messages during the export process.</param>
         public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger)
         {
-            _formatter = formatter;
-            _logger = logger;
+            _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>

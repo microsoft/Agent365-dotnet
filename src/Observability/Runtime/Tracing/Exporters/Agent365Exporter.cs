@@ -71,10 +71,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 // Use the async core method, synchronously
                 return _core.ExportBatchCoreAsync(
                     groups: groups,
-                    resource: this._resource,
-                    options: this._options,
-                    tokenResolver: (agentId, tenantId) => this._options.TokenResolver!(agentId, tenantId),
-                    sendAsync: request => this._httpClient.SendAsync(request)
+                    resource: _resource,
+                    options: _options,
+                    tokenResolver: (agentId, tenantId) => _options.TokenResolver!(agentId, tenantId),
+                    sendAsync: request => _httpClient.SendAsync(request)
                 ).GetAwaiter().GetResult();
             }
             catch (Exception exOuter)

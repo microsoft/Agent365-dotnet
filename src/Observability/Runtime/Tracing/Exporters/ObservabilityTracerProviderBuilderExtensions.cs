@@ -18,6 +18,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// </summary>
     public static class ObservabilityTracerProviderBuilderExtensions
     {
+        private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
+
         /// <summary>
         /// Adds the Agent365 Exporter to the OpenTelemetry TracerProviderBuilder using deferred initialization.
         /// </summary>
@@ -69,10 +71,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
             var httpClient = serviceProvider.GetService<HttpClient>();
 
-            var fallbackLoggerFactory = LoggerFactory.Create(b => b.AddConsole());
-            var logger = serviceProvider.GetService<ILogger<Agent365Exporter>>() ?? fallbackLoggerFactory.CreateLogger<Agent365Exporter>();
-            var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? fallbackLoggerFactory.CreateLogger<Agent365ExporterCore>();
-            var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? fallbackLoggerFactory.CreateLogger<ExportFormatter>();
+            // Resolve ILoggerFactory from DI to ensure loggers have proper lifetime; fall back to NullLogger when unavailable.
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? ObservabilityTracerProviderBuilderExtensions.FallbackConsoleLoggerFactory.Value;
+            var logger = serviceProvider.GetService<ILogger<Agent365Exporter>>() ?? loggerFactory.CreateLogger<Agent365Exporter>();
+            var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? loggerFactory.CreateLogger<Agent365ExporterCore>();
+            var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
 
             // Create ExportFormatter and Agent365ExporterCore
             var exportFormatter = new ExportFormatter(formatterLogger);
