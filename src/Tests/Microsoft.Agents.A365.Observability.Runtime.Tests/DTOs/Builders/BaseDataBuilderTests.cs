@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         [TestMethod]
         public void AddAgentDetails_PopulatesExpectedKeys()
         {
-            var agent = new AgentDetails("agent-1", "AgentName", "Desc", agentAUID: "auid", agentUPN: "upn", agentBlueprintId: "bp", tenantId: "tenant-x");
+            var agent = new AgentDetails("agent-1", "AgentName", "Desc", agentAUID: "auid", agentUPN: "upn", agentBlueprintId: "bp", tenantId: "tenant-x", agentPlatformId: "platform-123");
             var dict = TestBuilder.BuildAll(agent: agent);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey);
@@ -45,6 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentAUIDKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentUPNKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentBlueprintIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentPlatformIdKey);
         }
 
         [TestMethod]

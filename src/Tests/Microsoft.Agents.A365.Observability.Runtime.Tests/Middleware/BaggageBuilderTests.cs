@@ -29,6 +29,7 @@ public sealed class BaggageBuilderTest
         var session = "session-1";
         var sessionDescription = "Test Session";
         var callerClientIp = IPAddress.Parse("203.0.113.42");
+        var platformId = "platform-123";
 
         // Act
         using (new BaggageBuilder()
@@ -39,6 +40,7 @@ public sealed class BaggageBuilderTest
             .SessionDescription(sessionDescription)
             .AgentType(AgentType.EntraEmbodied)
             .CallerClientIp(callerClientIp)
+            .AgentPlatformId(platformId)
             .Build())
         {
             // Assert inside scope
@@ -49,6 +51,7 @@ public sealed class BaggageBuilderTest
             Baggage.Current.GetBaggage(SessionDescriptionKey).Should().Be(sessionDescription);
             Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().Be(AgentType.EntraEmbodied.ToString());
             Baggage.Current.GetBaggage(GenAiCallerClientIpKey).Should().Be(callerClientIp.ToString());
+            Baggage.Current.GetBaggage(GenAiAgentPlatformIdKey).Should().Be(platformId);
         }
 
         // Assert after dispose (restored -> no values)
@@ -59,6 +62,7 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiCallerClientIpKey).Should().BeNull();
+        Baggage.Current.GetBaggage(GenAiAgentPlatformIdKey).Should().BeNull();
     }
     
 }
