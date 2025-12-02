@@ -27,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         /// <param name="agentPlatformId">Optional platform ID for the agent.</param>
         public AgentDetails(
-            string agentId,
+            string? agentId = null,
             string? agentName = null,
             string? agentDescription = null,
             string? iconUri = null,
@@ -54,7 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// The unique identifier for the AI agent.
         /// </summary>
-        public string AgentId { get; }
+        public string? AgentId { get; }
 
         /// <summary>
         /// The human-readable name of the AI agent.
@@ -115,7 +115,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentClientIP">Receives the client IP address.</param>
         /// <param name="agentPlatformId">Receives the platform ID.</param>
         public void Deconstruct(
-            out string agentId,
+            out string? agentId,
             out string? agentName,
             out string? agentDescription,
             out string? agentAUID,
