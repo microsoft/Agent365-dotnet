@@ -14,6 +14,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string ProdObservabilityScope = "https://api.powerplatform.com/.default";
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
+        private const string Agent365EndpointProdObservabilityScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
 
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
@@ -21,7 +22,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <returns>The authentication scope.</returns>
         public static string[] GetObservabilityAuthenticationScope()
         {
-            return new[] { ProdObservabilityScope };
+            return EnvironmentUtils.IsCustomDomainEnabled() ? new[] { Agent365EndpointProdObservabilityScope } : new[] { ProdObservabilityScope };
         }
 
         /// <summary>
@@ -64,6 +65,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         {
             var environment = GetCurrentEnvironment();
             return string.Equals(environment, DevelopmentEnvironmentName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Returns true if the custom domain feature is enabled.
+        /// </summary>
+        public static bool IsCustomDomainEnabled()
+        {
+            var value = Environment.GetEnvironmentVariable("EnableAgent365CustomDomain");
+            return !string.IsNullOrEmpty(value) && string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

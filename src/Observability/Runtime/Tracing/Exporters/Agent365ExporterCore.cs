@@ -73,7 +73,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>The endpoint path string.</returns>
         public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
         {
-            return Agent365ExporterCore.IsCustomDomainEnabled()
+            return EnvironmentUtils.IsCustomDomainEnabled()
                 ? $"/agents/{agentId}/traces"
                 : useS2SEndpoint
                     ? $"/maven/agent365/service/agents/{agentId}/traces"
@@ -118,7 +118,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint);
-                var endpoint = Agent365ExporterCore.IsCustomDomainEnabled()
+                var endpoint = EnvironmentUtils.IsCustomDomainEnabled()
                     ? new Agent365EndpointDiscovery(options.ClusterCategory).GetHost()
                     : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
                 var requestUri = Agent365ExporterCore.BuildRequestUri(endpoint, endpointPath);
@@ -142,7 +142,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 if (!string.IsNullOrEmpty(token))
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-                if (Agent365ExporterCore.IsCustomDomainEnabled() && !string.IsNullOrEmpty(tenantId))
+                if (EnvironmentUtils.IsCustomDomainEnabled() && !string.IsNullOrEmpty(tenantId))
                 {
                     request.Headers.TryAddWithoutValidation(Agent365ExporterCore.TenantIdHeaderKey, tenantId);
                 }
@@ -168,12 +168,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 }
             }
             return ExportResult.Success;
-        }
-
-        private static bool IsCustomDomainEnabled()
-        {
-            var value = Environment.GetEnvironmentVariable("EnableAgent365CustomDomain");
-            return string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
         private static void TryAddActivityToMap(Activity activity, Dictionary<(string tenant, string agent), List<Activity>> map)
