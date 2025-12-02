@@ -98,7 +98,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         [TestMethod]
         public void AddCallerAgentDetails_PopulatesCallerAgentKeys()
         {
-            var callerAgent = new AgentDetails("c-agent", "CallerAgent", agentAUID: "ca-uid", agentUPN: "ca-upn", agentBlueprintId: "ca-bp", tenantId: "ca-tenant");
+            var callerAgent = new AgentDetails("c-agent", "CallerAgent", agentAUID: "ca-uid", agentUPN: "ca-upn", agentBlueprintId: "ca-bp", tenantId: "ca-tenant", agentPlatformId: "ca-platform");
             var dict = TestBuilder.BuildAll(callerAgent: callerAgent);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentNameKey);
@@ -106,6 +106,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentAUIDKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentUPNKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentTenantKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentPlatformIdKey);
         }
 
         [TestMethod]

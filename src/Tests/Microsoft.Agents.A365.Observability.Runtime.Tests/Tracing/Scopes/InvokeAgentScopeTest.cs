@@ -172,6 +172,31 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
+    public void CallerAgentPlatformIdTag_IsSetCorrectly()
+    {
+        // Arrange
+        var platformId = "caller-platform-123";
+        var callerAgentDetails = new AgentDetails(
+            agentId: "agent-003",
+            agentName: "CallerAgentWithPlatform",
+            agentType: AgentType.Foundry,
+            agentPlatformId: platformId);
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails: Details,
+                tenantDetails: Util.GetTenantDetails(),
+                request: null,
+                callerAgentDetails: callerAgentDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(GenAiCallerAgentPlatformIdKey, platformId);
+    }
+
+    [TestMethod]
     public void AgentPlatformIdTag_IsSetCorrectly()
     {
         // Arrange
