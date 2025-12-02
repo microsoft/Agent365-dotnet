@@ -113,6 +113,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the agent platform ID baggage value.
+        /// </summary>
+        public BaggageBuilder AgentPlatformId(string? v)
+        {
+            Set(OpenTelemetryConstants.GenAiAgentPlatformIdKey, v);
+            return this;
+        }
+
+        /// <summary>
         /// Sets the correlation ID baggage value.
         /// </summary>
         public BaggageBuilder CorrelationId(string? v)
