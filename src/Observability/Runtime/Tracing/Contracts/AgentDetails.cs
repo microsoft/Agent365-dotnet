@@ -26,6 +26,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentType">Optional agent type.</param>
         /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         /// <param name="agentPlatformId">Optional platform ID for the agent.</param>
+        /// <remarks>
+        /// Either <paramref name="agentId"/> or <paramref name="agentPlatformId"/> should be provided to identify the agent.
+        /// </remarks>
         public AgentDetails(
             string? agentId = null,
             string? agentName = null,
