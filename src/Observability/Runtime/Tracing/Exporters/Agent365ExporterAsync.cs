@@ -17,22 +17,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Minimal OTLP/HTTP JSON exporter for traces.
     /// Sends POST {Endpoint}/v1/traces with application/json.
     /// </summary>
+
     public sealed class Agent365ExporterAsync : BaseExporterAsync<Activity>
     {
         private readonly HttpClient _httpClient;
         private readonly Resource _resource;
         private readonly ILogger<Agent365Exporter> _logger;
         private readonly Agent365ExporterOptions _options;
+        private readonly Agent365ExporterCore _core;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterAsync"/> class.
         /// </summary>
+        /// <param name="core">The Agent365ExporterCore instance.</param>
         /// <param name="logger">The logger instance.</param>
         /// <param name="options">The exporter configuration options.</param>
         /// <param name="resource">Optional OpenTelemetry resource information.</param>
         /// <param name="httpClient">Optional HttpClient instance.</param>
-        public Agent365ExporterAsync(ILogger<Agent365Exporter> logger, Agent365ExporterOptions options, Resource? resource = null, HttpClient? httpClient = null)
+        public Agent365ExporterAsync(
+            Agent365ExporterCore core,
+            ILogger<Agent365Exporter> logger,
+            Agent365ExporterOptions options,
+            Resource? resource = null,
+            HttpClient? httpClient = null)
         {
+            this._core = core ?? throw new ArgumentNullException(nameof(core));
             this._logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this._options = options ?? throw new ArgumentNullException(nameof(options));
 
@@ -40,7 +49,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
             this._httpClient = httpClient ?? new HttpClient();
-
             this._resource = resource ?? ResourceBuilder.CreateEmpty().Build();
         }
 
@@ -56,21 +64,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             try
             {
-                var groups = Agent365ExporterCore.PartitionByIdentity(batch);
+                var groups = _core.PartitionByIdentity(batch);
                 if (groups.Count == 0)
                 {
                     this._logger.LogInformation("Agent365ExporterAsync: No spans with tenant/agent identity found; nothing exported.");
                     return;
                 }
 
-                await Agent365ExporterCore.ExportBatchCoreAsync(
+                await _core.ExportBatchCoreAsync(
                     groups: groups,
                     resource: this._resource,
                     options: this._options,
                     tokenResolver: (agentId, tenantId) => this._options.TokenResolver!(agentId, tenantId),
-                    sendAsync: request => this._httpClient.SendAsync(request, cancellationToken),
-                    logInformation: msg => this._logger.LogInformation("Agent365ExporterAsync: {Message}", msg),
-                    logError: (ex, msg) => this._logger.LogError(ex, "Agent365ExporterAsync: {Message}", msg)
+                    sendAsync: request => this._httpClient.SendAsync(request, cancellationToken)
                 ).ConfigureAwait(false);
             }
             catch (OperationCanceledException)

@@ -10,8 +10,10 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Agents.A365.Observability.Tests.Tracing;
 using Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
-using OpenTelemetry.Resources;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Resources;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
@@ -24,6 +26,8 @@ public sealed class TestScope : OpenTelemetryScope
 [TestClass]
 public partial class ExportFormatterTests : ActivityTest
 {
+    private static readonly NullLogger<ExportFormatter> NullLogger = NullLogger<ExportFormatter>.Instance;
+    private static ExportFormatter CreateFormatter() => new ExportFormatter(NullLogger);
     private static Resource CreateResource(Dictionary<string, object>? attributes = null)
     {
         var builder = ResourceBuilder.CreateEmpty();
@@ -40,9 +44,10 @@ public partial class ExportFormatterTests : ActivityTest
         // Arrange
         var activities = new List<Activity>();
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = formatter.FormatMany(activities, resource);
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();
@@ -88,9 +93,10 @@ public partial class ExportFormatterTests : ActivityTest
 
         var activities = new List<Activity> { activity };
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = formatter.FormatMany(activities, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -140,9 +146,10 @@ public partial class ExportFormatterTests : ActivityTest
 
         var activities = new List<Activity> { act1, act2, act3 };
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(activities, resource);
+        var json = formatter.FormatMany(activities, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -172,9 +179,10 @@ public partial class ExportFormatterTests : ActivityTest
             { "custom1", "val1" },
             { "custom2", 123 }
         });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = formatter.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -198,9 +206,10 @@ public partial class ExportFormatterTests : ActivityTest
         });
 
         var resource = ResourceBuilder.CreateDefault().Build();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { activity! }, resource);
+        var json = formatter.FormatMany(new[] { activity! }, resource);
 
         // Assert
         using var doc = JsonDocument.Parse(json);
@@ -218,9 +227,10 @@ public partial class ExportFormatterTests : ActivityTest
         // Arrange
         var act = CreateActivity();
         var resource = CreateResource();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = formatter.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -238,9 +248,10 @@ public partial class ExportFormatterTests : ActivityTest
         // Arrange
         var act = CreateActivity(tags: new Dictionary<string, object>());
         var resource = CreateResource();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatMany(new[] { act }, resource);
+        var json = formatter.FormatMany(new[] { act }, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -285,9 +296,10 @@ public partial class ExportFormatterTests : ActivityTest
             statusDescription: "fail"
         );
         var resource = CreateResource(new Dictionary<string, object> { { "env", "test" } });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatSingle(activity, resource);
+        var json = formatter.FormatSingle(activity, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -326,9 +338,10 @@ public partial class ExportFormatterTests : ActivityTest
             { "custom1", "val1" },
             { "custom2", 123 }
         });
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = formatter.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -347,9 +360,10 @@ public partial class ExportFormatterTests : ActivityTest
         var parentSpanId = ActivitySpanId.CreateRandom();
         var act = CreateActivity(parentSpanId: parentSpanId);
         var resource = CreateResource();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = formatter.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -367,9 +381,10 @@ public partial class ExportFormatterTests : ActivityTest
         // Arrange
         var act = CreateActivity();
         var resource = CreateResource();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = formatter.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -387,9 +402,10 @@ public partial class ExportFormatterTests : ActivityTest
         // Arrange
         var act = CreateActivity(tags: new Dictionary<string, object>());
         var resource = CreateResource();
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatSingle(act, resource);
+        var json = formatter.FormatSingle(act, resource);
 
         // Assert
         var doc = JsonDocument.Parse(json);
@@ -425,9 +441,10 @@ public partial class ExportFormatterTests : ActivityTest
             end,
             spanId,
             parentSpanId);
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatLogData(data.ToDictionary());
+        var json = formatter.FormatLogData(data.ToDictionary());
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();
@@ -463,9 +480,10 @@ public partial class ExportFormatterTests : ActivityTest
             endTime: null,
             spanId: explicitSpanId,
             parentSpanId: null);
+        var formatter = CreateFormatter();
 
         // Act
-        var json = ExportFormatter.FormatLogData(data.ToDictionary());
+        var json = formatter.FormatLogData(data.ToDictionary());
 
         // Assert
         json.Should().NotBeNullOrWhiteSpace();
@@ -484,101 +502,117 @@ public partial class ExportFormatterTests : ActivityTest
         attrs.GetProperty("key").GetString().Should().Be("val");
     }
 
-    #region ExportFormatter FormatMany Truncation Tests
+#region ExportFormatter FormatMany Truncation Tests
 
-    [TestMethod]
-    public void FormatMany_DoesNothing_WhenUnderLimit()
+private class ListLogger<T> : ILogger<T>
+{
+    private readonly List<string> _logs;
+    public ListLogger(List<string> logs) => _logs = logs;
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull => null!;
+    public bool IsEnabled(LogLevel logLevel) => true;
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        // Arrange
-        using var activity = CreateActivity("tenant-1", "agent-1");
-        activity.SetTag("gen_ai.tool.arguments", new string('a', 1024)); // 1KB
-        var resource = ResourceBuilder.CreateEmpty().Build();
-        var logs = new List<string>();
-
-        // Act
-        var json = ExportFormatter.FormatMany(new[] { activity }, resource, logs.Add);
-
-        // Assert
-        var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
-        span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().NotBe("TRUNCATED");
-        logs.Should().NotContain(l => l.Contains("Truncated"));
+        _logs.Add(formatter(state, exception));
     }
+}
 
-    [TestMethod]
-    public void FormatMany_TruncatesSingleLargeKey()
-    {
-        // Arrange
-        using var activity = CreateActivity("tenant-1", "agent-2");
-        activity.SetTag("gen_ai.tool.arguments", new string('b', 300 * 1024)); // 300KB
-        var resource = ResourceBuilder.CreateEmpty().Build();
-        var logs = new List<string>();
+[TestMethod]
+public void FormatMany_DoesNothing_WhenUnderLimit()
+{
+    // Arrange
+    using var activity = CreateActivity("tenant-1", "agent-1");
+    activity.SetTag("gen_ai.tool.arguments", new string('a', 1024)); // 1KB
+    var resource = ResourceBuilder.CreateEmpty().Build();
+    var logs = new List<string>();
+    var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
 
-        // Act
-        var json = ExportFormatter.FormatMany(new[] { activity }, resource, logs.Add);
+    // Act
+    var json = formatter.FormatMany(new[] { activity }, resource);
 
-        // Assert
-        var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
-        span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
-        logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
-    }
+    // Assert
+    var doc = JsonDocument.Parse(json);
+    var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
+    var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
+    var span = scopeSpans[0].GetProperty("spans")[0];
+    span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().NotBe("TRUNCATED");
+    logs.Should().NotContain(l => l.Contains("Truncated"));
+}
 
-    [TestMethod]
-    public void FormatMany_TruncatesMultipleKeys_LargestFirst()
-    {
-        // Arrange
-        using var activity = CreateActivity("tenant-1", "agent-1");
-        activity.SetTag("gen_ai.tool.arguments", new string('c', 200 * 1024));
-        activity.SetTag("gen_ai.event.content", new string('d', 100 * 1024));
-        var resource = ResourceBuilder.CreateEmpty().Build();
-        var logs = new List<string>();
+[TestMethod]
+public void FormatMany_TruncatesSingleLargeKey()
+{
+    // Arrange
+    using var activity = CreateActivity("tenant-1", "agent-2");
+    activity.SetTag("gen_ai.tool.arguments", new string('b', 300 * 1024)); // 300KB
+    var resource = ResourceBuilder.CreateEmpty().Build();
+    var logs = new List<string>();
+    var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
 
-        // Act
-        var json = ExportFormatter.FormatMany(new[] { activity }, resource, logs.Add);
+    // Act
+    var json = formatter.FormatMany(new[] { activity }, resource);
 
-        // Assert
-        var doc = JsonDocument.Parse(json);
-        var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
-        var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
-        var span = scopeSpans[0].GetProperty("spans")[0];
-        var attr = span.GetProperty("attributes");
-        attr.GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
-        logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = "));
-    }
+    // Assert
+    var doc = JsonDocument.Parse(json);
+    var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
+    var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
+    var span = scopeSpans[0].GetProperty("spans")[0];
+    span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
+    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
+}
 
-    [TestMethod]
-    public void FormatMany_LogsAllKeySizes()
-    {
-        // Arrange
-        using var activity = CreateActivity("tenant-1", "agent-1");
-        activity.SetTag("gen_ai.tool.arguments", new string('x', 100 * 1024));
-        activity.SetTag("gen_ai.event.content", new string('y', 125 * 1024));
-        activity.SetTag("gen_ai.input.messages", new string('z', 75 * 1024));
-        activity.SetTag("gen_ai.agent.invocation_input", new string('z', 0));
-        activity.SetTag("gen_ai.agent.invocation_output", new string('z', 0));
-        activity.SetTag("gen_ai.output.messages", new string('z', 0));
-        var resource = ResourceBuilder.CreateEmpty().Build();
-        var logs = new List<string>();
+[TestMethod]
+public void FormatMany_TruncatesMultipleKeys_LargestFirst()
+{
+    // Arrange
+    using var activity = CreateActivity("tenant-1", "agent-1");
+    activity.SetTag("gen_ai.tool.arguments", new string('c', 200 * 1024));
+    activity.SetTag("gen_ai.event.content", new string('d', 100 * 1024));
+    var resource = ResourceBuilder.CreateEmpty().Build();
+    var logs = new List<string>();
+    var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
 
-        // Act
-        ExportFormatter.FormatMany(new[] { activity }, resource, logs.Add);
+    // Act
+    var json = formatter.FormatMany(new[] { activity }, resource);
 
-        // Assert
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = 100"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = 125"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.input.messages' size = 75"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_input' size = 0"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_output' size = 0"));
-        logs.Should().Contain(l => l.Contains("Key 'gen_ai.output.messages' size = 0"));
-    }
+    // Assert
+    var doc = JsonDocument.Parse(json);
+    var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
+    var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
+    var span = scopeSpans[0].GetProperty("spans")[0];
+    var attr = span.GetProperty("attributes");
+    attr.GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
+    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = "));
+}
 
-    #endregion
+[TestMethod]
+public void FormatMany_LogsAllKeySizes()
+{
+    // Arrange
+    using var activity = CreateActivity("tenant-1", "agent-1");
+    activity.SetTag("gen_ai.tool.arguments", new string('x', 100 * 1024));
+    activity.SetTag("gen_ai.event.content", new string('y', 125 * 1024));
+    activity.SetTag("gen_ai.input.messages", new string('z', 75 * 1024));
+    activity.SetTag("gen_ai.agent.invocation_input", new string('z', 0));
+    activity.SetTag("gen_ai.agent.invocation_output", new string('z', 0));
+    activity.SetTag("gen_ai.output.messages", new string('z', 0));
+    var resource = ResourceBuilder.CreateEmpty().Build();
+    var logs = new List<string>();
+    var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
+
+    // Act
+    formatter.FormatMany(new[] { activity }, resource);
+
+    // Assert
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = 100"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = 125"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.input.messages' size = 75"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_input' size = 0"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_output' size = 0"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.output.messages' size = 0"));
+}
+
+#endregion
 }

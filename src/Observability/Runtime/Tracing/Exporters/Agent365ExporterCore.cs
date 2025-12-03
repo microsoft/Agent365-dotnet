@@ -4,6 +4,8 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -21,9 +23,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Utility methods for Agent365 trace exporters.
     /// Provides helpers for partitioning activities and building endpoint URIs.
     /// </summary>
-    public static class Agent365ExporterCore
+    public class Agent365ExporterCore
     {
         private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
+        private readonly ExportFormatter _formatter;
+        private readonly ILogger<Agent365ExporterCore> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Agent365ExporterCore"/> class.
+        /// </summary>
+        /// <param name="formatter">The formatter instance used to format export payloads.</param>
+        /// <param name="logger">The logger instance used to log messages during the export process.</param>
+        public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger)
+        {
+            _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
+            _logger = logger ?? NullLogger<Agent365ExporterCore>.Instance;
+        }
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
@@ -32,7 +47,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>
         /// A list of tuples containing TenantId, AgentId, and the corresponding activities.
         /// </returns>
-        public static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(IEnumerable<Activity> batch)
+        public List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(IEnumerable<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
 
@@ -51,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>
         /// A list of tuples containing TenantId, AgentId, and the corresponding activities.
         /// </returns>
-        public static List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
+        public List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
 
@@ -69,7 +84,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public string BuildEndpointPath(string agentId, bool useS2SEndpoint)
         {
             return useS2SEndpoint
                 ? $"/maven/agent365/service/agents/{agentId}/traces"
@@ -82,7 +97,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="endpoint">The base endpoint.</param>
         /// <param name="endpointPath">The endpoint path.</param>
         /// <returns>The full request URI string.</returns>
-        public static string BuildRequestUri(string endpoint, string endpointPath)
+        public string BuildRequestUri(string endpoint, string endpointPath)
         {
             return $"https://{endpoint}{endpointPath}?api-version=1";
         }
@@ -95,29 +110,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="options"></param>
         /// <param name="tokenResolver"></param>
         /// <param name="sendAsync"></param>
-        /// <param name="logInformation"></param>
-        /// <param name="logError"></param>
         /// <returns></returns>
-        public static async Task<ExportResult> ExportBatchCoreAsync(
+        public async Task<ExportResult> ExportBatchCoreAsync(
             IEnumerable<(string TenantId, string AgentId, List<Activity> Activities)> groups,
             Resource resource,
             Agent365ExporterOptions options,
             Func<string, string, Task<string?>> tokenResolver,
-            Func<HttpRequestMessage, Task<HttpResponseMessage>> sendAsync,
-            Action<string>? logInformation = null,
-            Action<Exception, string>? logError = null)
+            Func<HttpRequestMessage, Task<HttpResponseMessage>> sendAsync)
         {
             foreach (var g in groups)
             {
                 var (tenantId, agentId, activities) = g;
-                var json = ExportFormatter.FormatMany(activities, resource, logInformation);
+                var json = _formatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);
                 var ppapiEndpoint = ppapiDiscovery.GetTenantIslandClusterEndpoint(tenantId);
 
-                var endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId, options.UseS2SEndpoint);
-                var requestUri = Agent365ExporterCore.BuildRequestUri(ppapiEndpoint, endpointPath);
+                var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
+                var requestUri = BuildRequestUri(ppapiEndpoint, endpointPath);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
                 {
@@ -128,11 +139,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 try
                 {
                     token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
-                    logInformation?.Invoke($"Obtained token for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogInformation($"Obtained token for agent {agentId} tenant {tenantId}.");
                 }
                 catch (Exception ex)
                 {
-                    logError?.Invoke(ex, $"TokenResolver threw for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, $"TokenResolver threw for agent {agentId} tenant {tenantId}.");
                 }
 
                 if (!string.IsNullOrEmpty(token))
@@ -141,16 +152,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 HttpResponseMessage? resp = null;
                 try
                 {
-                    logInformation?.Invoke($"Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogInformation($"Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
                     resp = await sendAsync(request).ConfigureAwait(false);
-                    var correlationId = resp.Headers.Contains(Agent365ExporterCore.CorrelationIdHeaderKey) ? resp.Headers.GetValues(Agent365ExporterCore.CorrelationIdHeaderKey).FirstOrDefault() : null;
-                    logInformation?.Invoke($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{Agent365ExporterCore.CorrelationIdHeaderKey}': '{correlationId}'.");
+                    var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
+                    this._logger?.LogInformation($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{CorrelationIdHeaderKey}': '{correlationId}'.");
                     if (!resp.IsSuccessStatusCode)
                         return ExportResult.Failure;
                 }
                 catch (Exception ex)
                 {
-                    logError?.Invoke(ex, $"Exception exporting spans for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, $"Exception exporting spans for agent {agentId} tenant {tenantId}.");
                     return ExportResult.Failure;
                 }
                 finally
