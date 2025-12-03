@@ -234,7 +234,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the conversation ID baggage value.
         /// </summary>
         /// <remarks>
-        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// This property must be set for the agent to pass certification requirements.
         /// </remarks>
         public BaggageBuilder ConversationId(string? v)
         {
