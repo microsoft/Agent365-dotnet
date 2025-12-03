@@ -14,6 +14,37 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// <summary>
     /// Per request baggage builder
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see href="/microsoft-agent-365/developer/observability?tabs=dotnet#baggage-attributes">Learn more about baggage attributes</see>
+    /// </para>
+    /// <para>
+    /// <b>Certification Requirements:</b> To ensure the agent passes certification, the following properties must be set using their respective methods:
+    /// <list type="bullet">
+    ///   <item><see cref="OperationSource"/></item>
+    ///   <item><see cref="TenantId"/></item>
+    ///   <item><see cref="ConversationId"/></item>
+    ///   <item><see cref="ChannelName"/></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <b>Scope-Specific Recommendations:</b> The following properties are typically set at individual scopes and should be applied as appropriate:
+    /// <list type="bullet">
+    ///   <item><see cref="AgentId"/></item>
+    ///   <item><see cref="AgentName"/></item>
+    ///   <item><see cref="AgentDescription"/></item>
+    ///   <item><see cref="AgentAuid"/></item>
+    ///   <item><see cref="AgentUpn"/></item>
+    ///   <item><see cref="AgentBlueprintId"/></item>
+    ///   <item><see cref="CallerId"/></item>
+    ///   <item><see cref="CallerUpn"/></item>
+    ///   <item><see cref="CallerName"/></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
+    /// </para>
+    /// </remarks>
     public class BaggageBuilder
     {
         private sealed class Scope : IDisposable
@@ -34,6 +65,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the operation source baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// </remarks>
         public BaggageBuilder OperationSource(OperationSource source)
         {
             Set(OpenTelemetryConstants.OperationSourceKey, source.ToString());
@@ -43,6 +77,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the tenant ID baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// </remarks>
         public BaggageBuilder TenantId(string? v)
         { 
             Set(OpenTelemetryConstants.TenantIdKey, v); 
@@ -52,6 +89,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent ID baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentId(string? v)
         { 
             Set(OpenTelemetryConstants.GenAiAgentIdKey, v);
@@ -61,6 +101,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent name baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentName(string? v)
         {
             Set(OpenTelemetryConstants.GenAiAgentNameKey, v);
@@ -70,6 +113,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent description baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentDescription(string? v)
         {
             Set(OpenTelemetryConstants.GenAiAgentDescriptionKey, v);
@@ -79,6 +125,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent AUID baggage value
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentAuid(string? v)
         { 
             Set(OpenTelemetryConstants.GenAiAgentAUIDKey, v);
@@ -88,6 +137,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent UPN baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentUpn(string? v)
         { 
             Set(OpenTelemetryConstants.GenAiAgentUPNKey, v);
@@ -97,6 +149,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the agent blueprint ID baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
             Set(OpenTelemetryConstants.GenAiAgentBlueprintIdKey, v);
@@ -133,6 +188,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the caller ID baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder CallerId(string? v)
         { 
             Set(OpenTelemetryConstants.GenAiCallerIdKey, v);
@@ -142,6 +200,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the caller UPN baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder CallerUpn(string? v)
         {
             Set(OpenTelemetryConstants.GenAiCallerUpnKey, v);
@@ -151,6 +212,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the caller name baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// </remarks>
         public BaggageBuilder CallerName(string? v)
         {
             Set(OpenTelemetryConstants.GenAiCallerNameKey, v);
@@ -169,6 +233,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the conversation ID baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// </remarks>
         public BaggageBuilder ConversationId(string? v)
         {
             Set(OpenTelemetryConstants.GenAiConversationIdKey, v);
@@ -187,6 +254,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Sets the channel name baggage value.
         /// </summary>
+        /// <remarks>
+        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// </remarks>
         public BaggageBuilder ChannelName(string? v)
         {
             Set(OpenTelemetryConstants.GenAiChannelNameKey, v);
