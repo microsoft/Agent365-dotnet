@@ -34,13 +34,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
         /// <para>
-        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements:
+        /// <b>Certification Requirements:</b> The following parameters must be set (i.e., not <c>null</c>) for the agent to pass certification requirements:
         /// <list type="bullet">
         ///   <item><paramref name="invokeAgentDetails"/></item>
         ///   <item><paramref name="tenantDetails"/></item>
         ///   <item><paramref name="request"/></item>
         ///   <item><paramref name="callerDetails"/></item>
         /// </list>
+        /// <para>
+        /// <b>Note:</b> While <paramref name="request"/> and <paramref name="callerDetails"/> are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements.
         /// </para>
         /// <para>
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
