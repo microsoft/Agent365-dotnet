@@ -11,11 +11,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
     /// <summary>
     /// Provides OpenTelemetry tracing scope for generative AI inference operations.
     /// </summary>
+    /// <remarks>
+    /// <see href="https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet#inference">Learn more about inference</see>
+    /// </remarks>
     public sealed class InferenceScope : OpenTelemetryScope
     {
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
+        /// <param name="details">The details of the inference call.</param>
+        /// <param name="agentDetails">The details of the agent performing the inference.</param>
+        /// <param name="tenantDetails">The tenant details for the inference operation.</param>
+        /// <param name="parentId">Optional parent activity ID.</param>
+        /// <returns>A new InferenceScope instance.</returns>
+        /// <remarks>
+        /// <para>
+        /// <b>Certification Requirements:</b> The following parameters must be set with appropriate values for the agent to pass certification requirements:
+        /// <list type="bullet">
+        ///   <item><paramref name="details"/></item>
+        ///   <item><paramref name="agentDetails"/></item>
+        ///   <item><paramref name="tenantDetails"/></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
+        /// </para>
+        /// </remarks>
         public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId);
 
         private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
