@@ -30,16 +30,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private const string TenantIdHeaderKey = "x-ms-tenant-id";
         private readonly ExportFormatter _formatter;
         private readonly ILogger<Agent365ExporterCore> _logger;
+        private readonly IConfiguration _configuration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterCore"/> class.
         /// </summary>
         /// <param name="formatter">The formatter instance used to format export payloads.</param>
         /// <param name="logger">The logger instance used to log messages during the export process.</param>
-        public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger)
+        /// <param name="configuration">The configuration instance used to access application settings.</param>
+        public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger, IConfiguration? configuration)
         {
             _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
             _logger = logger ?? NullLogger<Agent365ExporterCore>.Instance;
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
         /// <summary>
@@ -86,9 +89,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        public static string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public string BuildEndpointPath(string agentId, bool useS2SEndpoint)
         {
-            return EnvironmentUtils.IsCustomDomainEnabled()
+            return EnvironmentUtils.IsCustomDomainEnabled(configuration: this._configuration)
                 ? $"/agents/{agentId}/traces"
                 : useS2SEndpoint
                     ? $"/maven/agent365/service/agents/{agentId}/traces"
@@ -128,8 +131,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = _formatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                string endpointPath = Agent365ExporterCore.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint);
-                var endpoint = EnvironmentUtils.IsCustomDomainEnabled()
+                string endpointPath = this.BuildEndpointPath(agentId: agentId, useS2SEndpoint: options.UseS2SEndpoint);
+                var endpoint = EnvironmentUtils.IsCustomDomainEnabled(configuration: this._configuration)
                     ? new Agent365EndpointDiscovery(options.ClusterCategory).GetHost()
                     : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
                 var requestUri = Agent365ExporterCore.BuildRequestUri(endpoint, endpointPath);
@@ -153,7 +156,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 if (!string.IsNullOrEmpty(token))
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-                if (EnvironmentUtils.IsCustomDomainEnabled() && !string.IsNullOrEmpty(tenantId))
+                if (EnvironmentUtils.IsCustomDomainEnabled(configuration: this._configuration) && !string.IsNullOrEmpty(tenantId))
                 {
                     request.Headers.TryAddWithoutValidation(Agent365ExporterCore.TenantIdHeaderKey, tenantId);
                 }

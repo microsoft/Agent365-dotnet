@@ -77,9 +77,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? loggerFactory.CreateLogger<Agent365ExporterCore>();
             var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
 
+            var configuration = serviceProvider.GetService<Microsoft.Extensions.Configuration.IConfiguration>();
+
             // Create ExportFormatter and Agent365ExporterCore
-            var exportFormatter = new ExportFormatter(formatterLogger);
-            var exporterCore = new Agent365ExporterCore(exportFormatter, coreLogger);
+            var exportFormatter = new ExportFormatter(logger: formatterLogger);
+            var exporterCore = new Agent365ExporterCore(formatter: exportFormatter, logger: coreLogger, configuration: configuration);
 
             switch (exporterType)
             {

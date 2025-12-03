@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Configuration;
 using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
@@ -19,22 +20,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
         /// </summary>
+        /// <param name="configuration">The configuration instance.</param>
         /// <returns>The authentication scope.</returns>
-        public static string[] GetObservabilityAuthenticationScope()
+        public static string[] GetObservabilityAuthenticationScope(IConfiguration? configuration = null)
         {
-            return EnvironmentUtils.IsCustomDomainEnabled() ? new[] { Agent365EndpointProdObservabilityScope } : new[] { ProdObservabilityScope };
-        }
-
-        /// <summary>
-        /// [Deprecated] Returns the scope for authenticating to the observability service based on the cluster category.
-        /// </summary>
-        /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
-        /// <returns>The authentication scope.</returns>
-        [Obsolete("Cluster category argument is deprecated and will be removed in future versions. Defaults to production.")]
-        public static string[] GetObservabilityAuthenticationScope(string clusterCategory = ProdObservabilityClusterCategory)
-        {
-            // clusterCategory is ignored; always returns production scope
-            return new[] { ProdObservabilityScope };
+            return EnvironmentUtils.IsCustomDomainEnabled(configuration: configuration) ? new[] { Agent365EndpointProdObservabilityScope } : new[] { ProdObservabilityScope };
         }
 
         /// <summary>
@@ -70,10 +60,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <summary>
         /// Returns true if the custom domain feature is enabled.
         /// </summary>
-        public static bool IsCustomDomainEnabled()
+        public static bool IsCustomDomainEnabled(IConfiguration? configuration)
         {
-            var value = Environment.GetEnvironmentVariable("EnableAgent365CustomDomain");
-            return !string.IsNullOrEmpty(value) && string.Equals(value, bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            if (configuration != null && configuration["EnableAgent365CustomDomain"] != null)
+            {
+                string enabled = configuration["EnableAgent365CustomDomain"]!;
+                return enabled.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
         }
 
         /// <summary>

@@ -7,6 +7,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 
@@ -92,7 +93,10 @@ public sealed class Agent365ExporterTests
         return (Batch<Activity>)batchObj!;
     }
 
-    private static readonly Agent365ExporterCore _agent365ExporterCore = new Agent365ExporterCore(new ExportFormatter(NullLogger<ExportFormatter>.Instance), NullLogger<Agent365ExporterCore>.Instance);
+    private static readonly IConfigurationRoot _configuration = new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?>())
+        .Build();
+    private static readonly Agent365ExporterCore _agent365ExporterCore = new Agent365ExporterCore(new ExportFormatter(NullLogger<ExportFormatter>.Instance), NullLogger<Agent365ExporterCore>.Instance, _configuration);
 
     private static Agent365Exporter CreateExporter(Func<string, string, string?>? tokenResolver)
     {
@@ -112,24 +116,24 @@ public sealed class Agent365ExporterTests
             resource);
     }
 
-    private sealed class EnvVarReset : IDisposable
+    private sealed class ConfigReset : IDisposable
     {
-        private readonly string? _previous;
         private readonly string _name;
-        public EnvVarReset(string name, string? previous)
+        private readonly string? _previous;
+        public ConfigReset(string name, string? previous)
         {
             _name = name;
             _previous = previous;
         }
-        public void Dispose() => Environment.SetEnvironmentVariable(_name, _previous);
+        public void Dispose() => _configuration[_name] = _previous;
     }
 
     private static IDisposable SetCustomDomain(bool enabled)
     {
         const string name = "EnableAgent365CustomDomain";
-        var prev = Environment.GetEnvironmentVariable(name);
-        Environment.SetEnvironmentVariable(name, enabled ? bool.TrueString : bool.FalseString);
-        return new EnvVarReset(name, prev);
+        var prev = _configuration[name];
+        _configuration[name] = enabled ? bool.TrueString : bool.FalseString;
+        return new ConfigReset(name, prev);
     }
 
     public void Constructor_NullLogger_Throws()
@@ -1039,7 +1043,7 @@ public sealed class Agent365ExporterTests
     public void BuildEndpointPath_CustomDomain_UsesAgentsRoot()
     {
         using var _ = SetCustomDomain(true);
-        var path = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
+        var path = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
         path.Should().Be("/agents/agent-123/traces");
     }
 
@@ -1047,8 +1051,8 @@ public sealed class Agent365ExporterTests
     public void BuildEndpointPath_NonCustomDomain_UsesServicePathsDependingOnS2S()
     {
         using var _ = SetCustomDomain(false);
-        var s2s = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
-        var standard = Agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false);
+        var s2s = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
+        var standard = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false);
         s2s.Should().Be("/maven/agent365/service/agents/agent-123/traces");
         standard.Should().Be("/maven/agent365/agents/agent-123/traces");
     }
