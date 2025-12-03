@@ -41,6 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         ///   <item><paramref name="request"/></item>
         ///   <item><paramref name="callerDetails"/></item>
         /// </list>
+        /// </para>
         /// <para>
         /// <b>Note:</b> While <paramref name="request"/> and <paramref name="callerDetails"/> are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements.
         /// </para>
