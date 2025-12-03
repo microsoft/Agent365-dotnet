@@ -24,8 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj" />
-    <ProjectReference Include="..\..\..\Runtime\Core\Microsoft.Agents.A365.Runtime.csproj" />
     <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Tooling.csproj" />
   </ItemGroup>
 
