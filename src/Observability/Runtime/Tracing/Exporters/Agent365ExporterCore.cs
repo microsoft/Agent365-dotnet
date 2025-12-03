@@ -5,6 +5,7 @@
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System;
@@ -36,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger)
         {
             _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger ?? NullLogger<Agent365ExporterCore>.Instance;
         }
 
         /// <summary>

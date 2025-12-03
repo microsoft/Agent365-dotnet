@@ -4,6 +4,7 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Resources;
 using System;
 using System.Collections.Generic;
@@ -40,7 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="logger">The logger instance used to log messages during the export formatting process.</param>
         public ExportFormatter(ILogger<ExportFormatter> logger)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger ?? NullLogger<ExportFormatter>.Instance;
         }
 
         /// <summary>
