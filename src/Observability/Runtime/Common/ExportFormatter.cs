@@ -3,6 +3,8 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Resources;
 using System;
 using System.Collections.Generic;
@@ -17,6 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// <summary>
     /// Provides functionality to format Activity spans into OTLP JSON payloads.
     /// </summary>
+
     public class ExportFormatter
     {
         private const int MaxSpanSizeBytes = 250 * 1024;
@@ -30,14 +33,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             AutoInstrumentationConstants.GenAiInvocationOutputKey
         };
 
+        private readonly ILogger<ExportFormatter> _logger;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExportFormatter"/> class.
+        /// </summary>
+        /// <param name="logger">The logger instance used to log messages during the export formatting process.</param>
+        public ExportFormatter(ILogger<ExportFormatter> logger)
+        {
+            _logger = logger ?? NullLogger<ExportFormatter>.Instance;
+        }
+
         /// <summary>
         /// Formats a collection of Activity spans into an OTLP JSON payload compatible with the Agent 365 Observability ingestion service.
         /// </summary>
         /// <param name="activities">The collection of Activity spans to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the spans, containing resource attributes.</param>
-        /// <param name="logInformation">An optional logger for informational messages.</param>
         /// <returns>A JSON string representing the OTLP payload for the provided activities and resource.</returns>
-        public static string FormatMany(IEnumerable<Activity> activities, Resource resource, Action<string>? logInformation = null)
+        public string FormatMany(IEnumerable<Activity> activities, Resource resource)
         {
             var resourceAttributes = GetResourceAttributes(resource);
             var serviceName = GetServiceName(resource);
@@ -53,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                     spans = new List<OtlpSpan>();
                     scopeMap[key] = spans;
                 }
-                spans.Add(BuildOtlpSpanWithTruncation(activity: activity, logInformation: logInformation));
+                spans.Add(BuildOtlpSpanWithTruncation(activity));
             }
 
             var scopeSpans = new List<ScopeSpans>(scopeMap.Count);
@@ -93,7 +106,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="activity">The Activity span to be formatted into the OTLP payload.</param>
         /// <param name="resource">The OpenTelemetry resource associated with the span, containing resource attributes.</param>
         /// <returns>A JSON string representing the OTLP payload for the provided activity and resource.</returns>
-        public static string FormatSingle(Activity activity, Resource resource)
+        public string FormatSingle(Activity activity, Resource resource)
         {
             var resourceAttributes = GetResourceAttributes(resource);
             var serviceName = GetServiceName(resource);
@@ -126,7 +139,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         /// <param name="data">The operation data containing the log information.</param>
         /// <returns>A JSON string representing the OTLP payload for the log data.</returns>
-        public static string FormatLogData(IDictionary<string, object?> data)
+        public string FormatLogData(IDictionary<string, object?> data)
         {
             var payload = new
             {
@@ -161,7 +174,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return resource.Attributes.FirstOrDefault(a => a.Key == "service.version").Value?.ToString();
         }
 
-        private static OtlpSpan BuildOtlpSpanWithTruncation(Activity activity, Action<string>? logInformation = null)
+        private OtlpSpan BuildOtlpSpanWithTruncation(Activity activity)
         {
             var span = BuildOtlpSpan(activity);
 
@@ -169,19 +182,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 return span;
 
             // Check initial size
-            if (Encoding.UTF8.GetByteCount(ExportFormatter.SerializePayload(span)) <= ExportFormatter.MaxSpanSizeBytes)
+            if (Encoding.UTF8.GetByteCount(SerializePayload(span)) <= MaxSpanSizeBytes)
                 return span;
 
             // Gather key sizes
             var keySizes = new List<(string Key, int Size, string? Value)>();
-            foreach (var key in ExportFormatter.LargePayloadAttributeKeys)
+            foreach (var key in LargePayloadAttributeKeys)
             {
                 if (span.Attributes.TryGetValue(key, out var valueObj))
                 {
                     var value = valueObj as string;
                     int size = !string.IsNullOrEmpty(value) ? Encoding.UTF8.GetByteCount(value) : 0;
                     keySizes.Add((key, size, value));
-                    logInformation?.Invoke($"Activity '{activity.DisplayName}': Key '{key}' size = {size / 1024} KB.");
+                    _logger?.LogInformation($"Activity '{activity.DisplayName}': Key '{key}' size = {size / 1024} KB.");
                 }
             }
 
@@ -194,11 +207,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             foreach (var (key, size, _) in sorted)
             {
                 span.Attributes[key] = "TRUNCATED";
-                logInformation?.Invoke($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
+                _logger?.LogInformation($"Truncated '{key}' in activity '{activity.DisplayName}' to reduce size. Previous size: {size / 1024} KB.");
 
                 // Re-check size after each truncation
                 var json = SerializePayload(span);
-                if (Encoding.UTF8.GetByteCount(json) <= ExportFormatter.MaxSpanSizeBytes)
+                if (Encoding.UTF8.GetByteCount(json) <= MaxSpanSizeBytes)
                 {
                     break;
                 }
@@ -207,7 +220,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             return span;
         }
 
-        private static OtlpSpan BuildOtlpSpan(Activity activity)
+        private OtlpSpan BuildOtlpSpan(Activity activity)
         {
             return new OtlpSpan
             {

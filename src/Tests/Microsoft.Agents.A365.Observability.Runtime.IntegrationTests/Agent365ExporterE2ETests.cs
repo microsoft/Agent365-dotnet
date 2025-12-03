@@ -259,21 +259,44 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         }
 
         [TestMethod]
-        public async Task AddTracing_NestedScopes_AllExporterRequestsReceived()
+        public async Task AddTracing_NestedScopes_AllExporterRequestsReceived_UsesAgentId()
+        {
+            await this.RunNestedScopes_AllExporterRequestsReceived(useAgentId: true);
+        }
+
+        [TestMethod]
+        public async Task AddTracing_NestedScopes_AllExporterRequestsReceived_UsesAgentPlatformId()
+        {
+            await this.RunNestedScopes_AllExporterRequestsReceived(useAgentId: false);
+        }
+
+        private async Task RunNestedScopes_AllExporterRequestsReceived(bool useAgentId)
         {
             // Arrange
             List<string> receivedContents = new();
 
             var agentType = AgentType.EntraEmbodied;
-            var agentDetails = new AgentDetails(
-                agentId: Guid.NewGuid().ToString(),
-                agentName: "Nested Agent",
-                agentDescription: "Agent for nested scope testing.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "nestedagent@ztaittest12.onmicrosoft.com",
-                agentBlueprintId: Guid.NewGuid().ToString(),
-                tenantId: Guid.NewGuid().ToString(),
-                agentType: agentType);
+            var agentDetails = useAgentId
+                ? new AgentDetails(
+                    agentId: Guid.NewGuid().ToString(),
+                    agentName: "Nested Agent",
+                    agentDescription: "Agent for nested scope testing.",
+                    agentAUID: Guid.NewGuid().ToString(),
+                    agentUPN: "nestedagent@ztaittest12.onmicrosoft.com",
+                    agentBlueprintId: Guid.NewGuid().ToString(),
+                    tenantId: Guid.NewGuid().ToString(),
+                    agentType: agentType)
+                : new AgentDetails(
+                    agentId: null,
+                    agentName: "Nested Agent",
+                    agentDescription: "Agent for nested scope testing.",
+                    agentAUID: Guid.NewGuid().ToString(),
+                    agentUPN: "nestedagent@ztaittest12.onmicrosoft.com",
+                    agentBlueprintId: Guid.NewGuid().ToString(),
+                    tenantId: Guid.NewGuid().ToString(),
+                    agentType: agentType,
+                    agentClientIP: null,
+                    agentPlatformId: Guid.NewGuid().ToString());
 
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://nested-endpoint");

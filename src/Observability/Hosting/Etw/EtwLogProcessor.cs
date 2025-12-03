@@ -14,6 +14,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     /// </summary>
     public class EtwLogProcessor : BaseProcessor<LogRecord>
     {
+        private readonly ExportFormatter _formatter;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EtwLogProcessor"/> class.
+        /// </summary>
+        /// <param name="formatter">The formatter used to format log data.</param>
+        public EtwLogProcessor(ExportFormatter formatter)
+        {
+            _formatter = formatter;
+        }
         /// <summary>
         /// Emits an ETW event with log details.
         /// </summary>
@@ -27,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 }
             }
 
-            var jsonContent = ExportFormatter.FormatLogData(attributes);
+            var jsonContent = _formatter.FormatLogData(attributes);
 
             EtwEventSource.Log.LogJson(jsonContent);
         }

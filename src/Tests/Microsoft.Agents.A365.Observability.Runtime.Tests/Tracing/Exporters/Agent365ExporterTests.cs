@@ -1,11 +1,8 @@
-﻿// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
@@ -95,6 +92,8 @@ public sealed class Agent365ExporterTests
         return (Batch<Activity>)batchObj!;
     }
 
+    private static readonly Agent365ExporterCore _agent365ExporterCore = new Agent365ExporterCore(new ExportFormatter(NullLogger<ExportFormatter>.Instance), NullLogger<Agent365ExporterCore>.Instance);
+
     private static Agent365Exporter CreateExporter(Func<string, string, string?>? tokenResolver)
     {
         var options = new Agent365ExporterOptions
@@ -107,6 +106,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         return new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -138,15 +138,14 @@ public sealed class Agent365ExporterTests
         {
             TokenResolver = (_, _) => Task.FromResult<string?>("token")
         };
-
-        Action act = () => _ = new Agent365Exporter(logger: null!, options, resource: null);
+        Action act = () => _ = new Agent365Exporter(Agent365ExporterTests._agent365ExporterCore, null!, options, resource: null);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
     }
 
     [TestMethod]
     public void Constructor_NullOptions_Throws()
     {
-        Action act = () => _ = new Agent365Exporter(NullLogger<Agent365Exporter>.Instance, null!, null);
+        Action act = () => _ = new Agent365Exporter(Agent365ExporterTests._agent365ExporterCore, NullLogger<Agent365Exporter>.Instance, null!, null);
         act.Should().Throw<ArgumentNullException>().WithParameterName("options");
     }
 
@@ -157,8 +156,7 @@ public sealed class Agent365ExporterTests
         {
             TokenResolver = null
         };
-
-        Action act = () => _ = new Agent365Exporter(NullLogger<Agent365Exporter>.Instance, options, null);
+        Action act = () => _ = new Agent365Exporter(Agent365ExporterTests._agent365ExporterCore, NullLogger<Agent365Exporter>.Instance, options, null);
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("TokenResolver");
     }
@@ -192,43 +190,22 @@ public sealed class Agent365ExporterTests
     public void PartitionByIdentity_GroupsActivitiesByTenantAndAgent()
     {
         // Arrange
-        var exporter = CreateExporter((_, _) => "token");
-
-        // Two activities for same (T1,A1)
         using var a1 = CreateActivity("tenant-1", "agent-1");
         using var a2 = CreateActivity("tenant-1", "agent-1");
-        // One activity for (T1,A2)
         using var a3 = CreateActivity("tenant-1", "agent-2");
-        // Activity missing agent -> ignored
-        using var a4 = CreateActivity("tenant-1", null);
-        // Activity missing tenant -> ignored
-        using var a5 = CreateActivity(null, "agent-3");
-        // Activity with neither -> ignored
-        using var a6 = CreateActivity();
+        using var a4 = CreateActivity("tenant-1", null);      // ignored (missing agent)
+        using var a5 = CreateActivity(null, "agent-3");       // ignored (missing tenant)
+        using var a6 = CreateActivity();                       // ignored (missing both)
 
         var batch = CreateBatch(a1, a2, a3, a4, a5, a6);
 
-        var result = Agent365ExporterCore.PartitionByIdentity(in batch);
-
-        result.Should().NotBeNull();
-
-        // Result is List<ValueTuple<string,string,List<Activity>>>
-        var list = (System.Collections.IEnumerable)result!;
-        var groups = new List<(string tenant, string agent, int count)>();
-
-        foreach (var group in list)
-        {
-            // ValueTuple fields are Item1, Item2, Item3
-            var t = (string)group.GetType().GetField("Item1")!.GetValue(group)!;
-            var a = (string)group.GetType().GetField("Item2")!.GetValue(group)!;
-            var acts = (List<Activity>)group.GetType().GetField("Item3")!.GetValue(group)!;
-            groups.Add((t, a, acts.Count));
-        }
+        // Act
+        var groups = Agent365ExporterTests._agent365ExporterCore.PartitionByIdentity(in batch);
 
         // Assert
         groups.Should().HaveCount(2);
-        groups.Should().Contain(g => g.tenant == "tenant-1" && g.agent == "agent-1" && g.count == 2);
-        groups.Should().Contain(g => g.tenant == "tenant-1" && g.agent == "agent-2" && g.count == 1);
+        groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-1" && g.Activities.Count == 2);
+        groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-2" && g.Activities.Count == 1);
     }
 
     [TestMethod]
@@ -347,6 +324,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -411,6 +389,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -444,6 +423,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -485,6 +465,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -523,6 +504,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -553,6 +535,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -582,6 +565,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -611,6 +595,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -640,6 +625,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -669,6 +655,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -700,6 +687,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -731,6 +719,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -760,6 +749,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -789,9 +779,10 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
-            NullLogger<Agent365Exporter>.Instance,
-            options,
-            resource);
+                Agent365ExporterTests._agent365ExporterCore,
+                NullLogger<Agent365Exporter>.Instance,
+                options,
+                resource);
 
         using var activity = CreateActivity(tenantId: "tenant-123", agentId: null);
         var batch = CreateBatch(activity);
@@ -818,6 +809,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -847,6 +839,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -880,6 +873,7 @@ public sealed class Agent365ExporterTests
             .Build();
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -918,6 +912,7 @@ public sealed class Agent365ExporterTests
         };
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -952,6 +947,7 @@ public sealed class Agent365ExporterTests
         };
 
         var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
             resource);
@@ -985,6 +981,7 @@ public sealed class Agent365ExporterTests
                 .Build();
 
             var exporter = new Agent365Exporter(
+                Agent365ExporterTests._agent365ExporterCore,
                 NullLogger<Agent365Exporter>.Instance,
                 options,
                 resource);
@@ -1019,6 +1016,7 @@ public sealed class Agent365ExporterTests
                 .Build();
 
             var exporter = new Agent365Exporter(
+                Agent365ExporterTests._agent365ExporterCore,
                 NullLogger<Agent365Exporter>.Instance,
                 options,
                 resource);

@@ -15,6 +15,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     /// </summary>
     public sealed class EtwLoggingBuilder
     {
+        private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
         private readonly IServiceCollection _services;
         private bool _isBuilt = false;
 
@@ -44,12 +45,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
 
             _services
                 .AddSingleton(typeof(IA365EtwLogger<>), typeof(A365EtwLogger<>))
+                .AddSingleton<ExportFormatter>(sp =>
+                {
+                    var logger = sp.GetService<ILogger<ExportFormatter>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<ExportFormatter>();
+                    return new ExportFormatter(logger);
+                })
                 .AddLogging(logging =>
                 {
                     logging.AddOpenTelemetry(otelLogging =>
                     {
                         otelLogging.ParseStateValues = true;
-                        otelLogging.AddProcessor(new EtwLogProcessor());
+                        otelLogging.AddProcessor(sp => new EtwLogProcessor(sp.GetRequiredService<ExportFormatter>()));
 
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
                         {

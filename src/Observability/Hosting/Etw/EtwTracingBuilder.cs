@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Etw
@@ -46,10 +47,14 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 .AddOpenTelemetry()
                 .WithTracing(tracing =>
                 {
+                    // Resolve ExportFormatter via the service provider and pass it to the processor
+                    var sp = _services.BuildServiceProvider();
+                    var exportFormatter = sp.GetService<ExportFormatter>() ?? new ExportFormatter(LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>());
+
                     tracing
                         .AddSource(OpenTelemetryConstants.SourceName)
                         .AddProcessor(new ActivityProcessor())
-                        .AddProcessor(new EtwScopeEventProcessor());
+                        .AddProcessor(new EtwScopeEventProcessor(exportFormatter));
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())
                     {

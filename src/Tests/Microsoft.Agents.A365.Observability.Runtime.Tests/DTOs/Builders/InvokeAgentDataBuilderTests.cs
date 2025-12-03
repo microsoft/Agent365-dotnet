@@ -444,5 +444,63 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().NotContainKey("custom.null");
             telemetry.Attributes.Should().ContainKey("custom.good").WhoseValue.Should().Be("ok");
         }
+
+        [TestMethod]
+        public void Build_WithAgentPlatformId_SetsExpectedAttributes()
+        {
+            // Arrange
+            var agentDetails = new AgentDetails(
+                agentPlatformId: "agent-123",
+                agentName: "TestAgent",
+                agentDescription: "Test Description");
+            var invokeAgentDetails = new InvokeAgentDetails(details: agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var request = new Request(
+                "test content",
+                ExecutionType.HumanToAgent,
+                "session-456",
+                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+            var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
+            var conversationId = "conv-999";
+            var inputMessages = new[] { "Hello" };
+            var startTime = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                request,
+                callerDetails: callerDetails,
+                inputMessages: inputMessages,
+                startTime: startTime);
+
+            // Assert
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentPlatformIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentPlatformIdKey].Should().Be("agent-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentNameKey].Should().Be("TestAgent");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentDescriptionKey].Should().Be("Test Description");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiConversationIdKey].Should().Be("conv-999");
+            telemetry.StartTime.Should().Be(startTime);
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiChannelNameKey].Should().Be("source-name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiChannelLinkKey].Should().Be("source-description");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionTypeKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiExecutionTypeKey].Should().Be("HumanToAgent");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiCallerIdKey].Should().Be("caller-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiCallerNameKey].Should().Be("Caller Name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiCallerUpnKey].Should().Be("caller@example.com");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantDetails.TenantId);
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey].Should().Be("Hello");
+        }
     }
 }
