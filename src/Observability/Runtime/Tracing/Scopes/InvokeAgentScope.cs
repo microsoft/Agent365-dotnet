@@ -28,12 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="invokeAgentDetails">The details of the agent invocation including endpoint, agent information, and conversation context.</param>
         /// <param name="tenantDetails">The tenant details for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
-        /// <param name="callerAgentDetails">
-        /// The details of the caller agent.
-        /// <para>
-        /// <b>Remarks:</b> This parameter is only used for agent-to-agent invocation.
-        /// </para>
-        /// </param>
+        /// <param name="callerAgentDetails">The details of the caller agent. Only used for agent-to-agent invocation.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
