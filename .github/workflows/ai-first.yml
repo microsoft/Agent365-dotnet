@@ -37,7 +37,7 @@ jobs:
         name: Check Prerequisites
         runs-on: ubuntu-latest
         outputs:
-          should_run: ${{ steps.draft_check.outputs.is_draft == 'false' && steps.bot_check.outputs.is_bot == 'false' && steps.label_check.outputs.has_label == 'true' }}
+          should_run: ${{ steps.draft_check.outputs.is_draft == 'false' && steps.bot_check.outputs.is_bot == 'false' }}
         permissions:
           contents: read
           pull-requests: read
@@ -90,68 +90,8 @@ jobs:
               exit 0
             fi
             
-            # Security: Verify PR author is a Microsoft organization member
-            if [ "$PR_AUTHOR_TYPE" != "Bot" ]; then
-              echo "Verifying Microsoft organization membership for @$PR_AUTHOR..."
-              
-              # Check if user is a member of Microsoft organization
-              ORG_MEMBERSHIP=$(gh api \
-                -H "Accept: application/vnd.github+json" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/orgs/microsoft/members/$PR_AUTHOR" 2>&1 || echo "NOT_MEMBER")
-              
-              if echo "$ORG_MEMBERSHIP" | grep -q "Not Found\|NOT_MEMBER"; then
-                echo "⏭️ Skipping workflow - PR author is not a Microsoft organization member"
-                echo ""
-                echo "Security Policy: This workflow only runs for Microsoft organization members."
-                echo "External contributors can submit PRs, but this automation will not execute."
-                echo "A Microsoft team member must review and re-trigger if needed."
-                echo ""
-                echo "is_bot=true" >> $GITHUB_OUTPUT
-                exit 0
-              fi
-              
-              echo "✅ Verified: @$PR_AUTHOR is a Microsoft organization member"
-            fi
-            
-            echo "✅ PR author is human or a different bot: $PR_AUTHOR"
+            echo "✅ PR author is human or allowed bot: $PR_AUTHOR"
             echo "is_bot=false" >> $GITHUB_OUTPUT
-        
-        - name: Check for required label
-          id: label_check
-          env:
-            GH_TOKEN: ${{ github.token }}
-          run: |
-            echo "=================================================="
-            echo "Checking for 'codegen-experiment' label"
-            echo "=================================================="
-            echo ""
-            
-            LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')
-            
-            echo "Current labels on PR #${{ github.event.pull_request.number }}:"
-            if [ -z "$LABELS" ]; then
-              echo "  (no labels)"
-            else
-              echo "$LABELS" | sed 's/^/  - /'
-            fi
-            echo ""
-            
-            if ! echo "$LABELS" | grep -q "codegen-experiment"; then
-              echo "⏭️ Skipping workflow - 'codegen-experiment' label not found"
-              echo ""
-              echo "This workflow only runs on PRs with the 'codegen-experiment' label."
-              echo ""
-              echo "To enable this workflow:"
-              echo "  1. Add the 'codegen-experiment' label to this PR"
-              echo "  2. The workflow will automatically run when the label is added"
-              echo "has_label=false" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            
-            echo "✅ Label 'codegen-experiment' found - proceeding with workflow"
-            echo "has_label=true" >> $GITHUB_OUTPUT
-            echo ""
     
     ai-first:
         name: AI-First Job
