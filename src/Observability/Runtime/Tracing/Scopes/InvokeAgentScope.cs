@@ -20,7 +20,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet#agent-invocation">Learn more about Agent Invocation</see>
         /// </para>
         /// </remarks>
-        
         public const string OperationName = "invoke_agent";
 
         /// <summary>
