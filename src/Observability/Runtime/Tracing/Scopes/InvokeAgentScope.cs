@@ -15,18 +15,36 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// The operation name for agent invocation tracing.
         /// </summary>
+        /// <para>
+        /// <see href="https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet#agent-invocation">Learn more about Agent Invocation</see>
+        /// </para>
+
         public const string OperationName = "invoke_agent";
 
         /// <summary>
         /// Creates and starts a new scope for agent invocation tracing.
         /// </summary>
         /// <param name="invokeAgentDetails">The details of the agent invocation including endpoint, agent information, and conversation context.</param>
-        /// <param name="tenantDetails"></param>
+        /// <param name="tenantDetails">The tenant details for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
         /// <param name="callerAgentDetails">The details of the caller agent.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
+        /// <remarks>
+        /// <para>
+        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements:
+        /// <list type="bullet">
+        ///   <item><paramref name="invokeAgentDetails"/></item>
+        ///   <item><paramref name="tenantDetails"/></item>
+        ///   <item><paramref name="request"/></item>
+        ///   <item><paramref name="callerDetails"/></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
+        /// </para>
+        /// </remarks>
         public static InvokeAgentScope Start(
             InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId);
 
