@@ -16,7 +16,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <see href="/microsoft-agent-365/developer/observability?tabs=dotnet#baggage-attributes">Learn more about baggage attributes</see>
+    /// <see href="https://learn.microsoft.com/microsoft-agent-365/developer/observability?tabs=dotnet#baggage-attributes">Learn more about baggage attributes</see>
     /// </para>
     /// <para>
     /// <b>Certification Requirements:</b> To ensure the agent passes certification, the following properties must be set using their respective methods:
