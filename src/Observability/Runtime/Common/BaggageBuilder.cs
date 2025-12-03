@@ -90,7 +90,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent ID baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentId(string? v)
         { 
