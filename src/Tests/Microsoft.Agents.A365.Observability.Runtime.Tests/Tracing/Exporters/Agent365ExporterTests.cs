@@ -1103,14 +1103,12 @@ public sealed class Agent365ExporterTests
         }
 
         // Act
-        var result = await Agent365ExporterCore.ExportBatchCoreAsync(
+        var result = await Agent365ExporterTests._agent365ExporterCore.ExportBatchCoreAsync(
             groups,
             resource,
             options,
             (a, t) => Task.FromResult<string?>(null),
-            sendAsync,
-            logInformation: null,
-            logError: null);
+            sendAsync);
 
         // Assert
         result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
@@ -1161,14 +1159,12 @@ public sealed class Agent365ExporterTests
         }
 
         // Act
-        var result = await Agent365ExporterCore.ExportBatchCoreAsync(
+        var result = await Agent365ExporterTests._agent365ExporterCore.ExportBatchCoreAsync(
             groups,
             resource,
             options,
             (a, t) => Task.FromResult<string?>(null),
-            sendAsync,
-            logInformation: null,
-            logError: null);
+            sendAsync);
 
         // Assert
         result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
