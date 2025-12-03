@@ -44,6 +44,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="callerUpn">The UPN (User Principal Name) of the caller.</param>
         /// <param name="callerClientIP">The client IP address of the caller.</param>
         /// <param name="tenantId">The tenant ID of the caller.</param>
+        /// <remarks>
+        /// <para>
+        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements, and these values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
+        /// <list type="bullet">
+        ///   <item><paramref name="callerId"/></item>
+        ///   <item><paramref name="callerName"/></item>
+        ///   <item><paramref name="callerUpn"/></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
+        /// </para>
+        /// </remarks>
         public CallerDetails(
             string callerId,
             string callerName,
