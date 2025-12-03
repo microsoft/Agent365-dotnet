@@ -176,7 +176,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (activity is null) return;
 
             var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
-            var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey);
+            var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey) ?? activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentPlatformIdKey);
 
             if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
                 return;

@@ -69,6 +69,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiAgentUPNKey = "gen_ai.agent.upn";
         public const string GenAiAgentBlueprintIdKey = "gen_ai.agent.applicationid";
         public const string GenAiAgentTypeKey = "gen_ai.agent.type";
+        public const string GenAiAgentPlatformIdKey = "gen_ai.agent.platformid";
 
         // Caller dimensions
         public const string GenAiCallerIdKey = "gen_ai.caller.id";
@@ -86,6 +87,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiCallerAgentTenantKey = "gen_ai.caller.agent.tenantid";
         public const string GenAiCallerAgentTypeKey = "gen_ai.caller.agent.type";
         public const string GenAiCallerAgentClientIpKey = "gen_ai.caller.agent.user.client.ip";
+        public const string GenAiCallerAgentPlatformIdKey = "gen_ai.caller.agent.platformid";
 
         #region Public Constants
         /// <summary>

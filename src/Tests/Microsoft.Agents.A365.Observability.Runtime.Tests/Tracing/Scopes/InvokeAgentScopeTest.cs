@@ -170,4 +170,54 @@ public sealed class InvokeAgentScopeTest : ActivityTest
 
         activity.ShouldHaveTag(GenAiCallerAgentClientIpKey, agentClientIp.ToString());
     }
+
+    [TestMethod]
+    public void CallerAgentPlatformIdTag_IsSetCorrectly()
+    {
+        // Arrange
+        var platformId = "caller-platform-123";
+        var callerAgentDetails = new AgentDetails(
+            agentId: "agent-003",
+            agentName: "CallerAgentWithPlatform",
+            agentType: AgentType.Foundry,
+            agentPlatformId: platformId);
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails: Details,
+                tenantDetails: Util.GetTenantDetails(),
+                request: null,
+                callerAgentDetails: callerAgentDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(GenAiCallerAgentPlatformIdKey, platformId);
+    }
+
+    [TestMethod]
+    public void AgentPlatformIdTag_IsSetCorrectly()
+    {
+        // Arrange
+        var platformId = "platform-001";
+        var agentDetails = new AgentDetails(
+            agentId: "agent-789",
+            agentName: "PlatformAgent",
+            agentPlatformId: platformId);
+
+        var invokeAgentDetails = new InvokeAgentDetails(agentDetails, new Uri("https://example.com"));
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(GenAiAgentPlatformIdKey, platformId);
+    }
 }
