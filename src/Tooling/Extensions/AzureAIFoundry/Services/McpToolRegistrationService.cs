@@ -144,8 +144,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // This workaround is temporary and will be removed once the Foundry SDK correctly updates agentClient with tool resources.
         // Eventually, we should retrieve tool resources directly from agentClient.
 
-        var toolsMode = Utility.GetToolsMode(_configuration);
-
         List<MCPServerConfig> servers;
         try
         {
@@ -203,11 +201,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             // Add directly to combined tool resources
             combinedToolResources.Mcp.Add(resource);
-
-            if (toolsMode == ToolsMode.MockMCPServer)
-            {
-                continue; // Skip live validation in hardcoded mode
-            }
 
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
