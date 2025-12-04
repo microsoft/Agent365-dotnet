@@ -57,7 +57,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                         otelLogging.ParseStateValues = true;
                         otelLogging.AddProcessor(sp =>
                         {
-                            return new EtwLogProcessor(formatter: sp.GetRequiredService<ExportFormatter>(), logger: sp.GetRequiredService<ILogger<EtwLogProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwLogProcessor>());
+                            return new EtwLogProcessor(formatter: sp.GetRequiredService<ExportFormatter>(), logger: sp.GetService<ILogger<EtwLogProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwLogProcessor>());
                         });
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
                         {

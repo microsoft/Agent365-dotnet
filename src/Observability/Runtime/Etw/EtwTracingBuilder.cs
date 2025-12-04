@@ -58,7 +58,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                         .AddProcessor(new ActivityProcessor())
                         .AddProcessor(sp =>
                         {
-                            return new EtwScopeEventProcessor(formatter: exportFormatter,logger: sp.GetRequiredService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
+                            return new EtwScopeEventProcessor(formatter: exportFormatter,logger: sp.GetService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
                         });
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())
