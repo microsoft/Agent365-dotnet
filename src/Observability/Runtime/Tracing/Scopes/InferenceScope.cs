@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <returns>A new InferenceScope instance.</returns>
         /// <remarks>
         /// <para>
-        /// <b>Certification Requirements:</b> The following parameters must be set with appropriate values for the agent to pass certification requirements:
+        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements:
         /// <list type="bullet">
         ///   <item><paramref name="details"/></item>
         ///   <item><paramref name="agentDetails"/></item>

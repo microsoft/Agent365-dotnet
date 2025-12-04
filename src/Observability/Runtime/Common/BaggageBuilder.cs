@@ -66,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the operation source baggage value.
         /// </summary>
         /// <remarks>
-        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// This property must be set for the agent to pass certification requirements.
         /// </remarks>
         public BaggageBuilder OperationSource(OperationSource source)
         {
@@ -78,7 +78,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the tenant ID baggage value.
         /// </summary>
         /// <remarks>
-        /// This property must be set using this method in order for the agent to pass certification requirements.
+        /// This property must be set for the agent to pass certification requirements.
         /// </remarks>
         public BaggageBuilder TenantId(string? v)
         { 
@@ -102,7 +102,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent name baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentName(string? v)
         {
@@ -114,7 +114,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent description baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentDescription(string? v)
         {
@@ -126,7 +126,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent AUID baggage value
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentAuid(string? v)
         { 
@@ -138,7 +138,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent UPN baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentUpn(string? v)
         { 
@@ -150,7 +150,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the agent blueprint ID baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
@@ -189,7 +189,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the caller ID baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder CallerId(string? v)
         { 
@@ -201,7 +201,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the caller UPN baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder CallerUpn(string? v)
         {
@@ -213,7 +213,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// Sets the caller name baggage value.
         /// </summary>
         /// <remarks>
-        /// This property should be set using this method to pass certification, but is typically set at individual scopes.
+        /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
         public BaggageBuilder CallerName(string? v)
         {

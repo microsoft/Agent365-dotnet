@@ -39,6 +39,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// </list>
         /// </para>
         /// <para>
+        /// While many parameters are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements.
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// <para>
