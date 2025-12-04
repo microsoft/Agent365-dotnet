@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Microsoft.Agents.A365.Observability.Hosting.Etw;
+using Microsoft.Agents.A365.Observability.Runtime.Etw;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics.Tracing;
 using System.Text.Json;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
 {
     [TestClass]
     public class EtwLoggingBuilderTests

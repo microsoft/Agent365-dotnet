@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using System;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Builds the ETW + OpenTelemetry logging configuration.

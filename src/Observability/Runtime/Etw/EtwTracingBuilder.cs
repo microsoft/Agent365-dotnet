@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Builds the ETW + OpenTelemetry tracing configuration.

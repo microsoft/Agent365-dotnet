@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Constants used in ETW logging.

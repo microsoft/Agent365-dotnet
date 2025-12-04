@@ -7,7 +7,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Processes spans by emitting ETW events.

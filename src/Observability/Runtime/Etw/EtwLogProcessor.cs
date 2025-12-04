@@ -7,7 +7,7 @@ using OpenTelemetry;
 using OpenTelemetry.Logs;
 using System.Collections.Generic;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Processes logs by emitting ETW events.
