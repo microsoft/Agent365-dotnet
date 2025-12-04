@@ -81,11 +81,11 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         public static string GetUserAgentHeader(string orchestrator = "")
         {
             var version = Assembly.GetExecutingAssembly()
-                .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
-            var dotnetVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription.Split(' ')[1];
+                .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
+            var frameworkDescription = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
             var osType = GetOsPlatform();
             var orchestratorString = string.IsNullOrEmpty(orchestrator) ? "" : $"; {orchestrator}";
-            return $"Agent365SDK/{version} ({osType}; Dotnet/{dotnetVersion}{orchestratorString})";
+            return $"Agent365SDK/{version} ({osType}; {frameworkDescription}{orchestratorString})";
         }
 
         private static string GetOsPlatform()

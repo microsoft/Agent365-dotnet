@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Agents.A365.Runtime.Utils;
 using System.Reflection;
@@ -61,8 +64,8 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             var userAgent = Utility.GetUserAgentHeader();
             Console.WriteLine(userAgent);
 
-            // Regex: Agent365SDK/{version} ({osType}; Dotnet/{dotnetVersion})
-            var pattern = @"^Agent365SDK/.+ \([^)]+; Dotnet/\d+(\.\d+)*\)$";
+            // Regex: Agent365SDK/{version} ({osType}; .NET {dotnetVersion})
+            var pattern = @"^Agent365SDK/.+ \([^)]+; .NET \d+(\.\d+)*\)$";
             Assert.Matches(pattern, userAgent);
         }
 
@@ -72,8 +75,8 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             var userAgent = Utility.GetUserAgentHeader("TestOrchestrator");
             Console.WriteLine(userAgent);
 
-            // Regex: Agent365SDK/{version} ({osType}; Dotnet/{dotnetVersion}; TestOrchestrator)
-            var pattern = @"^Agent365SDK/.+ \([^)]+; Dotnet/\d+(\.\d+)*; TestOrchestrator\)$";
+            // Regex: Agent365SDK/{version} ({osType}; .NET {dotnetVersion}; TestOrchestrator)
+            var pattern = @"^Agent365SDK/.+ \([^)]+; .NET \d+(\.\d+)*; TestOrchestrator\)$";
             Assert.Matches(pattern, userAgent);
         }
     }
