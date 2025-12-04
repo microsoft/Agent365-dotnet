@@ -36,7 +36,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot);
             var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
             string conversationId = "conv-123";
 
@@ -62,6 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
             Assert.AreEqual("session-1", attrsElement.GetProperty(OpenTelemetryConstants.SessionIdKey).GetString());
             Assert.AreEqual(conversationId, attrsElement.GetProperty(OpenTelemetryConstants.GenAiConversationIdKey).GetString());
             Assert.AreEqual("invoke_agent", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
+            Assert.AreEqual("MicrosoftCopilot", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentTypeKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
