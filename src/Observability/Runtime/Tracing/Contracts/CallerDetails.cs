@@ -46,8 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="tenantId">The tenant ID of the caller.</param>
         /// <remarks>
         /// <para>
-        /// While many parameters are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements.
-        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements, and these values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
+        /// <b>Certification Requirements:</b> While many parameters are optional in the API, the following must be provided (not <c>null</c>) to meet certification requirements. These values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
         /// <list type="bullet">
         ///   <item><paramref name="callerId"/></item>
         ///   <item><paramref name="callerName"/></item>
