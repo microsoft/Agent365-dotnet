@@ -64,7 +64,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
 
-            var toolsMode = Utility.GetToolsMode(_configuration);
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
