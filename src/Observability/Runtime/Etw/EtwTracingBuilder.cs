@@ -8,8 +8,9 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
+using System;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Builds the ETW + OpenTelemetry tracing configuration.
@@ -18,6 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     {
         private readonly IServiceCollection _services;
         private bool _isBuilt = false;
+        private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EtwTracingBuilder"/> class.
@@ -54,7 +56,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                     tracing
                         .AddSource(OpenTelemetryConstants.SourceName)
                         .AddProcessor(new ActivityProcessor())
-                        .AddProcessor(new EtwScopeEventProcessor(exportFormatter));
+                        .AddProcessor(sp =>
+                        {
+                            return new EtwScopeEventProcessor(formatter: exportFormatter,logger: sp.GetService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
+                        });
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())
                     {

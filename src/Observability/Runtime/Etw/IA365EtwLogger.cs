@@ -1,7 +1,7 @@
 ﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Interface for ETW Logger

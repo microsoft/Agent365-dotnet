@@ -3,11 +3,12 @@
 // ------------------------------------------------------------------------------
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using System.Collections.Generic;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Processes logs by emitting ETW events.
@@ -15,14 +16,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     public class EtwLogProcessor : BaseProcessor<LogRecord>
     {
         private readonly ExportFormatter _formatter;
+        private readonly ILogger<EtwLogProcessor>? _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EtwLogProcessor"/> class.
         /// </summary>
         /// <param name="formatter">The formatter used to format log data.</param>
-        public EtwLogProcessor(ExportFormatter formatter)
+        /// <param name="logger">The logger used to log messages.</param>
+        public EtwLogProcessor(ExportFormatter formatter, ILogger<EtwLogProcessor>? logger = null)
         {
             _formatter = formatter;
+            _logger = logger;
         }
         /// <summary>
         /// Emits an ETW event with log details.
@@ -38,6 +42,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
             }
 
             var jsonContent = _formatter.FormatLogData(attributes);
+
+            _logger?.LogInformation($"EtwLogProcessor: Emitting ETW log event. `Name`: {attributes["Name"]} `SpanId`: {attributes["SpanId"]}");
 
             EtwEventSource.Log.LogJson(jsonContent);
         }
