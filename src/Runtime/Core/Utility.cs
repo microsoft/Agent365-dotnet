@@ -5,6 +5,7 @@
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
@@ -65,11 +66,40 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// <returns></returns>
         public static string ResolveAgentIdentity(ITurnContext context, string authToken)
         {
-            // App ID is required to pass to MCP server URL. 
+            // App ID is required to pass to MCP server URL.
             string agenticAppId = context.Activity.IsAgenticRequest()
                 ? context.Activity.GetAgenticInstanceId()
                 : Runtime.Utils.Utility.GetAppIdFromToken(authToken);
-            return agenticAppId; 
+            return agenticAppId;
+        }
+
+        /// <summary>
+        /// Gets the User-Agent header string.
+        /// </summary>
+        /// <param name="orchestrator">The orchestrator name to include in the User-Agent string.</param>
+        /// <returns>The User-Agent header string.</returns>
+        public static string GetUserAgentHeader(string orchestrator = "")
+        {
+            var version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+            var dotnetVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription.Split(' ')[1];
+            var osType = GetOsPlatform();
+            var orchestratorString = string.IsNullOrEmpty(orchestrator) ? "" : $"; {orchestrator}";
+            return $"Agent365SDK/{version} ({osType}; Dotnet/{dotnetVersion}{orchestratorString})";
+        }
+
+        private static string GetOsPlatform()
+        {
+            var osDescription = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+
+            if (osDescription.Contains("Windows", StringComparison.OrdinalIgnoreCase))
+                return "Windows";
+            if (osDescription.Contains("Linux", StringComparison.OrdinalIgnoreCase))
+                return "Linux";
+            if (osDescription.Contains("Darwin", StringComparison.OrdinalIgnoreCase) || osDescription.Contains("Mac", StringComparison.OrdinalIgnoreCase))
+                return "macOS";
+
+            return "Unknown";
         }
     }
 }
