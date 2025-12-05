@@ -84,7 +84,7 @@ namespace Microsoft.Agents.A365.Runtime.Utils
             var version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
             var frameworkDescription = RuntimeInformation.FrameworkDescription;
-            var osType  = RuntimeInformation.OSDescription;
+            var osType = RuntimeInformation.OSDescription;
             var orchestratorString = string.IsNullOrEmpty(orchestrator) ? "" : $"; {orchestrator}";
             return $"Agent365SDK/{version} ({osType}; {frameworkDescription}{orchestratorString})";
         }
