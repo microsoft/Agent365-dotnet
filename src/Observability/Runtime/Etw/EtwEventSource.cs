@@ -4,7 +4,7 @@
 
 using System.Diagnostics.Tracing;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// ETW Event Source for Observability
