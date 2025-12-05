@@ -86,4 +86,42 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
     }
+
+    [TestMethod]
+    public void Start_SetsConversationId_WhenProvided()
+    {
+        var conversationId = "conv-tool-123";
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                parentId: null,
+                conversationId: conversationId,
+                sourceMetadata: null);
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+    }
+
+    [TestMethod]
+    public void Start_SetsSourceMetadata_Tags()
+    {
+        var metadata = new SourceMetadata(id: "tool-src", name: "ChannelY", role: Role.Agent, description: "https://channel/link/y");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                parentId: null,
+                conversationId: null,
+                sourceMetadata: metadata);
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+    }
 }
