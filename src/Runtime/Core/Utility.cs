@@ -6,6 +6,7 @@ using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Agents.A365.Runtime.Utils
 {
@@ -82,24 +83,10 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         {
             var version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
-            var frameworkDescription = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-            var osType = GetOsPlatform();
+            var frameworkDescription = RuntimeInformation.FrameworkDescription;
+            var osType  = RuntimeInformation.OSDescription;
             var orchestratorString = string.IsNullOrEmpty(orchestrator) ? "" : $"; {orchestrator}";
             return $"Agent365SDK/{version} ({osType}; {frameworkDescription}{orchestratorString})";
-        }
-
-        private static string GetOsPlatform()
-        {
-            var osDescription = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
-
-            if (osDescription.Contains("Windows", StringComparison.OrdinalIgnoreCase))
-                return "Windows";
-            if (osDescription.Contains("Linux", StringComparison.OrdinalIgnoreCase))
-                return "Linux";
-            if (osDescription.Contains("Darwin", StringComparison.OrdinalIgnoreCase) || osDescription.Contains("Mac", StringComparison.OrdinalIgnoreCase))
-                return "macOS";
-
-            return "Unknown";
         }
     }
 }
