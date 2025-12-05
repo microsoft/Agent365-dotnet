@@ -16,15 +16,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
         private const string Agent365EndpointProdObservabilityScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
+        private static bool _initialized;
+        private static bool _customDomainEnabled;
 
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
         /// </summary>
-        /// <param name="configuration">The configuration instance.</param>
         /// <returns>The authentication scope.</returns>
-        public static string[] GetObservabilityAuthenticationScope(IConfiguration? configuration = null)
+        public static string[] GetObservabilityAuthenticationScope()
         {
-            return EnvironmentUtils.IsCustomDomainEnabled(configuration: configuration) ? new[] { Agent365EndpointProdObservabilityScope } : new[] { ProdObservabilityScope };
+            return IsCustomDomainEnabled() ? new[] { Agent365EndpointProdObservabilityScope } : new[] { ProdObservabilityScope };
         }
 
         /// <summary>
@@ -58,16 +59,37 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Initializes the cached configuration values for environment utilities. Should be called once at application startup.
+        /// </summary>
+        /// <param name="configuration">The configuration instance.</param>
+        /// <param name="force">When true, re-initializes even if already initialized.</param>
+        public static void Initialize(IConfiguration? configuration, bool force = false)
+        {
+            if (configuration == null)
+            {
+                throw new ArgumentNullException(nameof(configuration));
+            }
+
+            if (_initialized && !force)
+            {
+                return;
+            }
+
+            string enabled = configuration["EnableAgent365CustomDomain"] ?? string.Empty;
+            _customDomainEnabled = enabled.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            _initialized = true;
+        }
+
+        /// <summary>
         /// Returns true if the custom domain feature is enabled.
         /// </summary>
-        public static bool IsCustomDomainEnabled(IConfiguration? configuration)
+        public static bool IsCustomDomainEnabled()
         {
-            if (configuration != null && configuration["EnableAgent365CustomDomain"] != null)
+            if (!_initialized)
             {
-                string enabled = configuration["EnableAgent365CustomDomain"]!;
-                return enabled.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+                throw new InvalidOperationException("EnvironmentUtils is not initialized. Call Initialize() before using this method.");
             }
-            return false;
+            return _customDomainEnabled;
         }
 
         /// <summary>

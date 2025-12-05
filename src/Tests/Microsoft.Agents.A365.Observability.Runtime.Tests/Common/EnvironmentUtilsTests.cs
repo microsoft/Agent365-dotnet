@@ -22,16 +22,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
         }
 
         [TestMethod]
-        public void GetObservabilityAuthenticationScope_DefaultsToProdScope()
-        {
-            // Act
-            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope();
-
-            // Assert
-            scope.Should().ContainSingle().Which.Should().Be("https://api.powerplatform.com/.default");
-        }
-
-        [TestMethod]
         public void GetObservabilityAuthenticationScope_UsesAgent365Scope_WhenCustomDomainEnabled()
         {
             // Arrange
@@ -40,8 +30,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 { "EnableAgent365CustomDomain", "true" }
             });
 
+            EnvironmentUtils.Initialize(configuration: configEnabled, force: true);
+
             // Act
-            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope(configuration: configEnabled);
+            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope();
 
             // Assert
             scope.Should().ContainSingle().Which.Should().Be("api://9b975845-388f-4429-889e-eab1ef63949c/.default");
@@ -56,8 +48,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 { "EnableAgent365CustomDomain", "false" }
             });
 
+            EnvironmentUtils.Initialize(configuration: configDisabled, force: true);
+
             // Act
-            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope(configuration: configDisabled);
+            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope();
 
             // Assert
             scope.Should().ContainSingle().Which.Should().Be("https://api.powerplatform.com/.default");
@@ -69,8 +63,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             // Arrange
             var configMissing = BuildConfig();
 
+            EnvironmentUtils.Initialize(configuration: configMissing, force: true);
+
             // Act
-            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope(configuration: configMissing);
+            var scope = EnvironmentUtils.GetObservabilityAuthenticationScope();
 
             // Assert
             scope.Should().ContainSingle().Which.Should().Be("https://api.powerplatform.com/.default");
@@ -85,8 +81,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 { "EnableAgent365CustomDomain", "true" }
             });
 
+            EnvironmentUtils.Initialize(configuration: config, force: true);
+
             // Act
-            var result = EnvironmentUtils.IsCustomDomainEnabled(configuration: config);
+            var result = EnvironmentUtils.IsCustomDomainEnabled();
 
             // Assert
             result.Should().BeTrue();
@@ -101,8 +99,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
                 { "EnableAgent365CustomDomain", "false" }
             });
 
+            EnvironmentUtils.Initialize(configuration: config, force: true);
+
             // Act
-            var result = EnvironmentUtils.IsCustomDomainEnabled(configuration: config);
+            var result = EnvironmentUtils.IsCustomDomainEnabled();
 
             // Assert
             result.Should().BeFalse();
@@ -114,18 +114,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common
             // Arrange
             var config = BuildConfig();
 
-            // Act
-            var result = EnvironmentUtils.IsCustomDomainEnabled(configuration: config);
+            EnvironmentUtils.Initialize(configuration: config, force: true);
 
-            // Assert
-            result.Should().BeFalse();
-        }
-
-        [TestMethod]
-        public void IsCustomDomainEnabled_DefaultsToFalse()
-        {
             // Act
-            var result = EnvironmentUtils.IsCustomDomainEnabled(null);
+            var result = EnvironmentUtils.IsCustomDomainEnabled();
 
             // Assert
             result.Should().BeFalse();

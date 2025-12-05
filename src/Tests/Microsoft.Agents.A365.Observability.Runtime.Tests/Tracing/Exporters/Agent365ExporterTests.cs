@@ -93,10 +93,7 @@ public sealed class Agent365ExporterTests
         return (Batch<Activity>)batchObj!;
     }
 
-    private static readonly IConfigurationRoot _configuration = new ConfigurationBuilder()
-        .AddInMemoryCollection(new Dictionary<string, string?>())
-        .Build();
-    private static readonly Agent365ExporterCore _agent365ExporterCore = new Agent365ExporterCore(new ExportFormatter(NullLogger<ExportFormatter>.Instance), NullLogger<Agent365ExporterCore>.Instance, _configuration);
+    private static readonly Agent365ExporterCore _agent365ExporterCore = new Agent365ExporterCore(new ExportFormatter(NullLogger<ExportFormatter>.Instance), NullLogger<Agent365ExporterCore>.Instance);
 
     private static Agent365Exporter CreateExporter(Func<string, string, string?>? tokenResolver)
     {
@@ -116,24 +113,15 @@ public sealed class Agent365ExporterTests
             resource);
     }
 
-    private sealed class ConfigReset : IDisposable
+    private static void SetCustomDomain(bool enabled)
     {
-        private readonly string _name;
-        private readonly string? _previous;
-        public ConfigReset(string name, string? previous)
-        {
-            _name = name;
-            _previous = previous;
-        }
-        public void Dispose() => _configuration[_name] = _previous;
-    }
-
-    private static IDisposable SetCustomDomain(bool enabled)
-    {
-        const string name = "EnableAgent365CustomDomain";
-        var prev = _configuration[name];
-        _configuration[name] = enabled ? bool.TrueString : bool.FalseString;
-        return new ConfigReset(name, prev);
+        var _configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "EnableAgent365CustomDomain", enabled ? bool.TrueString : bool.FalseString }
+            })
+            .Build();
+        EnvironmentUtils.Initialize(configuration: _configuration, force: true);
     }
 
     public void Constructor_NullLogger_Throws()
@@ -1042,7 +1030,7 @@ public sealed class Agent365ExporterTests
     [TestMethod]
     public void BuildEndpointPath_CustomDomain_UsesAgentsRoot()
     {
-        using var _ = SetCustomDomain(true);
+        Agent365ExporterTests.SetCustomDomain(true);
         var path = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
         path.Should().Be("/agents/agent-123/traces");
     }
@@ -1050,7 +1038,7 @@ public sealed class Agent365ExporterTests
     [TestMethod]
     public void BuildEndpointPath_NonCustomDomain_UsesServicePathsDependingOnS2S()
     {
-        using var _ = SetCustomDomain(false);
+        Agent365ExporterTests.SetCustomDomain(false);
         var s2s = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: true);
         var standard = Agent365ExporterTests._agent365ExporterCore.BuildEndpointPath("agent-123", useS2SEndpoint: false);
         s2s.Should().Be("/maven/agent365/service/agents/agent-123/traces");
@@ -1070,7 +1058,7 @@ public sealed class Agent365ExporterTests
     public async Task ExportBatchCoreAsync_CustomDomain_UsesBaseHostAndAddsTenantHeader()
     {
         // Arrange
-        using var _ = SetCustomDomain(true);
+        Agent365ExporterTests.SetCustomDomain(true);
         var tenantId = "tenant-xyz";
         var agentId = "agent-abc";
         var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();
@@ -1126,7 +1114,7 @@ public sealed class Agent365ExporterTests
     public async Task ExportBatchCoreAsync_NonCustomDomain_UsesPowerPlatformEndpoint()
     {
         // Arrange
-        using var _ = SetCustomDomain(false);
+        Agent365ExporterTests.SetCustomDomain(false);
         var tenantId = "tenant-xyz";
         var agentId = "agent-abc";
         var resource = ResourceBuilder.CreateEmpty().AddService("unit-test-service", serviceVersion: "1.0.0").Build();

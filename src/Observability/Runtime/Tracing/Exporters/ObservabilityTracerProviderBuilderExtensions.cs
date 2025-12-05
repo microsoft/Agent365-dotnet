@@ -81,7 +81,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
             // Create ExportFormatter and Agent365ExporterCore
             var exportFormatter = new ExportFormatter(logger: formatterLogger);
-            var exporterCore = new Agent365ExporterCore(formatter: exportFormatter, logger: coreLogger, configuration: configuration);
+            var exporterCore = new Agent365ExporterCore(formatter: exportFormatter, logger: coreLogger);
 
             switch (exporterType)
             {
