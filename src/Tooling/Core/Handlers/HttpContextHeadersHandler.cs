@@ -18,6 +18,8 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     {
         // Header names for passing context information in HTTP requests
         private const string ConversationIdHeader = "x-ms-conversation-id";
+        private const string ChannelIdHeader = "x-ms-channel-id";
+        private const string SubChannelIdHeader = "x-ms-subchannel-id";
         private const string UserMessageHeader = "x-ms-usermessage";
         private const string O11ySpanIdHeader = "x-ms-span-id";
         private const string O11yTraceIdHeader = "x-ms-trace-id";
@@ -42,6 +44,16 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 if (!string.IsNullOrEmpty(turnContext.Activity.Conversation.Id))
                 {
                     request.Headers.Add(ConversationIdHeader, turnContext.Activity.Conversation.Id);
+                }
+
+                if (!string.IsNullOrEmpty(turnContext.Activity.ChannelId?.Channel))
+                {
+                    request.Headers.Add(ChannelIdHeader, turnContext.Activity.ChannelId.Channel);
+                }
+
+                if (!string.IsNullOrEmpty(turnContext.Activity.ChannelId?.SubChannel))
+                {
+                    request.Headers.Add(SubChannelIdHeader, turnContext.Activity.ChannelId.SubChannel);
                 }
 
                 if (!string.IsNullOrEmpty(turnContext.Activity.Text))
