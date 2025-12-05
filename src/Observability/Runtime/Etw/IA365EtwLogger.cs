@@ -50,6 +50,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="endTime">Optional end time of the inference.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
+        /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
         public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
@@ -60,7 +61,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null);
+            string? parentSpanId = null,
+            SourceMetadata? sourceMetadata = null);
 
         /// <summary>
         /// Logs an execute_tool event.
@@ -74,6 +76,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="endTime">Optional end time of the tool execution.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
+        /// <param name="sourceMetadata">Optional source metadata for the tool call.</param>
         public void LogToolCall(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
@@ -83,6 +86,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null);
+            string? parentSpanId = null,
+            SourceMetadata? sourceMetadata = null);
     }
 }
