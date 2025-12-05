@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Microsoft.Agents.A365.Runtime.Tests</AssemblyName>
-    <RootNamespace>Microsoft.Agents.A365.Runtime.Tests</RootNamespace>
+    <AssemblyName>Microsoft.Agents.A365.Runtime.Common.Tests</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Runtime.Common.Tests</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -20,8 +20,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.Http" />
     <PackageReference Include="Moq" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
   </ItemGroup>
 
   <ItemGroup>

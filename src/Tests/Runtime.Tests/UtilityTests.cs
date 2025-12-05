@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using Microsoft.Agents.A365.Runtime.Utils;
-using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using System;

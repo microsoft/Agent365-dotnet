@@ -47,19 +47,15 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Null(result);
         }
 
-        [Theory]
-        [InlineData("tenant-123", "tenant-123")]
-        [InlineData("tenant-456", "tenant-456")]
-        [InlineData("", "")] // Empty claim should return null (fallback behavior)
-        [InlineData("   ", "")] // Whitespace claim should return null (fallback behavior)
-        [InlineData("special-tenant-789", "special-tenant-789")]
-        public void GetTenantId_WhenTenantInClaims_ReturnsExpectedResult(string claimValue, string? expectedResult)
+        [Fact]
+        public void GetTenantId_WhenTenantInClaims_ReturnsTenantFromClaims()
         {
             // Arrange
+            const string expectedTenantId = "tenant-123";
             var context = CreateMockHttpContext();
             var claims = new List<Claim>
             {
-                new(TenantContextHelper.TenantClaimName, claimValue)
+                new(TenantContextHelper.TenantClaimName, expectedTenantId)
             };
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
             context.User = principal;
@@ -68,104 +64,169 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             var result = TenantContextHelper.GetTenantId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedTenantId, result);
         }
 
-        [Theory]
-        [InlineData("header-tenant-123", "header-tenant-123")]
-        [InlineData("header-tenant-456", "header-tenant-456")]
-        [InlineData("", "")] // Empty header should return null
-        [InlineData("special-header-789", "special-header-789")]
-        public void GetTenantId_WhenTenantInHeaders_ReturnsExpectedResult(string headerValue, string? expectedResult)
+        [Fact]
+        public void GetTenantId_WhenTenantInHeaders_ReturnsTenantFromHeaders()
         {
             // Arrange
+            const string expectedTenantId = "tenant-456";
             var context = CreateMockHttpContext();
-            if (!string.IsNullOrEmpty(headerValue))
-            {
-                context.Request.Headers[TenantContextHelper.TenantHeaderName] = headerValue;
-            }
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = expectedTenantId;
 
             // Act
             var result = TenantContextHelper.GetTenantId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedTenantId, result);
         }
 
-        [Theory]
-        [InlineData("item-tenant-123", "item-tenant-123")]
-        [InlineData("item-tenant-456", "item-tenant-456")]
-        [InlineData(12345, "12345")] // Non-string values should be converted to string
-        [InlineData("", "")] // Empty string should return null
-        public void GetTenantId_WhenTenantInItems_ReturnsExpectedResult(object? itemValue, string? expectedResult)
+        [Fact]
+        public void GetTenantId_WhenTenantInItems_ReturnsTenantFromItems()
         {
             // Arrange
+            const string expectedTenantId = "tenant-789";
             var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.TenantItemKey] = itemValue;
+            context.Items[TenantContextHelper.TenantItemKey] = expectedTenantId;
 
             // Act
             var result = TenantContextHelper.GetTenantId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedTenantId, result);
         }
 
-        [Theory]
-        [InlineData("claims-tenant", "headers-tenant", "items-tenant", "claims-tenant")] // Claims takes priority
-        [InlineData("", "headers-tenant", "items-tenant", "headers-tenant")] // Empty claims, headers take priority
-        [InlineData("   ", "headers-tenant", "items-tenant", "headers-tenant")] // Whitespace claims, headers take priority
-        public void GetTenantId_WithMultipleSources_ReturnsBasedOnPriority(
-            string? claimValue, string? headerValue, string? itemValue, string expectedResult)
+        [Fact]
+        public void GetTenantId_WhenTenantInMultipleSources_PrioritizesClaims()
         {
             // Arrange
-            var context = CreateMockHttpContext();
+            const string tenantFromClaims = "tenant-claims";
+            const string tenantFromHeaders = "tenant-headers";
+            const string tenantFromItems = "tenant-items";
 
+            var context = CreateMockHttpContext();
+            
             // Set up claims
-            if (claimValue != null)
+            var claims = new List<Claim>
             {
-                var claims = new List<Claim> { new(TenantContextHelper.TenantClaimName, claimValue) };
-                var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-                context.User = principal;
-            }
+                new(TenantContextHelper.TenantClaimName, tenantFromClaims)
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
 
             // Set up headers
-            if (headerValue != null)
-            {
-                context.Request.Headers[TenantContextHelper.TenantHeaderName] = headerValue;
-            }
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
 
             // Set up items
-            if (itemValue != null)
-            {
-                context.Items[TenantContextHelper.TenantItemKey] = itemValue;
-            }
+            context.Items[TenantContextHelper.TenantItemKey] = tenantFromItems;
 
             // Act
             var result = TenantContextHelper.GetTenantId(context);
 
             // Assert
-            Assert.Equal(expectedResult, result);
+            Assert.Equal(tenantFromClaims, result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenTenantInHeadersAndItems_PrioritizesHeaders()
+        {
+            // Arrange
+            const string tenantFromHeaders = "tenant-headers";
+            const string tenantFromItems = "tenant-items";
+
+            var context = CreateMockHttpContext();
+            
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
+
+            // Set up items
+            context.Items[TenantContextHelper.TenantItemKey] = tenantFromItems;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Equal(tenantFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenTenantClaimIsEmpty_FallsBackToHeaders()
+        {
+            // Arrange
+            const string tenantFromHeaders = "tenant-headers";
+            var context = CreateMockHttpContext();
+
+            // Set up empty claim
+            var claims = new List<Claim>
+            {
+                new(TenantContextHelper.TenantClaimName, "")
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
+
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Equal(tenantFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenTenantClaimIsWhitespace_FallsBackToHeaders()
+        {
+            // Arrange
+            const string tenantFromHeaders = "tenant-headers";
+            var context = CreateMockHttpContext();
+
+            // Set up whitespace claim
+            var claims = new List<Claim>
+            {
+                new(TenantContextHelper.TenantClaimName, "   ")
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
+
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Equal(tenantFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenNoTenantFound_ReturnsNull()
+        {
+            // Arrange
+            var context = CreateMockHttpContext();
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenUserIsNull_FallsBackToHeaders()
+        {
+            // Arrange
+            const string tenantFromHeaders = "tenant-headers";
+            var context = CreateMockHttpContext();
+            context.User = new ClaimsPrincipal();
+            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Equal(tenantFromHeaders, result);
         }
 
         #endregion
@@ -185,19 +246,15 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Null(result);
         }
 
-        [Theory]
-        [InlineData("worker-123", "worker-123")]
-        [InlineData("worker-456", "worker-456")]
-        [InlineData("", "")] // Empty claim should return null (fallback behavior)
-        [InlineData("   ", "")] // Whitespace claim should return null (fallback behavior)
-        [InlineData("special-worker-789", "special-worker-789")]
-        public void GetWorkerId_WhenWorkerInClaims_ReturnsExpectedResult(string claimValue, string? expectedResult)
+        [Fact]
+        public void GetWorkerId_WhenWorkerInClaims_ReturnsWorkerFromClaims()
         {
             // Arrange
+            const string expectedWorkerId = "worker-123";
             var context = CreateMockHttpContext();
             var claims = new List<Claim>
             {
-                new(TenantContextHelper.WorkerClaimName, claimValue)
+                new(TenantContextHelper.WorkerClaimName, expectedWorkerId)
             };
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
             context.User = principal;
@@ -206,126 +263,227 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedWorkerId, result);
         }
 
-        [Theory]
-        [InlineData("header-worker-123", "header-worker-123")]
-        [InlineData("header-worker-456", "header-worker-456")]
-        [InlineData("", "")] // Empty header should return null
-        [InlineData("special-header-worker-789", "special-header-worker-789")]
-        public void GetWorkerId_WhenWorkerInHeaders_ReturnsExpectedResult(string headerValue, string? expectedResult)
+        [Fact]
+        public void GetWorkerId_WhenWorkerInHeaders_ReturnsWorkerFromHeaders()
         {
             // Arrange
+            const string expectedWorkerId = "worker-456";
             var context = CreateMockHttpContext();
-            if (!string.IsNullOrEmpty(headerValue))
-            {
-                context.Request.Headers[TenantContextHelper.WorkerHeaderName] = headerValue;
-            }
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = expectedWorkerId;
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedWorkerId, result);
         }
 
-        [Theory]
-        [InlineData("item-worker-123", "item-worker-123")]
-        [InlineData("item-worker-456", "item-worker-456")]
-        [InlineData(12345, "12345")] // Non-string values should be converted to string
-        [InlineData(67890, "67890")] // Another non-string test
-        [InlineData("", "")] // Empty string should return null
-        public void GetWorkerId_WhenWorkerInItems_ReturnsExpectedResult(object? itemValue, string? expectedResult)
+        [Fact]
+        public void GetWorkerId_WhenWorkerInItems_ReturnsWorkerFromItems()
         {
             // Arrange
+            const string expectedWorkerId = "worker-789";
             var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.WorkerItemKey] = itemValue;
+            context.Items[TenantContextHelper.WorkerItemKey] = expectedWorkerId;
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            if (string.IsNullOrWhiteSpace(expectedResult))
-            {
-                Assert.Null(result);
-            }
-            else
-            {
-                Assert.Equal(expectedResult, result);
-            }
+            Assert.Equal(expectedWorkerId, result);
         }
 
-        [Theory]
-        [InlineData("claims-worker", "headers-worker", "items-worker", "claims-worker")] // Claims takes priority
-        [InlineData("", "headers-worker", "items-worker", "headers-worker")] // Empty claims, headers take priority
-        [InlineData("   ", "headers-worker", "items-worker", "headers-worker")] // Whitespace claims, headers take priority
-        [InlineData("SKIP", "headers-worker", "items-worker", "headers-worker")] // Skip claims, headers take priority
-        [InlineData("SKIP", "", "items-worker", "items-worker")] // No claims or headers, items used
-        public void GetWorkerId_WithMultipleSources_ReturnsBasedOnPriority(
-            string? claimValue, string? headerValue, string? itemValue, string expectedResult)
+        [Fact]
+        public void GetWorkerId_WhenWorkerInMultipleSources_PrioritizesClaims()
         {
             // Arrange
-            var context = CreateMockHttpContext();
+            const string workerFromClaims = "worker-claims";
+            const string workerFromHeaders = "worker-headers";
+            const string workerFromItems = "worker-items";
 
+            var context = CreateMockHttpContext();
+            
             // Set up claims
-            if (claimValue != null && claimValue != "SKIP")
+            var claims = new List<Claim>
             {
-                var claims = new List<Claim> { new(TenantContextHelper.WorkerClaimName, claimValue) };
-                var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-                context.User = principal;
-            }
+                new(TenantContextHelper.WorkerClaimName, workerFromClaims)
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
 
             // Set up headers
-            if (!string.IsNullOrEmpty(headerValue))
-            {
-                context.Request.Headers[TenantContextHelper.WorkerHeaderName] = headerValue;
-            }
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
 
             // Set up items
-            if (itemValue != null)
-            {
-                context.Items[TenantContextHelper.WorkerItemKey] = itemValue;
-            }
+            context.Items[TenantContextHelper.WorkerItemKey] = workerFromItems;
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            Assert.Equal(expectedResult, result);
+            Assert.Equal(workerFromClaims, result);
         }
 
-        [Theory]
-        [InlineData(12345, "12345")] // Both tenant and worker as integers
-        [InlineData("string-value", "string-value")] // Both tenant and worker as strings
-        public void GetTenantIdAndWorkerId_WhenItemsAreVariousTypes_ReturnExpectedResults(object itemValue, string expectedResult)
+        [Fact]
+        public void GetWorkerId_WhenWorkerInHeadersAndItems_PrioritizesHeaders()
+        {
+            // Arrange
+            const string workerFromHeaders = "worker-headers";
+            const string workerFromItems = "worker-items";
+
+            var context = CreateMockHttpContext();
+            
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
+
+            // Set up items
+            context.Items[TenantContextHelper.WorkerItemKey] = workerFromItems;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Equal(workerFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenWorkerClaimIsEmpty_FallsBackToHeaders()
+        {
+            // Arrange
+            const string workerFromHeaders = "worker-headers";
+            var context = CreateMockHttpContext();
+
+            // Set up empty claim
+            var claims = new List<Claim>
+            {
+                new(TenantContextHelper.WorkerClaimName, "")
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
+
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Equal(workerFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenWorkerClaimIsWhitespace_FallsBackToHeaders()
+        {
+            // Arrange
+            const string workerFromHeaders = "worker-headers";
+            var context = CreateMockHttpContext();
+
+            // Set up whitespace claim
+            var claims = new List<Claim>
+            {
+                new(TenantContextHelper.WorkerClaimName, "   ")
+            };
+            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            context.User = principal;
+
+            // Set up headers
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Equal(workerFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenNoWorkerFound_ReturnsNull()
         {
             // Arrange
             var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.TenantItemKey] = itemValue;
-            context.Items[TenantContextHelper.WorkerItemKey] = itemValue;
 
             // Act
-            var tenantResult = TenantContextHelper.GetTenantId(context);
-            var workerResult = TenantContextHelper.GetWorkerId(context);
+            var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            Assert.Equal(expectedResult, tenantResult);
-            Assert.Equal(expectedResult, workerResult);
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenUserIsNull_FallsBackToHeaders()
+        {
+            // Arrange
+            const string workerFromHeaders = "worker-headers";
+            var context = CreateMockHttpContext();
+            context.User = new ClaimsPrincipal();
+            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Equal(workerFromHeaders, result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenItemValueIsNonString_ReturnsStringRepresentation()
+        {
+            // Arrange
+            const int workerIdAsInt = 12345;
+            var context = CreateMockHttpContext();
+            context.Items[TenantContextHelper.WorkerItemKey] = workerIdAsInt;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Equal("12345", result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenItemValueIsNonString_ReturnsStringRepresentation()
+        {
+            // Arrange
+            const int tenantIdAsInt = 67890;
+            var context = CreateMockHttpContext();
+            context.Items[TenantContextHelper.TenantItemKey] = tenantIdAsInt;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Equal("67890", result);
+        }
+
+        [Fact]
+        public void GetTenantId_WhenItemValueIsNull_ReturnsNull()
+        {
+            // Arrange
+            var context = CreateMockHttpContext();
+            context.Items[TenantContextHelper.TenantItemKey] = null;
+
+            // Act
+            var result = TenantContextHelper.GetTenantId(context);
+
+            // Assert
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void GetWorkerId_WhenItemValueIsNull_ReturnsNull()
+        {
+            // Arrange
+            var context = CreateMockHttpContext();
+            context.Items[TenantContextHelper.WorkerItemKey] = null;
+
+            // Act
+            var result = TenantContextHelper.GetWorkerId(context);
+
+            // Assert
+            Assert.Null(result);
         }
 
         #endregion
