@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <param name="clusterCategory">The cluster category.</param>
         public Agent365EndpointDiscovery(string clusterCategory)
         {
-            this.clusterCategory = clusterCategory ?? throw new ArgumentNullException(nameof(clusterCategory));
+            this.clusterCategory = clusterCategory ?? "production";
         }
 
         /// <summary>
