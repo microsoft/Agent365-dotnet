@@ -16,16 +16,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
-        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId);
+        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata);
 
-        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
+        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
             : base(
-                ActivityKind.Client,
-                agentDetails,
-                tenantDetails,
-                details.OperationName.ToString(),
-                $"{details.OperationName} {details.Model}",
-                parentId: parentId)
+                kind: ActivityKind.Client,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                operationName: details.OperationName.ToString(),
+                activityName: $"{details.OperationName} {details.Model}",
+                parentId: parentId,
+                conversationId: conversationId, 
+                sourceMetadata: sourceMetadata)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
