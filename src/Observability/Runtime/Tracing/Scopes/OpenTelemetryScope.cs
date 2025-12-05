@@ -2,15 +2,14 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
 
-using Azure;
-using Azure.Core;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes

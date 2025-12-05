@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 operationName: details.OperationName.ToString(),
                 activityName: $"{details.OperationName} {details.Model}",
                 parentId: parentId,
-                conversationId: conversationId, 
+                conversationId: conversationId,
                 sourceMetadata: sourceMetadata)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
