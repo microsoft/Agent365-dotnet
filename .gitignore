@@ -53,6 +53,14 @@ CodeCoverage/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# Test Coverage
+coverage/
+coverage-report/
+coverage-report-all/
+TestResults/
+*.cobertura.xml
+*.trx
+
 # Visual Studio
 .vs/
 
