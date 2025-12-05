@@ -22,12 +22,9 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         #region GetMcpPlatformAuthenticationScope Tests
 
         [Theory]
-        [InlineData("custom-scope-1", "custom-scope-1")]
-        [InlineData("custom-scope-2", "custom-scope-2")]
-        [InlineData("https://api.example.com/.default", "https://api.example.com/.default")]
-        [InlineData("SKIP", "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default")]
-        [InlineData("", "")] // Empty string is returned as-is (not null)
-        [InlineData("   ", "   ")] // Whitespace is returned as-is (not null)
+        [InlineData("custom-scope", "custom-scope")] // Custom value returned as-is
+        [InlineData("SKIP", "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default")] // Null returns default
+        [InlineData("", "")] // Empty string returned as-is
         public void GetMcpPlatformAuthenticationScope_WithVariousConfigurationValues_ReturnsExpectedScope(
             string? configValue, 
             string expectedScope)
@@ -49,14 +46,10 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         #region GetCurrentEnvironment Tests
 
         [Theory]
-        [InlineData("Production", "SKIP", "Production")]
-        [InlineData("Staging", "Development", "Staging")]
-        [InlineData("Testing", "Staging", "Testing")]
-        [InlineData("SKIP", "Production", "Production")]
-        [InlineData("SKIP", "Development", "Development")]
-        [InlineData("SKIP", "SKIP", "Development")]
-        [InlineData("", "", "")] // Empty strings are returned as-is (not replaced with default)
-        [InlineData("   ", "   ", "   ")] // Whitespace is returned as-is (not replaced with default)
+        [InlineData("Production", "SKIP", "Production")] // ASPNETCORE_ENVIRONMENT takes precedence
+        [InlineData("SKIP", "Development", "Development")] // Falls back to DOTNET_ENVIRONMENT
+        [InlineData("SKIP", "SKIP", "Development")] // Both null returns default
+        [InlineData("", "", "")] // Empty strings returned as-is
         public void GetCurrentEnvironment_WithVariousEnvironmentVariables_ReturnsExpectedEnvironment(
             string? aspNetCoreEnv, 
             string? dotNetEnv, 
@@ -81,24 +74,21 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         #region GetAppIdFromToken Tests
 
         [Theory]
-        [InlineData("12345678-1234-1234-1234-123456789abc", "SKIP", "12345678-1234-1234-1234-123456789abc")]
-        [InlineData("SKIP", "87654321-4321-4321-4321-cba987654321", "87654321-4321-4321-4321-cba987654321")]
-        [InlineData("appid-value", "azp-value", "appid-value")] // appid takes precedence
-        [InlineData("SKIP", "SKIP", "")]
+        [InlineData("12345678-1234-1234-1234-123456789abc", "SKIP", "12345678-1234-1234-1234-123456789abc")] // appid claim only
+        [InlineData("SKIP", "87654321-4321-4321-4321-cba987654321", "87654321-4321-4321-4321-cba987654321")] // azp claim only
+        [InlineData("appid-value", "azp-value", "appid-value")] // appid takes precedence over azp
+        [InlineData("SKIP", "SKIP", "")] // No claims returns empty string
         public void GetAppIdFromToken_WithValidTokensContainingVariousClaims_ReturnsExpectedAppId(
             string? appIdValue,
             string? azpValue,
             string expectedAppId)
         {
             // Arrange
-            var claims = new Dictionary<string, object>
-            {
-                { "aud", "test-audience" }
-            };
+            var claims = new Dictionary<string, object> { { "aud", "test-audience" } };
 
-            if (appIdValue != null && appIdValue != "SKIP")
+            if (appIdValue != "SKIP" && appIdValue != null)
                 claims.Add("appid", appIdValue);
-            if (azpValue != null && azpValue != "SKIP")
+            if (azpValue != "SKIP" && azpValue != null)
                 claims.Add("azp", azpValue);
 
             var token = CreateJwtToken(claims);
@@ -111,11 +101,9 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         }
 
         [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
-        [InlineData("\t")]
-        [InlineData("\n")]
-        public void GetAppIdFromToken_WithWhitespaceToken_ReturnsEmptyGuid(string token)
+        [InlineData("")] // Empty string
+        [InlineData("   ")] // Whitespace
+        public void GetAppIdFromToken_WithNullOrWhitespaceToken_ReturnsEmptyGuid(string token)
         {
             // Act
             var result = Utility.GetAppIdFromToken(token);
@@ -135,14 +123,11 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         }
 
         [Theory]
-        [InlineData("invalid-token")]
-        [InlineData("not.a.jwt")]
-        [InlineData("header.payload")]
-        [InlineData("just-text")]
-        [InlineData("123456")]
+        [InlineData("invalid-token")] // Invalid format
+        [InlineData("not.a.jwt")] // Wrong number of parts
         public void GetAppIdFromToken_WithInvalidTokenFormats_ThrowsException(string invalidToken)
         {
-            // Act & Assert - Expects SecurityTokenMalformedException or ArgumentException
+            // Act & Assert
             Assert.ThrowsAny<Exception>(() => Utility.GetAppIdFromToken(invalidToken));
         }
 

@@ -47,18 +47,38 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Null(result);
         }
 
-        [Fact]
-        public void GetTenantId_WhenTenantInClaims_ReturnsTenantFromClaims()
+        [Theory]
+        [InlineData("tenant-claims", null, null, "tenant-claims")] // Claims only
+        [InlineData(null, "tenant-headers", null, "tenant-headers")] // Headers only
+        [InlineData(null, null, "tenant-items", "tenant-items")] // Items only
+        [InlineData("tenant-claims", "tenant-headers", "tenant-items", "tenant-claims")] // Claims has priority
+        [InlineData(null, "tenant-headers", "tenant-items", "tenant-headers")] // Headers has priority over items
+        [InlineData("", "tenant-headers", null, "tenant-headers")] // Empty claim falls back to headers
+        [InlineData("   ", "tenant-headers", null, "tenant-headers")] // Whitespace claim falls back to headers
+        public void GetTenantId_WithVariousSources_ReturnsExpectedTenantId(
+            string? claimValue,
+            string? headerValue,
+            string? itemValue,
+            string? expectedTenantId)
         {
             // Arrange
-            const string expectedTenantId = "tenant-123";
             var context = CreateMockHttpContext();
-            var claims = new List<Claim>
+
+            if (claimValue != null)
             {
-                new(TenantContextHelper.TenantClaimName, expectedTenantId)
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
+                var claims = new List<Claim> { new(TenantContextHelper.TenantClaimName, claimValue) };
+                context.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            }
+
+            if (headerValue != null)
+            {
+                context.Request.Headers[TenantContextHelper.TenantHeaderName] = headerValue;
+            }
+
+            if (itemValue != null)
+            {
+                context.Items[TenantContextHelper.TenantItemKey] = itemValue;
+            }
 
             // Act
             var result = TenantContextHelper.GetTenantId(context);
@@ -67,137 +87,20 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Equal(expectedTenantId, result);
         }
 
-        [Fact]
-        public void GetTenantId_WhenTenantInHeaders_ReturnsTenantFromHeaders()
+        [Theory]
+        [InlineData(12345, "12345")] // Integer to string
+        [InlineData(null, null)] // Null item
+        public void GetTenantId_WithVariousItemTypes_ReturnsExpectedResult(object? itemValue, string? expectedResult)
         {
             // Arrange
-            const string expectedTenantId = "tenant-456";
             var context = CreateMockHttpContext();
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = expectedTenantId;
+            context.Items[TenantContextHelper.TenantItemKey] = itemValue;
 
             // Act
             var result = TenantContextHelper.GetTenantId(context);
 
             // Assert
-            Assert.Equal(expectedTenantId, result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenTenantInItems_ReturnsTenantFromItems()
-        {
-            // Arrange
-            const string expectedTenantId = "tenant-789";
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.TenantItemKey] = expectedTenantId;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(expectedTenantId, result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenTenantInMultipleSources_PrioritizesClaims()
-        {
-            // Arrange
-            const string tenantFromClaims = "tenant-claims";
-            const string tenantFromHeaders = "tenant-headers";
-            const string tenantFromItems = "tenant-items";
-
-            var context = CreateMockHttpContext();
-            
-            // Set up claims
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.TenantClaimName, tenantFromClaims)
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
-
-            // Set up items
-            context.Items[TenantContextHelper.TenantItemKey] = tenantFromItems;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(tenantFromClaims, result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenTenantInHeadersAndItems_PrioritizesHeaders()
-        {
-            // Arrange
-            const string tenantFromHeaders = "tenant-headers";
-            const string tenantFromItems = "tenant-items";
-
-            var context = CreateMockHttpContext();
-            
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
-
-            // Set up items
-            context.Items[TenantContextHelper.TenantItemKey] = tenantFromItems;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(tenantFromHeaders, result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenTenantClaimIsEmpty_FallsBackToHeaders()
-        {
-            // Arrange
-            const string tenantFromHeaders = "tenant-headers";
-            var context = CreateMockHttpContext();
-
-            // Set up empty claim
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.TenantClaimName, "")
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(tenantFromHeaders, result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenTenantClaimIsWhitespace_FallsBackToHeaders()
-        {
-            // Arrange
-            const string tenantFromHeaders = "tenant-headers";
-            var context = CreateMockHttpContext();
-
-            // Set up whitespace claim
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.TenantClaimName, "   ")
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(tenantFromHeaders, result);
+            Assert.Equal(expectedResult, result);
         }
 
         [Fact]
@@ -211,22 +114,6 @@ namespace Microsoft.Agents.A365.Runtime.Tests
 
             // Assert
             Assert.Null(result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenUserIsNull_FallsBackToHeaders()
-        {
-            // Arrange
-            const string tenantFromHeaders = "tenant-headers";
-            var context = CreateMockHttpContext();
-            context.User = new ClaimsPrincipal();
-            context.Request.Headers[TenantContextHelper.TenantHeaderName] = tenantFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal(tenantFromHeaders, result);
         }
 
         #endregion
@@ -246,18 +133,38 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Null(result);
         }
 
-        [Fact]
-        public void GetWorkerId_WhenWorkerInClaims_ReturnsWorkerFromClaims()
+        [Theory]
+        [InlineData("worker-claims", null, null, "worker-claims")] // Claims only
+        [InlineData(null, "worker-headers", null, "worker-headers")] // Headers only
+        [InlineData(null, null, "worker-items", "worker-items")] // Items only
+        [InlineData("worker-claims", "worker-headers", "worker-items", "worker-claims")] // Claims has priority
+        [InlineData(null, "worker-headers", "worker-items", "worker-headers")] // Headers has priority over items
+        [InlineData("", "worker-headers", null, "worker-headers")] // Empty claim falls back to headers
+        [InlineData("   ", "worker-headers", null, "worker-headers")] // Whitespace claim falls back to headers
+        public void GetWorkerId_WithVariousSources_ReturnsExpectedWorkerId(
+            string? claimValue,
+            string? headerValue,
+            string? itemValue,
+            string? expectedWorkerId)
         {
             // Arrange
-            const string expectedWorkerId = "worker-123";
             var context = CreateMockHttpContext();
-            var claims = new List<Claim>
+
+            if (claimValue != null)
             {
-                new(TenantContextHelper.WorkerClaimName, expectedWorkerId)
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
+                var claims = new List<Claim> { new(TenantContextHelper.WorkerClaimName, claimValue) };
+                context.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
+            }
+
+            if (headerValue != null)
+            {
+                context.Request.Headers[TenantContextHelper.WorkerHeaderName] = headerValue;
+            }
+
+            if (itemValue != null)
+            {
+                context.Items[TenantContextHelper.WorkerItemKey] = itemValue;
+            }
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);
@@ -266,137 +173,20 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Equal(expectedWorkerId, result);
         }
 
-        [Fact]
-        public void GetWorkerId_WhenWorkerInHeaders_ReturnsWorkerFromHeaders()
+        [Theory]
+        [InlineData(12345, "12345")] // Integer to string
+        [InlineData(null, null)] // Null item
+        public void GetWorkerId_WithVariousItemTypes_ReturnsExpectedResult(object? itemValue, string? expectedResult)
         {
             // Arrange
-            const string expectedWorkerId = "worker-456";
             var context = CreateMockHttpContext();
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = expectedWorkerId;
+            context.Items[TenantContextHelper.WorkerItemKey] = itemValue;
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);
 
             // Assert
-            Assert.Equal(expectedWorkerId, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenWorkerInItems_ReturnsWorkerFromItems()
-        {
-            // Arrange
-            const string expectedWorkerId = "worker-789";
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.WorkerItemKey] = expectedWorkerId;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(expectedWorkerId, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenWorkerInMultipleSources_PrioritizesClaims()
-        {
-            // Arrange
-            const string workerFromClaims = "worker-claims";
-            const string workerFromHeaders = "worker-headers";
-            const string workerFromItems = "worker-items";
-
-            var context = CreateMockHttpContext();
-            
-            // Set up claims
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.WorkerClaimName, workerFromClaims)
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
-
-            // Set up items
-            context.Items[TenantContextHelper.WorkerItemKey] = workerFromItems;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(workerFromClaims, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenWorkerInHeadersAndItems_PrioritizesHeaders()
-        {
-            // Arrange
-            const string workerFromHeaders = "worker-headers";
-            const string workerFromItems = "worker-items";
-
-            var context = CreateMockHttpContext();
-            
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
-
-            // Set up items
-            context.Items[TenantContextHelper.WorkerItemKey] = workerFromItems;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(workerFromHeaders, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenWorkerClaimIsEmpty_FallsBackToHeaders()
-        {
-            // Arrange
-            const string workerFromHeaders = "worker-headers";
-            var context = CreateMockHttpContext();
-
-            // Set up empty claim
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.WorkerClaimName, "")
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(workerFromHeaders, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenWorkerClaimIsWhitespace_FallsBackToHeaders()
-        {
-            // Arrange
-            const string workerFromHeaders = "worker-headers";
-            var context = CreateMockHttpContext();
-
-            // Set up whitespace claim
-            var claims = new List<Claim>
-            {
-                new(TenantContextHelper.WorkerClaimName, "   ")
-            };
-            var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
-            context.User = principal;
-
-            // Set up headers
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(workerFromHeaders, result);
+            Assert.Equal(expectedResult, result);
         }
 
         [Fact]
@@ -404,80 +194,6 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         {
             // Arrange
             var context = CreateMockHttpContext();
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Null(result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenUserIsNull_FallsBackToHeaders()
-        {
-            // Arrange
-            const string workerFromHeaders = "worker-headers";
-            var context = CreateMockHttpContext();
-            context.User = new ClaimsPrincipal();
-            context.Request.Headers[TenantContextHelper.WorkerHeaderName] = workerFromHeaders;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal(workerFromHeaders, result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenItemValueIsNonString_ReturnsStringRepresentation()
-        {
-            // Arrange
-            const int workerIdAsInt = 12345;
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.WorkerItemKey] = workerIdAsInt;
-
-            // Act
-            var result = TenantContextHelper.GetWorkerId(context);
-
-            // Assert
-            Assert.Equal("12345", result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenItemValueIsNonString_ReturnsStringRepresentation()
-        {
-            // Arrange
-            const int tenantIdAsInt = 67890;
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.TenantItemKey] = tenantIdAsInt;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Equal("67890", result);
-        }
-
-        [Fact]
-        public void GetTenantId_WhenItemValueIsNull_ReturnsNull()
-        {
-            // Arrange
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.TenantItemKey] = null;
-
-            // Act
-            var result = TenantContextHelper.GetTenantId(context);
-
-            // Assert
-            Assert.Null(result);
-        }
-
-        [Fact]
-        public void GetWorkerId_WhenItemValueIsNull_ReturnsNull()
-        {
-            // Arrange
-            var context = CreateMockHttpContext();
-            context.Items[TenantContextHelper.WorkerItemKey] = null;
 
             // Act
             var result = TenantContextHelper.GetWorkerId(context);

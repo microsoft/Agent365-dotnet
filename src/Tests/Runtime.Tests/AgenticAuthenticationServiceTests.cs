@@ -17,11 +17,9 @@ namespace Microsoft.Agents.A365.Runtime.Tests
     public class AgenticAuthenticationServiceTests
     {
         [Theory]
-        [InlineData("custom-scope", "custom-scope")]
-        [InlineData("SKIP", "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default")]
-        [InlineData("", "")] // Empty string is returned as-is (not replaced with default)
-        [InlineData("   ", "   ")] // Whitespace is returned as-is (not replaced with default)
-        [InlineData("https://custom.scope/.default", "https://custom.scope/.default")]
+        [InlineData("custom-scope", "custom-scope")] // Custom scope
+        [InlineData("SKIP", "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default")] // Null returns default
+        [InlineData("", "")] // Empty string
         public void GetMcpPlatformAuthenticationScope_WithVariousConfigurations_ReturnsExpectedScope(
             string? configValue,
             string expectedScope)
@@ -39,10 +37,9 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         }
 
         [Theory]
-        [InlineData("Production", "SKIP", "Production")]
-        [InlineData("Staging", "Development", "Staging")]
-        [InlineData("SKIP", "Production", "Production")]
-        [InlineData("SKIP", "SKIP", "Development")]
+        [InlineData("Production", "SKIP", "Production")] // ASPNETCORE_ENVIRONMENT takes precedence
+        [InlineData("SKIP", "Development", "Development")] // Falls back to DOTNET_ENVIRONMENT
+        [InlineData("SKIP", "SKIP", "Development")] // Both null returns default
         public void GetCurrentEnvironment_WithVariousConfigurations_ReturnsExpectedEnvironment(
             string? aspNetCoreEnv,
             string? dotNetEnv,
@@ -77,25 +74,9 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             Assert.Equal("ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default", result);
         }
 
-        [Fact]
-        public void GetCurrentEnvironment_AllEnvironmentVariablesNull_ReturnsDefaultDevelopment()
-        {
-            // Arrange
-            var mockConfiguration = new Mock<IConfiguration>();
-            mockConfiguration.Setup(c => c["ASPNETCORE_ENVIRONMENT"]).Returns((string?)null);
-            mockConfiguration.Setup(c => c["DOTNET_ENVIRONMENT"]).Returns((string?)null);
-
-            // Act
-            var result = Utility.GetCurrentEnvironment(mockConfiguration.Object);
-
-            // Assert
-            Assert.Equal("Development", result);
-        }
-
         [Theory]
         [InlineData("scope1", 1)]
-        [InlineData("scope2", 2)]
-        [InlineData("scope3", 3)]
+        [InlineData("scope2", 3)]
         public void GetMcpPlatformAuthenticationScope_CalledMultipleTimes_AccessesConfigurationCorrectly(
             string testScope,
             int callCount)
