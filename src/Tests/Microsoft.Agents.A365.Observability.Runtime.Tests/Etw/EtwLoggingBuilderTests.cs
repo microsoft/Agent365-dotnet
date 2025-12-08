@@ -80,9 +80,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             string conversationId = "conv-inf-1";
+            var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
 
             // Act
-            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
+            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" }, sourceMetadata: source);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -105,6 +106,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("provider-y", attrsElement.GetProperty(OpenTelemetryConstants.GenAiProviderNameKey).GetString());
             Assert.AreEqual("hello", attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString());
             Assert.AreEqual("world", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.GenAiChannelNameKey).GetString());
+            Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.GenAiChannelLinkKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
@@ -123,9 +126,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
             string conversationId = "conv-tool-1";
             string responseContent = @"{ ""value"": ""result"" }";
+            var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
 
             // Act
-            logger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent);
+            logger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent, sourceMetadata: source);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -150,6 +154,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("function", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolTypeKey).GetString());
             Assert.AreEqual(responseContent, attrsElement.GetProperty(OpenTelemetryConstants.GenAiEventContent).GetString());
             Assert.AreEqual("execute_tool", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
+            Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.GenAiChannelNameKey).GetString());
+            Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.GenAiChannelLinkKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);

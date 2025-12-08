@@ -21,16 +21,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// Creates and starts a new scope for tool execution tracing.
         /// </summary>
         /// <returns>A new ExecuteToolScope instance.</returns>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
             : base(
-                ActivityKind.Internal,
-                agentDetails,
-                tenantDetails,
-                OperationName,
-                $"{OperationName} {details.ToolName}",
-                parentId: parentId)
+                kind: ActivityKind.Internal,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                operationName: OperationName,
+                activityName: $"{OperationName} {details.ToolName}",
+                parentId: parentId,
+                conversationId: conversationId,
+                sourceMetadata: sourceMetadata)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
