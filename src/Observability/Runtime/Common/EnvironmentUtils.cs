@@ -23,13 +23,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         /// <param name="configuration">The configuration instance.</param>
         /// <param name="force">When true, re-initializes even if already initialized.</param>
+        /// <remarks>Reads and caches the A365_OBSERVABILITY_SCOPES_OVERRIDE configuration value.</remarks>
         public static void Initialize(IConfiguration? configuration, bool force = false)
         {
             if (initialized && !force)
             {
                 return;
             }
-            scopeOverride = configuration?["A365_OBSERVABILITY_SCOPES_OVERRIDE"] ?? string.Empty;
+            scopeOverride = configuration?["A365_OBSERVABILITY_SCOPE_OVERRIDE"] ?? string.Empty;
             initialized = true;
         }
 

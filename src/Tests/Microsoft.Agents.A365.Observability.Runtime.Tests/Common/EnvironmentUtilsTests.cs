@@ -36,7 +36,7 @@ public class EnvironmentUtilsTests
         var cfg = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["A365_OBSERVABILITY_SCOPES_OVERRIDE"] = expected,
+                ["A365_OBSERVABILITY_SCOPE_OVERRIDE"] = expected,
             })
             .Build();
 
