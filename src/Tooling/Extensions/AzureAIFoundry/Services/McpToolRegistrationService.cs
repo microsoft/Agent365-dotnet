@@ -6,7 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 
 using Azure.AI.Agents.Persistent; // MCPToolDefinition, MCPToolResource, MCPApproval
 using Microsoft.Agents.A365.Runtime.Authentication;
-using Microsoft.Agents.A365.Tooling;
+using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
@@ -195,6 +195,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 var headerValue = authToken.StartsWith($"{Constants.Headers.BearerPrefix} ", StringComparison.OrdinalIgnoreCase) ? authToken : $"{Constants.Headers.BearerPrefix} {authToken}";
                 resource.UpdateHeader("Authorization", headerValue);
             }
+
+            // Set up other headers
+            resource.UpdateHeader("User-Agent", RuntimeUtility.GetUserAgentHeader("AzureAIFoundry"));
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");

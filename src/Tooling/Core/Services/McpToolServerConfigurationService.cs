@@ -7,6 +7,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.A365.Tooling.Handlers;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
@@ -107,6 +108,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
+                httpClient.DefaultRequestHeaders.Add("User-Agent", RuntimeUtility.GetUserAgentHeader());
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
@@ -420,6 +422,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 Endpoint = endpoint,
                 TransportMode = HttpTransportMode.AutoDetect,
+                AdditionalHeaders = new Dictionary<string, string>
+                {
+                    { "User-Agent", RuntimeUtility.GetUserAgentHeader() }
+                }
             };
 
             // Create HTTP client with the authentication handler chain
