@@ -17,31 +17,31 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Configuration;
-	using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
 
-	/// <summary>
-	/// Provides services for managing MCP server configurations.
-	/// </summary>
+    /// <summary>
+    /// Provides services for managing MCP server configurations.
+    /// </summary>
     public class McpToolServerConfigurationService : IMcpToolServerConfigurationService
     {
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
         private readonly ILoggerFactory? _loggerFactory;
 
-		/// <summary>
-		/// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
-		/// </summary>
-		/// <param name="logger">Logger instance for logging.</param>
-		/// <param name="configuration">Configuration collection.</param>
-		/// <param name="serviceProvider">Service provider</param>
-		public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
+        /// </summary>
+        /// <param name="logger">Logger instance for logging.</param>
+        /// <param name="configuration">Configuration collection.</param>
+        /// <param name="serviceProvider">Service provider</param>
+        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
         {
             _configuration = configuration;
             _logger = logger;
             _loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? null;
-		}
+        }
 
         /// <summary>
         /// Gets the list of MCP Servers that are configured for the agent.
