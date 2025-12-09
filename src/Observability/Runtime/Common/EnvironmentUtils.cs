@@ -3,6 +3,7 @@
 // ------------------------------------------------------------------------------
 
 using System;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
 {
@@ -14,6 +15,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string ProdObservabilityScope = "https://api.powerplatform.com/.default";
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
+        private static IConfiguration? _configuration;
+        private static bool _initialized;
+
+        /// <summary>
+        /// Initializes the cached configuration values for environment utilities. Should be called once at application startup.
+        /// </summary>
+        /// <param name="configuration">The configuration instance.</param>
+        /// <param name="force">When true, re-initializes even if already initialized.</param>
+        public static void Initialize(IConfiguration? configuration, bool force = false)
+        {
+            if (_initialized && !force)
+            {
+                return;
+            }
+            _configuration = configuration;
+            _initialized = true;
+        }
 
         /// <summary>
         /// Returns the scope for authenticating to the observability service based on the current environment.
@@ -21,6 +39,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <returns>The authentication scope.</returns>
         public static string[] GetObservabilityAuthenticationScope()
         {
+            if (_configuration != null && !string.IsNullOrEmpty(_configuration["A365_OBSERVABILITY_SCOPES_OVERRIDE"]))
+            {
+                return new[] { _configuration["A365_OBSERVABILITY_SCOPE_OVERRIDE"]! };
+            }
+
             return new[] { ProdObservabilityScope };
         }
 

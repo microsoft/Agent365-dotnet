@@ -97,7 +97,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 this.Configure(tracerProviderBuilder: tracerProviderBuilder);
                 tracerProviderBuilder.Build();
             }
-
+            
+            EnvironmentUtils.Initialize(configuration: this.Configuration);
             _isBuilt = true;
         }
 
