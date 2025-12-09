@@ -67,16 +67,29 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             var tasks = servers.Select(async server =>
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
-                // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
-                listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
-                return (pluginName, listAvailableToolsForServer);
+                try
+                {
+                    var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
+                    // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
+                    listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
+                    return (pluginName, listAvailableToolsForServer);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to retrieve tools from server '{ServerName}'. Skipping this server.", pluginName);
+                    return (pluginName, new List<McpClientTool>());
+                }
             });
 
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
             foreach (var (pluginName, listAvailableToolsForServer) in results)
             {
+                if (listAvailableToolsForServer == null || !listAvailableToolsForServer.Any())
+                {
+                    // No tools available for this server, skip.
+                    continue;
+                }
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
                 kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
