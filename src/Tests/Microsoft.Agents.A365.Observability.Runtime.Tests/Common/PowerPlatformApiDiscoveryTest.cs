@@ -121,27 +121,5 @@ public class PowerPlatformApiDiscoveryTests
         var ex4 = Assert.Throws<ArgumentException>(() => discProd.GetTenantEndpoint("a-a"));
         Assert.Contains("must be at least 3 characters in length", ex4.Message);
     }
-
-    [TestMethod]
-    public void DomainOverride_TenantEndpoint_UsesOverrideAndOneCharHexSuffix()
-    {
-        var overrideDomain = "api.preprod.powerplatform.com";
-        var disc = new PowerPlatformApiDiscovery("prod", overrideDomain);
-
-        var tenantId = "6d68dcbc-5170-48d2-8717-99f42e284c9b";
-
-        var endpoint = disc.GetTenantEndpoint(tenantId);
-        Assert.IsTrue(endpoint.EndsWith(".tenant.api.preprod.powerplatform.com"));
-        var preTenant = endpoint.Substring(0, endpoint.IndexOf(".tenant."));
-        var lastLabel = preTenant.Split('.').Last();
-        Assert.AreEqual(1, lastLabel.Length);
-
-        var ilEndpoint = disc.GetTenantIslandClusterEndpoint(tenantId);
-        Assert.IsTrue(ilEndpoint.EndsWith(".tenant.api.preprod.powerplatform.com"));
-        Assert.IsTrue(ilEndpoint.StartsWith("il-"));
-        var ilPreTenant = ilEndpoint.Substring(0, ilEndpoint.IndexOf(".tenant."));
-        var ilLastLabel = ilPreTenant.Split('.').Last();
-        Assert.AreEqual(1, ilLastLabel.Length);
-    }
 }
 

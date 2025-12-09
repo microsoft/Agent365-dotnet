@@ -4,7 +4,6 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
@@ -78,13 +77,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? loggerFactory.CreateLogger<Agent365ExporterCore>();
             var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
 
-            // Create ExportFormatter
+            // Create ExportFormatter and Agent365ExporterCore
             var exportFormatter = new ExportFormatter(formatterLogger);
-
-            // Create Agent365ExporterCore
-            var configuration = serviceProvider.GetService<IConfiguration>();
-            var domainOverride = configuration != null ? configuration["A365_OBSERVABILITY_DOMAIN_OVERRIDE"] : null;
-            var exporterCore = new Agent365ExporterCore(exportFormatter, coreLogger, domainOverride);
+            var exporterCore = new Agent365ExporterCore(exportFormatter, coreLogger);
 
             switch (exporterType)
             {

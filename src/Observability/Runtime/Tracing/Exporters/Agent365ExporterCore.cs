@@ -28,19 +28,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private const string CorrelationIdHeaderKey = "x-ms-correlation-id";
         private readonly ExportFormatter _formatter;
         private readonly ILogger<Agent365ExporterCore> _logger;
-        private string? _domainOverride;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterCore"/> class.
         /// </summary>
         /// <param name="formatter">The formatter instance used to format export payloads.</param>
         /// <param name="logger">The logger instance used to log messages during the export process.</param>
-        /// <param name="domainOverride">Optional domain override for the exporter.</param>
-        public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger, string? domainOverride = null)
+        public Agent365ExporterCore(ExportFormatter formatter, ILogger<Agent365ExporterCore> logger)
         {
             _formatter = formatter ?? throw new ArgumentNullException(nameof(formatter));
             _logger = logger ?? NullLogger<Agent365ExporterCore>.Instance;
-            _domainOverride = domainOverride;
         }
 
         /// <summary>
@@ -127,7 +124,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = _formatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory, _domainOverride);
+                var ppapiDiscovery = new PowerPlatformApiDiscovery(options.ClusterCategory);
                 var ppapiEndpoint = ppapiDiscovery.GetTenantIslandClusterEndpoint(tenantId);
 
                 var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
