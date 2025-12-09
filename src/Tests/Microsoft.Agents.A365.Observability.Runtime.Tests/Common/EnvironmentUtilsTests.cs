@@ -56,7 +56,7 @@ public class EnvironmentUtilsTests
         var cfg1 = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["A365_OBSERVABILITY_SCOPES_OVERRIDE"] = first,
+                ["A365_OBSERVABILITY_SCOPE_OVERRIDE"] = first,
             })
             .Build();
         EnvironmentUtils.Initialize(cfg1, force: true);
@@ -67,7 +67,7 @@ public class EnvironmentUtilsTests
         var cfg2 = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["A365_OBSERVABILITY_SCOPES_OVERRIDE"] = second,
+                ["A365_OBSERVABILITY_SCOPE_OVERRIDE"] = second,
             })
             .Build();
         EnvironmentUtils.Initialize(cfg2, force: false);
