@@ -15,7 +15,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private const string ProdObservabilityScope = "https://api.powerplatform.com/.default";
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
-        private static IConfiguration? _configuration;
+        private static string? _scopeOverride;
         private static bool _initialized;
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             {
                 return;
             }
-            _configuration = configuration;
+            _scopeOverride = configuration?["A365_OBSERVABILITY_SCOPES_OVERRIDE"] ?? string.Empty;
             _initialized = true;
         }
 
@@ -39,12 +39,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <returns>The authentication scope.</returns>
         public static string[] GetObservabilityAuthenticationScope()
         {
-            if (_configuration != null && !string.IsNullOrEmpty(_configuration["A365_OBSERVABILITY_SCOPES_OVERRIDE"]))
-            {
-                return new[] { _configuration["A365_OBSERVABILITY_SCOPE_OVERRIDE"]! };
-            }
-
-            return new[] { ProdObservabilityScope };
+            return new[] { !string.IsNullOrEmpty(_scopeOverride) ? _scopeOverride! : ProdObservabilityScope };
         }
 
         /// <summary>
