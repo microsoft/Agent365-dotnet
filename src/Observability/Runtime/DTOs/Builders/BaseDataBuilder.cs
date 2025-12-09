@@ -131,8 +131,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (request == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, request.SourceMetadata?.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, request.SourceMetadata?.Description);
+            AddSourceMetadataAttributes(attributes, request.SourceMetadata);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString());
         }
 
@@ -164,6 +163,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentTypeKey, callerAgentDetails.AgentType?.ToString());
+        }
+
+        /// <summary>
+        /// Adds source metadata attributes to the attributes dictionary.
+        /// </summary>
+        protected static void AddSourceMetadataAttributes(IDictionary<string, object?> attributes, SourceMetadata? sourceMetadata)
+        {
+            if (sourceMetadata == null) return;
+
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
         }
 
         /// <summary>

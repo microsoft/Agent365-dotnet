@@ -182,4 +182,51 @@ public sealed class InferenceScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
     }
+
+    [TestMethod]
+    public void Start_SetsConversationId_WhenProvided()
+    {
+        var conversationId = "conv-inf-123";
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(
+                details,
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                parentId: null,
+                conversationId: conversationId,
+                sourceMetadata: null);
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+    }
+
+    [TestMethod]
+    public void Start_SetsSourceMetadata_Tags()
+    {
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+        var metadata = new SourceMetadata(id: "src-id", name: "ChannelZ", role: Role.Human, description: "https://channel/link/z");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(
+                details,
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                parentId: null,
+                conversationId: null,
+                sourceMetadata: metadata);
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+    }
 }

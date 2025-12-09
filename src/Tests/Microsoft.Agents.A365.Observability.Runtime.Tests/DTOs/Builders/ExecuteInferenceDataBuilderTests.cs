@@ -28,6 +28,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        {
+            // Arrange
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
+            var agent = new AgentDetails("agent-src");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-src-inf";
+            var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
+
+            // Act
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, sourceMetadata: source);
+
+            // Assert
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelInf");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/inf");
+        }
+
+        [TestMethod]
         public void Build_WithTokensAndFinishReasons_IncludesUsageAndReasons()
         {
             // Arrange

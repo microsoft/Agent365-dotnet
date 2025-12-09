@@ -46,19 +46,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 return;
 
             _services
+                .AddSingleton<ExportFormatter>(sp =>
+                {
+                    var logger = sp.GetService<ILogger<ExportFormatter>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<ExportFormatter>();
+                    return new ExportFormatter(logger);
+                })
                 .AddOpenTelemetry()
                 .WithTracing(tracing =>
                 {
-                    // Resolve ExportFormatter via the service provider and pass it to the processor
-                    var sp = _services.BuildServiceProvider();
-                    var exportFormatter = sp.GetService<ExportFormatter>() ?? new ExportFormatter(LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>());
-
                     tracing
                         .AddSource(OpenTelemetryConstants.SourceName)
                         .AddProcessor(new ActivityProcessor())
                         .AddProcessor(sp =>
                         {
-                            return new EtwScopeEventProcessor(formatter: exportFormatter,logger: sp.GetService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
+                            return new EtwScopeEventProcessor(formatter: sp.GetRequiredService<ExportFormatter>(), logger: sp.GetService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
                         });
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())

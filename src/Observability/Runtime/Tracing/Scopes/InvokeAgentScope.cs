@@ -32,22 +32,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId)
             : base(
-                ActivityKind.Client,
-                invokeAgentDetails.Details,
-                tenantDetails,
-                OperationName,
-                string.IsNullOrWhiteSpace(invokeAgentDetails.Details.AgentName)
+                kind: ActivityKind.Client,
+                agentDetails: invokeAgentDetails.Details,
+                tenantDetails: tenantDetails,
+                operationName: OperationName,
+                activityName: string.IsNullOrWhiteSpace(invokeAgentDetails.Details.AgentName)
                     ? OperationName
-                    : $"invoke_agent {invokeAgentDetails.Details.AgentName}")
+                    : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
+                conversationId: conversationId,
+                sourceMetadata: request?.SourceMetadata)
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
             SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
-            SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, request?.SourceMetadata?.Name);
-            SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, request?.SourceMetadata?.Description);
             SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
-            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Only record port if it is different from 443
             if (endpoint?.Port != 443)
