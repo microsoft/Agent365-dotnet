@@ -12,6 +12,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -73,14 +74,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Get MCP tool server configurations
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!).ConfigureAwait(false);
 
-            // Retrieve MCP tools from all configured servers
-            foreach (var server in servers)
+            // Retrieve MCP tools from all configured servers in parallel
+            var mcpToolsBag = new ConcurrentBag<AITool>();
+            var tasks = servers.Select(async server =>
             {
                 try
                 {
                     var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
-                    // Add the MCP tools
-                    updatedTools.AddRange(mcpTools.Cast<AITool>());
+                    // Add the MCP tools to the thread-safe collection
+                    foreach (var tool in mcpTools)
+                    {
+                        mcpToolsBag.Add(tool);
+                    }
 
                     _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
                         mcpTools.Count, server.mcpServerName);
@@ -90,7 +95,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                     _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}",
                         server.mcpServerName, ex.Message);
                 }
-            }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+            updatedTools.AddRange(mcpToolsBag);
 
             _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
                 updatedTools.Count, agentUserId);
@@ -134,14 +142,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Get MCP tool server configurations
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!).ConfigureAwait(false);
 
-            // Retrieve MCP tools from all configured servers
-            foreach (var server in servers)
+            // Retrieve MCP tools from all configured servers in parallel
+            var mcpToolsBag = new ConcurrentBag<AITool>();
+            var tasks = servers.Select(async server =>
             {
                 try
                 {
                     var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
-                    // Add the MCP tools
-                    a365ToolList.AddRange(mcpTools.Cast<AITool>());
+                    // Add the MCP tools to the thread-safe collection
+                    foreach (var tool in mcpTools)
+                    {
+                        mcpToolsBag.Add(tool);
+                    }
 
                     _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
                         mcpTools.Count, server.mcpServerName);
@@ -151,7 +163,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                     _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}",
                         server.mcpServerName, ex.Message);
                 }
-            }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+            a365ToolList.AddRange(mcpToolsBag);
 
             _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
                 a365ToolList.Count, agentUserId);
