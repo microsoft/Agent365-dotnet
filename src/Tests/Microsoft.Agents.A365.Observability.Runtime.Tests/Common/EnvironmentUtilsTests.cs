@@ -32,7 +32,7 @@ public class EnvironmentUtilsTests
     [TestMethod]
     public void GetObservabilityAuthenticationScope_UsesOverride_WhenProvided()
     {
-        var expected = "https://custom.scope/.default";
+        var expected = "https://api.preprod.powerplatform.com/.default";
         var cfg = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
