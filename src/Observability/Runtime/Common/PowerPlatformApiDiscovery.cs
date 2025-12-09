@@ -13,14 +13,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     public class PowerPlatformApiDiscovery
     {
         private readonly string clusterCategory;
+        private readonly string domainOverride;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PowerPlatformApiDiscovery"/> class.
         /// </summary>
         /// <param name="clusterCategory">The cluster category.</param>
-        public PowerPlatformApiDiscovery(string clusterCategory)
+        /// <param name="domainOverride">The domain override.</param>
+        public PowerPlatformApiDiscovery(string clusterCategory, string? domainOverride = null)
         {
             this.clusterCategory = clusterCategory ?? throw new ArgumentNullException(nameof(clusterCategory));
+            this.domainOverride = domainOverride ?? string.Empty;
         }
 
         /// <summary>
@@ -86,6 +89,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
         private int GetHexApiSuffixLength()
         {
+            if (!string.IsNullOrEmpty(domainOverride))
+            {
+                return 1;
+            }
+
             switch (clusterCategory)
             {
                 case "firstrelease":
@@ -99,6 +107,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
 
         private string GetEnvironmentApiHostNameSuffix()
         {
+            if (!string.IsNullOrEmpty(domainOverride))
+            {
+                return domainOverride;
+            }
+
             switch (clusterCategory)
             {
                 case "firstrelease":
