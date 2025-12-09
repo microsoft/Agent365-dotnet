@@ -7,6 +7,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using System.Diagnostics;
 using System.Reflection;
+using System.Net;
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 
@@ -1014,4 +1015,67 @@ public sealed class Agent365ExporterTests
     }
 
     #endregion
+
+    [TestMethod]
+    public void Export_RequestUri_UsesDomainOverride_WhenEnvVarSet()
+    {
+        // Arrange
+        var overrideDomain = "override.example.com";
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", overrideDomain);
+
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = false
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity(tenantId: "tenant-abc", agentId: "agent-xyz");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().NotBeNull();
+        observedUri!.Should().StartWith($"https://{overrideDomain}");
+        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain("api-version=1");
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+    }
+
+    private class TestHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
+        public TestHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_handler(request));
+        }
+    }
+
 }
