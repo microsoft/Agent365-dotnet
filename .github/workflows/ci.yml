@@ -33,9 +33,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
-          source-url: https://pkgs.dev.azure.com/msazure/OneAgile/_packaging/Agent365/nuget/v3/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_TOKEN }}
 
       - name: Restore dependencies
         run: dotnet restore Microsoft.Agents.A365.Sdk.sln

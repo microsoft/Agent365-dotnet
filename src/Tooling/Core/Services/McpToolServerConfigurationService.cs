@@ -4,13 +4,6 @@
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
-    using Microsoft.Agents.A365.Tooling.Models;
-    using Microsoft.Agents.A365.Tooling.Utils;
-    using Microsoft.Agents.A365.Tooling.Handlers;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
-    using Microsoft.Agents.Builder;
-    using Microsoft.Extensions.Logging;
-    using ModelContextProtocol.Client;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -19,7 +12,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Reflection;
     using System.Text.Json;
     using System.Threading.Tasks;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
+    using Microsoft.Agents.A365.Tooling.Handlers;
+    using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Utils;
+    using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+    using ModelContextProtocol.Client;
 
     /// <summary>
     /// Provides services for managing MCP server configurations.
@@ -28,16 +29,19 @@ namespace Microsoft.Agents.A365.Tooling.Services
     {
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ILoggerFactory? _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
         /// </summary>
         /// <param name="logger">Logger instance for logging.</param>
         /// <param name="configuration">Configuration collection.</param>
-        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration)
+        /// <param name="serviceProvider">Service provider</param>
+        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
         {
             _configuration = configuration;
             _logger = logger;
+            _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
         }
 
         /// <inheritdoc/>
@@ -423,7 +427,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: _loggerFactory);
             }
             catch (Exception ex)
             {
