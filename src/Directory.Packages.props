@@ -22,6 +22,7 @@
     <!-- ASP.NET Core packages -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" />
     <!-- Other packages -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="System.Security.Claims" Version="4.3.0" />
