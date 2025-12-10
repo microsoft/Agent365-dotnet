@@ -6,13 +6,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
     using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Services;
-    using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
-    using System;
+	using ModelContextProtocol.Client;
+	using System;
     using System.Linq;
 
     /// <summary>
