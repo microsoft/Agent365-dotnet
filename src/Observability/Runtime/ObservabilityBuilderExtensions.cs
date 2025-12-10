@@ -58,7 +58,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                     useOpenTelemetryBuilder: useOpenTelemetryBuilder,
                     agent365ExporterType: agent365ExporterType,
                     configuration: context.Configuration);
-
                 configure?.Invoke(localBuilder);
                 localBuilder.Build();
             });
