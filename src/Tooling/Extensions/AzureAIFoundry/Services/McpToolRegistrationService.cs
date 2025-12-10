@@ -32,6 +32,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
+    private readonly string _orchestratorName = "AzureAIFoundry";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -147,7 +148,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken, _orchestratorName);
         }
         catch (Exception ex)
         {
@@ -197,7 +198,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             }
 
             // Set up other headers
-            resource.UpdateHeader("User-Agent", RuntimeUtility.GetUserAgentHeader("AzureAIFoundry"));
+            resource.UpdateHeader("User-Agent", RuntimeUtility.GetUserAgentHeader(_orchestratorName));
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
@@ -208,7 +209,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, _orchestratorName);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)
