@@ -11,8 +11,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
-	using ModelContextProtocol.Client;
-	using System;
+    using ModelContextProtocol.Client;
+    using System;
     using System.Linq;
 
     /// <summary>
