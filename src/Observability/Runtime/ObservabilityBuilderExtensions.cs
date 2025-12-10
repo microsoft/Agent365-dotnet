@@ -4,10 +4,10 @@
 
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
-    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Hosting;
     using System;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Extensions.Hosting;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
@@ -36,5 +36,33 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             return builder;
         }
 
+
+        /// <summary>
+        /// Adds the Microsoft Agent 365 SDK with OpenTelemetry tracing for AI agents and tools.
+        /// </summary>
+        /// <param name="webHostBuilder"></param>
+        /// <param name="configure"></param>
+        /// <param name="useOpenTelemetryBuilder"></param>
+        /// <param name="agent365ExporterType"></param>
+        /// <returns></returns>
+        public static IWebHostBuilder AddA365Tracing(
+            this IWebHostBuilder webHostBuilder,
+            Action<Builder>? configure = null,
+            bool useOpenTelemetryBuilder = true,
+            Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter)
+        {
+            webHostBuilder.ConfigureServices((context, services) =>
+            {
+                var localBuilder = new Builder(
+                    services: services,
+                    useOpenTelemetryBuilder: useOpenTelemetryBuilder,
+                    agent365ExporterType: agent365ExporterType,
+                    configuration: context.Configuration);
+
+                configure?.Invoke(localBuilder);
+                localBuilder.Build();
+            });
+            return webHostBuilder;
+        }
     }
 }
