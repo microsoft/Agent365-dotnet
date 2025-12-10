@@ -1,6 +1,3 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.AspNetCore.Builder;
