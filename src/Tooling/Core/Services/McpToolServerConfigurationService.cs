@@ -40,7 +40,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         {
             _configuration = configuration;
             _logger = logger;
-            _loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? null;
+            _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
         }
 
         /// <summary>
