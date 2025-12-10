@@ -4,15 +4,17 @@
 
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
-    using System;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using System;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
     /// </summary>
     public static class ObservabilityBuilderExtensions
     {
+
         /// <summary>
         /// Adds the Microsoft Agent 365 SDK with OpenTelemetry tracing for AI agents and tools.
         /// </summary>
@@ -33,5 +35,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             localbuilder.Build();
             return builder;
         }
+
     }
 }
