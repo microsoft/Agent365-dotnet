@@ -398,9 +398,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             this._logger.LogInformation($"Configured authentication handler for MCP endpoint {endpoint}");
 
-            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger)
+            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, orchestratorName)
             {
-                InnerHandler = authHandler
+                InnerHandler = authHandler,
             };
 
             // Create logging handler (optional - for debugging HTTP requests)
@@ -414,10 +414,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 Endpoint = endpoint,
                 TransportMode = HttpTransportMode.AutoDetect,
-                AdditionalHeaders = new Dictionary<string, string>
-                {
-                    { "User-Agent", RuntimeUtility.GetUserAgentHeader(orchestratorName) }
-                }
             };
 
             // Create HTTP client with the authentication handler chain

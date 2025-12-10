@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 {
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using System;
     using System.Globalization;
     using System.Net.Http;
@@ -23,6 +24,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         private const string UserMessageHeader = "x-ms-usermessage";
         private const string O11ySpanIdHeader = "x-ms-span-id";
         private const string O11yTraceIdHeader = "x-ms-trace-id";
+        private const string UserAgentHeader = "User-Agent";
 
         // Keys set from Observability
         private const string O11ySpanIdKey = "O11ySpanId";
@@ -30,11 +32,13 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
         private readonly ITurnContext turnContext;
         private readonly ILogger logger;
+        private readonly string orchestratorName;
 
-        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger)
+        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger, string orchestratorName = "")
         {
             this.turnContext = turnContext;
             this.logger = logger;
+            this.orchestratorName = orchestratorName;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -77,6 +81,8 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                     request.Headers.Add(O11yTraceIdHeader, traceId);
                 }
             }
+
+            request.Headers.Add(UserAgentHeader, RuntimeUtility.GetUserAgentHeader(orchestratorName));
 
             return base.SendAsync(request, cancellationToken);
         }
