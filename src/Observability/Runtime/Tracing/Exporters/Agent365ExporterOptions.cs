@@ -3,6 +3,7 @@
 // ------------------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -25,6 +26,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// </summary>
     public sealed class Agent365ExporterOptions
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Agent365ExporterOptions"/> class with default settings.
+        /// </summary>
+        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to resolve tenant
+        /// endpoints using the current <c>ClusterCategory</c> value.</remarks>
+        public Agent365ExporterOptions()
+        {
+            this.DomainResolver = tenantId => new PowerPlatformApiDiscovery(this.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+        }
+
         /// <summary>
         /// Cluster region argument. Defaults to production.
         /// </summary>

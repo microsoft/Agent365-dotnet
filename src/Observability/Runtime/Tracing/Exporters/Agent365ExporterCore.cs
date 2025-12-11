@@ -124,13 +124,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = _formatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var resolvedDomain = options.DomainResolver?.Invoke(tenantId);
-                var envDomain = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
-                var ppapiEndpoint = !string.IsNullOrEmpty(resolvedDomain)
-                    ? resolvedDomain
-                    : !string.IsNullOrEmpty(envDomain)
-                        ? envDomain
-                        : new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+                var ppapiEndpointOverride = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
+                var ppapiEndpoint = !string.IsNullOrEmpty(ppapiEndpointOverride)
+                    ? ppapiEndpointOverride
+                    : options.DomainResolver?.Invoke(tenantId);
+
                 var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
                 var requestUri = BuildRequestUri(ppapiEndpoint!, endpointPath);
 
