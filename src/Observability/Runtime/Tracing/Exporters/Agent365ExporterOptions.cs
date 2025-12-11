@@ -71,7 +71,5 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Default is 512.
         /// </summary>
         public int MaxExportBatchSize { get; set; } = 512;
-
-
     }
 }
