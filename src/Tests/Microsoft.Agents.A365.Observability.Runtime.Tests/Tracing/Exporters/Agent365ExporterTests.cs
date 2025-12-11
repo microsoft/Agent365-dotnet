@@ -1169,7 +1169,7 @@ public sealed class Agent365ExporterTests
     }
 
     [TestMethod]
-    public void Export_RequestUri_UsesDiscovery_WhenNoResolverAndNoEnvVarSet()
+    public void Export_RequestUri_UsesPpapiDiscovery_WhenNoResolverAndNoEnvVarSet()
     {
         // Arrange
         Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
