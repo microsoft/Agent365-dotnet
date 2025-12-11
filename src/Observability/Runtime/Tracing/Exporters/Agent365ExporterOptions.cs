@@ -14,6 +14,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
+    /// Delegate used by the exporter to resolve the island tenant domain for a given tenant id.
+    /// Return null/empty to indicate no override.
+    /// </summary>
+    public delegate string? TenantDomainResolver(string tenantId);
+
+    /// <summary>
     /// Configuration for Agent365Exporter.
     /// Only ClusterCategory and TokenResolver are required for core operation.
     /// </summary>
@@ -28,6 +34,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Async delegate used to resolve the auth token. REQUIRED.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
+
+        /// <summary>
+        /// Optional delegate used to resolve the island tenant domain for a given tenant id.
+        /// If provided, this will be used as the first choice to obtain the endpoint override.
+        /// </summary>
+        public TenantDomainResolver? DomainResolver { get; set; }
 
         /// <summary>
         /// When true, uses the service-to-service (S2S) endpoint path: /maven/agent365/service/agents/{agentId}/traces
@@ -59,5 +71,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Default is 512.
         /// </summary>
         public int MaxExportBatchSize { get; set; } = 512;
+
+
     }
 }
