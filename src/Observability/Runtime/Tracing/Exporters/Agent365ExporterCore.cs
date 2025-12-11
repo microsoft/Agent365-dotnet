@@ -127,10 +127,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var ppapiEndpointOverride = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
                 var ppapiEndpoint = !string.IsNullOrEmpty(ppapiEndpointOverride)
                     ? ppapiEndpointOverride
-                    : options.DomainResolver?.Invoke(tenantId);
+                    : options.DomainResolver.Invoke(tenantId);
 
                 var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
-                var requestUri = BuildRequestUri(ppapiEndpoint!, endpointPath);
+                var requestUri = BuildRequestUri(ppapiEndpoint, endpointPath);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
                 {
