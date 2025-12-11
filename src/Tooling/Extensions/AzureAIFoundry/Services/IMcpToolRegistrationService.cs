@@ -21,12 +21,14 @@ public interface IMcpToolRegistrationService
     /// This is the primary method that customers should use in orchestrators with full authentication context.
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance.</param>
+    /// <param name="agentInstanceId">The ID of the agent instance.</param>
     /// <param name="userAuthorization">User authorization context.</param>
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
     Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
+        string agentInstanceId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,

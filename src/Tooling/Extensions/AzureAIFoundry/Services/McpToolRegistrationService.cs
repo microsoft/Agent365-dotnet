@@ -92,9 +92,19 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Add new MCP servers to the agent by updating the PersistentAgentsClient asynchronously.
+    /// </summary>
+    /// <param name="agentClient">PersistentAgentsClient instance for the agent.</param>
+    /// <param name="agentInstanceId">The ID of the agent instance.</param>
+    /// <param name="userAuthorization">User authorization information.</param>
+    /// <param name="authHandlerName">The name of the authentication handler.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="authToken">Authentication token for MCP server access.</param>
+    /// <exception cref="ArgumentNullException"></exception>
     public async Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
+        string agentInstanceId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
@@ -110,15 +120,13 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
 
-        var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
-
         try
         {
             // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
 
             agentClient.Administration.UpdateAgent(
-                agenticAppId,
+                agentInstanceId,
                 tools: toolDefinitions,
                 toolResources: toolResources);
 
@@ -126,7 +134,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agenticAppId}", agenticAppId);
+            _logger.LogError(ex, "Unhandled failure during MCP tool registration workflow for agent user {agentInstanceId}", agentInstanceId);
             throw;
         }
     }
