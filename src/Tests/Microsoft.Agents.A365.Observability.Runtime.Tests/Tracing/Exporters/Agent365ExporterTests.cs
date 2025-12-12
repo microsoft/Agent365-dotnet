@@ -1016,12 +1016,163 @@ public sealed class Agent365ExporterTests
 
     #endregion
 
+    #region Domain Override Functional Tests
+
     [TestMethod]
-    public void Export_RequestUri_UsesDomainOverride_WhenEnvVarSet()
+    public void Export_RequestUri_EnvVar_Overrides_CustomDomainResolver_WhenBothSet()
     {
         // Arrange
         var overrideDomain = "override.example.com";
         Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", overrideDomain);
+        var resolverDomain = "resolver.example.com"; // should be ignored due to env var
+
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = false,
+            DomainResolver = tenantId => resolverDomain
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity(tenantId: "tenant-env-overrides", agentId: "agent-xyz");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().NotBeNull();
+        observedUri!.Should().StartWith($"https://{overrideDomain}");
+        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain("api-version=1");
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+    }
+
+    [TestMethod]
+    public void Export_RequestUri_UsesEnvVar_WhenNoResolverSet()
+    {
+        // Arrange
+        var overrideDomain = "override.example.com";
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", overrideDomain);
+
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = false,
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity(tenantId: "tenant-env", agentId: "agent-xyz");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().NotBeNull();
+        observedUri!.Should().StartWith($"https://{overrideDomain}");
+        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain("api-version=1");
+
+        // Cleanup
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+    }
+
+    [TestMethod]
+    public void Export_RequestUri_UsesCustomDomainResolver_WhenProvided()
+    {
+        // Arrange
+        var resolverDomain = "resolver.example.com";
+        // Ensure env variable is not set so resolver is used
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = false,
+            DomainResolver = tenantId => resolverDomain
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity(tenantId: "tenant-resolver", agentId: "agent-xyz");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().NotBeNull();
+        observedUri!.Should().StartWith($"https://{resolverDomain}");
+        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain("api-version=1");
+        // Cleanup
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+    }
+
+    [TestMethod]
+    public void Export_RequestUri_UsesPpapiDiscovery_WhenNoResolverAndNoEnvVarSet()
+    {
+        // Arrange
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
 
         string? observedUri = null;
         var handler = new TestHttpMessageHandler(req =>
@@ -1048,8 +1199,11 @@ public sealed class Agent365ExporterTests
             resource,
             httpClient);
 
-        using var activity = CreateActivity(tenantId: "tenant-abc", agentId: "agent-xyz");
+        var tenantId = "tenant-discovery-noset";
+        using var activity = CreateActivity(tenantId: tenantId, agentId: "agent-xyz");
         var batch = CreateBatch(activity);
+
+        var expectedDomain = new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
 
         // Act
         var result = exporter.Export(in batch);
@@ -1057,13 +1211,12 @@ public sealed class Agent365ExporterTests
         // Assert
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
-        observedUri!.Should().StartWith($"https://{overrideDomain}");
+        observedUri!.Should().StartWith($"https://{expectedDomain}");
         observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
-
-        // Cleanup
-        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
     }
+
+    #endregion
 
     private class TestHttpMessageHandler : HttpMessageHandler
     {
