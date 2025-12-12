@@ -5,7 +5,7 @@
 namespace Microsoft.Agents.A365.Tooling.Models
 {
     /// <summary>
-    /// Tooling options for list tool servers.
+    /// Tooling options for listing tool servers.
     /// </summary>
     public class ToolOptions
     {
