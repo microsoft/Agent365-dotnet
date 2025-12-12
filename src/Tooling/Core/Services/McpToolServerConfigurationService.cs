@@ -45,9 +45,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, string orchestratorName = "")
+        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, orchestratorName);
+            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions());
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        {
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
         }
 
         /// <inheritdoc/>
@@ -55,7 +61,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             ITurnContext turnContext,
             MCPServerConfig mCPServerConfig,
             string authToken,
-            string orchestratorName = "")
+            ToolOptions toolOptions)
         {
             try
             {
@@ -68,7 +74,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, orchestratorName);
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -90,7 +96,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
-            string agentInstanceId, string authToken, string orchestratorName = "")
+            string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, _configuration);
 
@@ -104,7 +110,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                httpClient.DefaultRequestHeaders.Add("User-Agent", RuntimeUtility.GetUserAgentHeader(orchestratorName));
+                httpClient.DefaultRequestHeaders.Add("User-Agent", RuntimeUtility.GetUserAgentHeader(toolOptions.OrchestratorName));
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
@@ -379,7 +385,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, string orchestratorName = "")
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -402,7 +408,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             this._logger.LogInformation($"Configured authentication handler for MCP endpoint {endpoint}");
 
-            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, orchestratorName)
+            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, toolOptions)
             {
                 InnerHandler = authHandler,
             };

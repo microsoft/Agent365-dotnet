@@ -145,10 +145,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // This workaround is temporary and will be removed once the Foundry SDK correctly updates agentClient with tool resources.
         // Eventually, we should retrieve tool resources directly from agentClient.
 
+        var toolOptions = new ToolOptions
+        {
+            OrchestratorName = _orchestratorName
+        };
+
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken, _orchestratorName);
+            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken, toolOptions);
         }
         catch (Exception ex)
         {
@@ -209,7 +214,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, _orchestratorName);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)
