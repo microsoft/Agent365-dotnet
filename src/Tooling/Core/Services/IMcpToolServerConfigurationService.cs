@@ -22,13 +22,23 @@ namespace Microsoft.Agents.A365.Tooling.Services
         Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken);
 
         /// <summary>
+        /// Gets the list of MCP Servers that are configured for the agent.
+        /// </summary>
+        /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
+        /// <param name="authToken">Auth token to access the MCP servers</param>
+        /// <param name="toolOptions">Tool options for listing servers.</param>
+        /// <returns>Returns the list of MCP Servers that are configured.</returns>
+        Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions);
+
+        /// <summary>
         /// Gets the MCP Client Tools from the specified MCP server.
         /// </summary>
         /// <param name="turnContext">The turn context.</param>
         /// <param name="mCPServerConfig">The MCP server configuration.</param>
         /// <param name="authToken">The authentication token.</param>
+        /// <param name="toolOptions">Tool options for listing servers.</param>
         /// <returns>MCP Client Tools</returns>
         /// <exception cref="InvalidOperationException"></exception>
-        Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken);
+        Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken, ToolOptions toolOptions);
     }
 }

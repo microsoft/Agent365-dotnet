@@ -4,6 +4,7 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Runtime.Authentication;
+using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
@@ -24,6 +25,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
+    private readonly string _orchestratorName = "AgentFramework";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -70,15 +72,20 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Keep any existing tools that were passed in
             updatedTools.AddRange(initialTools);
 
+            var toolOptions = new ToolOptions
+            {
+                OrchestratorName = _orchestratorName
+            };
+
             // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!).ConfigureAwait(false);
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!, toolOptions).ConfigureAwait(false);
 
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
                 try
                 {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
                     // Add the MCP tools
                     updatedTools.AddRange(mcpTools.Cast<AITool>());
 
@@ -113,10 +120,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
     /// <inheritdoc />
     public async Task<IList<AITool>> GetMcpToolsAsync(
-        string agentUserId, 
-        UserAuthorization userAuthorization, 
-        string authHandlerName, 
-        ITurnContext turnContext, 
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
         string? authToken = null)
     {
         var a365ToolList = new List<AITool>();
@@ -131,15 +138,20 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 }
             }
 
+            var toolOptions = new ToolOptions
+            {
+                OrchestratorName = _orchestratorName
+            };
+
             // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!).ConfigureAwait(false);
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!, toolOptions).ConfigureAwait(false);
 
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
                 try
                 {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
+                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
                     // Add the MCP tools
                     a365ToolList.AddRange(mcpTools.Cast<AITool>());
 

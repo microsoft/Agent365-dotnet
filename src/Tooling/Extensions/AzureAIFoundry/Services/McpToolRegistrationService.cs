@@ -6,7 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 
 using Azure.AI.Agents.Persistent; // MCPToolDefinition, MCPToolResource, MCPApproval
 using Microsoft.Agents.A365.Runtime.Authentication;
-using Microsoft.Agents.A365.Tooling;
+using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
@@ -32,6 +32,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
+    private readonly string _orchestratorName = "AzureAIFoundry";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -144,10 +145,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // This workaround is temporary and will be removed once the Foundry SDK correctly updates agentClient with tool resources.
         // Eventually, we should retrieve tool resources directly from agentClient.
 
+        var toolOptions = new ToolOptions
+        {
+            OrchestratorName = _orchestratorName
+        };
+
         List<MCPServerConfig> servers;
         try
         {
-            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken);
+            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken, toolOptions);
         }
         catch (Exception ex)
         {
@@ -196,6 +202,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 resource.UpdateHeader("Authorization", headerValue);
             }
 
+            // Set up other headers
+            resource.UpdateHeader("User-Agent", RuntimeUtility.GetUserAgentHeader(_orchestratorName));
+
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");
 
@@ -205,7 +214,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
             try
             {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken);
+                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions);
                 discoveredTools[server.mcpServerName] = mcpTools;
             }
             catch (Exception ex)

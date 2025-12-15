@@ -5,8 +5,9 @@
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
     using Microsoft.Agents.A365.Runtime.Authentication;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
+    using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
-    using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
@@ -24,6 +25,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
         private readonly IConfiguration _configuration;
+        private readonly string _orchestratorName = "SemanticKernel";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -59,15 +61,20 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
-            // resolve agent identity from context or token. 
-            string agenticAppId = Runtime.Utils.Utility.ResolveAgentIdentity(turnContext, authToken);
+            // resolve agent identity from context or token.
+            string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
 
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken).ConfigureAwait(false);
+            var toolOptions = new ToolOptions
+            {
+                OrchestratorName = _orchestratorName
+            };
+
+            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken, toolOptions).ConfigureAwait(false);
 
             foreach (var server in servers)
             {
                 var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken).ConfigureAwait(false);
+                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
