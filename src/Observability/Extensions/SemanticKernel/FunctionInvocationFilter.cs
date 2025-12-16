@@ -36,18 +36,6 @@ public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolCallIdKey, context.Function.PluginName);
             return;
         }
-        // TODO: figure out how to get agent and tenant details here
-        using var scope = ExecuteToolScope.Start(
-            new ToolCallDetails(
-                context.Function.Name,
-                arguments,
-                null,
-                context.Function.Description,
-                ToolType.Function),
-            new AgentDetails("tempAgentId"),
-            new TenantDetails(new Guid()));
-        await InvokeWithErrorHandlingAsync(next, context);
-        scope?.RecordResponse(GetResult(context));
     }
 
     private async Task InvokeWithErrorHandlingAsync(Func<FunctionInvocationContext, Task> next, FunctionInvocationContext context)
