@@ -4,11 +4,11 @@
 
 namespace Microsoft.Agents.A365.Observability.Hosting
 {
+    using System;
     using Microsoft.Agents.A365.Observability.Runtime;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Hosting;
-    using System;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
