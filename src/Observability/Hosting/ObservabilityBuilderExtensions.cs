@@ -4,10 +4,11 @@
 
 namespace Microsoft.Agents.A365.Observability.Hosting
 {
-    using System;
-    using Microsoft.AspNetCore.Hosting;
     using Microsoft.Agents.A365.Observability.Runtime;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Hosting;
+    using System;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
@@ -39,6 +40,33 @@ namespace Microsoft.Agents.A365.Observability.Hosting
                 localBuilder.Build();
             });
             return webHostBuilder;
+        }
+
+
+        /// <summary>
+        /// Adds the Microsoft Agent 365 SDK with OpenTelemetry tracing for AI agents and tools.
+        /// </summary>
+        /// <param name="builder">The generic host builder to which tracing services will be added.</param>
+        /// <param name="configure">An optional delegate to further configure the tracing builder.</param>
+        /// <param name="useOpenTelemetryBuilder">Specifies whether to use the OpenTelemetry builder for configuration. Defaults to <c>true</c>.</param>
+        /// <param name="agent365ExporterType">The type of Agent 365 exporter to use for tracing. Defaults to <see cref="Agent365ExporterType.Agent365Exporter"/>.</param>
+        public static IHostBuilder AddA365Tracing(
+            this IHostBuilder builder,
+            Action<Builder>? configure = null,
+            bool useOpenTelemetryBuilder = true,
+            Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter)
+        {
+            builder.ConfigureServices((context, services) =>
+            {
+                var localbuilder = new Builder(
+                    services: services,
+                    useOpenTelemetryBuilder: useOpenTelemetryBuilder,
+                    agent365ExporterType: agent365ExporterType,
+                    configuration: context.Configuration);
+                configure?.Invoke(localbuilder);
+                localbuilder.Build();
+            });
+            return builder;
         }
     }
 }
