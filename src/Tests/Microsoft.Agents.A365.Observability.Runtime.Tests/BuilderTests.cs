@@ -69,7 +69,7 @@ public sealed class BuilderTests
             var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
             // Provide required dependencies for exporter
-            services.AddSingleton<Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions>(_ => new Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions
+            services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
                 TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
                 UseS2SEndpoint = false
