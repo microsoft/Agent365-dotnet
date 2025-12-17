@@ -96,29 +96,36 @@ public sealed class BuilderTests
     [TestMethod]
     public void Builder_WithExporterType_Async_RegistersTracerProvider()
     {
-        Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-
-        var services = new ServiceCollection();
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-
-        // Provide required dependencies for exporter
-        services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+        try
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
-            UseS2SEndpoint = false
-        });
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
 
-        var builder = new Builder(
-            services: services,
-            configuration: configuration,
-            useOpenTelemetryBuilder: true,
-            agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        builder.Build();
+            // Provide required dependencies for exporter
+            services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+            {
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
+                UseS2SEndpoint = false
+            });
 
-        var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetService<TracerProvider>();
-        tracerProvider.Should().NotBeNull();
+            var builder = new Builder(
+                services: services,
+                configuration: configuration,
+                useOpenTelemetryBuilder: true,
+                agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+
+            builder.Build();
+
+            var provider = services.BuildServiceProvider();
+            var tracerProvider = provider.GetService<TracerProvider>();
+            tracerProvider.Should().NotBeNull();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", null);
+        }
     }
 
     [TestMethod]
