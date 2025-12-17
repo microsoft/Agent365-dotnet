@@ -143,39 +143,35 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests
         [TestMethod]
         public void AddA365Tracing_IHostBuilder_WithOpenTelemetryBuilderTrue_AndExporterEnabled_RegistersTracerProvider()
         {
-            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-
-            var hostBuilder = new HostBuilder();
-
-            var configuration = new ConfigurationBuilder()
-                .AddEnvironmentVariables()
-                .Build();
-
-            hostBuilder.ConfigureHostConfiguration(cfg =>
+            try
             {
-                foreach (var kvp in configuration.AsEnumerable())
-                {
-                    if (kvp.Value is not null)
-                    {
-                        cfg.AddInMemoryCollection(new[] { new KeyValuePair<string, string?>(kvp.Key, kvp.Value) });
-                    }
-                }
-            });
+                Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
 
-            hostBuilder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter,
-                configure: builder =>
+                var hostBuilder = new HostBuilder();
+                hostBuilder.ConfigureHostConfiguration(cfg =>
                 {
-                    builder.Services.AddSingleton<HttpClient>(_ => new HttpClient());
-                    builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
-                    {
-                        UseS2SEndpoint = false,
-                        TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
-                    });
+                    cfg.AddEnvironmentVariables();
                 });
 
-            using var host = hostBuilder.Build();
-            var tracerProvider = host.Services.GetService<TracerProvider>();
-            tracerProvider.Should().NotBeNull("TracerProvider should be registered when exporter is enabled via OpenTelemetry builder");
+                hostBuilder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter,
+                    configure: builder =>
+                    {
+                        builder.Services.AddSingleton<HttpClient>(_ => new HttpClient());
+                        builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+                        {
+                            UseS2SEndpoint = false,
+                            TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+                        });
+                    });
+
+                using var host = hostBuilder.Build();
+                var tracerProvider = host.Services.GetService<TracerProvider>();
+                tracerProvider.Should().NotBeNull("TracerProvider should be registered when exporter is enabled via OpenTelemetry builder");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("EnableAgent365Exporter", null);
+            }
         }
 
         [TestMethod]
