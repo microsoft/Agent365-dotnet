@@ -17,6 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Tests;
 [TestClass]
 public sealed class BuilderTests
 {
+    [TestMethod]
     public void Builder_WithUseOpenTelemetryBuilder_True_ShouldBuild()
     {
         var services = new ServiceCollection();
@@ -60,29 +61,36 @@ public sealed class BuilderTests
     [TestMethod]
     public void Builder_WithExporterType_Sync_RegistersTracerProvider()
     {
-        Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-
-        var services = new ServiceCollection();
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-
-        // Provide required dependencies for exporter
-        services.AddSingleton<Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions>(_ => new Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions
+        try
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
-            UseS2SEndpoint = false
-        });
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
 
-        var builder = new Builder(
-            services: services,
-            configuration: configuration,
-            useOpenTelemetryBuilder: true,
-            agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        builder.Build();
+            // Provide required dependencies for exporter
+            services.AddSingleton<Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions>(_ => new Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters.Agent365ExporterOptions
+            {
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
+                UseS2SEndpoint = false
+            });
 
-        var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetService<TracerProvider>();
-        tracerProvider.Should().NotBeNull();
+            var builder = new Builder(
+                services: services,
+                configuration: configuration,
+                useOpenTelemetryBuilder: true,
+                agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+
+            builder.Build();
+
+            var provider = services.BuildServiceProvider();
+            var tracerProvider = provider.GetService<TracerProvider>();
+            tracerProvider.Should().NotBeNull();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", null);
+        }
     }
 
     [TestMethod]
@@ -99,7 +107,6 @@ public sealed class BuilderTests
             TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
             UseS2SEndpoint = false
         });
-        services.AddSingleton<System.Net.Http.HttpClient>(new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler()));
 
         var builder = new Builder(
             services: services,
@@ -110,67 +117,81 @@ public sealed class BuilderTests
         builder.Build();
 
         var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetService<OpenTelemetry.Trace.TracerProvider>();
+        var tracerProvider = provider.GetService<TracerProvider>();
         tracerProvider.Should().NotBeNull();
     }
 
     [TestMethod]
-    public void Builder_UseOpenTelemetryBuilder_False_WithExporterType_Sync_ExportsAndNoTracerProviderInDI()
+    public void Builder_UseOpenTelemetryBuilder_False_WithExporterType_Sync_CreatesTracerProvider()
     {
-        Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-
-        var services = new ServiceCollection();
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-
-        services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+        try
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
-            UseS2SEndpoint = false
-        });
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
 
-        var builder = new Builder(
-            services: services,
-            configuration: configuration,
-            useOpenTelemetryBuilder: false,
-            agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        builder.Build();
+            services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+            {
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
+                UseS2SEndpoint = false
+            });
 
-        var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetService<TracerProvider>();
-        tracerProvider.Should().BeNull("useOpenTelemetryBuilder=false should not register TracerProvider in DI");
+            var builder = new Builder(
+                services: services,
+                configuration: configuration,
+                useOpenTelemetryBuilder: false,
+                agent365ExporterType: Agent365ExporterType.Agent365Exporter);
 
-        using var source = new System.Diagnostics.ActivitySource(OpenTelemetryConstants.SourceName);
-        bool hasListeners = source.HasListeners();
+            builder.Build();
+
+            var provider = services.BuildServiceProvider();
+            var tracerProvider = provider.GetService<TracerProvider>();
+            tracerProvider.Should().BeNull("useOpenTelemetryBuilder=false should not register TracerProvider in DI");
+
+            using var source = new System.Diagnostics.ActivitySource(OpenTelemetryConstants.SourceName);
+            source.HasListeners().Should().BeTrue("Agent365Exporter should register ActivitySource listeners even when not using OpenTelemetryBuilder");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", null);
+        }
     }
 
     [TestMethod]
     public void Builder_UseOpenTelemetryBuilder_False_WithExporterType_Async_ExportsAndNoTracerProviderInDI()
     {
-        Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-
-        var services = new ServiceCollection();
-        var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-
-        services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+        try
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
-            UseS2SEndpoint = false
-        });
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
 
-        var builder = new Builder(
-            services: services,
-            configuration: configuration,
-            useOpenTelemetryBuilder: false,
-            agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
+            var services = new ServiceCollection();
+            var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 
-        builder.Build();
+            services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+            {
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
+                UseS2SEndpoint = false
+            });
 
-        var provider = services.BuildServiceProvider();
-        var tracerProvider = provider.GetService<TracerProvider>();
-        tracerProvider.Should().BeNull("useOpenTelemetryBuilder=false should not register TracerProvider in DI");
+            var builder = new Builder(
+                services: services,
+                configuration: configuration,
+                useOpenTelemetryBuilder: false,
+                agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
 
-        using var source = new System.Diagnostics.ActivitySource(OpenTelemetryConstants.SourceName);
-        bool hasListeners = source.HasListeners();
+            builder.Build();
+
+            var provider = services.BuildServiceProvider();
+            var tracerProvider = provider.GetService<TracerProvider>();
+            tracerProvider.Should().BeNull("useOpenTelemetryBuilder=false should not register TracerProvider in DI");
+
+            using var source = new System.Diagnostics.ActivitySource(OpenTelemetryConstants.SourceName);
+            source.HasListeners().Should().BeTrue("Agent365ExporterAsync should register ActivitySource listeners even when not using OpenTelemetryBuilder");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", null);
+        }
     }
 }
