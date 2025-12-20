@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 {
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Agents.A365.Runtime;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.A365.Tooling.Models;
     using System;
@@ -83,7 +84,8 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 }
             }
 
-            request.Headers.Add(UserAgentHeader, RuntimeUtility.GetUserAgentHeader(this.toolOptions.OrchestratorName));
+            var userAgentConfig = new Agent365SdkUserAgentConfiguration(this.toolOptions.OrchestratorName);
+            request.Headers.Add(UserAgentHeader, UserAgentHelper.BuildUserAgent(userAgentConfig));
 
             return base.SendAsync(request, cancellationToken);
         }
