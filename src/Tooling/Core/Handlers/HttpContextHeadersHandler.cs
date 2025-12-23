@@ -7,7 +7,6 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
     using Microsoft.Agents.A365.Runtime;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.A365.Tooling.Models;
     using System;
     using System.Globalization;
