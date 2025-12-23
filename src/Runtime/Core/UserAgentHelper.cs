@@ -17,6 +17,8 @@ namespace Microsoft.Agents.A365.Runtime
         /// <returns>A formatted User-Agent header string.</returns>
         public static string BuildUserAgent(IUserAgentConfiguration config)
         {
+            config = config ?? throw new ArgumentNullException(nameof(config));
+
             var osDescription = RuntimeInformation.OSDescription;
             var frameworkDescription = RuntimeInformation.FrameworkDescription;
             
