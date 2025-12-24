@@ -110,8 +110,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                var userAgentConfig = new Agent365SdkUserAgentConfiguration(toolOptions.OrchestratorName);
-                httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(userAgentConfig));
+                if (toolOptions.UserAgentConfiguration != null)
+                {
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(toolOptions.UserAgentConfiguration));
+                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 

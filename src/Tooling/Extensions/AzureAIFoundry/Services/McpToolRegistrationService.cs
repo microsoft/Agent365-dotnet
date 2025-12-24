@@ -31,7 +31,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
-    private readonly string _orchestratorName = "AzureAIFoundry";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -146,7 +145,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         var toolOptions = new ToolOptions
         {
-            OrchestratorName = _orchestratorName
+            UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
         };
 
         List<MCPServerConfig> servers;
@@ -202,8 +201,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             }
 
             // Set up other headers
-            var userAgentConfig = new Agent365SdkUserAgentConfiguration(_orchestratorName);
-            resource.UpdateHeader("User-Agent", UserAgentHelper.BuildUserAgent(userAgentConfig));
+            resource.UpdateHeader("User-Agent", UserAgentHelper.BuildUserAgent(Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance));
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");

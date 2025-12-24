@@ -83,8 +83,10 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 }
             }
 
-            var userAgentConfig = new Agent365SdkUserAgentConfiguration(this.toolOptions.OrchestratorName);
-            request.Headers.Add(UserAgentHeader, UserAgentHelper.BuildUserAgent(userAgentConfig));
+            if (this.toolOptions.UserAgentConfiguration != null)
+            {
+                request.Headers.Add(UserAgentHeader, UserAgentHelper.BuildUserAgent(this.toolOptions.UserAgentConfiguration));
+            }
 
             return base.SendAsync(request, cancellationToken);
         }

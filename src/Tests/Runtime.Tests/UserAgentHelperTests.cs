@@ -13,11 +13,20 @@ namespace Microsoft.Agents.A365.Runtime.Tests
     /// </summary>
     public class UserAgentHelperTests
     {
+        // Test helper class to test the protected base class
+        private class TestAgent365SdkUserAgentConfiguration : Agent365SdkUserAgentConfiguration
+        {
+            public TestAgent365SdkUserAgentConfiguration(string? orchestratorName = null) 
+                : base(orchestratorName)
+            {
+            }
+        }
+
         [Fact]
         public void BuildUserAgent_ReturnsExpectedFormat_WithDefaultConfiguration()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration();
+            var config = new TestAgent365SdkUserAgentConfiguration();
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
@@ -34,7 +43,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void BuildUserAgent_ReturnsExpectedFormat_WithOrchestrator()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration("TestOrchestrator");
+            var config = new TestAgent365SdkUserAgentConfiguration("TestOrchestrator");
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
@@ -50,7 +59,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void BuildUserAgent_HandlesEmptyOrchestratorName()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration("");
+            var config = new TestAgent365SdkUserAgentConfiguration("");
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
@@ -65,7 +74,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void BuildUserAgent_HandlesNullOrchestratorName()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration(null);
+            var config = new TestAgent365SdkUserAgentConfiguration(null);
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
@@ -114,7 +123,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void BuildUserAgent_IncludesOSDescription()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration();
+            var config = new TestAgent365SdkUserAgentConfiguration();
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
@@ -128,7 +137,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void BuildUserAgent_IncludesFrameworkDescription()
         {
             // Arrange
-            var config = new Agent365SdkUserAgentConfiguration();
+            var config = new TestAgent365SdkUserAgentConfiguration();
 
             // Act
             var userAgent = UserAgentHelper.BuildUserAgent(config);
