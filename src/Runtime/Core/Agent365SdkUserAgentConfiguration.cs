@@ -23,7 +23,8 @@ namespace Microsoft.Agents.A365.Runtime
         public string ProductName => "Agent365SDK";
 
         /// <inheritdoc/>
-        public string Version => Assembly.GetExecutingAssembly()
+        public string Version => typeof(Agent365SdkUserAgentConfiguration)
+            .Assembly
             .GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "Unknown";
 
         /// <inheritdoc/>
