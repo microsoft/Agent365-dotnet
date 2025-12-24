@@ -7,7 +7,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 using Azure.AI.Agents.Persistent; // MCPToolDefinition, MCPToolResource, MCPApproval
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Runtime;
-using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
@@ -19,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Constants = Utils.Constants;
-using Utility = Utils.Utility;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Foundry (Persistent Agents) scenarios.
