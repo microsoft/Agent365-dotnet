@@ -13,7 +13,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Text.Json;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.A365.Tooling.Handlers;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Utils;
