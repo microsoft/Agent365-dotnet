@@ -6,7 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 
 using Azure.AI.Agents.Persistent; // MCPToolDefinition, MCPToolResource, MCPApproval
 using Microsoft.Agents.A365.Runtime.Authentication;
-using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
+using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
@@ -18,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Constants = Utils.Constants;
-using Utility = Utils.Utility;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Foundry (Persistent Agents) scenarios.
@@ -32,7 +31,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
-    private readonly string _orchestratorName = "AzureAIFoundry";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -147,7 +145,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         var toolOptions = new ToolOptions
         {
-            OrchestratorName = _orchestratorName
+            UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
         };
 
         List<MCPServerConfig> servers;
@@ -203,7 +201,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             }
 
             // Set up other headers
-            resource.UpdateHeader("User-Agent", RuntimeUtility.GetUserAgentHeader(_orchestratorName));
+            resource.UpdateHeader("User-Agent", UserAgentHelper.BuildUserAgent(Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance));
 
             // Set approval requirement
             resource.RequireApproval = new MCPApproval("never");

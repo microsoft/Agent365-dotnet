@@ -25,7 +25,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
     private readonly IConfiguration _configuration;
-    private readonly string _orchestratorName = "AgentFramework";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -74,7 +73,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             var toolOptions = new ToolOptions
             {
-                OrchestratorName = _orchestratorName
+                UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
             // Get MCP tool server configurations
@@ -140,7 +139,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             var toolOptions = new ToolOptions
             {
-                OrchestratorName = _orchestratorName
+                UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
             // Get MCP tool server configurations

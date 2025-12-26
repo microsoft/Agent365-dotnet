@@ -25,7 +25,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
         private readonly IConfiguration _configuration;
-        private readonly string _orchestratorName = "SemanticKernel";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -66,7 +65,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             var toolOptions = new ToolOptions
             {
-                OrchestratorName = _orchestratorName
+                UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
             var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken, toolOptions).ConfigureAwait(false);

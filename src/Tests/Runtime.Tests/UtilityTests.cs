@@ -84,29 +84,5 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             // Assert
             Assert.Equal("Development", result);
         }
-
-        [Fact]
-        public void GetUserAgentHeader_ReturnsExpectedFormat()
-        {
-            // Act
-            var userAgent = Utility.GetUserAgentHeader();
-
-            // Assert
-            // Regex: Agent365SDK/{version} ({osType}; .NET {dotnetVersion})
-            var pattern = @"^Agent365SDK/.+ \(.+; .NET \d+(\.\d+)*\)$";
-            Assert.Matches(pattern, userAgent);
-        }
-
-        [Fact]
-        public void GetUserAgentHeader_ReturnsExpectedFormat_WithOrchestrator()
-        {
-            // Act
-            var userAgent = Utility.GetUserAgentHeader("TestOrchestrator");
-
-            // Assert
-            // Regex: Agent365SDK/{version} ({osType}; .NET {dotnetVersion}; TestOrchestrator)
-            var pattern = @"^Agent365SDK/.+ \(.+; .NET \d+(\.\d+)*; TestOrchestrator\)$";
-            Assert.Matches(pattern, userAgent);
-        }
     }
 }

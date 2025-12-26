@@ -12,7 +12,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Reflection;
     using System.Text.Json;
     using System.Threading.Tasks;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
+    using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Handlers;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Utils;
@@ -110,7 +110,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                httpClient.DefaultRequestHeaders.Add("User-Agent", RuntimeUtility.GetUserAgentHeader(toolOptions.OrchestratorName));
+                if (toolOptions.UserAgentConfiguration != null)
+                {
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(toolOptions.UserAgentConfiguration));
+                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
