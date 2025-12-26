@@ -236,11 +236,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 string? name = null;
+                string? endpoint = null;
                 string? id = null;
                 string? scope = null;
                 string? audience = null;
                 string? publisher = null;
-                string? url = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
@@ -256,7 +256,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (serverElement.TryGetProperty("url", out var urlElement) &&
                     urlElement.ValueKind == JsonValueKind.String)
                 {
-                    url = urlElement.GetString();
+                    endpoint = urlElement.GetString();
                 }
 
                 if (serverElement.TryGetProperty("id", out var idElement) &&
@@ -287,7 +287,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
 
                 // Construct full URL if not provided in manifest
-                var fullUrl = url ?? Utility.BuildMcpServerUrl(name, _configuration);
+                var fullUrl = endpoint ?? Utility.BuildMcpServerUrl(name, _configuration);
 
                 return new MCPServerConfig
                 {
