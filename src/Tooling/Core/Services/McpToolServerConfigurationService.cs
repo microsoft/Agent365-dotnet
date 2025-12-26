@@ -240,12 +240,25 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 string? scope = null;
                 string? audience = null;
                 string? publisher = null;
+                string? url = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
                 {
                     name = nameElement.GetString();
                 }
+                else if (serverElement.TryGetProperty("mcpServerUniqueName", out var mcpServerUniqueNameElement) &&
+                    mcpServerUniqueNameElement.ValueKind == JsonValueKind.String)
+                {
+                    name = mcpServerUniqueNameElement.GetString();
+                }
+
+                if (serverElement.TryGetProperty("url", out var urlElement) &&
+                    urlElement.ValueKind == JsonValueKind.String)
+                {
+                    url = urlElement.GetString();
+                }
+
                 if (serverElement.TryGetProperty("id", out var idElement) &&
                     idElement.ValueKind == JsonValueKind.String)
                 {
@@ -273,8 +286,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     return null;
                 }
 
-                // Construct full URL
-                var fullUrl = Utility.BuildMcpServerUrl(name, _configuration);
+                // Construct full URL if not provided in manifest
+                var fullUrl = url ?? Utility.BuildMcpServerUrl(name, _configuration);
 
                 return new MCPServerConfig
                 {
