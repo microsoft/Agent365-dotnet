@@ -17,7 +17,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365AgentFrameworkSdkUserAgentConfiguration"/>.
         /// </summary>
-        public static Agent365AgentFrameworkSdkUserAgentConfiguration Instance => _instance.Value;
+        public static new Agent365AgentFrameworkSdkUserAgentConfiguration Instance => _instance.Value;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365AgentFrameworkSdkUserAgentConfiguration"/> class.

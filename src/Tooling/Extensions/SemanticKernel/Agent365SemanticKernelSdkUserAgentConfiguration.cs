@@ -17,7 +17,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365SemanticKernelSdkUserAgentConfiguration"/>.
         /// </summary>
-        public static Agent365SemanticKernelSdkUserAgentConfiguration Instance => _instance.Value;
+        public static new Agent365SemanticKernelSdkUserAgentConfiguration Instance => _instance.Value;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365SemanticKernelSdkUserAgentConfiguration"/> class.

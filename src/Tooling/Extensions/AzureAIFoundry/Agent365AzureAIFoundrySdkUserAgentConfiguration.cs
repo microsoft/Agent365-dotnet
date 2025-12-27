@@ -17,7 +17,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365AzureAIFoundrySdkUserAgentConfiguration"/>.
         /// </summary>
-        public static Agent365AzureAIFoundrySdkUserAgentConfiguration Instance => _instance.Value;
+        public static new Agent365AzureAIFoundrySdkUserAgentConfiguration Instance => _instance.Value;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365AzureAIFoundrySdkUserAgentConfiguration"/> class.

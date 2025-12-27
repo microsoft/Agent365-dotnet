@@ -61,5 +61,15 @@ namespace Microsoft.Agents.A365.Tooling.Utils
             var baseUrl = GetMcpBaseUrl(configuration);
             return $"{baseUrl}/{serverName}";
         }
+
+        /// <summary>
+        /// Gets the chat history endpoint URL for the specified agent instance.
+        /// </summary>
+        /// <param name="configuration">Configuration Collection</param>
+        /// <returns>The chat history endpoint URL.</returns>
+        public static string GetChatHistoryEndpoint(IConfiguration configuration)
+        {
+            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/real-time-threat-protection/chat-message";
+        }
     }
 }

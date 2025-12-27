@@ -41,6 +41,19 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         }
 
         /// <summary>
+        /// Creates a default HttpClient configured with standard timeout and user agent header.
+        /// </summary>
+        /// <param name="userAgentConfiguration">The implementation that contains User-Agent information. If null, uses default Agent 365 SDK configuration.</param>
+        /// <param name="timeoutSeconds">Timeout in seconds. Defaults to 30 seconds.</param>
+        /// <returns>A configured HttpClient instance.</returns>
+        public static HttpClient GetDefaultHttpClient(IUserAgentConfiguration? userAgentConfiguration = null, int timeoutSeconds = 30)
+        {
+            var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(timeoutSeconds) };
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentHelper.BuildUserAgent(userAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance));
+            return httpClient;
+        }
+
+        /// <summary>
         /// Decodes the current token and retrieves the App ID (appid or azp claim).
         /// </summary>
         /// <param name="token">Token to Decode</param>

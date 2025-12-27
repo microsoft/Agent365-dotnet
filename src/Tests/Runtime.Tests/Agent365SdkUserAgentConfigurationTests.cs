@@ -90,5 +90,46 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             // Assert
             config.Should().BeAssignableTo<IUserAgentConfiguration>();
         }
+
+        [Fact]
+        public void Agent365SdkUserAgentConfiguration_Instance_ReturnsSingleton()
+        {
+            // Arrange & Act
+            var instance1 = Agent365SdkUserAgentConfiguration.Instance;
+            var instance2 = Agent365SdkUserAgentConfiguration.Instance;
+
+            // Assert
+            instance1.Should().BeSameAs(instance2);
+        }
+
+        [Fact]
+        public void Agent365SdkUserAgentConfiguration_Instance_HasNoOrchestratorName()
+        {
+            // Arrange & Act
+            var instance = Agent365SdkUserAgentConfiguration.Instance;
+
+            // Assert
+            instance.OrchestratorName.Should().BeNull();
+        }
+
+        [Fact]
+        public void Agent365SdkUserAgentConfiguration_Instance_HasCorrectProductName()
+        {
+            // Arrange & Act
+            var instance = Agent365SdkUserAgentConfiguration.Instance;
+
+            // Assert
+            instance.ProductName.Should().Be("Agent365SDK");
+        }
+
+        [Fact]
+        public void Agent365SdkUserAgentConfiguration_Instance_HasValidVersion()
+        {
+            // Arrange & Act
+            var instance = Agent365SdkUserAgentConfiguration.Instance;
+
+            // Assert
+            instance.Version.Should().NotBeNullOrEmpty();
+        }
     }
 }

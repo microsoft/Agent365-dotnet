@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
     /// Provides services for managing MCP server configurations.
@@ -95,6 +96,64 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
         }
 
+        /// <inheritdoc/>
+        public async Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages)
+        {
+            await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions());
+        }
+
+        /// <inheritdoc/>
+        public async Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions)
+        {
+            ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+            ArgumentNullException.ThrowIfNull(chatHistoryMessages, nameof(chatHistoryMessages));
+
+            // Extract required information from turn context
+            var conversationId = turnContext.Activity?.Conversation?.Id ?? throw new InvalidOperationException("Conversation ID is required but not found in turn context");
+            var messageId = turnContext.Activity?.Id ?? throw new InvalidOperationException("Message ID is required but not found in turn context");
+            var userMessage = turnContext.Activity?.Text ?? throw new InvalidOperationException("User message is required but not found in turn context");
+
+            // Get the endpoint URL
+            var endpoint = Utility.GetChatHistoryEndpoint(_configuration);
+
+            this._logger.LogInformation($"Sending chat history to endpoint: {endpoint}");
+
+            // Create the request payload
+            var request = new ChatMessageRequest(conversationId, messageId, userMessage, chatHistoryMessages);
+
+            try
+            {
+                var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
+                using var httpClient = RuntimeUtility.GetDefaultHttpClient(userAgentConfiguration: userAgentConfiguration);
+
+                var jsonContent = JsonSerializer.Serialize(request);
+                var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await httpClient.PostAsync(endpoint, content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    throw new InvalidOperationException(
+                        $"Failed to send chat history. Status: {response.StatusCode}, Error: {errorContent}");
+                }
+
+                this._logger.LogInformation("Successfully sent chat history to MCP platform");
+            }
+            catch (HttpRequestException httpEx)
+            {
+                _logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, httpEx.Message);
+            }
+            catch (TaskCanceledException tcEx)
+            {
+                _logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, tcEx.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {ErrorMessage}", endpoint, ex.Message);
+            }
+        }
+
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
             string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
@@ -107,13 +166,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
+                using var httpClient = RuntimeUtility.GetDefaultHttpClient(userAgentConfiguration: userAgentConfiguration);
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                if (toolOptions.UserAgentConfiguration != null)
-                {
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(toolOptions.UserAgentConfiguration));
-                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 

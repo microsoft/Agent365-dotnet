@@ -40,5 +40,24 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <returns>MCP Client Tools</returns>
         /// <exception cref="InvalidOperationException"></exception>
         Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken, ToolOptions toolOptions);
+
+        /// <summary>
+        /// Sends chat history to the MCP platform for real-time threat protection.
+        /// </summary>
+        /// <param name="turnContext">The turn context containing conversation information.</param>
+        /// <param name="chatHistoryMessages">The chat history messages to send.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the request fails.</exception>
+        Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages);
+
+        /// <summary>
+        /// Sends chat history to the MCP platform for real-time threat protection.
+        /// </summary>
+        /// <param name="turnContext">The turn context containing conversation information.</param>
+        /// <param name="chatHistoryMessages">The chat history messages to send.</param>
+        /// <param name="toolOptions">Tool options for sending chat history.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the request fails.</exception>
+        Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions);
     }
 }
