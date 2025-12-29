@@ -23,7 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         
         // Static guard to ensure Agent365 exporters are only registered once per process.
         // This prevents duplicate export processors when clients call AddAgent365Exporter multiple times via different builder extension paths or mixed API usage.
-        private static readonly ConcurrentDictionary<Agent365ExporterType, bool> _registeredExporters = new ConcurrentDictionary<Agent365ExporterType, bool>();
+        internal static readonly ConcurrentDictionary<Agent365ExporterType, bool> RegisteredExporters = new ConcurrentDictionary<Agent365ExporterType, bool>();
 
         /// <summary>
         /// Adds the Agent365 Exporter to the OpenTelemetry TracerProviderBuilder using deferred initialization.
@@ -72,7 +72,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         private static TracerProviderBuilder ConfigureInternal(IServiceProvider serviceProvider, TracerProviderBuilder builder, Agent365ExporterType exporterType)
         {
-            if (_registeredExporters.TryAdd(exporterType, true))
+            if (ObservabilityTracerProviderBuilderExtensions.RegisteredExporters.TryAdd(exporterType, true))
             {
                 // Ensure required services are registered
                 var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();

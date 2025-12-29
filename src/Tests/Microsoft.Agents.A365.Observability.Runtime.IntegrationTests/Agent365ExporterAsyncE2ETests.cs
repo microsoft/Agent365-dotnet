@@ -20,9 +20,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         private bool _receivedRequest;
         private string? _receivedContent;
 
-        public Agent365ExporterAsyncE2ETests()
+        [TestInitialize]
+        public void TestInitialize()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
+            ClearStaticGuardRegistry();
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
+            ClearStaticGuardRegistry();
         }
 
         [TestMethod]
@@ -429,6 +438,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             var httpClient = new HttpClient(this._handler);
             this._provider = this.CreateTestServiceProvider(httpClient);
+        }
+
+        private static void ClearStaticGuardRegistry()
+        {
+            ObservabilityTracerProviderBuilderExtensions.RegisteredExporters.Clear();
         }
     }
 }

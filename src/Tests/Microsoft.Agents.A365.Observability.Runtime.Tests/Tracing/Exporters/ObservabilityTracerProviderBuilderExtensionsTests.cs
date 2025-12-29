@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections.Concurrent;
-using System.Reflection;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,7 +39,7 @@ public sealed class ObservabilityTracerProviderBuilderExtensionsTests
         });
 
         // Act
-        var tracerProviderBuilder = services.AddOpenTelemetry().WithTracing(builder =>
+        services.AddOpenTelemetry().WithTracing(builder =>
         {
             builder.AddAgent365Exporter(Agent365ExporterType.Agent365Exporter);
         });
@@ -54,37 +52,17 @@ public sealed class ObservabilityTracerProviderBuilderExtensionsTests
         tracerProvider.Should().NotBeNull();
         
         // Verify that the exporter type is registered in the static guard
-        IsExporterTypeRegistered(Agent365ExporterType.Agent365Exporter).Should().BeTrue("Agent365Exporter type should be registered in static guard");
+        ObservabilityTracerProviderBuilderExtensions.RegisteredExporters
+            .Should().ContainKey(Agent365ExporterType.Agent365Exporter)
+            .WhoseValue.Should().BeTrue("Agent365Exporter type should be registered in static guard");
     }
 
     /// <summary>
-    /// Helper method to clear the static guard registry using reflection.
+    /// Helper method to clear the static guard registry.
     /// This is needed for test isolation since static state persists across tests.
     /// </summary>
     private static void ClearStaticGuardRegistry()
     {
-        var type = typeof(ObservabilityTracerProviderBuilderExtensions);
-        var field = type.GetField("_registeredExporters", BindingFlags.NonPublic | BindingFlags.Static);
-        
-        if (field?.GetValue(null) is ConcurrentDictionary<Agent365ExporterType, bool> registry)
-        {
-            registry.Clear();
-        }
-    }
-
-    /// <summary>
-    /// Helper method to check if an exporter type is registered in the static guard using reflection.
-    /// </summary>
-    private static bool IsExporterTypeRegistered(Agent365ExporterType exporterType)
-    {
-        var type = typeof(ObservabilityTracerProviderBuilderExtensions);
-        var field = type.GetField("_registeredExporters", BindingFlags.NonPublic | BindingFlags.Static);
-        
-        if (field?.GetValue(null) is ConcurrentDictionary<Agent365ExporterType, bool> registry)
-        {
-            return registry.ContainsKey(exporterType);
-        }
-        
-        return false;
+        ObservabilityTracerProviderBuilderExtensions.RegisteredExporters.Clear();
     }
 }

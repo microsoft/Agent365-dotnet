@@ -20,9 +20,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         private bool _receivedRequest;
         private string? _receivedContent;
 
-        public Agent365ExporterE2ETests()
+        [TestInitialize]
+        public void TestInitialize()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
+            ClearStaticGuardRegistry();
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
+            ClearStaticGuardRegistry();
         }
 
         [TestMethod]
@@ -483,7 +492,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         }
 
         [TestMethod]
-        public async Task AddTracing_SingletonExporter_MixedAPIUsage_NoDuplicateExports()
+        public async Task AddTracing_MultipleInvocations_NoDuplicateExports()
         {
             List<string> receivedContents = new();
             var requestCount = 0;
@@ -548,7 +557,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             }
 
             // Wait for export(s) to complete
-            await Task.Delay(15000).ConfigureAwait(false);
+            await Task.Delay(10000).ConfigureAwait(false);
 
             // Assert - Should have exactly one export request, not two
             requestCount.Should().Be(1, "Static guard should prevent duplicate exporter registration, resulting in only one export request");
@@ -620,6 +629,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             var httpClient = new HttpClient(this._handler);
             this._provider = this.CreateTestServiceProvider(httpClient);
+        }
+
+        private static void ClearStaticGuardRegistry()
+        {
+            ObservabilityTracerProviderBuilderExtensions.RegisteredExporters.Clear();
         }
     }
 }
