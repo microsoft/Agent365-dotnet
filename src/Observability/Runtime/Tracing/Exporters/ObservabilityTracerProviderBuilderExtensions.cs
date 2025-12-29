@@ -22,8 +22,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
         
         // Static guard to ensure Agent365 exporters are only registered once per process.
-        // This prevents duplicate export processors when clients call AddAgent365Exporter multiple times
-        // via different builder extension paths or mixed API usage.
+        // This prevents duplicate export processors when clients call AddAgent365Exporter multiple times via different builder extension paths or mixed API usage.
         private static readonly ConcurrentDictionary<Agent365ExporterType, bool> _registeredExporters = new ConcurrentDictionary<Agent365ExporterType, bool>();
 
         /// <summary>
@@ -73,49 +72,46 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         private static TracerProviderBuilder ConfigureInternal(IServiceProvider serviceProvider, TracerProviderBuilder builder, Agent365ExporterType exporterType)
         {
-            // Static guard: ensure exporter type is only configured once per process
-            if (!_registeredExporters.TryAdd(exporterType, true))
+            if (_registeredExporters.TryAdd(exporterType, true))
             {
-                // Already registered, skip adding processor
-                return builder;
+                // Ensure required services are registered
+                var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
+                var httpClient = serviceProvider.GetService<HttpClient>();
+
+                // Resolve ILoggerFactory from DI to ensure loggers have proper lifetime; fall back to NullLogger when unavailable.
+                var loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? ObservabilityTracerProviderBuilderExtensions.FallbackConsoleLoggerFactory.Value;
+                var logger = serviceProvider.GetService<ILogger<Agent365Exporter>>() ?? loggerFactory.CreateLogger<Agent365Exporter>();
+                var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? loggerFactory.CreateLogger<Agent365ExporterCore>();
+                var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
+
+                // Create ExportFormatter and Agent365ExporterCore
+                var exportFormatter = new ExportFormatter(formatterLogger);
+                var exporterCore = new Agent365ExporterCore(exportFormatter, coreLogger);
+
+                switch (exporterType)
+                {
+                    case Agent365ExporterType.Agent365ExporterAsync:
+                        builder.AddProcessor(new BatchActivityExportProcessorAsync(
+                            new Agent365ExporterAsync(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
+                            maxQueueSize: exporterOptions.MaxQueueSize,
+                            scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
+                            maxExportBatchSize: exporterOptions.MaxExportBatchSize));
+                        break;
+
+                    case Agent365ExporterType.Agent365Exporter:
+                        builder.AddProcessor(new BatchActivityExportProcessor(
+                            new Agent365Exporter(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
+                            maxQueueSize: exporterOptions.MaxQueueSize,
+                            scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
+                            exporterTimeoutMilliseconds: exporterOptions.ExporterTimeoutMilliseconds,
+                            maxExportBatchSize: exporterOptions.MaxExportBatchSize));
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(exporterType), exporterType, "Unknown Agent365ExporterType specified.");
+                }
             }
 
-            // Ensure required services are registered
-            var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-            var httpClient = serviceProvider.GetService<HttpClient>();
-
-            // Resolve ILoggerFactory from DI to ensure loggers have proper lifetime; fall back to NullLogger when unavailable.
-            var loggerFactory = serviceProvider.GetService<ILoggerFactory>() ?? ObservabilityTracerProviderBuilderExtensions.FallbackConsoleLoggerFactory.Value;
-            var logger = serviceProvider.GetService<ILogger<Agent365Exporter>>() ?? loggerFactory.CreateLogger<Agent365Exporter>();
-            var coreLogger = serviceProvider.GetService<ILogger<Agent365ExporterCore>>() ?? loggerFactory.CreateLogger<Agent365ExporterCore>();
-            var formatterLogger = serviceProvider.GetService<ILogger<ExportFormatter>>() ?? loggerFactory.CreateLogger<ExportFormatter>();
-
-            // Create ExportFormatter and Agent365ExporterCore
-            var exportFormatter = new ExportFormatter(formatterLogger);
-            var exporterCore = new Agent365ExporterCore(exportFormatter, coreLogger);
-
-            switch (exporterType)
-            {
-                case Agent365ExporterType.Agent365ExporterAsync:
-                    builder.AddProcessor(new BatchActivityExportProcessorAsync(
-                        new Agent365ExporterAsync(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
-                        maxQueueSize: exporterOptions.MaxQueueSize,
-                        scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
-                        maxExportBatchSize: exporterOptions.MaxExportBatchSize));
-                    break;
-
-                case Agent365ExporterType.Agent365Exporter:
-                    builder.AddProcessor(new BatchActivityExportProcessor(
-                        new Agent365Exporter(core: exporterCore, logger: logger, options: exporterOptions, resource: null, httpClient: httpClient),
-                        maxQueueSize: exporterOptions.MaxQueueSize,
-                        scheduledDelayMilliseconds: exporterOptions.ScheduledDelayMilliseconds,
-                        exporterTimeoutMilliseconds: exporterOptions.ExporterTimeoutMilliseconds,
-                        maxExportBatchSize: exporterOptions.MaxExportBatchSize));
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(exporterType), exporterType, "Unknown Agent365ExporterType specified.");
-            }
             return builder;
         }
     }
