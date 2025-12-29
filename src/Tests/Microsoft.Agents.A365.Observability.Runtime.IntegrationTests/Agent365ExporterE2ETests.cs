@@ -482,6 +482,79 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             foundExecuteTool.Should().BeTrue();
         }
 
+        [TestMethod]
+        public async Task AddTracing_SingletonExporter_MixedAPIUsage_NoDuplicateExports()
+        {
+            List<string> receivedContents = new();
+            var requestCount = 0;
+
+            var handler = new TestHttpMessageHandler(req =>
+            {
+                Interlocked.Increment(ref requestCount);
+                var content = req.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "";
+                lock (receivedContents)
+                {
+                    receivedContents.Add(content);
+                }
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            });
+            var httpClient = new HttpClient(handler);
+
+            // Create builder and simulate mixed API usage that could cause duplicates
+            HostApplicationBuilder builder = new HostApplicationBuilder();
+            builder.Configuration["EnableAgent365Exporter"] = "true";
+            builder.Services.AddSingleton<HttpClient>(httpClient);
+            builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+            {
+                UseS2SEndpoint = false,
+                TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+            });
+
+            // 1. Direct OpenTelemetry call
+            builder.Services.AddOpenTelemetry().WithTracing(tracingBuilder =>
+            {
+                tracingBuilder.AddAgent365Exporter(Agent365ExporterType.Agent365Exporter);
+            });
+
+            // 2. AddA365Tracing call
+            builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+
+            var serviceProvider = builder.Services.BuildServiceProvider();
+
+            // Initialize the OpenTelemetry infrastructure by accessing the TracerProvider
+            // This ensures the tracing pipeline is built and exporters are initialized
+            _ = serviceProvider.GetService<OpenTelemetry.Trace.TracerProvider>();
+
+            var agentDetails = new AgentDetails(
+                agentId: Guid.NewGuid().ToString(),
+                agentName: "Singleton Test Agent",
+                agentDescription: "Testing singleton exporter behavior.",
+                agentAUID: Guid.NewGuid().ToString(),
+                agentUPN: "singleton@test.com",
+                agentBlueprintId: Guid.NewGuid().ToString(),
+                tenantId: Guid.NewGuid().ToString());
+
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var endpoint = new Uri("https://singleton-test-endpoint");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var request = new Request(
+                content: "Singleton test request",
+                executionType: ExecutionType.HumanToAgent,
+                sourceMetadata: new SourceMetadata(name: "test", description: "singleton test"));
+            using (var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            {
+                scope.RecordInputMessages(new[] { "Test input" });
+                scope.RecordOutputMessages(new[] { "Test output" });
+            }
+
+            // Wait for export(s) to complete
+            await Task.Delay(15000).ConfigureAwait(false);
+
+            // Assert - Should have exactly one export request, not two
+            requestCount.Should().Be(1, "Static guard should prevent duplicate exporter registration, resulting in only one export request");
+            receivedContents.Should().HaveCount(1, "Should receive exactly one export payload");
+        }
+
         private class TestHttpMessageHandler : HttpMessageHandler
         {
             private Func<HttpRequestMessage, HttpResponseMessage> _handler;
