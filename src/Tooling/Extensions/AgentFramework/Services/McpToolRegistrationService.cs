@@ -23,23 +23,19 @@ using System.Threading.Tasks;
 public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
-    private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
-    private readonly IConfiguration _configuration;
+    private readonly McpToolEnumerationService _mcpToolEnumerationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="mcpServerConfigurationService">The MCP tool server configuration service.</param>
-    /// <param name="configuration">The application configuration.</param>
+    /// <param name="mcpToolEnumerationService">The MCP tool enumeration service.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
-        IMcpToolServerConfigurationService mcpServerConfigurationService,
-        IConfiguration configuration)
+        McpToolEnumerationService mcpToolEnumerationService)
     {
-        _configuration = configuration;
         _logger = logger;
-        _mcpServerConfigurationService = mcpServerConfigurationService;
+        _mcpToolEnumerationService = mcpToolEnumerationService;
     }
 
     /// <inheritdoc />
@@ -58,10 +54,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (authToken == null)
-        {
-            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-        }
+        authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
 
         try
         {
@@ -76,26 +69,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!, toolOptions).ConfigureAwait(false);
+            // Use the shared enumeration service to get tools from all servers
+            var (servers, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(
+                agentUserId,
+                authToken,
+                turnContext,
+                toolOptions).ConfigureAwait(false);
 
-            // Retrieve MCP tools from all configured servers
-            foreach (var server in servers)
+            // Add all MCP tools from all servers
+            foreach (var serverEntry in toolsByServer)
             {
-                try
-                {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
-                    // Add the MCP tools
-                    updatedTools.AddRange(mcpTools.Cast<AITool>());
-
-                    _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
-                        mcpTools.Count, server.mcpServerName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}",
-                        server.mcpServerName, ex.Message);
-                }
+                updatedTools.AddRange(serverEntry.Value.Cast<AITool>());
             }
 
             _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
@@ -125,47 +109,29 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         string? authToken = null)
     {
-        var a365ToolList = new List<AITool>();
         try
         {
-            if (authToken == null)
-            {
-                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-                if (authToken == null )
-                {
-                    throw new InvalidOperationException("Failed to obtain authentication token for MCP tool retrieval.");
-                }
-            }
+            authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
 
             var toolOptions = new ToolOptions
             {
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Get MCP tool server configurations
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agentUserId, authToken!, toolOptions).ConfigureAwait(false);
+            // Use the shared enumeration service to get all tools
+            var mcpTools = await _mcpToolEnumerationService.EnumerateAllToolsAsync(
+                agentUserId,
+                authToken,
+                turnContext,
+                toolOptions).ConfigureAwait(false);
 
-            // Retrieve MCP tools from all configured servers
-            foreach (var server in servers)
-            {
-                try
-                {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
-                    // Add the MCP tools
-                    a365ToolList.AddRange(mcpTools.Cast<AITool>());
-
-                    _logger.LogInformation("Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
-                        mcpTools.Count, server.mcpServerName);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to load tools from MCP server '{ServerName}': {Error}",
-                        server.mcpServerName, ex.Message);
-                }
-            }
+            // Convert to AITool list
+            var a365ToolList = mcpTools.Cast<AITool>().ToList();
 
             _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
                 a365ToolList.Count, agentUserId);
+
+            return a365ToolList;
         }
         catch (Exception ex)
         {
@@ -173,6 +139,5 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentUserId);
             throw;
         }
-        return a365ToolList;
     }
 }
