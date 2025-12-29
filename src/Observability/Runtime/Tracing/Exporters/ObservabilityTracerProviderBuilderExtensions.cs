@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using System;
+using System.Collections.Concurrent;
 using System.Net.Http;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
@@ -19,6 +20,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public static class ObservabilityTracerProviderBuilderExtensions
     {
         private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
+        
+        // Static guard to ensure Agent365 exporters are only registered once per process.
+        // This prevents duplicate export processors when clients call AddAgent365Exporter multiple times
+        // via different builder extension paths or mixed API usage.
+        private static readonly ConcurrentDictionary<Agent365ExporterType, bool> _registeredExporters = new ConcurrentDictionary<Agent365ExporterType, bool>();
 
         /// <summary>
         /// Adds the Agent365 Exporter to the OpenTelemetry TracerProviderBuilder using deferred initialization.
@@ -67,6 +73,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         private static TracerProviderBuilder ConfigureInternal(IServiceProvider serviceProvider, TracerProviderBuilder builder, Agent365ExporterType exporterType)
         {
+            // Static guard: ensure exporter type is only configured once per process
+            if (!_registeredExporters.TryAdd(exporterType, true))
+            {
+                // Already registered, skip adding processor
+                return builder;
+            }
+
             // Ensure required services are registered
             var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
             var httpClient = serviceProvider.GetService<HttpClient>();
