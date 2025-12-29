@@ -110,18 +110,23 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 return (servers, toolsByServer);
             }
 
-            foreach (var server in servers)
+            // Filter valid servers first
+            var validServers = servers.Where(server =>
             {
-                // Defensive validation of config object
                 if (string.IsNullOrWhiteSpace(server.mcpServerName) || string.IsNullOrWhiteSpace(server.url))
                 {
                     _logger.LogWarning(
                         "Skipping invalid MCP server config: Name='{Name}', Url='{Url}'",
                         server.mcpServerName,
                         server.url);
-                    continue;
+                    return false;
                 }
+                return true;
+            }).ToList();
 
+            // Enumerate tools from all servers in parallel
+            var tasks = validServers.Select(async server =>
+            {
                 try
                 {
                     var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(
@@ -130,12 +135,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         authToken,
                         toolOptions).ConfigureAwait(false);
 
-                    toolsByServer[server.mcpServerName] = mcpTools;
-
                     _logger.LogInformation(
                         "Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
                         mcpTools.Count,
                         server.mcpServerName);
+
+                    return (ServerName: server.mcpServerName, Tools: mcpTools, Success: true);
                 }
                 catch (Exception ex)
                 {
@@ -145,7 +150,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         server.mcpServerName,
                         server.url,
                         ex.Message);
+
+                    return (ServerName: server.mcpServerName, Tools: (IList<McpClientTool>)Array.Empty<McpClientTool>(), Success: false);
                 }
+            });
+
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            // Populate the dictionary with successful results
+            foreach (var result in results.Where(r => r.Success))
+            {
+                toolsByServer[result.ServerName] = result.Tools;
             }
 
             _logger.LogInformation(
