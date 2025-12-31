@@ -1,5 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Notifications
 {
     /// <summary>
     /// Contains constants.
