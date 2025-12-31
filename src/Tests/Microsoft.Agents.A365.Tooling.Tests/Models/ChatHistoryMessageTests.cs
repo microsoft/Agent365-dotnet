@@ -71,16 +71,19 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
         }
 
         [Fact]
-        public void ChatHistoryMessage_AllowsNullableProperties()
+        public void ChatHistoryMessage_RequiresNonNullCoreProperties()
         {
-            // Arrange & Act
-            var message = new ChatHistoryMessage(null!, null!, null!, default);
+            // Arrange
+            var expectedTimestamp = DateTimeOffset.UtcNow;
+
+            // Act
+            var message = new ChatHistoryMessage("required-id", "user", "Required content", expectedTimestamp);
 
             // Assert
-            message.Id.Should().BeNull();
-            message.Role.Should().BeNull();
-            message.Content.Should().BeNull();
-            message.Timestamp.Should().Be(default);
+            message.Id.Should().NotBeNullOrEmpty();
+            message.Role.Should().NotBeNullOrEmpty();
+            message.Content.Should().NotBeNullOrEmpty();
+            message.Timestamp.Should().Be(expectedTimestamp);
         }
 
         [Fact]
