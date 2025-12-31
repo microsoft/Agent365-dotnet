@@ -90,7 +90,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void GetDefaultHttpClient_WithoutFactory_CreatesNewHttpClient()
         {
             // Act
-            var httpClient = Utility.GetDefaultHttpClient();
+            using var httpClient = Utility.GetDefaultHttpClient();
 
             // Assert
             httpClient.Should().NotBeNull();
@@ -104,7 +104,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         {
             // Arrange
             var mockFactory = new Mock<IHttpClientFactory>();
-            var expectedClient = new HttpClient();
+            using var expectedClient = new HttpClient();
             mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
 
             // Act
@@ -119,7 +119,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void GetDefaultHttpClient_DefaultTimeout_Is30Seconds()
         {
             // Act
-            var httpClient = Utility.GetDefaultHttpClient();
+            using var httpClient = Utility.GetDefaultHttpClient();
 
             // Assert
             httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(30));
@@ -132,7 +132,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             const int customTimeout = 60;
 
             // Act
-            var httpClient = Utility.GetDefaultHttpClient(timeoutSeconds: customTimeout);
+            using var httpClient = Utility.GetDefaultHttpClient(timeoutSeconds: customTimeout);
 
             // Assert
             httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(customTimeout));
@@ -142,7 +142,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         public void GetDefaultHttpClient_DefaultUserAgentConfiguration_IsApplied()
         {
             // Act
-            var httpClient = Utility.GetDefaultHttpClient();
+            using var httpClient = Utility.GetDefaultHttpClient();
 
             // Assert
             var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
@@ -160,7 +160,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             mockConfig.Setup(c => c.OrchestratorName).Returns("TestOrchestrator");
 
             // Act
-            var httpClient = Utility.GetDefaultHttpClient(userAgentConfiguration: mockConfig.Object);
+            using var httpClient = Utility.GetDefaultHttpClient(userAgentConfiguration: mockConfig.Object);
 
             // Assert
             var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
@@ -173,7 +173,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         {
             // Arrange
             var mockFactory = new Mock<IHttpClientFactory>();
-            var expectedClient = new HttpClient();
+            using var expectedClient = new HttpClient();
             mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
 
             var mockConfig = new Mock<IUserAgentConfiguration>();
