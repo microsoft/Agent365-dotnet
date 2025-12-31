@@ -107,12 +107,19 @@ namespace Microsoft.Agents.A365.Runtime.Tests
             var expectedClient = new HttpClient();
             mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
 
-            // Act
-            var httpClient = Utility.GetDefaultHttpClient(mockFactory.Object);
+            try
+            {
+                // Act
+                var httpClient = Utility.GetDefaultHttpClient(mockFactory.Object);
 
-            // Assert
-            httpClient.Should().BeSameAs(expectedClient);
-            mockFactory.Verify(f => f.CreateClient(It.IsAny<string>()), Times.Once);
+                // Assert
+                httpClient.Should().BeSameAs(expectedClient);
+                mockFactory.Verify(f => f.CreateClient(It.IsAny<string>()), Times.Once);
+            }
+            finally
+            {
+                expectedClient.Dispose();
+            }
         }
 
         [Fact]
@@ -183,17 +190,24 @@ namespace Microsoft.Agents.A365.Runtime.Tests
 
             const int customTimeout = 45;
 
-            // Act
-            var httpClient = Utility.GetDefaultHttpClient(
-                mockFactory.Object, 
-                mockConfig.Object, 
-                customTimeout);
+            try
+            {
+                // Act
+                var httpClient = Utility.GetDefaultHttpClient(
+                    mockFactory.Object, 
+                    mockConfig.Object, 
+                    customTimeout);
 
-            // Assert
-            httpClient.Should().BeSameAs(expectedClient);
-            httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(customTimeout));
-            var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
-            userAgent.Should().Contain("TestProduct/2.0.0");
+                // Assert
+                httpClient.Should().BeSameAs(expectedClient);
+                httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(customTimeout));
+                var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
+                userAgent.Should().Contain("TestProduct/2.0.0");
+            }
+            finally
+            {
+                expectedClient.Dispose();
+            }
         }
     }
 }
