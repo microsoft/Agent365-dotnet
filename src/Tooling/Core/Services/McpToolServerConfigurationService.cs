@@ -138,11 +138,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    throw new InvalidOperationException(
-                        $"Failed to send chat history. Status: {response.StatusCode}, Error: {errorContent}");
+                    this._logger.LogError("Failed to send chat history. Status: {StatusCode}, Error: {ErrorContent}", response.StatusCode, errorContent);
                 }
-
-                this._logger.LogInformation("Successfully sent chat history to MCP platform");
+                else
+                {
+                    this._logger.LogInformation("Successfully sent chat history to MCP platform");
+                }
             }
             catch (HttpRequestException httpEx)
             {
