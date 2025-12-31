@@ -292,10 +292,11 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var turnContextMock = new Mock<ITurnContext>();
             turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
+            var timestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
             var chatHistory = new[] 
             { 
-                new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow),
-                new ChatHistoryMessage("2", "assistant", "Hello!", DateTimeOffset.UtcNow)
+                new ChatHistoryMessage("1", "user", "Hi", timestamp),
+                new ChatHistoryMessage("2", "assistant", "Hello!", timestamp.AddSeconds(1))
             };
 
             // Act
@@ -355,7 +356,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var conversationId = "conv-456";
             var messageId = "msg-789";
             var userMessage = "What is the weather?";
-            var timestamp = DateTimeOffset.UtcNow;
+            var timestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
             var conversationAccount = new ConversationAccount { Id = conversationId };
             var activityMock = new Mock<IActivity>();
@@ -441,7 +442,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var turnContextMock = new Mock<ITurnContext>();
             turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
-            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Test", DateTimeOffset.UtcNow) };
+            var timestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Test", timestamp) };
 
             // Act
             await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
@@ -492,7 +494,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var turnContextMock = new Mock<ITurnContext>();
             turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
-            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
+            var timestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", timestamp) };
             var toolOptions = new ToolOptions();
 
             // Act
