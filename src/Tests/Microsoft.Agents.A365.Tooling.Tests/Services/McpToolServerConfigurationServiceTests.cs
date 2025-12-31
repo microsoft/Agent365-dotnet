@@ -266,7 +266,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                     "SendAsync",
                     ItExpr.IsAny<HttpRequestMessage>(),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage
+                .ReturnsAsync(() => new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
@@ -336,7 +336,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 {
                     capturedRequestBody = await req.Content!.ReadAsStringAsync();
                 })
-                .ReturnsAsync(new HttpResponseMessage
+                .ReturnsAsync(() => new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
@@ -416,7 +416,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 {
                     capturedUri = req.RequestUri;
                 })
-                .ReturnsAsync(new HttpResponseMessage
+                .ReturnsAsync(() => new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
@@ -468,7 +468,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                     "SendAsync",
                     ItExpr.IsAny<HttpRequestMessage>(),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage
+                .ReturnsAsync(() => new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
@@ -533,7 +533,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                     "SendAsync",
                     ItExpr.IsAny<HttpRequestMessage>(),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage
+                .ReturnsAsync(() => new HttpResponseMessage
                 {
                     StatusCode = statusCode,
                     Content = new StringContent(errorResponseContent, Encoding.UTF8, "application/json")
