@@ -159,7 +159,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var service = new McpToolServerConfigurationService(
                 _loggerMock.Object,
                 configMock.Object,
-                _serviceProviderMock.Object);
+                _serviceProviderMock.Object,
+                _httpClientFactoryMock.Object);
 
             var activityMock = new Mock<IActivity>();
             activityMock.Setup(a => a.Id).Returns("msg-123");
@@ -189,7 +190,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var service = new McpToolServerConfigurationService(
                 _loggerMock.Object,
                 configMock.Object,
-                _serviceProviderMock.Object);
+                _serviceProviderMock.Object,
+                _httpClientFactoryMock.Object);
 
             var conversationAccount = new ConversationAccount { Id = "conv-123" };
 
@@ -221,7 +223,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             var service = new McpToolServerConfigurationService(
                 _loggerMock.Object,
                 configMock.Object,
-                _serviceProviderMock.Object);
+                _serviceProviderMock.Object,
+                _httpClientFactoryMock.Object);
 
             var conversationAccount = new ConversationAccount { Id = "conv-123" };
 
