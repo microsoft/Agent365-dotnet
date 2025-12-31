@@ -4,6 +4,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Agents.A365.Runtime.Utils;
 using Moq;
+using FluentAssertions;
 
 namespace Microsoft.Agents.A365.Runtime.Tests
 {
@@ -83,6 +84,116 @@ namespace Microsoft.Agents.A365.Runtime.Tests
 
             // Assert
             Assert.Equal("Development", result);
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_WithoutFactory_CreatesNewHttpClient()
+        {
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient();
+
+            // Assert
+            httpClient.Should().NotBeNull();
+            httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(30));
+            httpClient.DefaultRequestHeaders.UserAgent.Should().NotBeEmpty();
+            httpClient.DefaultRequestHeaders.UserAgent.ToString().Should().Contain("Agent365SDK/");
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_WithFactory_UsesFactory()
+        {
+            // Arrange
+            var mockFactory = new Mock<IHttpClientFactory>();
+            var expectedClient = new HttpClient();
+            mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
+
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient(mockFactory.Object);
+
+            // Assert
+            httpClient.Should().BeSameAs(expectedClient);
+            mockFactory.Verify(f => f.CreateClient(It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_DefaultTimeout_Is30Seconds()
+        {
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient();
+
+            // Assert
+            httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(30));
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_CustomTimeout_IsApplied()
+        {
+            // Arrange
+            const int customTimeout = 60;
+
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient(timeoutSeconds: customTimeout);
+
+            // Assert
+            httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(customTimeout));
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_DefaultUserAgentConfiguration_IsApplied()
+        {
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient();
+
+            // Assert
+            var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
+            userAgent.Should().Contain("Agent365SDK/");
+            userAgent.Should().MatchRegex(@"^Agent365SDK/.+ \(.+; .NET \d+(\.\d+)*\)$");
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_CustomUserAgentConfiguration_IsApplied()
+        {
+            // Arrange
+            var mockConfig = new Mock<IUserAgentConfiguration>();
+            mockConfig.Setup(c => c.ProductName).Returns("CustomProduct");
+            mockConfig.Setup(c => c.Version).Returns("1.2.3");
+            mockConfig.Setup(c => c.OrchestratorName).Returns("TestOrchestrator");
+
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient(userAgentConfiguration: mockConfig.Object);
+
+            // Assert
+            var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
+            userAgent.Should().Contain("CustomProduct/1.2.3");
+            userAgent.Should().Contain("TestOrchestrator");
+        }
+
+        [Fact]
+        public void GetDefaultHttpClient_WithAllParameters_ConfiguresCorrectly()
+        {
+            // Arrange
+            var mockFactory = new Mock<IHttpClientFactory>();
+            var expectedClient = new HttpClient();
+            mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
+
+            var mockConfig = new Mock<IUserAgentConfiguration>();
+            mockConfig.Setup(c => c.ProductName).Returns("TestProduct");
+            mockConfig.Setup(c => c.Version).Returns("2.0.0");
+            mockConfig.Setup(c => c.OrchestratorName).Returns((string?)null);
+
+            const int customTimeout = 45;
+
+            // Act
+            var httpClient = Utility.GetDefaultHttpClient(
+                mockFactory.Object, 
+                mockConfig.Object, 
+                customTimeout);
+
+            // Assert
+            httpClient.Should().BeSameAs(expectedClient);
+            httpClient.Timeout.Should().Be(TimeSpan.FromSeconds(customTimeout));
+            var userAgent = httpClient.DefaultRequestHeaders.UserAgent.ToString();
+            userAgent.Should().Contain("TestProduct/2.0.0");
         }
     }
 }
