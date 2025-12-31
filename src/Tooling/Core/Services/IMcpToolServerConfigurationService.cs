@@ -47,6 +47,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">The turn context containing conversation information.</param>
         /// <param name="chatHistoryMessages">The chat history messages to send.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistoryMessages"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when required turn context properties (Conversation.Id, Activity.Id, or Activity.Text) are null.</exception>
+        /// <remarks>
+        /// HTTP exceptions (HttpRequestException, TaskCanceledException) are caught and logged but not rethrown.
+        /// The method will complete successfully even if the HTTP request fails.
+        /// </remarks>
         Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages);
 
         /// <summary>
@@ -56,6 +62,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="chatHistoryMessages">The chat history messages to send.</param>
         /// <param name="toolOptions">Tool options for sending chat history.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistoryMessages"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when required turn context properties (Conversation.Id, Activity.Id, or Activity.Text) are null.</exception>
+        /// <remarks>
+        /// HTTP exceptions (HttpRequestException, TaskCanceledException) are caught and logged but not rethrown.
+        /// The method will complete successfully even if the HTTP request fails.
+        /// </remarks>
         Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions);
     }
 }
