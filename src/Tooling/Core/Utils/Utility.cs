@@ -63,7 +63,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
-        /// Gets the chat history endpoint URL for the specified agent instance.
+        /// Gets the chat history endpoint URL.
         /// </summary>
         /// <param name="configuration">Configuration Collection</param>
         /// <returns>The chat history endpoint URL.</returns>
