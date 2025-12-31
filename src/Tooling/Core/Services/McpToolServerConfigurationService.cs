@@ -10,6 +10,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Reflection;
+    using System.Text;
     using System.Text.Json;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
@@ -127,7 +128,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = RuntimeUtility.GetDefaultHttpClient(userAgentConfiguration: userAgentConfiguration);
 
                 var jsonContent = JsonSerializer.Serialize(request);
-                using var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+                using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
                 var response = await httpClient.PostAsync(endpoint, content);
 
