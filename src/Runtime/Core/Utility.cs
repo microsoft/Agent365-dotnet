@@ -4,7 +4,6 @@
 
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Http;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace Microsoft.Agents.A365.Runtime.Utils
