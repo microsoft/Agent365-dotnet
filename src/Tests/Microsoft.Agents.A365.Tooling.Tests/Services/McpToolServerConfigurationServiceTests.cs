@@ -272,7 +272,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
                 });
 
-            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
             httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
                 .Returns(httpClient);
