@@ -133,7 +133,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 var jsonContent = JsonSerializer.Serialize(request);
                 using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                var response = await httpClient.PostAsync(endpoint, content);
+                using var response = await httpClient.PostAsync(endpoint, content);
 
                 if (!response.IsSuccessStatusCode)
                 {
