@@ -136,8 +136,6 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             }
         }
 
-
-
         [Fact]
         public async Task SendChatHistoryAsync_MissingConversationId_ThrowsInvalidOperationException()
         {
