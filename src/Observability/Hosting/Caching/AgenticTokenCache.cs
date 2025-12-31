@@ -1,8 +1,6 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
-﻿using Azure.Core;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+using Azure.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;

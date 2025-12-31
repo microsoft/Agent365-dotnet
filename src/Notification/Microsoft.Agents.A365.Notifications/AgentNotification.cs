@@ -1,7 +1,5 @@
-﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-
-// Ignore Spelling: Agentic
 
 using Microsoft.Agents.A365.Notifications.Extensions;
 using Microsoft.Agents.Builder;
