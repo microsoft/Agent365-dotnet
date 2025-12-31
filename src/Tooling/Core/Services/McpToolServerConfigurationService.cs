@@ -32,6 +32,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
         private readonly ILoggerFactory? _loggerFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
@@ -39,11 +40,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="logger">Logger instance for logging.</param>
         /// <param name="configuration">Configuration collection.</param>
         /// <param name="serviceProvider">Service provider</param>
-        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
+        /// <param name="httpClientFactory">HTTP client factory for creating HTTP clients.</param>
+        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider, IHttpClientFactory httpClientFactory)
         {
             this._configuration = configuration;
             this._logger = logger;
             this._loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            this._httpClientFactory = httpClientFactory;
         }
 
         /// <inheritdoc/>
@@ -125,7 +128,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
-                using var httpClient = RuntimeUtility.GetDefaultHttpClient(userAgentConfiguration: userAgentConfiguration);
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
 
                 var jsonContent = JsonSerializer.Serialize(request);
                 using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
@@ -168,7 +171,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
-                using var httpClient = RuntimeUtility.GetDefaultHttpClient(userAgentConfiguration: userAgentConfiguration);
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
 
