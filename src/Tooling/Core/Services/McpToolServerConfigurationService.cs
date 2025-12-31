@@ -127,8 +127,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
-                var httpClient = this._httpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentHelper.BuildUserAgent(userAgentConfiguration));
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
 
                 var jsonContent = JsonSerializer.Serialize(request);
                 using var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
@@ -171,8 +170,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
-                var httpClient = this._httpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentHelper.BuildUserAgent(userAgentConfiguration));
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
 
