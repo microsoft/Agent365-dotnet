@@ -101,13 +101,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public async Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages)
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages)
         {
-            await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions());
+            return await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions());
         }
 
         /// <inheritdoc/>
-        public async Task SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions)
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions)
         {
             ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
             ArgumentNullException.ThrowIfNull(chatHistoryMessages, nameof(chatHistoryMessages));
@@ -134,28 +134,25 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
                 using var response = await httpClient.PostAsync(endpoint, content);
+                response.EnsureSuccessStatusCode();
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    this._logger.LogError("Failed to send chat history. Status: {StatusCode}, Error: {ErrorContent}", response.StatusCode, errorContent);
-                }
-                else
-                {
-                    this._logger.LogInformation("Successfully sent chat history to MCP platform");
-                }
+                this._logger.LogInformation("Successfully sent chat history to MCP platform");
+                return OperationResult.Success;
             }
             catch (HttpRequestException httpEx)
             {
-                this._logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, httpEx.Message);
+                this._logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {Message}", endpoint, httpEx.Message);
+                return OperationResult.Failed(new OperationError(httpEx));
             }
             catch (TaskCanceledException tcEx)
             {
-                this._logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, tcEx.Message);
+                this._logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {Message}", endpoint, tcEx.Message);
+                return OperationResult.Failed(new OperationError(tcEx));
             }
             catch (Exception ex)
             {
-                this._logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {ErrorMessage}", endpoint, ex.Message);
+                this._logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {Message}", endpoint, ex.Message);
+                return OperationResult.Failed(new OperationError(ex));
             }
         }
 
