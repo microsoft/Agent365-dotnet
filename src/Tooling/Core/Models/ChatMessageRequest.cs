@@ -50,7 +50,7 @@ public class ChatMessageRequest
     public string UserMessage { get; set; }
 
     /// <summary>
-    /// Gets or sets the chat history as a JSON element.
+    /// Gets or sets the chat history messages.
     /// </summary>
     [JsonPropertyName("chatHistory")]
     [Required]
