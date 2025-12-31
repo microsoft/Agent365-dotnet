@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
+using Microsoft.Agents.Core.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -133,6 +134,81 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             {
                 // Also expected - HTTP call will fail, but we validated ToolOptions creation
             }
+        }
+
+
+
+        [Fact]
+        public async Task SendChatHistoryAsync_MissingConversationId_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*Conversation ID*");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_MissingMessageId_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>();
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_MissingUserMessage_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>();
         }
     }
 }
