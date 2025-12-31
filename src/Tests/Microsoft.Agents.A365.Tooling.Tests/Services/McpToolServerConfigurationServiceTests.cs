@@ -38,7 +38,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 _configurationMock.Object,
                 _serviceProviderMock.Object);
 
-            var chatHistory = new[] { new ChatHistoryMessage() };
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
 
             // Act
             Func<Task> act = async () => await service.SendChatHistoryAsync(null!, chatHistory);
@@ -76,7 +76,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 _configurationMock.Object,
                 _serviceProviderMock.Object);
 
-            var chatHistory = new[] { new ChatHistoryMessage() };
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
             var toolOptions = new ToolOptions();
 
             // Act

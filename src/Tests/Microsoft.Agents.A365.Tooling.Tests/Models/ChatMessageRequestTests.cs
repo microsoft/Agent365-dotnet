@@ -23,7 +23,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
             var userMessage = "Hello!";
             var chatHistory = new[]
             {
-                new ChatHistoryMessage { Id = "msg-1", Role = "user", Content = "Hi", Timestamp = DateTimeOffset.UtcNow }
+                new ChatHistoryMessage("msg-1", "user", "Hi", DateTimeOffset.UtcNow)
             };
 
             // Act
@@ -42,13 +42,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
             // Arrange
             var chatHistory = new[]
             {
-                new ChatHistoryMessage
-                {
-                    Id = "msg-1",
-                    Role = "user",
-                    Content = "Previous message",
-                    Timestamp = new DateTimeOffset(2024, 1, 15, 10, 0, 0, TimeSpan.Zero)
-                }
+                new ChatHistoryMessage("msg-1", "user", "Previous message", new DateTimeOffset(2024, 1, 15, 10, 0, 0, TimeSpan.Zero))
             };
             var request = new ChatMessageRequest("conv-789", "msg-999", "Current message", chatHistory);
 
@@ -121,9 +115,9 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
             // Arrange
             var chatHistory = new[]
             {
-                new ChatHistoryMessage { Id = "1", Role = "user", Content = "Message 1", Timestamp = DateTimeOffset.UtcNow },
-                new ChatHistoryMessage { Id = "2", Role = "assistant", Content = "Message 2", Timestamp = DateTimeOffset.UtcNow },
-                new ChatHistoryMessage { Id = "3", Role = "user", Content = "Message 3", Timestamp = DateTimeOffset.UtcNow }
+                new ChatHistoryMessage("1", "user", "Message 1", DateTimeOffset.UtcNow),
+                new ChatHistoryMessage("2", "assistant", "Message 2", DateTimeOffset.UtcNow),
+                new ChatHistoryMessage("3", "user", "Message 3", DateTimeOffset.UtcNow)
             };
 
             // Act
@@ -148,7 +142,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
             request.ConversationId = "conv-2";
             request.MessageId = "msg-2";
             request.UserMessage = "Message 2";
-            request.ChatHistory = new[] { new ChatHistoryMessage { Id = "new", Role = "user", Content = "New", Timestamp = DateTimeOffset.UtcNow } };
+            request.ChatHistory = new[] { new ChatHistoryMessage("new", "user", "New", DateTimeOffset.UtcNow) };
 
             // Assert
             request.ConversationId.Should().Be("conv-2");

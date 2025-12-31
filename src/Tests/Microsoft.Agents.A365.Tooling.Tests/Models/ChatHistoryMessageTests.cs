@@ -18,20 +18,15 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
         public void ChatHistoryMessage_CanBeInstantiated()
         {
             // Arrange & Act
-            var message = new ChatHistoryMessage
-            {
-                Id = "msg-123",
-                Role = "user",
-                Content = "Hello, world!",
-                Timestamp = DateTimeOffset.UtcNow
-            };
+            var timestamp = DateTimeOffset.UtcNow;
+            var message = new ChatHistoryMessage("msg-123", "user", "Hello, world!", timestamp);
 
             // Assert
             message.Should().NotBeNull();
             message.Id.Should().Be("msg-123");
             message.Role.Should().Be("user");
             message.Content.Should().Be("Hello, world!");
-            message.Timestamp.Should().NotBeNull();
+            message.Timestamp.Should().Be(timestamp);
         }
 
         [Fact]
@@ -39,13 +34,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
         {
             // Arrange
             var timestamp = new DateTimeOffset(2024, 1, 15, 10, 30, 0, TimeSpan.Zero);
-            var message = new ChatHistoryMessage
-            {
-                Id = "msg-456",
-                Role = "assistant",
-                Content = "How can I help you?",
-                Timestamp = timestamp
-            };
+            var message = new ChatHistoryMessage("msg-456", "assistant", "How can I help you?", timestamp);
 
             // Act
             var json = JsonSerializer.Serialize(message);
@@ -85,26 +74,20 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
         public void ChatHistoryMessage_AllowsNullableProperties()
         {
             // Arrange & Act
-            var message = new ChatHistoryMessage();
+            var message = new ChatHistoryMessage(null!, null!, null!, default);
 
             // Assert
             message.Id.Should().BeNull();
             message.Role.Should().BeNull();
             message.Content.Should().BeNull();
-            message.Timestamp.Should().BeNull();
+            message.Timestamp.Should().Be(default);
         }
 
         [Fact]
         public void ChatHistoryMessage_SupportsSystemRole()
         {
             // Arrange & Act
-            var message = new ChatHistoryMessage
-            {
-                Id = "sys-001",
-                Role = "system",
-                Content = "You are a helpful assistant.",
-                Timestamp = DateTimeOffset.UtcNow
-            };
+            var message = new ChatHistoryMessage("sys-001", "system", "You are a helpful assistant.", DateTimeOffset.UtcNow);
 
             // Assert
             message.Role.Should().Be("system");
@@ -115,13 +98,7 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Models
         {
             // Arrange
             var expectedTimestamp = new DateTimeOffset(2024, 1, 15, 10, 30, 45, 123, TimeSpan.FromHours(-5));
-            var message = new ChatHistoryMessage
-            {
-                Id = "msg-001",
-                Role = "user",
-                Content = "Test",
-                Timestamp = expectedTimestamp
-            };
+            var message = new ChatHistoryMessage("msg-001", "user", "Test", expectedTimestamp);
 
             // Act
             var json = JsonSerializer.Serialize(message);
