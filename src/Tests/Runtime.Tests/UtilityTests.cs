@@ -104,7 +104,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         {
             // Arrange
             var mockFactory = new Mock<IHttpClientFactory>();
-            using var expectedClient = new HttpClient();
+            var expectedClient = new HttpClient();
             mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
 
             // Act
@@ -173,7 +173,7 @@ namespace Microsoft.Agents.A365.Runtime.Tests
         {
             // Arrange
             var mockFactory = new Mock<IHttpClientFactory>();
-            using var expectedClient = new HttpClient();
+            var expectedClient = new HttpClient();
             mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(expectedClient);
 
             var mockConfig = new Mock<IUserAgentConfiguration>();
