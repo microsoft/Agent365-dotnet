@@ -150,8 +150,13 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 configMock.Object,
                 _serviceProviderMock.Object);
 
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns("msg-123");
+            activityMock.Setup(a => a.Text).Returns("Hello");
+            activityMock.Setup(a => a.Conversation).Returns((ConversationAccount)null!); // Missing conversation
+
             var turnContextMock = new Mock<ITurnContext>();
-            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
             var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
 
@@ -175,8 +180,15 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 configMock.Object,
                 _serviceProviderMock.Object);
 
+            var conversationAccount = new ConversationAccount { Id = "conv-123" };
+
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns((string)null!); // Missing message ID
+            activityMock.Setup(a => a.Text).Returns("Hello");
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
             var turnContextMock = new Mock<ITurnContext>();
-            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
             var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
 
@@ -184,7 +196,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*Message ID*");
         }
 
         [Fact]
@@ -199,8 +212,15 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
                 configMock.Object,
                 _serviceProviderMock.Object);
 
+            var conversationAccount = new ConversationAccount { Id = "conv-123" };
+
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns("msg-123");
+            activityMock.Setup(a => a.Text).Returns((string)null!); // Missing user message
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
             var turnContextMock = new Mock<ITurnContext>();
-            turnContextMock.Setup(tc => tc.Activity).Returns((IActivity)null!);
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
 
             var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
 
@@ -208,7 +228,8 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
 
             // Assert
-            await act.Should().ThrowAsync<InvalidOperationException>();
+            await act.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*User message*");
         }
     }
 }
