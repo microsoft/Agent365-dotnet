@@ -16,6 +16,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel
 
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365SemanticKernelSdkUserAgentConfiguration"/>.
+        /// This property intentionally uses the <c>new</c> keyword to hide the base <c>Instance</c>
+        /// property and expose a more specific strongly-typed singleton for this derived configuration.
         /// </summary>
         public static new Agent365SemanticKernelSdkUserAgentConfiguration Instance => _instance.Value;
 
