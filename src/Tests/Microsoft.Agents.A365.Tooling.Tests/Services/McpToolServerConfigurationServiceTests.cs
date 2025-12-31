@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -11,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 using Xunit;
 
 namespace Microsoft.Agents.A365.Tooling.Tests.Services
@@ -244,6 +248,265 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("*User message*");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_SuccessfulRequest_CompletesWithoutException()
+        {
+            // Arrange
+            var expectedEndpoint = "https://test.example.com/agents/real-time-threat-protection/chat-message";
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            // Setup mock HTTP message handler to return success response
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            var conversationAccount = new ConversationAccount { Id = "conv-123" };
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns("msg-123");
+            activityMock.Setup(a => a.Text).Returns("Hello, how are you?");
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
+
+            var chatHistory = new[] 
+            { 
+                new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow),
+                new ChatHistoryMessage("2", "assistant", "Hello!", DateTimeOffset.UtcNow)
+            };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            await act.Should().NotThrowAsync();
+
+            // Verify HTTP request was made
+            mockHttpMessageHandler.Protected().Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Post &&
+                    req.RequestUri!.ToString() == expectedEndpoint),
+                ItExpr.IsAny<CancellationToken>());
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_SuccessfulRequest_SerializesRequestCorrectly()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            string? capturedRequestBody = null;
+
+            // Setup mock HTTP message handler to capture and return success response
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
+                {
+                    capturedRequestBody = await req.Content!.ReadAsStringAsync();
+                })
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            var conversationId = "conv-456";
+            var messageId = "msg-789";
+            var userMessage = "What is the weather?";
+            var timestamp = DateTimeOffset.UtcNow;
+
+            var conversationAccount = new ConversationAccount { Id = conversationId };
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns(messageId);
+            activityMock.Setup(a => a.Text).Returns(userMessage);
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
+
+            var chatHistory = new[] 
+            { 
+                new ChatHistoryMessage("1", "user", "Hi", timestamp),
+                new ChatHistoryMessage("2", "assistant", "Hello! How can I help?", timestamp.AddSeconds(1))
+            };
+
+            // Act
+            await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            capturedRequestBody.Should().NotBeNullOrEmpty();
+            
+            var deserializedRequest = JsonSerializer.Deserialize<ChatMessageRequest>(capturedRequestBody!);
+            deserializedRequest.Should().NotBeNull();
+            deserializedRequest!.ConversationId.Should().Be(conversationId);
+            deserializedRequest.MessageId.Should().Be(messageId);
+            deserializedRequest.UserMessage.Should().Be(userMessage);
+            deserializedRequest.ChatHistory.Should().HaveCount(2);
+            deserializedRequest.ChatHistory[0].Id.Should().Be("1");
+            deserializedRequest.ChatHistory[0].Role.Should().Be("user");
+            deserializedRequest.ChatHistory[0].Content.Should().Be("Hi");
+            deserializedRequest.ChatHistory[1].Id.Should().Be("2");
+            deserializedRequest.ChatHistory[1].Role.Should().Be("assistant");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_SuccessfulRequest_UsesCorrectEndpoint()
+        {
+            // Arrange
+            var customEndpoint = "https://custom.endpoint.com";
+            var expectedFullEndpoint = $"{customEndpoint}/agents/real-time-threat-protection/chat-message";
+            
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns(customEndpoint);
+
+            Uri? capturedUri = null;
+
+            // Setup mock HTTP message handler to capture request URI
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
+                {
+                    capturedUri = req.RequestUri;
+                })
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            var conversationAccount = new ConversationAccount { Id = "conv-999" };
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns("msg-999");
+            activityMock.Setup(a => a.Text).Returns("Test message");
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
+
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Test", DateTimeOffset.UtcNow) };
+
+            // Act
+            await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory);
+
+            // Assert
+            capturedUri.Should().NotBeNull();
+            capturedUri!.ToString().Should().Be(expectedFullEndpoint);
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithToolOptions_SuccessfulRequest_CompletesWithoutException()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            // Setup mock HTTP message handler to return success response
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+
+            var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            var conversationAccount = new ConversationAccount { Id = "conv-123" };
+            var activityMock = new Mock<IActivity>();
+            activityMock.Setup(a => a.Id).Returns("msg-123");
+            activityMock.Setup(a => a.Text).Returns("Hello with options");
+            activityMock.Setup(a => a.Conversation).Returns(conversationAccount);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            turnContextMock.Setup(tc => tc.Activity).Returns(activityMock.Object);
+
+            var chatHistory = new[] { new ChatHistoryMessage("1", "user", "Hi", DateTimeOffset.UtcNow) };
+            var toolOptions = new ToolOptions();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, chatHistory, toolOptions);
+
+            // Assert
+            await act.Should().NotThrowAsync();
+
+            // Verify HTTP request was made
+            mockHttpMessageHandler.Protected().Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>());
         }
     }
 }
