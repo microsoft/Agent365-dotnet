@@ -17,6 +17,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365AgentFrameworkSdkUserAgentConfiguration"/>.
         /// </summary>
+        /// <remarks>
+        /// The <c>new</c> keyword is used to hide the base class <c>Instance</c> property so that this
+        /// derived class can expose a singleton instance with a more specific return type while
+        /// following the same singleton pattern.
+        /// </remarks>
         public static new Agent365AgentFrameworkSdkUserAgentConfiguration Instance => _instance.Value;
 
         /// <summary>
