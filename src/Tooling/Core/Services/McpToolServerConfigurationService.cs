@@ -40,9 +40,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="serviceProvider">Service provider</param>
         public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
         {
-            _configuration = configuration;
-            _logger = logger;
-            _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            this._configuration = configuration;
+            this._logger = logger;
+            this._loggerFactory = serviceProvider.GetService<ILoggerFactory>();
         }
 
         /// <inheritdoc/>
@@ -114,7 +114,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             var userMessage = turnContext.Activity?.Text ?? throw new InvalidOperationException("User message is required but not found in turn context");
 
             // Get the endpoint URL
-            var endpoint = Utility.GetChatHistoryEndpoint(_configuration);
+            var endpoint = Utility.GetChatHistoryEndpoint(this._configuration);
 
             this._logger.LogInformation($"Sending chat history to endpoint: {endpoint}");
 
@@ -142,22 +142,22 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
             catch (HttpRequestException httpEx)
             {
-                _logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, httpEx.Message);
+                this._logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, httpEx.Message);
             }
             catch (TaskCanceledException tcEx)
             {
-                _logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, tcEx.Message);
+                this._logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {ErrorMessage}", endpoint, tcEx.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {ErrorMessage}", endpoint, ex.Message);
+                this._logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {ErrorMessage}", endpoint, ex.Message);
             }
         }
 
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
             string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
-            string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, _configuration);
+            string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, this._configuration);
 
             if (string.IsNullOrWhiteSpace(configEndpoint))
             {
@@ -333,7 +333,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
 
                 // Construct full URL
-                var fullUrl = Utility.BuildMcpServerUrl(name, _configuration);
+                var fullUrl = Utility.BuildMcpServerUrl(name, this._configuration);
 
                 return new MCPServerConfig
                 {
@@ -492,7 +492,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: _loggerFactory);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
             }
             catch (Exception ex)
             {
@@ -503,8 +503,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private bool IsDevScenario()
         {
             // Determine environment from configuration (environment variables, appsettings.json, etc.), default to 'Development' if not set
-            var environment = _configuration["ASPNETCORE_ENVIRONMENT"] ??
-                             _configuration["DOTNET_ENVIRONMENT"] ??
+            var environment = this._configuration["ASPNETCORE_ENVIRONMENT"] ??
+                             this._configuration["DOTNET_ENVIRONMENT"] ??
                              "Development";
 
             return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
