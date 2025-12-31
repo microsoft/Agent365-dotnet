@@ -462,19 +462,17 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
 
             // Setup mock HTTP message handler to return success response
             var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-            using var httpResponse = new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent("{}", Encoding.UTF8, "application/json")
-            };
-
             mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
                     "SendAsync",
                     ItExpr.IsAny<HttpRequestMessage>(),
                     ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(httpResponse);
+                .ReturnsAsync(() => new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
 
             using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
             var httpClientFactoryMock = new Mock<IHttpClientFactory>();
