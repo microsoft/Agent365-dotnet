@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 /// <summary>
@@ -172,5 +174,103 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw;
         }
         return a365ToolList;
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        IEnumerable<ChatMessage> chatMessages,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendChatHistoryAsync(chatMessages, turnContext, new ToolOptions
+        {
+            UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        IEnumerable<ChatMessage> chatMessages,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(chatMessages, nameof(chatMessages));
+        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+        ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));
+
+        try
+        {
+            // Convert to array to avoid multiple enumeration
+            var chatMessageArray = chatMessages.ToArray();
+
+            if (chatMessageArray.Length == 0)
+            {
+                _logger.LogWarning("No chat messages provided");
+                return OperationResult.Success;
+            }
+
+            // Convert ChatMessage objects to ChatHistoryMessage array
+            // Messages are used in the order provided (no sorting)
+            var chatHistoryMessages = chatMessageArray
+                .Select(msg => new ChatHistoryMessage(
+                    id: msg.MessageId ?? Guid.NewGuid().ToString(),
+                    role: msg.Role.ToString(),
+                    content: msg.Text ?? string.Empty,
+                    timestamp: msg.CreatedAt ?? DateTimeOffset.UtcNow))
+                .ToArray();
+
+            _logger.LogInformation("Converted {MessageCount} chat messages to history format", chatHistoryMessages.Length);
+
+            // Call the underlying service to send the chat history
+            return await _mcpServerConfigurationService.SendChatHistoryAsync(
+                turnContext,
+                chatHistoryMessages,
+                toolOptions).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send chat history");
+            return OperationResult.Failed(new OperationError(ex));
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        ChatMessageStore chatMessageStore,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default)
+    {
+        return await SendChatHistoryAsync(chatMessageStore, turnContext, new ToolOptions
+        {
+            UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        ChatMessageStore chatMessageStore,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
+        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+        ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));
+
+        try
+        {
+            // Retrieve messages from the store asynchronously
+            // Use ToListAsync extension method to efficiently materialize the async enumerable
+            var messages = await chatMessageStore.GetMessagesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Delegate to the IEnumerable overload
+            return await SendChatHistoryAsync(messages, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve and send chat history from ChatMessageStore");
+            return OperationResult.Failed(new OperationError(ex));
+        }
     }
 }
