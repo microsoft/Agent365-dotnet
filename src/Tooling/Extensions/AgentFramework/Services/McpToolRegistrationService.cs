@@ -182,6 +182,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         return await SendChatHistoryAsync(chatMessages, turnContext, new ToolOptions
         {
             UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
@@ -195,6 +197,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ToolOptions toolOptions,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         ArgumentNullException.ThrowIfNull(chatMessages, nameof(chatMessages));
         ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
         ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));
@@ -226,7 +230,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             return await _mcpServerConfigurationService.SendChatHistoryAsync(
                 turnContext,
                 chatHistoryMessages,
-                toolOptions).ConfigureAwait(false);
+                toolOptions,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -241,6 +246,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         return await SendChatHistoryAsync(chatMessageStore, turnContext, new ToolOptions
         {
             UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
@@ -254,6 +261,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ToolOptions toolOptions,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
         ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
         ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));

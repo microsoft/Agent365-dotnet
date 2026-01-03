@@ -100,7 +100,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -113,7 +114,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var service = CreateService();
@@ -147,7 +149,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var service = CreateService();
@@ -185,7 +188,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             s => s.SendChatHistoryAsync(
                 turnContextMock.Object,
                 It.IsAny<ChatHistoryMessage[]>(),
-                customToolOptions),
+                customToolOptions,
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -198,7 +202,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var service = CreateService();
@@ -227,7 +232,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
                 turnContextMock.Object,
                 It.IsAny<ChatHistoryMessage[]>(),
                 It.Is<ToolOptions>(opts =>
-                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance)),
+                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -239,7 +245,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(OperationResult.Success);
 
         var service = CreateService();
@@ -277,7 +284,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
                     !string.IsNullOrEmpty(messages[1].Role) &&
                     !string.IsNullOrEmpty(messages[2].Role) &&
                     !string.IsNullOrEmpty(messages[3].Role)),
-                toolOptions),
+                toolOptions,
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -289,7 +297,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(OperationResult.Success);
 
         var service = CreateService();
@@ -330,7 +339,8 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(OperationResult.Success);
 
         var service = CreateService();
@@ -361,7 +371,42 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
                 It.Is<ChatHistoryMessage[]>(messages =>
                     messages.Length == 1 &&
                     messages[0].Content == string.Empty),
-                toolOptions),
+                toolOptions,
+                It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task WithCancelledToken_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var service = CreateService();
+        var chatMessages = new List<ChatMessage>
+        {
+            new ChatMessage(ChatRole.User, "Test")
+            {
+                MessageId = "msg-1",
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+        var turnContextMock = new Mock<ITurnContext>();
+        var toolOptions = new ToolOptions();
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        Func<Task> act = async () => await service.SendChatHistoryAsync(chatMessages, turnContextMock.Object, toolOptions, cts.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        // Verify underlying service was NOT called
+        McpServerConfigurationServiceMock.Verify(
+            s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

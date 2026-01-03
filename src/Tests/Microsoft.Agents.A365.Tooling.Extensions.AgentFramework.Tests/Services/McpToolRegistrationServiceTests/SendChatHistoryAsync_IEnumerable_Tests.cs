@@ -78,7 +78,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -91,7 +92,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var service = CreateService();
@@ -137,7 +139,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
                     messages[1].Content == "I'm doing well, thank you!" &&
                     messages[1].Timestamp == timestamp2),
                 It.Is<ToolOptions>(opts =>
-                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance)),
+                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -150,7 +153,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedResult);
 
         var service = CreateService();
@@ -180,7 +184,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
                     messages[0].Id == "1" &&
                     messages[1].Id == "2" &&
                     messages[2].Id == "3"),
-                It.IsAny<ToolOptions>()),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -192,7 +197,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(OperationResult.Success);
 
         var service = CreateService();
@@ -223,7 +229,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
                     messages.Length == 1 &&
                     !string.IsNullOrEmpty(messages[0].Id) &&
                     IsValidGuid(messages[0].Id)),
-                It.IsAny<ToolOptions>()),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -237,7 +244,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(OperationResult.Success);
 
         var service = CreateService();
@@ -270,7 +278,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
                     messages.Length == 1 &&
                     messages[0].Timestamp >= beforeCall &&
                     messages[0].Timestamp <= afterCall),
-                It.IsAny<ToolOptions>()),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -283,7 +292,8 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             .Setup(s => s.SendChatHistoryAsync(
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(expectedException);
 
         var service = CreateService();
@@ -319,5 +329,38 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task WithCancelledToken_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var service = CreateService();
+        var chatMessages = new List<ChatMessage>
+        {
+            new ChatMessage(ChatRole.User, "Test")
+            {
+                MessageId = "msg-1",
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+        var turnContextMock = new Mock<ITurnContext>();
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Act
+        Func<Task> act = async () => await service.SendChatHistoryAsync(chatMessages, turnContextMock.Object, cts.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        // Verify underlying service was NOT called
+        McpServerConfigurationServiceMock.Verify(
+            s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }
