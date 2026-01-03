@@ -47,6 +47,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// </summary>
         /// <param name="turnContext">The turn context containing conversation information.</param>
         /// <param name="chatHistoryMessages">The chat history messages to send.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistoryMessages"/> is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when required turn context properties (Conversation.Id, Activity.Id, or Activity.Text) are null.</exception>
@@ -55,7 +56,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Instead, the method returns an <see cref="OperationResult"/> indicating whether the operation succeeded or failed.
         /// Callers can choose to inspect the result for error handling or ignore it if error details are not needed.
         /// </remarks>
-        Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages);
+        Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sends chat history to the MCP platform for real-time threat protection.
@@ -63,6 +64,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">The turn context containing conversation information.</param>
         /// <param name="chatHistoryMessages">The chat history messages to send.</param>
         /// <param name="toolOptions">Tool options for sending chat history.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistoryMessages"/> is null.</exception>
         /// <exception cref="InvalidOperationException">Thrown when required turn context properties (Conversation.Id, Activity.Id, or Activity.Text) are null.</exception>
@@ -71,6 +73,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Instead, the method returns an <see cref="OperationResult"/> indicating whether the operation succeeded or failed.
         /// Callers can choose to inspect the result for error handling or ignore it if error details are not needed.
         /// </remarks>
-        Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions);
+        Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions, CancellationToken cancellationToken = default);
     }
 }

@@ -101,16 +101,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages)
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, CancellationToken cancellationToken = default)
         {
-            return await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions());
+            return await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions { UserAgentConfiguration = Agent365SdkUserAgentConfiguration.Instance }, cancellationToken);
         }
 
         /// <inheritdoc/>
-        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions)
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
             ArgumentNullException.ThrowIfNull(chatHistoryMessages, nameof(chatHistoryMessages));
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Extract required information from turn context
             var conversationId = turnContext.Activity?.Conversation?.Id ?? throw new InvalidOperationException("Conversation ID is required but not found in turn context");
@@ -133,7 +134,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 var jsonContent = JsonSerializer.Serialize(request);
                 using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                using var response = await httpClient.PostAsync(endpoint, content);
+                using var response = await httpClient.PostAsync(endpoint, content, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 this._logger.LogInformation("Successfully sent chat history to MCP platform");
