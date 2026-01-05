@@ -24,7 +24,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public void TestInitialize()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-            ClearExporterRegistry();
         }
 
         [TestCleanup]
