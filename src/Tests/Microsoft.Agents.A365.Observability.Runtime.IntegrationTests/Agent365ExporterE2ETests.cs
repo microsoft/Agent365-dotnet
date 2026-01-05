@@ -491,6 +491,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             foundExecuteTool.Should().BeTrue();
         }
 
+        /// <summary>
+        /// Verifies that multiple registrations of the Agent365 exporter through different APIs 
+        /// (direct OpenTelemetry configuration and AddA365Tracing) result in only a single 
+        /// exporter instance being registered, preventing duplicate telemetry exports.
+        /// This test ensures the exporter registry correctly implements singleton behavior
+        /// to avoid data duplication when the same exporter type is configured multiple times.
+        /// </summary>
         [TestMethod]
         public async Task AddTracing_MultipleInvocations_NoDuplicateExports()
         {
