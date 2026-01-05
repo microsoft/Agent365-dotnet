@@ -1,14 +1,14 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Net;
-using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 {
@@ -24,14 +24,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public void TestInitialize()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-            ClearStaticGuardRegistry();
+            ClearExporterRegistry();
         }
 
         [TestCleanup]
         public void TestCleanup()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
-            ClearStaticGuardRegistry();
+            ClearExporterRegistry();
         }
 
         [TestMethod]
@@ -440,7 +440,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this._provider = this.CreateTestServiceProvider(httpClient);
         }
 
-        private static void ClearStaticGuardRegistry()
+        private static void ClearExporterRegistry()
         {
             // Create a temporary service provider to clear the exporter registration service
             var services = new ServiceCollection();

@@ -4,6 +4,7 @@
 
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
+    using System;
     using Microsoft.Agents.A365.Observability.Runtime.Common;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
@@ -12,8 +13,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry;
     using OpenTelemetry.Trace;
-    using System;
-    using static Grpc.Core.ServerServiceDefinition;
 
     /// <summary>
     /// Builder for configuring SDK with OpenTelemetry tracing.

@@ -24,14 +24,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public void TestInitialize()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-            ClearStaticGuardRegistry();
+            ClearExporterRegistry();
         }
 
         [TestCleanup]
         public void TestCleanup()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
-            ClearStaticGuardRegistry();
+            ClearExporterRegistry();
         }
 
         [TestMethod]
@@ -631,7 +631,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this._provider = this.CreateTestServiceProvider(httpClient);
         }
 
-        private static void ClearStaticGuardRegistry()
+        private static void ClearExporterRegistry()
         {
             // Create a temporary service provider to clear the exporter registration service
             var services = new ServiceCollection();
