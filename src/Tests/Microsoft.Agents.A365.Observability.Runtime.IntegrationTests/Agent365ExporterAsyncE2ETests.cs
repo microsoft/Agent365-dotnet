@@ -440,13 +440,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this._provider = this.CreateTestServiceProvider(httpClient);
         }
 
-        private static void ClearExporterRegistry()
+        private void ClearExporterRegistry()
         {
-            // Create a temporary service provider to clear the exporter registration service
-            var services = new ServiceCollection();
-            services.AddSingleton<IAgent365ExporterRegistrationService, Agent365ExporterRegistrationService>();
-            var provider = services.BuildServiceProvider();
-            var exporterRegistrationService = provider.GetService<IAgent365ExporterRegistrationService>();
+            var exporterRegistrationService = this._provider?.GetService<IAgent365ExporterRegistrationService>();
             exporterRegistrationService?.ClearRegisteredExporters();
         }
     }
