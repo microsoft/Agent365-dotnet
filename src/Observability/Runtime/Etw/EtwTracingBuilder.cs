@@ -1,15 +1,14 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Trace;
+using System;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Builds the ETW + OpenTelemetry tracing configuration.
@@ -18,6 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
     {
         private readonly IServiceCollection _services;
         private bool _isBuilt = false;
+        private static readonly Lazy<ILoggerFactory> FallbackConsoleLoggerFactory = new Lazy<ILoggerFactory>(() => LoggerFactory.Create(b => b.AddConsole()));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EtwTracingBuilder"/> class.
@@ -44,17 +44,21 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 return;
 
             _services
+                .AddSingleton<ExportFormatter>(sp =>
+                {
+                    var logger = sp.GetService<ILogger<ExportFormatter>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<ExportFormatter>();
+                    return new ExportFormatter(logger);
+                })
                 .AddOpenTelemetry()
                 .WithTracing(tracing =>
                 {
-                    // Resolve ExportFormatter via the service provider and pass it to the processor
-                    var sp = _services.BuildServiceProvider();
-                    var exportFormatter = sp.GetService<ExportFormatter>() ?? new ExportFormatter(LoggerFactory.Create(b => b.AddConsole()).CreateLogger<ExportFormatter>());
-
                     tracing
                         .AddSource(OpenTelemetryConstants.SourceName)
                         .AddProcessor(new ActivityProcessor())
-                        .AddProcessor(new EtwScopeEventProcessor(exportFormatter));
+                        .AddProcessor(sp =>
+                        {
+                            return new EtwScopeEventProcessor(formatter: sp.GetRequiredService<ExportFormatter>(), logger: sp.GetService<ILogger<EtwScopeEventProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwScopeEventProcessor>());
+                        });
 
                     if (EnvironmentUtils.IsDevelopmentEnvironment())
                     {

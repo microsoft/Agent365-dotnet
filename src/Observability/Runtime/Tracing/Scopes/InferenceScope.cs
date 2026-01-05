@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -19,10 +18,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
-        /// <param name="details">The details of the inference call.</param>
-        /// <param name="agentDetails">The details of the agent performing the inference.</param>
-        /// <param name="tenantDetails">The tenant details for the inference operation.</param>
-        /// <param name="parentId">Optional parent activity ID.</param>
+        /// <param name="details">Details of the inference call (operation name, model, provider, token usage, finish reasons, response ID).</param>
+        /// <param name="agentDetails">Information about the agent executing the inference (service, version, identifiers).</param>
+        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
+        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID for the inference.</param>
+        /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
         /// <returns>A new InferenceScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -37,16 +38,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId);
+        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata);
 
-        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
+        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
             : base(
-                ActivityKind.Client,
-                agentDetails,
-                tenantDetails,
-                details.OperationName.ToString(),
-                $"{details.OperationName} {details.Model}",
-                parentId: parentId)
+                kind: ActivityKind.Client,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                operationName: details.OperationName.ToString(),
+                activityName: $"{details.OperationName} {details.Model}",
+                parentId: parentId,
+                conversationId: conversationId,
+                sourceMetadata: sourceMetadata)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);

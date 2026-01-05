@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
     using Microsoft.Agents.A365.Observability.Runtime.Common;
@@ -34,10 +32,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// Initializes a new instance of the <see cref="Builder"/> class.
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
+        /// <param name="configuration">The configuration instance.</param>
         /// <param name="useOpenTelemetryBuilder">Whether to use the OpenTelemetryBuilder to add OpenTelemetry services to the supplied service collection.</param>
         /// <param name="agent365ExporterType">The type of Agent365 exporter to use.</param>
-        /// <param name="configuration">The configuration instance.</param>
-        internal Builder(IServiceCollection services, bool useOpenTelemetryBuilder, Agent365ExporterType agent365ExporterType, IConfiguration? configuration)
+        public Builder(IServiceCollection services, IConfiguration? configuration, bool useOpenTelemetryBuilder = true, Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter)
         {
             this._services = services;
             this._useOpenTelemetryBuilder = useOpenTelemetryBuilder;

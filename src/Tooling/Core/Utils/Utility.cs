@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
@@ -60,21 +59,6 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         {
             var baseUrl = GetMcpBaseUrl(configuration);
             return $"{baseUrl}/{serverName}";
-        }
-
-        /// <summary>
-        /// Gets the configured tools mode from the configuration (e.g., environment variable TOOLS_MODE, appsettings.json, etc.).
-        /// </summary>
-        /// <param name="configuration">Configuration Collection</param>
-        /// <returns>The configured tools mode, defaults to MCPPlatform if not set.</returns>
-        public static ToolsMode GetToolsMode(IConfiguration configuration)
-        {
-            var toolsMode = configuration["TOOLS_MODE"] ?? "MCPPlatform";
-            return toolsMode.ToLowerInvariant() switch
-            {
-                "mockmcpserver" => ToolsMode.MockMCPServer,
-                _ => ToolsMode.MCPPlatform
-            };
         }
     }
 }

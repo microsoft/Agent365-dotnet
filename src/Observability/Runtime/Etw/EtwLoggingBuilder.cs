@@ -1,14 +1,12 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using System;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Builds the ETW + OpenTelemetry logging configuration.
@@ -55,8 +53,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                     logging.AddOpenTelemetry(otelLogging =>
                     {
                         otelLogging.ParseStateValues = true;
-                        otelLogging.AddProcessor(sp => new EtwLogProcessor(sp.GetRequiredService<ExportFormatter>()));
-
+                        otelLogging.AddProcessor(sp =>
+                        {
+                            return new EtwLogProcessor(formatter: sp.GetRequiredService<ExportFormatter>(), logger: sp.GetService<ILogger<EtwLogProcessor>>() ?? FallbackConsoleLoggerFactory.Value.CreateLogger<EtwLogProcessor>());
+                        });
                         if (EnvironmentUtils.IsDevelopmentEnvironment())
                         {
                             otelLogging.AddConsoleExporter();

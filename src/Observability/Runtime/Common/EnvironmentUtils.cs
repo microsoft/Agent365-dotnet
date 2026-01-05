@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Common
@@ -21,7 +19,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// <returns>The authentication scope.</returns>
         public static string[] GetObservabilityAuthenticationScope()
         {
-            return new[] { ProdObservabilityScope };
+            var overrideScope = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_SCOPE_OVERRIDE");
+            return new[] { !string.IsNullOrEmpty(overrideScope) ? overrideScope : ProdObservabilityScope };
         }
 
         /// <summary>

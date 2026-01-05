@@ -1,11 +1,11 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Handlers
 {
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Agents.A365.Runtime;
+    using Microsoft.Agents.A365.Tooling.Models;
     using System;
     using System.Globalization;
     using System.Net.Http;
@@ -18,9 +18,12 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     {
         // Header names for passing context information in HTTP requests
         private const string ConversationIdHeader = "x-ms-conversation-id";
+        private const string ChannelIdHeader = "x-ms-channel-id";
+        private const string SubChannelIdHeader = "x-ms-subchannel-id";
         private const string UserMessageHeader = "x-ms-usermessage";
         private const string O11ySpanIdHeader = "x-ms-span-id";
         private const string O11yTraceIdHeader = "x-ms-trace-id";
+        private const string UserAgentHeader = "User-Agent";
 
         // Keys set from Observability
         private const string O11ySpanIdKey = "O11ySpanId";
@@ -28,11 +31,13 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
         private readonly ITurnContext turnContext;
         private readonly ILogger logger;
+        private readonly ToolOptions toolOptions;
 
-        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger)
+        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger, ToolOptions toolOptions)
         {
             this.turnContext = turnContext;
             this.logger = logger;
+            this.toolOptions = toolOptions;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -42,6 +47,16 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 if (!string.IsNullOrEmpty(turnContext.Activity.Conversation.Id))
                 {
                     request.Headers.Add(ConversationIdHeader, turnContext.Activity.Conversation.Id);
+                }
+
+                if (!string.IsNullOrEmpty(turnContext.Activity.ChannelId?.Channel))
+                {
+                    request.Headers.Add(ChannelIdHeader, turnContext.Activity.ChannelId.Channel);
+                }
+
+                if (!string.IsNullOrEmpty(turnContext.Activity.ChannelId?.SubChannel))
+                {
+                    request.Headers.Add(SubChannelIdHeader, turnContext.Activity.ChannelId.SubChannel);
                 }
 
                 if (!string.IsNullOrEmpty(turnContext.Activity.Text))
@@ -64,6 +79,11 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 {
                     request.Headers.Add(O11yTraceIdHeader, traceId);
                 }
+            }
+
+            if (this.toolOptions.UserAgentConfiguration != null)
+            {
+                request.Headers.Add(UserAgentHeader, UserAgentHelper.BuildUserAgent(this.toolOptions.UserAgentConfiguration));
             }
 
             return base.SendAsync(request, cancellationToken);

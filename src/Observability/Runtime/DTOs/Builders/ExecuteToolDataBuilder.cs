@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -29,6 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="sourceMetadata">Optional source metadata for the operation.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
         public static ExecuteToolData Build(
@@ -41,9 +41,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
+            SourceMetadata? sourceMetadata = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -54,6 +55,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             TenantDetails tenantDetails,
             string conversationId,
             string? responseContent,
+            SourceMetadata? sourceMetadata,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -73,6 +75,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Response content if supplied
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiEventContent, responseContent);
+
+            // Source metadata
+            AddSourceMetadataAttributes(attributes, sourceMetadata);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);

@@ -29,6 +29,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        {
+            // Arrange
+            var toolDetails = new ToolCallDetails("toolSource", null);
+            var agent = new AgentDetails("agent-src");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-src-tool";
+            var source = new SourceMetadata(id: "src-id", name: "ChannelTool", role: Role.Agent, description: "https://channel/tool");
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(toolDetails, agent, tenant, conversationId, sourceMetadata: source);
+
+            // Assert
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelTool");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/tool");
+        }
+
+        [TestMethod]
         public void Build_WithFullToolDetails_IncludesAllToolAttributes()
         {
             // Arrange

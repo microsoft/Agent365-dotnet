@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
@@ -65,11 +63,11 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         /// <returns></returns>
         public static string ResolveAgentIdentity(ITurnContext context, string authToken)
         {
-            // App ID is required to pass to MCP server URL. 
+            // App ID is required to pass to MCP server URL.
             string agenticAppId = context.Activity.IsAgenticRequest()
                 ? context.Activity.GetAgenticInstanceId()
                 : Runtime.Utils.Utility.GetAppIdFromToken(authToken);
-            return agenticAppId; 
+            return agenticAppId;
         }
     }
 }

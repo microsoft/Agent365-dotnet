@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -23,10 +22,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for tool execution tracing.
         /// </summary>
-        /// <param name="details">The details of the tool call.</param>
-        /// <param name="agentDetails">The details of the agent executing the tool.</param>
-        /// <param name="tenantDetails">The tenant details for the tool execution.</param>
-        /// <param name="parentId">Optional parent activity ID.</param>
+        /// <param name="details">Details of the tool call (name, args, type, call ID, description, endpoint).</param>
+        /// <param name="agentDetails">Information about the agent executing the tool (service, version, identifiers).</param>
+        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
+        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID for the tool execution.</param>
+        /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
         /// <returns>A new ExecuteToolScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -41,16 +42,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
             : base(
-                ActivityKind.Internal,
-                agentDetails,
-                tenantDetails,
-                OperationName,
-                $"{OperationName} {details.ToolName}",
-                parentId: parentId)
+                kind: ActivityKind.Internal,
+                agentDetails: agentDetails,
+                tenantDetails: tenantDetails,
+                operationName: OperationName,
+                activityName: $"{OperationName} {details.ToolName}",
+                parentId: parentId,
+                conversationId: conversationId,
+                sourceMetadata: sourceMetadata)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);

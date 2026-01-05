@@ -1,15 +1,8 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
-    using Microsoft.Agents.A365.Tooling.Models;
-    using Microsoft.Agents.A365.Tooling.Utils;
-    using Microsoft.Agents.A365.Tooling.Handlers;
-    using Microsoft.Agents.Builder;
-    using Microsoft.Extensions.Logging;
-    using ModelContextProtocol.Client;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -18,7 +11,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Reflection;
     using System.Text.Json;
     using System.Threading.Tasks;
+    using Microsoft.Agents.A365.Runtime;
+    using Microsoft.Agents.A365.Tooling.Handlers;
+    using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Utils;
+    using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+    using ModelContextProtocol.Client;
 
     /// <summary>
     /// Provides services for managing MCP server configurations.
@@ -27,38 +28,39 @@ namespace Microsoft.Agents.A365.Tooling.Services
     {
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ILoggerFactory? _loggerFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
         /// </summary>
         /// <param name="logger">Logger instance for logging.</param>
         /// <param name="configuration">Configuration collection.</param>
-        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration)
+        /// <param name="serviceProvider">Service provider</param>
+        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
         {
             _configuration = configuration;
             _logger = logger;
+            _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
         }
 
-        /// <summary>
-        /// Gets the list of MCP Servers that are configured for the agent.
-        /// </summary>
-        /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
-        /// <param name="authToken">Auth token to access the MCP servers</param>
-        /// <returns>Returns the list of MCP Servers that are configured.</returns>
+        /// <inheritdoc/>
         public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken);
+            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions());
         }
 
-        /// <summary>
-        /// Gets the MCP Client Tools from the specified MCP server.
-        /// </summary>
-        /// <param name="turnContext">The turn context.</param>
-        /// <param name="mCPServerConfig">The MCP server configuration.</param>
-        /// <param name="authToken">The authentication token.</param>
-        /// <returns>MCP Client Tools</returns>
-        /// <exception cref="InvalidOperationException"></exception>
-        public async Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken)
+        /// <inheritdoc/>
+        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        {
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+        }
+
+        /// <inheritdoc/>
+        public async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
+            ITurnContext turnContext,
+            MCPServerConfig mCPServerConfig,
+            string authToken,
+            ToolOptions toolOptions)
         {
             try
             {
@@ -71,7 +73,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), mCPServerConfig.mcpServerName, authToken);
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -93,7 +95,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
-            string agentInstanceId, string authToken)
+            string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, _configuration);
 
@@ -107,6 +109,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
+                if (toolOptions.UserAgentConfiguration != null)
+                {
+                    httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(toolOptions.UserAgentConfiguration));
+                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
@@ -232,6 +238,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 string? name = null;
+                string? endpoint = null;
                 string? id = null;
                 string? scope = null;
                 string? audience = null;
@@ -242,6 +249,18 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     name = nameElement.GetString();
                 }
+                else if (serverElement.TryGetProperty("mcpServerUniqueName", out var mcpServerUniqueNameElement) &&
+                    mcpServerUniqueNameElement.ValueKind == JsonValueKind.String)
+                {
+                    name = mcpServerUniqueNameElement.GetString();
+                }
+
+                if (serverElement.TryGetProperty("url", out var urlElement) &&
+                    urlElement.ValueKind == JsonValueKind.String)
+                {
+                    endpoint = urlElement.GetString();
+                }
+
                 if (serverElement.TryGetProperty("id", out var idElement) &&
                     idElement.ValueKind == JsonValueKind.String)
                 {
@@ -269,8 +288,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     return null;
                 }
 
-                // Construct full URL
-                var fullUrl = Utility.BuildMcpServerUrl(name, _configuration);
+                // Construct full URL if not provided in manifest
+                var fullUrl = endpoint ?? Utility.BuildMcpServerUrl(name, _configuration);
 
                 return new MCPServerConfig
                 {
@@ -381,7 +400,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string clientName, string authToken)
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -404,9 +423,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             this._logger.LogInformation($"Configured authentication handler for MCP endpoint {endpoint}");
 
-            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger)
+            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, toolOptions)
             {
-                InnerHandler = authHandler
+                InnerHandler = authHandler,
             };
 
             // Create logging handler (optional - for debugging HTTP requests)
@@ -429,7 +448,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: _loggerFactory);
             }
             catch (Exception ex)
             {

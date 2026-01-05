@@ -1,14 +1,12 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// Provides ETW logging functionality for tracing events.
@@ -44,7 +42,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
             DateTimeOffset? startTime, 
             DateTimeOffset? endTime, 
             string? spanId, 
-            string? parentSpanId)
+            string? parentSpanId,
+            SourceMetadata? sourceMetadata)
         {
             var data = ExecuteInferenceDataBuilder.Build(
                 inferenceCallDetails,
@@ -56,7 +55,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 startTime,
                 endTime,
                 spanId,
-                parentSpanId);
+                parentSpanId,
+                sourceMetadata);
 
             logger.Log(
                 LogLevel.Information,
@@ -115,7 +115,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
             DateTimeOffset? startTime, 
             DateTimeOffset? endTime, 
             string? spanId, 
-            string? parentSpanId)
+            string? parentSpanId,
+            SourceMetadata? sourceMetadata)
         {
             var data = ExecuteToolDataBuilder.Build(
                 toolCallDetails,
@@ -126,7 +127,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Etw
                 startTime,
                 endTime,
                 spanId,
-                parentSpanId);
+                parentSpanId,
+                sourceMetadata);
 
             logger.Log(
                 LogLevel.Information,

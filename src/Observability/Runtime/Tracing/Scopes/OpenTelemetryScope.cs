@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System;
 using System.Collections.Generic;
@@ -45,7 +44,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
         /// <param name="parentId">Optional parent ID for the activity.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null)
+        /// <param name="conversationId">Optional conversation id.</param>
+        /// <param name="sourceMetadata">Optional source metadata.</param>
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
         {
             customStartTime = startTime;
             activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
@@ -90,6 +91,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             if (!customStartTime.HasValue)
             {
                 duration = Stopwatch.StartNew();
+            }
+
+            if (!string.IsNullOrEmpty(conversationId))
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+            }
+
+            if (sourceMetadata != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
+                SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
             }
 
             activity?.Start();

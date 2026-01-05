@@ -1,13 +1,10 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
-    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Hosting;
     using System;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Extensions.Hosting;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
@@ -35,6 +32,5 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             localbuilder.Build();
             return builder;
         }
-
     }
 }

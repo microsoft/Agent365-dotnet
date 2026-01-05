@@ -1,8 +1,8 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System.Threading.Tasks;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -14,11 +14,26 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
+    /// Delegate used by the exporter to resolve the island tenant domain for a given tenant id.
+    /// </summary>
+    public delegate string TenantDomainResolver(string tenantId);
+
+    /// <summary>
     /// Configuration for Agent365Exporter.
     /// Only ClusterCategory and TokenResolver are required for core operation.
     /// </summary>
     public sealed class Agent365ExporterOptions
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Agent365ExporterOptions"/> class with default settings.
+        /// </summary>
+        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to resolve tenant
+        /// endpoints using the current <c>ClusterCategory</c> value.</remarks>
+        public Agent365ExporterOptions()
+        {
+            this.DomainResolver = tenantId => new PowerPlatformApiDiscovery(this.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+        }
+
         /// <summary>
         /// Cluster region argument. Defaults to production.
         /// </summary>
@@ -28,6 +43,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Async delegate used to resolve the auth token. REQUIRED.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
+
+        /// <summary>
+        /// Delegate used to resolve the island tenant domain for a given tenant id.
+        /// </summary>
+        public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
         /// When true, uses the service-to-service (S2S) endpoint path: /maven/agent365/service/agents/{agentId}/traces

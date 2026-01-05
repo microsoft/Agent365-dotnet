@@ -1,11 +1,10 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
-using Microsoft.Agents.A365.Observability.Hosting.Etw;
+using Microsoft.Agents.A365.Observability.Runtime.Etw;
 using System.Diagnostics.Tracing;
 
-namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Etw
+namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
 {
     [TestClass]
     public class EtwEventSourceTests
