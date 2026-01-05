@@ -1,5 +1,7 @@
-﻿// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,7 +68,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private static TracerProviderBuilder ConfigureInternal(IServiceProvider serviceProvider, TracerProviderBuilder builder, Agent365ExporterType exporterType)
         {
             var exporterRegistrationService = serviceProvider.GetRequiredService<IAgent365ExporterRegistrationService>();
-            if (exporterRegistrationService?.TryRegisterExporter(exporterType) ?? true)
+            if (exporterRegistrationService!.TryRegisterExporter(exporterType))
             {
                 // Ensure required services are registered
                 var exporterOptions = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
