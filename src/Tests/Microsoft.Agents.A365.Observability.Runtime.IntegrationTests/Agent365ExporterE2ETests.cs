@@ -560,7 +560,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             await Task.Delay(10000).ConfigureAwait(false);
 
             // Assert - Should have exactly one export request, not two
-            requestCount.Should().Be(1, "Static guard should prevent duplicate exporter registration, resulting in only one export request");
+            requestCount.Should().Be(1, "Exporter registry should prevent duplicate exporter registration, resulting in only one export request");
             receivedContents.Should().HaveCount(1, "Should receive exactly one export payload");
         }
 
