@@ -5,6 +5,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 
@@ -18,13 +19,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.AgentSettings
         private readonly PowerPlatformApiDiscovery _apiDiscovery;
         private readonly string _tenantId;
         private readonly HttpClient _httpClient;
+        private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true
+        };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AgentSettingsService"/> class.
         /// </summary>
         /// <param name="apiDiscovery">The Power Platform API discovery service.</param>
         /// <param name="tenantId">The tenant identifier.</param>
-        /// <param name="httpClient">Optional HttpClient instance. If not provided, a new instance will be created.</param>
+        /// <param name="httpClient">Optional HttpClient instance. If not provided, a new instance will be created.
+        /// For production use, it is recommended to provide an HttpClient instance managed by an IHttpClientFactory
+        /// to avoid socket exhaustion issues.</param>
         public AgentSettingsService(
             PowerPlatformApiDiscovery apiDiscovery,
             string tenantId,
@@ -71,7 +80,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.AgentSettings
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return JsonSerializer.Deserialize<AgentSettingTemplate>(content);
+                return JsonSerializer.Deserialize<AgentSettingTemplate>(content, JsonOptions);
             }
         }
 
@@ -148,7 +157,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.AgentSettings
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return JsonSerializer.Deserialize<AgentSettings>(content);
+                return JsonSerializer.Deserialize<AgentSettings>(content, JsonOptions);
             }
         }
 
