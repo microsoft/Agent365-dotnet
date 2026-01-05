@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;

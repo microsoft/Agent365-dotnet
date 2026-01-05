@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿// ------------------------------------------------------------------------------
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // ------------------------------------------------------------------------------
@@ -13,6 +14,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Extensions.DependencyInjection;
     using OpenTelemetry;
     using OpenTelemetry.Trace;
+=======
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+namespace Microsoft.Agents.A365.Observability.Runtime
+{
+    using Microsoft.Agents.A365.Observability.Runtime.Common;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using OpenTelemetry;
+    using OpenTelemetry.Trace;
+    using System;
+>>>>>>> main
 
     /// <summary>
     /// Builder for configuring SDK with OpenTelemetry tracing.
