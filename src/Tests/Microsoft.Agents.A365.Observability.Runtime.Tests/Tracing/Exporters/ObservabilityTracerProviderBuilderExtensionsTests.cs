@@ -10,29 +10,18 @@ using OpenTelemetry.Trace;
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Tracing.Exporters;
 
 /// <summary>
-/// Unit tests for ObservabilityTracerProviderBuilderExtensions static guard functionality.
+/// Unit tests for ObservabilityTracerProviderBuilderExtensions functionality.
 /// </summary>
 [TestClass]
 public sealed class ObservabilityTracerProviderBuilderExtensionsTests
 {
-    [TestInitialize]
-    public void TestInitialize()
-    {
-        ClearStaticGuardRegistry();
-    }
-
-    [TestCleanup]
-    public void TestCleanup()
-    {
-        ClearStaticGuardRegistry();
-    }
-
     [TestMethod]
-    public void AddAgent365Exporter_UpdatesStaticGuardRegistry()
+    public void AddAgent365Exporter_UpdatesExporterRegistrationService()
     {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<IAgent365ExporterRegistrationService, Agent365ExporterRegistrationService>();
         services.AddSingleton(new Agent365ExporterOptions
         {
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
@@ -51,18 +40,10 @@ public sealed class ObservabilityTracerProviderBuilderExtensionsTests
         serviceProvider.Should().NotBeNull();
         tracerProvider.Should().NotBeNull();
         
-        // Verify that the exporter type is registered in the static guard
-        ObservabilityTracerProviderBuilderExtensions.RegisteredExporters
-            .Should().ContainKey(Agent365ExporterType.Agent365Exporter)
-            .WhoseValue.Should().BeTrue("Agent365Exporter type should be registered in static guard");
-    }
-
-    /// <summary>
-    /// Helper method to clear the static guard registry.
-    /// This is needed for test isolation since static state persists across tests.
-    /// </summary>
-    private static void ClearStaticGuardRegistry()
-    {
-        ObservabilityTracerProviderBuilderExtensions.RegisteredExporters.Clear();
+        // Verify that the exporter type is registered in the exporter registration service
+        var exporterRegistrationService = serviceProvider.GetService<IAgent365ExporterRegistrationService>();
+        exporterRegistrationService.Should().NotBeNull();
+        exporterRegistrationService!.IsExporterRegistered(Agent365ExporterType.Agent365Exporter)
+            .Should().BeTrue("Agent365Exporter type should be registered in the service");
     }
 }

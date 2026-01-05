@@ -13,6 +13,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using OpenTelemetry;
     using OpenTelemetry.Trace;
     using System;
+    using static Grpc.Core.ServerServiceDefinition;
 
     /// <summary>
     /// Builder for configuring SDK with OpenTelemetry tracing.
@@ -76,6 +77,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 return;
 
             AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
+            // Register the exporter registration service as a singleton
+            this._services.AddSingleton<IAgent365ExporterRegistrationService, Agent365ExporterRegistrationService>();
 
             // Configure OpenTelemetry with all processors in a single call
             // NOTE: _useOpenTelemetryBuilder = true does two things.
