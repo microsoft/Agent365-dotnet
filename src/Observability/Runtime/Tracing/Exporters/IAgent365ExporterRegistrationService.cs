@@ -6,7 +6,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// <summary>
     /// Service to track registered Agent365 exporters and prevent duplicate registrations.
     /// </summary>
-    public interface IAgent365ExporterRegistrationService
+    internal interface IAgent365ExporterRegistrationService
     {
         /// <summary>
         /// Attempts to register an exporter type if not already registered.
