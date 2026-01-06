@@ -28,11 +28,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         public IConfiguration? Configuration { get; }
 
         /// <summary>
-        /// Gets a value indicating whether the builder has been built.
-        /// </summary>
-        public bool IsBuilt => _isBuilt;
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="Builder"/> class.
         /// </summary>
         /// <param name="services">The service collection to configure.</param>
