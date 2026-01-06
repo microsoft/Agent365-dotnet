@@ -520,7 +520,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             // AddA365Tracing call
             builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
 
-
             // Duplicate AddA365Tracing call
             builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
 
