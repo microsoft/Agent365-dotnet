@@ -5,6 +5,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using System;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.DependencyInjection.Extensions;
     using Microsoft.Extensions.Hosting;
 
     /// <summary>
@@ -28,15 +29,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 bool useOpenTelemetryBuilder = true,
                 Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter) where TBuilder : IHostApplicationBuilder
         {
-            using var sp = builder.Services!.BuildServiceProvider();
-            if (sp.GetService<Builder>()?.IsBuilt == true)
+            if (builder.Services!.BuildServiceProvider().GetService<Builder>()?.IsBuilt == true)
             {
                 return builder;
             }
 
-            var localbuilder = new Builder(services: builder.Services!, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType,configuration: builder.Configuration);
+            var localbuilder = new Builder(services: builder.Services!, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType, configuration: builder.Configuration);
             configure?.Invoke(localbuilder);
             localbuilder.Build();
+            builder.Services.AddSingleton(localbuilder);
             return builder;
         }
     }
