@@ -16,8 +16,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry
 
         /// <summary>
         /// Gets the singleton instance of <see cref="Agent365AzureAIFoundrySdkUserAgentConfiguration"/>.
+        /// This property intentionally uses <c>new</c> to hide the base <c>Instance</c> property
+        /// so that callers receive this more specific configuration type for Azure AI Foundry.
         /// </summary>
-        public static Agent365AzureAIFoundrySdkUserAgentConfiguration Instance => _instance.Value;
+        public static new Agent365AzureAIFoundrySdkUserAgentConfiguration Instance => _instance.Value;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365AzureAIFoundrySdkUserAgentConfiguration"/> class.

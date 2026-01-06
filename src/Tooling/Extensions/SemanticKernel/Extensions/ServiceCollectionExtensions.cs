@@ -19,6 +19,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
         /// <returns>The service collection for chaining.</returns>
         public static IServiceCollection AddMcpServices(this IServiceCollection services)
         {
+            // Register HttpClient with default configuration
+            services.AddHttpClient();
+            
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
             
