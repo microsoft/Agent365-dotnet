@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             var localbuilder = new Builder(services: builder.Services!, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType, configuration: builder.Configuration);
             configure?.Invoke(localbuilder);
             localbuilder.Build();
-            builder.Services.AddSingleton(localbuilder);
+            builder.Services.TryAddSingleton<Builder>(localbuilder);
             return builder;
         }
     }

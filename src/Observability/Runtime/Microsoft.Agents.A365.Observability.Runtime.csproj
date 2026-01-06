@@ -23,5 +23,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Hosting" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Runtime.Tests" />
   </ItemGroup>
 </Project>
