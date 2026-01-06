@@ -30,7 +30,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public void TestCleanup()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
-            ClearExporterRegistry();
         }
 
         [TestMethod]
@@ -525,13 +524,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
             });
 
-            // 1. Direct OpenTelemetry call
-            builder.Services.AddOpenTelemetry().WithTracing(tracingBuilder =>
-            {
-                tracingBuilder.AddAgent365Exporter(Agent365ExporterType.Agent365Exporter);
-            });
+            // AddA365Tracing call
+            builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
 
-            // 2. AddA365Tracing call
+
+            // Duplicate AddA365Tracing call
             builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
 
             var serviceProvider = builder.Services.BuildServiceProvider();
@@ -635,12 +632,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             var httpClient = new HttpClient(this._handler);
             this._provider = this.CreateTestServiceProvider(httpClient);
-        }
-
-        private void ClearExporterRegistry()
-        {
-            var exporterRegistrationService = this._provider?.GetService<IAgent365ExporterRegistrationService>();
-            exporterRegistrationService?.ClearRegisteredExporters();
         }
     }
 }

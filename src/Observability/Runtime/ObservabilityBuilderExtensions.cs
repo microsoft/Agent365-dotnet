@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
-    using System;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using System;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
@@ -27,6 +28,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 bool useOpenTelemetryBuilder = true,
                 Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter) where TBuilder : IHostApplicationBuilder
         {
+            using var sp = builder.Services!.BuildServiceProvider();
+            if (sp.GetService<Builder>()?.IsBuilt == true)
+            {
+                return builder;
+            }
+
             var localbuilder = new Builder(services: builder.Services!, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType,configuration: builder.Configuration);
             configure?.Invoke(localbuilder);
             localbuilder.Build();

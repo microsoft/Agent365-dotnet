@@ -30,7 +30,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         public void TestCleanup()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
-            ClearExporterRegistry();
         }
 
         [TestMethod]
@@ -437,12 +436,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             });
             var httpClient = new HttpClient(this._handler);
             this._provider = this.CreateTestServiceProvider(httpClient);
-        }
-
-        private void ClearExporterRegistry()
-        {
-            var exporterRegistrationService = this._provider?.GetService<IAgent365ExporterRegistrationService>();
-            exporterRegistrationService?.ClearRegisteredExporters();
         }
     }
 }

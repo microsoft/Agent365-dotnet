@@ -27,6 +27,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// </summary>
         public IConfiguration? Configuration { get; }
 
+        /// <summary>
+        /// Gets a value indicating whether the builder has been built.
+        /// </summary>
+        public bool IsBuilt => _isBuilt;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Builder"/> class.
@@ -74,9 +78,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 return;
 
             AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
-
-            // Register the exporter registration service as a singleton
-            this._services.AddSingleton<IAgent365ExporterRegistrationService, Agent365ExporterRegistrationService>();
 
             // Configure OpenTelemetry with all processors in a single call
             // NOTE: _useOpenTelemetryBuilder = true does two things.
