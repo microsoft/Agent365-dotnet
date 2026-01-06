@@ -8,6 +8,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Net;
+using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 {
