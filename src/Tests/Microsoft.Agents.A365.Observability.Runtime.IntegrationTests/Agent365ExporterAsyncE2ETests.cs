@@ -20,16 +20,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         private bool _receivedRequest;
         private string? _receivedContent;
 
-        [TestInitialize]
-        public void TestInitialize()
+        public Agent365ExporterAsyncE2ETests()
         {
             Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-        }
-
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "false");
         }
 
         [TestMethod]

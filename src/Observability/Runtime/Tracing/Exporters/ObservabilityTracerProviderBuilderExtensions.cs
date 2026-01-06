@@ -101,7 +101,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 default:
                     throw new ArgumentOutOfRangeException(nameof(exporterType), exporterType, "Unknown Agent365ExporterType specified.");
             }
-
             return builder;
         }
     }
