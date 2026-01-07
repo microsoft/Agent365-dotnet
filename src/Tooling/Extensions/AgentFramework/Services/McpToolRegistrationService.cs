@@ -182,6 +182,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(chatMessages, nameof(chatMessages));
+        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+
         cancellationToken.ThrowIfCancellationRequested();
 
         return await SendChatHistoryAsync(chatMessages, turnContext, new ToolOptions
@@ -246,6 +249,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
+        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+
         cancellationToken.ThrowIfCancellationRequested();
 
         return await SendChatHistoryAsync(chatMessageStore, turnContext, new ToolOptions
