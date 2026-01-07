@@ -276,7 +276,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Retrieve messages from the store asynchronously
-            // Use ToListAsync extension method to efficiently materialize the async enumerable
             var messages = await chatMessageStore.GetMessagesAsync(cancellationToken).ConfigureAwait(false);
 
             // Delegate to the IEnumerable overload
