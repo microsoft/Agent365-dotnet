@@ -294,7 +294,7 @@ public class SendChatHistoryAsync_ChatMessageStore_Tests : McpToolRegistrationSe
             new ChatMessage(ChatRole.User, "Test") { MessageId = "msg-1", CreatedAt = DateTimeOffset.UtcNow }
         });
         var turnContextMock = new Mock<ITurnContext>();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act
@@ -324,7 +324,7 @@ public class SendChatHistoryAsync_ChatMessageStore_Tests : McpToolRegistrationSe
         });
         var turnContextMock = new Mock<ITurnContext>();
         var toolOptions = new ToolOptions();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act

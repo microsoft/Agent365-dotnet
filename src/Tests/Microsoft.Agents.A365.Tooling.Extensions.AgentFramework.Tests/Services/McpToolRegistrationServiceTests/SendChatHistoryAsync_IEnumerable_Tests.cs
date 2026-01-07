@@ -345,7 +345,7 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
             }
         };
         var turnContextMock = new Mock<ITurnContext>();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         // Act
