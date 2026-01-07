@@ -73,7 +73,7 @@ public static class SemanticKernelSpanProcessorHelper
     /// <param name="key">The key of the tag to remove.</param>
     private static void RemoveTagIfExists(Activity activity, string key)
     {
-        if (!string.IsNullOrEmpty(GetTagValue(activity, key)))
+        if (GetTagValue(activity, key) != null)
         {
             activity.SetTag(key, null);
         }
