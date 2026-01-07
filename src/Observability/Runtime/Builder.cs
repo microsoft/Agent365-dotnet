@@ -27,7 +27,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime
         /// </summary>
         public IConfiguration? Configuration { get; }
 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Builder"/> class.
         /// </summary>

@@ -20,11 +20,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         private bool _receivedRequest;
         private string? _receivedContent;
 
-        public Agent365ExporterAsyncE2ETests()
-        {
-            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-        }
-
         [TestMethod]
         public async Task AddTracing_And_InvokeAgentScope_ExporterMakesExpectedRequest()
         {
@@ -404,6 +399,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         {
             HostApplicationBuilder builder = new HostApplicationBuilder();
 
+            builder.Configuration["EnableAgent365Exporter"] = "true";
             builder.Services.AddSingleton<HttpClient>(httpClient);
             builder.Services.AddSingleton<Agent365ExporterOptions>(sp =>
             {
