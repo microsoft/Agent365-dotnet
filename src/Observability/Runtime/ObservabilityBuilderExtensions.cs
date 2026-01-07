@@ -43,9 +43,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
             }
             else
             {
-                using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
-                var logger = loggerFactory.CreateLogger(typeof(ObservabilityBuilderExtensions).FullName);
-                logger.LogWarning("A365 tracing has already been configured. Duplicate call to AddA365Tracing() will be ignored.");
+                Console.WriteLine("A365 tracing has already been configured. Duplicate call to AddA365Tracing() will be ignored.");
             }
 
             return builder;
