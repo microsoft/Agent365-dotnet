@@ -32,7 +32,7 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
         }
 
         [TestMethod]
-        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RedactsInputTagsAndPreservesOutput()
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RemovesInputTagsAndPreservesOutput()
         {
             var activity = new Activity("test");
             var agentMessages = new List<string>
@@ -45,22 +45,20 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
             {
                 JsonSerializer.Serialize(new MessageContent { Role = "assistant", Content = "Output message" })
             };
-
+            
             activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, JsonSerializer.Serialize(agentMessages));
             activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, inputMessages);
             activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationOutputKey, JsonSerializer.Serialize(outputMessages));
 
             SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
 
-            var redactedAgentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
-            var redactedInputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value as string;
+            var removedAgentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
+            var removedInputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
             var output = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationOutputKey).Value as string;
-
-            Assert.IsNotNull(redactedAgentInput);
-            Assert.IsNotNull(redactedInputMessages);
+            
+            Assert.IsNull(removedAgentInput);
+            Assert.IsNull(removedInputMessages);
             Assert.IsNotNull(output);
-            Assert.AreEqual("[REDACTED]", redactedAgentInput);
-            Assert.AreEqual("[REDACTED]", redactedInputMessages);
             Assert.IsTrue(output.Contains("Output message"));
         }
 
@@ -78,26 +76,6 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             Assert.AreEqual("", agentInput);
             Assert.IsNull(inputMessages);
-        }
-
-        [TestMethod]
-        public void ProcessInvocationInputOutputTag_SuppressInvocationInputFalse_ProcessesNormally()
-        {
-            var activity = new Activity("test");
-            var messages = new List<string>
-            {
-                JsonSerializer.Serialize(new MessageContent { Role = "system", Content = "System message" }),
-                JsonSerializer.Serialize(new MessageContent { Role = "user", Content = "Message:User message" })
-            };
-            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, JsonSerializer.Serialize(messages));
-
-            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: false);
-
-            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
-            Assert.IsNotNull(filtered);
-            Assert.IsFalse(filtered.Contains("System message"));
-            Assert.IsTrue(filtered.Contains("User message"));
-            Assert.IsFalse(filtered.Contains("[REDACTED]"));
         }
 
         [TestMethod]

@@ -35,14 +35,8 @@ public static class SemanticKernelSpanProcessorHelper
     {
         if (suppressInvocationInput)
         {
-            if (!string.IsNullOrEmpty(GetTagValue(activity, OpenTelemetryConstants.GenAiInputMessagesKey)))
-            {
-                activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "[REDACTED]");
-            }
-            if (!string.IsNullOrEmpty(GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey)))
-            {
-                activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "[REDACTED]");
-            }
+            RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
+            RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
             return;
         }
 
@@ -70,6 +64,19 @@ public static class SemanticKernelSpanProcessorHelper
         return activity.TagObjects
             .OfType<KeyValuePair<string, object>>()
             .FirstOrDefault(k => k.Key == key).Value as string;
+    }
+
+    /// <summary>
+    /// Removes a tag from the activity if it exists.
+    /// </summary>
+    /// <param name="activity">The activity containing the tag to remove.</param>
+    /// <param name="key">The key of the tag to remove.</param>
+    private static void RemoveTagIfExists(Activity activity, string key)
+    {
+        if (!string.IsNullOrEmpty(GetTagValue(activity, key)))
+        {
+            activity.SetTag(key, null);
+        }
     }
 
     /// <summary>
