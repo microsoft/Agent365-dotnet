@@ -36,6 +36,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="chatHistory">The chat history to send.</param>
         /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistory"/> is null.</exception>
+        /// <exception cref="OperationCanceledException">Thrown when the operation is canceled via the <paramref name="cancellationToken"/>.</exception>
+        /// <remarks>
+        /// Note: The <see cref="ChatHistory"/> class does not include timestamp information for individual messages.
+        /// As a result, all messages in the converted chat history will be timestamped with the current UTC time at the moment of conversion.
+        /// Original message creation times are not preserved.
+        /// </remarks>
         Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -46,6 +53,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="toolOptions">Tool options for sending chat history.</param>
         /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/>, <paramref name="chatHistory"/>, or <paramref name="toolOptions"/> is null.</exception>
+        /// <exception cref="OperationCanceledException">Thrown when the operation is canceled via the <paramref name="cancellationToken"/>.</exception>
+        /// <remarks>
+        /// Note: The <see cref="ChatHistory"/> class does not include timestamp information for individual messages.
+        /// As a result, all messages in the converted chat history will be timestamped with the current UTC time at the moment of conversion.
+        /// Original message creation times are not preserved.
+        /// </remarks>
         Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, ToolOptions toolOptions, CancellationToken cancellationToken = default);
     }
 }

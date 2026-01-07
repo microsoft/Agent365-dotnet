@@ -107,6 +107,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             cancellationToken.ThrowIfCancellationRequested();
 
             // Convert ChatHistory to ChatHistoryMessage[]
+            // Note: ChatHistory does not include timestamps, so all messages are timestamped with the current UTC time
             var chatHistoryMessages = chatHistory.Select(message => new ChatHistoryMessage(
                 id: Guid.NewGuid().ToString(),
                 role: message.Role.Label,
