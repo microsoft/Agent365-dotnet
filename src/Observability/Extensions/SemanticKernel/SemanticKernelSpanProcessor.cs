@@ -3,9 +3,11 @@
 
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;
@@ -13,6 +15,16 @@ using System.Linq;
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
     private static readonly string TargetSourceName = SemanticKernelTelemetryConstants.SemanticKernelSource;
+    private readonly bool _suppressInvokeAgentInput;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SemanticKernelSpanProcessor"/> class.
+    /// </summary>
+    /// <param name="configuration">The configuration instance for accessing settings.</param>
+    public SemanticKernelSpanProcessor(IConfiguration? configuration = null)
+    {
+        this._suppressInvokeAgentInput = configuration != null && bool.TryParse(configuration[SemanticKernelTelemetryConstants.SuppressInvokeAgentInputConfigKey], out var suppress) && suppress;
+    }
 
     public override void OnStart(Activity activity)
     {
@@ -28,6 +40,10 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case SemanticKernelTelemetryConstants.InvokeAgentOperation:
+                        if (this._suppressInvokeAgentInput)
+                        {
+                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "[REDACTED]");
+                        }
                         SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
                         break;
 

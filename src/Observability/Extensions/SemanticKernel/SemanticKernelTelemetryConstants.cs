@@ -17,4 +17,7 @@ internal static class SemanticKernelTelemetryConstants
     public const string SemanticKernelSource = "Microsoft.SemanticKernel";
     public const string SemanticKernelSourceWildcard = "Microsoft.SemanticKernel*";
     public const string AzureAISourceWildcard = "Azure.AI.*";
+
+    // Configuration Keys
+    public const string SuppressInvokeAgentInputConfigKey = "SuppressInvokeAgentInput";
 }

@@ -29,7 +29,7 @@ public static class BuilderExtensions
             var telmConfig = builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
                 .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
-                .AddProcessor(new SemanticKernelSpanProcessor()));
+                .AddProcessor(new SemanticKernelSpanProcessor(builder.Configuration)));
 
             if (builder.Configuration != null
                 && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
