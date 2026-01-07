@@ -63,18 +63,33 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
         }
 
         [TestMethod]
-        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_HandlesEmptyAndMissingTags()
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_HandlesMissingTags()
         {
             var activity = new Activity("test");
-            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "");
-            // GenAiInputMessagesKey intentionally not set
+            // GenAiInputMessagesKey and GenAiAgentInvocationInputKey intentionally not set
 
             SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
 
-            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
             var inputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
 
-            Assert.AreEqual("", agentInput);
+            Assert.IsNull(agentInput);
+            Assert.IsNull(inputMessages);
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RemovesEmptyStringInputTags()
+        {
+            var activity = new Activity("test");
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "");
+            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "");
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
+            var inputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
+
+            Assert.IsNull(agentInput);
             Assert.IsNull(inputMessages);
         }
 
