@@ -30,8 +30,22 @@ public static class SemanticKernelSpanProcessorHelper
     /// Processes and filters the gen_ai.agent.invocation_input and gen_ai.agent.invocation_output tags to remove system role messages.
     /// </summary>
     /// <param name="activity">The activity containing the tags to process.</param>
-    public static void ProcessInvocationInputOutputTag(Activity activity)
+    /// <param name="suppressInvocationInput">Whether to suppress the invocation input messages.</param>
+    public static void ProcessInvocationInputOutputTag(Activity activity, bool suppressInvocationInput = false)
     {
+        if (suppressInvocationInput)
+        {
+            if (!string.IsNullOrEmpty(GetTagValue(activity, OpenTelemetryConstants.GenAiInputMessagesKey)))
+            {
+                activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "[REDACTED]");
+            }
+            if (!string.IsNullOrEmpty(GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey)))
+            {
+                activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "[REDACTED]");
+            }
+            return;
+        }
+
         var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
         if (inputJsonString != null)
         {

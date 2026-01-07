@@ -32,6 +32,75 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
         }
 
         [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RedactsInputTagsAndPreservesOutput()
+        {
+            var activity = new Activity("test");
+            var agentMessages = new List<string>
+            {
+                JsonSerializer.Serialize(new MessageContent { Role = "system", Content = "System message" }),
+                JsonSerializer.Serialize(new MessageContent { Role = "user", Content = "Message:Sensitive user message" })
+            };
+            var inputMessages = JsonSerializer.Serialize(new[] { "Sensitive input message 1", "Sensitive input message 2" });
+            var outputMessages = new List<string>
+            {
+                JsonSerializer.Serialize(new MessageContent { Role = "assistant", Content = "Output message" })
+            };
+
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, JsonSerializer.Serialize(agentMessages));
+            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, inputMessages);
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationOutputKey, JsonSerializer.Serialize(outputMessages));
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var redactedAgentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            var redactedInputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value as string;
+            var output = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationOutputKey).Value as string;
+
+            Assert.IsNotNull(redactedAgentInput);
+            Assert.IsNotNull(redactedInputMessages);
+            Assert.IsNotNull(output);
+            Assert.AreEqual("[REDACTED]", redactedAgentInput);
+            Assert.AreEqual("[REDACTED]", redactedInputMessages);
+            Assert.IsTrue(output.Contains("Output message"));
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_HandlesEmptyAndMissingTags()
+        {
+            var activity = new Activity("test");
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "");
+            // GenAiInputMessagesKey intentionally not set
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            var inputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
+
+            Assert.AreEqual("", agentInput);
+            Assert.IsNull(inputMessages);
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInputFalse_ProcessesNormally()
+        {
+            var activity = new Activity("test");
+            var messages = new List<string>
+            {
+                JsonSerializer.Serialize(new MessageContent { Role = "system", Content = "System message" }),
+                JsonSerializer.Serialize(new MessageContent { Role = "user", Content = "Message:User message" })
+            };
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, JsonSerializer.Serialize(messages));
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: false);
+
+            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            Assert.IsNotNull(filtered);
+            Assert.IsFalse(filtered.Contains("System message"));
+            Assert.IsTrue(filtered.Contains("User message"));
+            Assert.IsFalse(filtered.Contains("[REDACTED]"));
+        }
+
+        [TestMethod]
         public void GetGenAiUserAndChoiceMessageContent_ExtractsUserAndChoiceMessages()
         {
             var activity = new Activity("test");

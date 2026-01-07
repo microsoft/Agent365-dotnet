@@ -40,11 +40,7 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case SemanticKernelTelemetryConstants.InvokeAgentOperation:
-                        if (this._suppressInvokeAgentInput)
-                        {
-                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "[REDACTED]");
-                        }
-                        SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
+                        SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity: activity, suppressInvocationInput: this._suppressInvokeAgentInput);
                         break;
 
                     case SemanticKernelTelemetryConstants.ExecuteToolOperation:
