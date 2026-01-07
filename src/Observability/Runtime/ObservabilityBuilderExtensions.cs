@@ -5,6 +5,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using System;
     using System.Linq;
 
@@ -39,6 +40,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 configure?.Invoke(localbuilder);
                 localbuilder.Build();
                 builder.Services.AddSingleton<Builder>(localbuilder);
+            }
+            else
+            {
+                using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+                var logger = loggerFactory.CreateLogger(typeof(ObservabilityBuilderExtensions).FullName);
+                logger.LogWarning("A365 tracing has already been configured. Duplicate call to AddA365Tracing() will be ignored.");
             }
 
             return builder;
