@@ -242,11 +242,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <inheritdoc />
     public async Task<OperationResult> SendChatHistoryAsync(
         ITurnContext turnContext,
-        ChatHistoryMessage[] chatHistoryMessages,
+        PersistentThreadMessage[] messages,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(turnContext);
-        ArgumentNullException.ThrowIfNull(chatHistoryMessages);
+        ArgumentNullException.ThrowIfNull(messages);
         cancellationToken.ThrowIfCancellationRequested();
 
         var toolOptions = new ToolOptions
@@ -254,20 +254,37 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
         };
 
-        return await SendChatHistoryAsync(turnContext, chatHistoryMessages, toolOptions, cancellationToken).ConfigureAwait(false);
+        return await SendChatHistoryAsync(turnContext, messages, toolOptions, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
     public async Task<OperationResult> SendChatHistoryAsync(
         ITurnContext turnContext,
-        ChatHistoryMessage[] chatHistoryMessages,
+        PersistentThreadMessage[] messages,
         ToolOptions toolOptions,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(turnContext);
-        ArgumentNullException.ThrowIfNull(chatHistoryMessages);
+        ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(toolOptions);
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Convert PersistentThreadMessage[] to ChatHistoryMessage[]
+        var chatHistoryMessages = messages.Select(message =>
+        {
+            // Extract text content from ContentItems
+            var content = ExtractContentFromMessage(message);
+            
+            // Convert Unix timestamp (seconds) to DateTimeOffset
+            var timestamp = DateTimeOffset.FromUnixTimeSeconds(message.CreatedAt);
+            
+            return new ChatHistoryMessage(
+                id: message.Id,
+                role: message.Role.ToString().ToLowerInvariant(),
+                content: content,
+                timestamp: timestamp
+            );
+        }).ToArray();
 
         return await _mcpServerConfigurationService.SendChatHistoryAsync(
             turnContext,
@@ -313,30 +330,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         try
         {
             // Retrieve messages from Azure AI Foundry
-            var messages = new List<ChatHistoryMessage>();
+            var messages = new List<PersistentThreadMessage>();
             
             await foreach (var message in agentClient.Messages.GetMessagesAsync(threadId, cancellationToken: cancellationToken))
             {
-                // Convert PersistentThreadMessage to ChatHistoryMessage
-                // Extract text content from ContentItems
-                var content = ExtractContentFromMessage(message);
-                
-                // Convert Unix timestamp (seconds) to DateTimeOffset
-                var timestamp = DateTimeOffset.FromUnixTimeSeconds(message.CreatedAt);
-                
-                var chatHistoryMessage = new ChatHistoryMessage(
-                    id: message.Id,
-                    role: message.Role.ToString().ToLowerInvariant(),
-                    content: content,
-                    timestamp: timestamp
-                );
-                
-                messages.Add(chatHistoryMessage);
+                messages.Add(message);
             }
 
             _logger.LogInformation("Retrieved {MessageCount} messages from thread {ThreadId}", messages.Count, threadId);
 
-            // Delegate to the overload that accepts messages directly
+            // Delegate to the overload that accepts PersistentThreadMessage[] directly
             return await SendChatHistoryAsync(turnContext, messages.ToArray(), toolOptions, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

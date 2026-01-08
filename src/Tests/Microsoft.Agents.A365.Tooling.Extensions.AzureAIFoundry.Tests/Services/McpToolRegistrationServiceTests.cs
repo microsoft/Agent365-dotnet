@@ -437,7 +437,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _mcpServerConfigurationServiceMock.Object,
                 _configurationMock.Object);
 
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = new Mock<PersistentThreadMessage>();
+            var messages = new[] { messageMock.Object };
 
             // Act
             Func<Task> act = async () => await service.SendChatHistoryAsync(null!, messages);
@@ -460,11 +461,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             var turnContextMock = new Mock<ITurnContext>();
 
             // Act
-            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, null!);
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, (PersistentThreadMessage[])null!);
 
             // Assert
             await act.Should().ThrowAsync<ArgumentNullException>()
-                .WithParameterName("chatHistoryMessages");
+                .WithParameterName("messages");
         }
 
         [Fact]
@@ -478,7 +479,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = new Mock<PersistentThreadMessage>();
+            var messages = new[] { messageMock.Object };
 
             using var cts = new CancellationTokenSource();
             cts.Cancel();
@@ -503,7 +505,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _mcpServerConfigurationServiceMock.Object,
                 _configurationMock.Object);
 
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = new Mock<PersistentThreadMessage>();
+            var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
             // Act
@@ -528,11 +531,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             var toolOptions = new ToolOptions();
 
             // Act
-            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, null!, toolOptions);
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, (PersistentThreadMessage[])null!, toolOptions);
 
             // Assert
             await act.Should().ThrowAsync<ArgumentNullException>()
-                .WithParameterName("chatHistoryMessages");
+                .WithParameterName("messages");
         }
 
         [Fact]
@@ -546,10 +549,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = new Mock<PersistentThreadMessage>();
+            var messages = new[] { messageMock.Object };
 
             // Act
-            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, messages, null!);
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, messages, (ToolOptions)null!);
 
             // Assert
             await act.Should().ThrowAsync<ArgumentNullException>()
@@ -567,7 +571,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = new Mock<PersistentThreadMessage>();
+            var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
             using var cts = new CancellationTokenSource();
@@ -603,7 +608,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messages = new[] { messageMock.Object };
 
             // Act
             var result = await service.SendChatHistoryAsync(turnContextMock.Object, messages);
@@ -615,7 +621,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             _mcpServerConfigurationServiceMock.Verify(
                 s => s.SendChatHistoryAsync(
                     turnContextMock.Object,
-                    messages,
+                    It.Is<ChatHistoryMessage[]>(m => m.Length == 1),
                     It.Is<ToolOptions>(opts => opts.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -641,7 +647,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
             // Act
@@ -653,7 +660,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             _mcpServerConfigurationServiceMock.Verify(
                 s => s.SendChatHistoryAsync(
                     turnContextMock.Object,
-                    messages,
+                    It.Is<ChatHistoryMessage[]>(m => m.Length == 1),
                     toolOptions,
                     It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -683,7 +690,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
             using var cts = new CancellationTokenSource();
@@ -693,6 +701,24 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
 
             // Assert
             capturedToken.Should().Be(cts.Token);
+        }
+
+        // Helper method to create a mock PersistentThreadMessage
+        private Mock<PersistentThreadMessage> CreateMockPersistentThreadMessage(string id, string role, string content, long createdAt)
+        {
+            var messageMock = new Mock<PersistentThreadMessage>();
+            messageMock.Setup(m => m.Id).Returns(id);
+            messageMock.Setup(m => m.Role).Returns(Enum.Parse<MessageRole>(role, ignoreCase: true));
+            messageMock.Setup(m => m.CreatedAt).Returns(createdAt);
+            
+            // Setup ContentItems with text content
+            var textContentMock = new Mock<MessageTextContent>();
+            textContentMock.Setup(tc => tc.Text).Returns(content);
+            
+            var contentItems = new List<MessageContent> { textContentMock.Object };
+            messageMock.Setup(m => m.ContentItems).Returns(contentItems);
+            
+            return messageMock;
         }
     }
 }
