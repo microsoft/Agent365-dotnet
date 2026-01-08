@@ -238,9 +238,130 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             await act.Should().ThrowAsync<OperationCanceledException>();
         }
 
-        // Tests for direct message overloads removed due to Azure SDK type limitations
+        // Parameter validation tests for direct message overloads
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_ThrowsArgumentNullException_WhenTurnContextIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var messages = Array.Empty<PersistentThreadMessage>();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContext: null!,
+                messages: messages,
+                cancellationToken: CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("turnContext");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_ThrowsArgumentNullException_WhenMessagesIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContext: turnContextMock.Object,
+                messages: null!,
+                cancellationToken: CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("messages");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenTurnContextIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var messages = Array.Empty<PersistentThreadMessage>();
+            var toolOptions = new ToolOptions();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContext: null!,
+                messages: messages,
+                toolOptions: toolOptions,
+                cancellationToken: CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("turnContext");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenMessagesIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var toolOptions = new ToolOptions();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContext: turnContextMock.Object,
+                messages: null!,
+                toolOptions: toolOptions,
+                cancellationToken: CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("messages");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenToolOptionsIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = Array.Empty<PersistentThreadMessage>();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContext: turnContextMock.Object,
+                messages: messages,
+                toolOptions: null!,
+                cancellationToken: CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("toolOptions");
+        }
+
+        // Note: Tests for message conversion logic cannot be added due to Azure SDK limitations
         // PersistentThreadMessage has non-virtual properties that cannot be mocked
-        // Coverage is provided through PersistentAgentsClient overload parameter validation tests
 
     }
 }

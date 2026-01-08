@@ -272,6 +272,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // Convert PersistentThreadMessage[] to ChatHistoryMessage[]
         var chatHistoryMessages = messages.Select(message =>
         {
+            // Validate message properties
+            if (message.Id == null)
+            {
+                throw new InvalidOperationException("PersistentThreadMessage.Id cannot be null");
+            }
+            if (message.Role == null)
+            {
+                throw new InvalidOperationException("PersistentThreadMessage.Role cannot be null");
+            }
+            
             // Extract text content from ContentItems
             var content = ExtractContentFromMessage(message);
             
@@ -322,7 +332,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agentClient);
-        ArgumentNullException.ThrowIfNull(threadId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(threadId);
         ArgumentNullException.ThrowIfNull(turnContext);
         ArgumentNullException.ThrowIfNull(toolOptions);
         cancellationToken.ThrowIfCancellationRequested();
