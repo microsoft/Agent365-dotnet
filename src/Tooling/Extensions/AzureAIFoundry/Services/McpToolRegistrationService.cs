@@ -368,19 +368,15 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         var textContent = new System.Text.StringBuilder();
         
-        foreach (var contentItem in message.ContentItems)
+        foreach (var textContentItem in message.ContentItems.OfType<MessageTextContent>())
         {
-            // Check if the content item is MessageTextContent
-            if (contentItem is MessageTextContent textContentItem)
+            if (!string.IsNullOrEmpty(textContentItem.Text))
             {
-                if (!string.IsNullOrEmpty(textContentItem.Text))
+                if (textContent.Length > 0)
                 {
-                    if (textContent.Length > 0)
-                    {
-                        textContent.Append(" ");
-                    }
-                    textContent.Append(textContentItem.Text);
+                    textContent.Append(" ");
                 }
+                textContent.Append(textContentItem.Text);
             }
         }
 
