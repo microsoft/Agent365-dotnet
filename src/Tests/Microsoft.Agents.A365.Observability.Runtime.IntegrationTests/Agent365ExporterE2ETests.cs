@@ -55,12 +55,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerClientIP: IPAddress.Parse("203.0.113.42"),
                 tenantId: expectedAgentDetails.TenantId);
 
+            var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
+                blockAction: true,
+                reasonCode: 112,
+                reason: "The action was blocked due to security policy.",
+                diagnostics: "{\"flaggedField\":\"bcc\"}");
+
             // Act
             using (var scope = InvokeAgentScope.Start(
                 invokeAgentDetails: invokeAgentDetails,
                 tenantDetails: tenantDetails,
                 request: expectedRequest,
-                callerDetails: expectedCallerDetails))
+                callerDetails: expectedCallerDetails,
+                threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordInputMessages(new[] { "Input message 1", "Input message 2" });
                 scope.RecordOutputMessages(new[] { "Output message 1" });
@@ -104,6 +111,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            var threatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
+            threatSummaryJson.Should().Contain("\"blockAction\":true");
+            threatSummaryJson.Should().Contain("\"reasonCode\":112");
+            threatSummaryJson.Should().Contain("\"reason\":\"The action was blocked due to security policy.\"");
+            threatSummaryJson.Should().Contain("flaggedField");
+            threatSummaryJson.Should().Contain("bcc");
         }
 
         [TestMethod]
@@ -133,8 +146,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 toolType: "custom-type",
                 endpoint: endpoint);
 
+            var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
+                blockAction: false,
+                reasonCode: 200,
+                reason: "No threats detected during tool execution.",
+                diagnostics: null);
+
             // Act
-            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails))
+            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordResponse("Tool response content");
             }
@@ -175,6 +194,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            var toolThreatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
+            toolThreatSummaryJson.Should().Contain("\"blockAction\":false");
+            toolThreatSummaryJson.Should().Contain("\"reasonCode\":200");
+            toolThreatSummaryJson.Should().Contain("\"reason\":\"No threats detected during tool execution.\"");
+            toolThreatSummaryJson.Should().Contain("\"diagnostics\":null");
         }
 
         [TestMethod]
