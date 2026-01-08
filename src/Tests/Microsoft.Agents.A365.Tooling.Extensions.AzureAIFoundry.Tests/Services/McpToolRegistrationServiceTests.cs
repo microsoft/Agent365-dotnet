@@ -5,6 +5,7 @@ using Azure;
 using Azure.AI.Agents.Persistent;
 using FluentAssertions;
 using Microsoft.Agents.A365.Runtime;
+using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry;
 using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
