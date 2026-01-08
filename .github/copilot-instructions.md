@@ -121,5 +121,3 @@ When Copilot detects violations:
 - Build output directories (`bin/`, `obj/`)
 - AssemblyInfo.cs files that are auto-generated
 
-
-
