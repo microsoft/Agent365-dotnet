@@ -32,6 +32,24 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
         }
 
         [TestMethod]
+        public void ProcessInvocationInputOutputTag_HandlesJsonArrayOfObjects()
+        {
+            var activity = new Activity("test");
+
+            // JSON array of objects directly (not wrapped in strings)
+            var jsonArrayOfObjects = @"[{""role"":""system"",""name"":""Agent365Agent"",""content"":""You are a friendly assistant."",""tool_calls"":[]},{""role"":""user"",""name"":null,""content"":""hi"",""tool_calls"":[]}]";
+
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, jsonArrayOfObjects);
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
+
+            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            Assert.IsNotNull(filtered);
+            Assert.IsFalse(filtered.Contains("You are a friendly assistant"), "System message should be filtered out");
+            Assert.IsTrue(filtered.Contains("hi"), "User message should be preserved");
+        }
+
+        [TestMethod]
         public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RemovesInputTagsAndPreservesOutput()
         {
             var activity = new Activity("test");

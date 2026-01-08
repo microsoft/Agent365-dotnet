@@ -121,13 +121,22 @@ public static class SemanticKernelSpanProcessorHelper
         {
             List<MessageContent>? inputArray = null;
 
-            var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
-            if (strList != null)
+            // First, try to deserialize as a list of MessageContent objects directly
+            try
             {
-                inputArray = strList
-                    .Select(TryDeserializeMessageContent)
-                    .Where(mc => mc != null)
-                    .ToList()!;
+                inputArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                // If that fails, try to deserialize as a list of strings and then parse each string
+                var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
+                if (strList != null)
+                {
+                    inputArray = strList
+                        .Select(TryDeserializeMessageContent)
+                        .Where(mc => mc != null)
+                        .ToList()!;
+                }
             }
 
             if (inputArray != null)
