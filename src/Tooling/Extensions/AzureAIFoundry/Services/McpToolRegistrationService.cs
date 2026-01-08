@@ -275,19 +275,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Extract text content from ContentItems
             var content = ExtractContentFromMessage(message);
             
-            // Convert Unix timestamp (seconds) to DateTimeOffset
-            // Use current time if timestamp is invalid
-            DateTimeOffset timestamp;
-            try
-            {
-                timestamp = DateTimeOffset.FromUnixTimeSeconds(message.CreatedAt);
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                _logger.LogWarning(ex, "Invalid CreatedAt timestamp {Timestamp} for message {MessageId}, using current time instead", 
-                    message.CreatedAt, message.Id);
-                timestamp = DateTimeOffset.UtcNow;
-            }
+            // CreatedAt is already a DateTimeOffset in Azure.AI.Agents.Persistent
+            var timestamp = message.CreatedAt;
             
             return new ChatHistoryMessage(
                 id: message.Id,

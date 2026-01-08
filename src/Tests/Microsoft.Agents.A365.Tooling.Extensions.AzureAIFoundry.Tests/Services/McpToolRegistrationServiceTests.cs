@@ -608,7 +608,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow);
             var messages = new[] { messageMock.Object };
 
             // Act
@@ -647,7 +647,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow);
             var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
@@ -690,7 +690,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
                 _configurationMock.Object);
 
             var turnContextMock = new Mock<ITurnContext>();
-            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var messageMock = CreateMockPersistentThreadMessage("1", "user", "test", DateTimeOffset.UtcNow);
             var messages = new[] { messageMock.Object };
             var toolOptions = new ToolOptions();
 
@@ -704,7 +704,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
         }
 
         // Helper method to create a mock PersistentThreadMessage
-        private Mock<PersistentThreadMessage> CreateMockPersistentThreadMessage(string id, string role, string content, long createdAt)
+        private Mock<PersistentThreadMessage> CreateMockPersistentThreadMessage(string id, string role, string content, DateTimeOffset createdAt)
         {
             var messageMock = new Mock<PersistentThreadMessage>();
             messageMock.Setup(m => m.Id).Returns(id);
