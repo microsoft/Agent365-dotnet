@@ -40,13 +40,13 @@ public static class SemanticKernelSpanProcessorHelper
             return;
         }
 
-        var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
+        var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey) ?? GetTagValue(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
         if (inputJsonString != null)
         {
             TryFilterInvocationMessage(activity, inputJsonString, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
         }
 
-        var outputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
+        var outputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey) ?? GetTagValue(activity, OpenTelemetryConstants.GenAiOutputMessagesKey);
         if (outputJsonString != null)
         {
             TryFilterInvocationMessage(activity, outputJsonString, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
