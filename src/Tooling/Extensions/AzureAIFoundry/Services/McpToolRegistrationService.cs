@@ -301,7 +301,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agentClient);
-        ArgumentNullException.ThrowIfNull(threadId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(threadId);
         ArgumentNullException.ThrowIfNull(turnContext);
         cancellationToken.ThrowIfCancellationRequested();
 
