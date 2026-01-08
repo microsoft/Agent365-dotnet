@@ -3,6 +3,8 @@
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
 using Azure.AI.OpenAI;
+using Microsoft.Agents.A365.Runtime;
+using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
@@ -56,4 +58,68 @@ public interface IMcpToolRegistrationService
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null);
+
+    /// <summary>
+    /// Sends chat history to the MCP platform.
+    /// </summary>
+    /// <param name="chatMessages">The chat messages to send.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>An OperationResult indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="chatMessages"/> or <paramref name="turnContext"/> is null.
+    /// </exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        IEnumerable<ChatMessage> chatMessages,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends chat history to the MCP platform.
+    /// </summary>
+    /// <param name="chatMessages">The chat messages to send.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="toolOptions">Tool options for configuration.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>An OperationResult indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="chatMessages"/>, <paramref name="turnContext"/>, or <paramref name="toolOptions"/> is null.
+    /// </exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        IEnumerable<ChatMessage> chatMessages,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends chat history from a ChatMessageStore to the MCP platform.
+    /// </summary>
+    /// <param name="chatMessageStore">The chat message store containing the conversation history.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>An OperationResult indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="chatMessageStore"/> or <paramref name="turnContext"/> is null.
+    /// </exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        ChatMessageStore chatMessageStore,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends chat history from a ChatMessageStore to the MCP platform.
+    /// </summary>
+    /// <param name="chatMessageStore">The chat message store containing the conversation history.</param>
+    /// <param name="turnContext">Turn context for the current request.</param>
+    /// <param name="toolOptions">Tool options for configuration.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>An OperationResult indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="chatMessageStore"/>, <paramref name="turnContext"/>, or <paramref name="toolOptions"/> is null.
+    /// </exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        ChatMessageStore chatMessageStore,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default);
 }
