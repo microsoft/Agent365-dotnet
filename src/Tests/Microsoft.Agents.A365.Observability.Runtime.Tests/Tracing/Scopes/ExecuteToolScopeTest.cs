@@ -124,4 +124,55 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
     }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
+    {
+        // Arrange
+        const string threatSummary = "{\"threats\":[{\"type\":\"injection\",\"severity\":\"medium\"}]}";
+        var toolCallDetails = new ToolCallDetails("SecurityTool", "scan args");
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                toolCallDetails,
+                agentDetails,
+                tenantDetails,
+                parentId: null,
+                conversationId: null,
+                sourceMetadata: null,
+                threatDiagnosticsSummary: threatSummary);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatSummary);
+    }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsNotSet_WhenNull()
+    {
+        // Arrange
+        var toolCallDetails = new ToolCallDetails("TestTool", "args");
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                toolCallDetails,
+                agentDetails,
+                tenantDetails,
+                parentId: null,
+                conversationId: null,
+                sourceMetadata: null,
+                threatDiagnosticsSummary: null);
+        });
+
+        // Assert
+        activity.Tags.Should().NotContainKey(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey);
+    }
 }

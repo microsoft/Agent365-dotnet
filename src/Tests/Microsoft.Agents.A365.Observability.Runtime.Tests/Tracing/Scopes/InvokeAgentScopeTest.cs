@@ -220,4 +220,53 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(GenAiAgentPlatformIdKey, platformId);
     }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
+    {
+        // Arrange
+        const string threatSummary = "{\"threats\":[{\"type\":\"malware\",\"level\":\"high\"}]}";
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails,
+                request: null,
+                callerAgentDetails: null,
+                callerDetails: null,
+                conversationId: null,
+                threatDiagnosticsSummary: threatSummary);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(ThreatDiagnosticsSummaryKey, threatSummary);
+    }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsNotSet_WhenNull()
+    {
+        // Arrange
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails,
+                request: null,
+                callerAgentDetails: null,
+                callerDetails: null,
+                conversationId: null,
+                threatDiagnosticsSummary: null);
+        });
+
+        // Assert
+        activity.Tags.Should().NotContainKey(ThreatDiagnosticsSummaryKey);
+    }
 }

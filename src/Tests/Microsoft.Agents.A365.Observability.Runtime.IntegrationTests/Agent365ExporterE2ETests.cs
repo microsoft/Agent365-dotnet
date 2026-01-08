@@ -55,12 +55,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerClientIP: IPAddress.Parse("203.0.113.42"),
                 tenantId: expectedAgentDetails.TenantId);
 
+            var expectedThreatDiagnosticsSummary = "{\"threats\":[{\"type\":\"malware\",\"level\":\"high\"}]}";
+
             // Act
             using (var scope = InvokeAgentScope.Start(
                 invokeAgentDetails: invokeAgentDetails,
                 tenantDetails: tenantDetails,
                 request: expectedRequest,
-                callerDetails: expectedCallerDetails))
+                callerDetails: expectedCallerDetails,
+                threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordInputMessages(new[] { "Input message 1", "Input message 2" });
                 scope.RecordOutputMessages(new[] { "Output message 1" });
@@ -104,6 +107,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            this.GetAttribute(attributes, "threat.diagnostics.summary").Should().Be(expectedThreatDiagnosticsSummary);
         }
 
         [TestMethod]
@@ -133,8 +137,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 toolType: "custom-type",
                 endpoint: endpoint);
 
+            var expectedThreatDiagnosticsSummary = "{\"threats\":[{\"type\":\"injection\",\"severity\":\"medium\"}]}";
+
             // Act
-            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails))
+            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordResponse("Tool response content");
             }
@@ -175,6 +181,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            this.GetAttribute(attributes, "threat.diagnostics.summary").Should().Be(expectedThreatDiagnosticsSummary);
         }
 
         [TestMethod]

@@ -136,6 +136,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiToolTypeKey = "gen_ai.tool.type";
         #endregion
 
+        /// <summary>
+        /// The threat diagnostics summary key.
+        /// </summary>
+        public const string ThreatDiagnosticsSummaryKey = "threat.diagnostics.summary";
+
         #endregion
     }
     #pragma warning restore CS1591
