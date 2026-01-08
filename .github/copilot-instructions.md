@@ -1,5 +1,13 @@
 # GitHub Copilot Instructions for Agent365-dotnet
 
+## Coding agent rules
+- Before committing changes, ensure that the solution `./src/Microsoft.Agents.A365.Sdk.sln` builds and that all unit tests pass.
+- Ensure that each file added or modified has the correct copyright header:
+  ```csharp
+  // Copyright (c) Microsoft Corporation.
+  // Licensed under the MIT License.
+  ```
+
 ## Code Review Rules
 
 ### Rule 1: Check for "Kairo" Keyword
@@ -110,3 +118,4 @@ When Copilot detects violations:
 - Project files (`.csproj`, `.sln`), configuration files (`.json`, `.xml`, `.yaml`, `.md`) do not require copyright headers
 - Build output directories (`bin/`, `obj/`)
 - AssemblyInfo.cs files that are auto-generated
+
