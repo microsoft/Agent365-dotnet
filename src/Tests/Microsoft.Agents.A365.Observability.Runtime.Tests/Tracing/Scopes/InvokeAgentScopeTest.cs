@@ -246,8 +246,14 @@ public sealed class InvokeAgentScopeTest : ActivityTest
                 threatDiagnosticsSummary: threatSummary);
         });
 
-        // Assert
-        activity.ShouldHaveTag(ThreatDiagnosticsSummaryKey, "{\"blockAction\":true,\"reasonCode\":112,\"reason\":\"The action was blocked because there is a noncompliant email address in the BCC field.\",\"diagnostics\":\"{\\\"flaggedField\\\":\\\"bcc\\\",\\\"flaggedValue\\\":\\\"hacker@evil.com\\\"}\"}");
+        // Assert - use Contains checks to handle JSON Unicode encoding variations
+        var tagValue = activity.Tags.First(t => t.Key == ThreatDiagnosticsSummaryKey).Value;
+        tagValue.Should().Contain("\"blockAction\":true");
+        tagValue.Should().Contain("\"reasonCode\":112");
+        tagValue.Should().Contain("\"reason\":\"The action was blocked because there is a noncompliant email address in the BCC field.\"");
+        tagValue.Should().Contain("flaggedField");
+        tagValue.Should().Contain("bcc");
+        tagValue.Should().Contain("hacker@evil.com");
     }
 
     [TestMethod]
