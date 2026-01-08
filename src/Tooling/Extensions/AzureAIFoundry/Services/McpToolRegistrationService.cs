@@ -241,6 +241,43 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
     /// <inheritdoc />
     public async Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        ChatHistoryMessage[] chatHistoryMessages,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(turnContext);
+        ArgumentNullException.ThrowIfNull(chatHistoryMessages);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var toolOptions = new ToolOptions
+        {
+            UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
+        };
+
+        return await SendChatHistoryAsync(turnContext, chatHistoryMessages, toolOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        ChatHistoryMessage[] chatHistoryMessages,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(turnContext);
+        ArgumentNullException.ThrowIfNull(chatHistoryMessages);
+        ArgumentNullException.ThrowIfNull(toolOptions);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await _mcpServerConfigurationService.SendChatHistoryAsync(
+            turnContext,
+            chatHistoryMessages,
+            toolOptions,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
         PersistentAgentsClient agentClient,
         string threadId,
         ITurnContext turnContext,
@@ -299,12 +336,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             _logger.LogInformation("Retrieved {MessageCount} messages from thread {ThreadId}", messages.Count, threadId);
 
-            // Send the chat history to MCP platform
-            return await _mcpServerConfigurationService.SendChatHistoryAsync(
-                turnContext, 
-                messages.ToArray(), 
-                toolOptions, 
-                cancellationToken).ConfigureAwait(false);
+            // Delegate to the overload that accepts messages directly
+            return await SendChatHistoryAsync(turnContext, messages.ToArray(), toolOptions, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

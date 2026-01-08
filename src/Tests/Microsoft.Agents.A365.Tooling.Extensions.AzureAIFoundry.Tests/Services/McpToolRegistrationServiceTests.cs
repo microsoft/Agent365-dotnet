@@ -425,5 +425,274 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
             result.Should().NotBeNull();
             result.Succeeded.Should().BeFalse();
         }
+
+        // Tests for direct message overloads
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_ThrowsArgumentNullException_WhenTurnContextIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(null!, messages);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("turnContext");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_ThrowsArgumentNullException_WhenMessagesIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("chatHistoryMessages");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_ThrowsOperationCanceledException_WhenCancellationTokenIsCanceled()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContextMock.Object, 
+                messages, 
+                cts.Token);
+
+            // Assert
+            await act.Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenTurnContextIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var toolOptions = new ToolOptions();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(null!, messages, toolOptions);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("turnContext");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenMessagesIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var toolOptions = new ToolOptions();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, null!, toolOptions);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("chatHistoryMessages");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsArgumentNullException_WhenToolOptionsIsNull()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(turnContextMock.Object, messages, null!);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("toolOptions");
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_ThrowsOperationCanceledException_WhenCancellationTokenIsCanceled()
+        {
+            // Arrange
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var toolOptions = new ToolOptions();
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            // Act
+            Func<Task> act = async () => await service.SendChatHistoryAsync(
+                turnContextMock.Object, 
+                messages, 
+                toolOptions, 
+                cts.Token);
+
+            // Assert
+            await act.Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_DelegatesToUnderlyingService()
+        {
+            // Arrange
+            _mcpServerConfigurationServiceMock
+                .Setup(s => s.SendChatHistoryAsync(
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ChatHistoryMessage[]>(),
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(OperationResult.Success);
+
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+
+            // Act
+            var result = await service.SendChatHistoryAsync(turnContextMock.Object, messages);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Succeeded.Should().BeTrue();
+
+            _mcpServerConfigurationServiceMock.Verify(
+                s => s.SendChatHistoryAsync(
+                    turnContextMock.Object,
+                    messages,
+                    It.Is<ToolOptions>(opts => opts.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessagesAndToolOptions_DelegatesToUnderlyingService()
+        {
+            // Arrange
+            var expectedResult = OperationResult.Success;
+            _mcpServerConfigurationServiceMock
+                .Setup(s => s.SendChatHistoryAsync(
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ChatHistoryMessage[]>(),
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(expectedResult);
+
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var toolOptions = new ToolOptions();
+
+            // Act
+            var result = await service.SendChatHistoryAsync(turnContextMock.Object, messages, toolOptions);
+
+            // Assert
+            result.Should().BeSameAs(expectedResult);
+
+            _mcpServerConfigurationServiceMock.Verify(
+                s => s.SendChatHistoryAsync(
+                    turnContextMock.Object,
+                    messages,
+                    toolOptions,
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task SendChatHistoryAsync_WithMessages_PassesCancellationTokenToUnderlyingService()
+        {
+            // Arrange
+            CancellationToken capturedToken = default;
+            _mcpServerConfigurationServiceMock
+                .Setup(s => s.SendChatHistoryAsync(
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ChatHistoryMessage[]>(),
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()))
+                .Callback<ITurnContext, ChatHistoryMessage[], ToolOptions, CancellationToken>((_, _, _, token) =>
+                {
+                    capturedToken = token;
+                })
+                .ReturnsAsync(OperationResult.Success);
+
+            var service = new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+
+            var turnContextMock = new Mock<ITurnContext>();
+            var messages = new[] { new ChatHistoryMessage("1", "user", "test", DateTimeOffset.UtcNow) };
+            var toolOptions = new ToolOptions();
+
+            using var cts = new CancellationTokenSource();
+
+            // Act
+            await service.SendChatHistoryAsync(turnContextMock.Object, messages, toolOptions, cts.Token);
+
+            // Assert
+            capturedToken.Should().Be(cts.Token);
+        }
     }
 }

@@ -47,6 +47,38 @@ public interface IMcpToolRegistrationService
 
     /// <summary>
     /// Sends chat history to the MCP platform for real-time threat protection.
+    /// Messages are provided directly by the caller.
+    /// </summary>
+    /// <param name="turnContext">The turn context containing conversation information.</param>
+    /// <param name="chatHistoryMessages">The chat history messages to send.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/> or <paramref name="chatHistoryMessages"/> is null.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is canceled via the <paramref name="cancellationToken"/>.</exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        ChatHistoryMessage[] chatHistoryMessages,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends chat history to the MCP platform for real-time threat protection.
+    /// Messages are provided directly by the caller.
+    /// </summary>
+    /// <param name="turnContext">The turn context containing conversation information.</param>
+    /// <param name="chatHistoryMessages">The chat history messages to send.</param>
+    /// <param name="toolOptions">Tool options for sending chat history.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation that returns an <see cref="OperationResult"/> indicating success or failure.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="turnContext"/>, <paramref name="chatHistoryMessages"/>, or <paramref name="toolOptions"/> is null.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is canceled via the <paramref name="cancellationToken"/>.</exception>
+    Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        ChatHistoryMessage[] chatHistoryMessages,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends chat history to the MCP platform for real-time threat protection.
     /// Messages are retrieved from the Azure AI Foundry Persistent Agents client.
     /// </summary>
     /// <param name="agentClient">The PersistentAgentsClient instance to retrieve messages from.</param>
