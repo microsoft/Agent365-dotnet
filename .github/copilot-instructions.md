@@ -1,9 +1,9 @@
 # GitHub Copilot Instructions for Agent365-dotnet
 
 ## Coding agent rules
-- Before committing changes, ensure that the solution `./src/Microsoft.Agents.A365.Sdk.sln` builds: `dotnet build .\src\Microsoft.Agents.A365.Sdk.sln -p:NBGV_GitEngine=Disabled`
-- Before committing changes, ensure that all tests pass: `dotnet test .\src\Microsoft.Agents.A365.Sdk.sln -p:NBGV_GitEngine=Disabled`
-- When adding a new project, renaming a project, or removing a project (`.csproj` file), ensure that the solution file `./src/Microsoft.Agents.A365.Sdk.sln` is updated accordingly.
+- Before committing changes, ensure that the solution `src/Microsoft.Agents.A365.Sdk.sln` builds: `dotnet build src/Microsoft.Agents.A365.Sdk.sln`
+- Before committing changes, ensure that all tests pass: `dotnet test src/Microsoft.Agents.A365.Sdk.sln`
+- When adding a new project, renaming a project, or removing a project (`.csproj` file), ensure that the solution file `src/Microsoft.Agents.A365.Sdk.sln` is updated accordingly.
 - Ensure that each file added or modified has the correct copyright header:
   ```csharp
   // Copyright (c) Microsoft Corporation.
@@ -120,5 +120,6 @@ When Copilot detects violations:
 - Project files (`.csproj`, `.sln`), configuration files (`.json`, `.xml`, `.yaml`, `.md`) do not require copyright headers
 - Build output directories (`bin/`, `obj/`)
 - AssemblyInfo.cs files that are auto-generated
+
 
 
