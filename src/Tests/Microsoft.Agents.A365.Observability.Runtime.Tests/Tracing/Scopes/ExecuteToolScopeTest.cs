@@ -129,7 +129,11 @@ public sealed class ExecuteToolScopeTest : ActivityTest
     public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
     {
         // Arrange
-        const string threatSummary = "{\"threats\":[{\"type\":\"injection\",\"severity\":\"medium\"}]}";
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: false,
+            reasonCode: 0,
+            reason: "No threat detected.",
+            diagnostics: null);
         var toolCallDetails = new ToolCallDetails("SecurityTool", "scan args");
         var agentDetails = Util.GetAgentDetails();
         var tenantDetails = Util.GetTenantDetails();
@@ -148,7 +152,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatSummary);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, "{\"blockAction\":false,\"reasonCode\":0,\"reason\":\"No threat detected.\",\"diagnostics\":null}");
     }
 
     [TestMethod]
@@ -174,5 +178,33 @@ public sealed class ExecuteToolScopeTest : ActivityTest
 
         // Assert
         activity.Tags.Should().NotContainKey(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey);
+    }
+
+    [TestMethod]
+    public void RecordThreatDiagnosticsSummary_SetsTagCorrectly()
+    {
+        // Arrange
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: true,
+            reasonCode: 200,
+            reason: "Blocked due to policy violation.",
+            diagnostics: "{\"policy\":\"data-loss-prevention\"}");
+        var toolCallDetails = new ToolCallDetails("TestTool", "args");
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
+            scope.RecordThreatDiagnosticsSummary(threatSummary);
+        });
+
+        // Assert
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.ThreatDiagnosticsSummaryKey).Value;
+        tagValue.Should().Contain("\"blockAction\":true");
+        tagValue.Should().Contain("\"reasonCode\":200");
+        tagValue.Should().Contain("\"reason\":\"Blocked due to policy violation.\"");
+        tagValue.Should().Contain("data-loss-prevention");
     }
 }

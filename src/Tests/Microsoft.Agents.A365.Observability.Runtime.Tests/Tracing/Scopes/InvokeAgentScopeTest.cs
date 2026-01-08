@@ -225,7 +225,11 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
     {
         // Arrange
-        const string threatSummary = "{\"threats\":[{\"type\":\"malware\",\"level\":\"high\"}]}";
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: true,
+            reasonCode: 112,
+            reason: "The action was blocked because there is a noncompliant email address in the BCC field.",
+            diagnostics: "{\"flaggedField\":\"bcc\",\"flaggedValue\":\"hacker@evil.com\"}");
         var invokeAgentDetails = Details;
         var tenantDetails = Util.GetTenantDetails();
 
@@ -243,7 +247,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(ThreatDiagnosticsSummaryKey, threatSummary);
+        activity.ShouldHaveTag(ThreatDiagnosticsSummaryKey, "{\"blockAction\":true,\"reasonCode\":112,\"reason\":\"The action was blocked because there is a noncompliant email address in the BCC field.\",\"diagnostics\":\"{\\\"flaggedField\\\":\\\"bcc\\\",\\\"flaggedValue\\\":\\\"hacker@evil.com\\\"}\"}");
     }
 
     [TestMethod]
@@ -268,5 +272,32 @@ public sealed class InvokeAgentScopeTest : ActivityTest
 
         // Assert
         activity.Tags.Should().NotContainKey(ThreatDiagnosticsSummaryKey);
+    }
+
+    [TestMethod]
+    public void RecordThreatDiagnosticsSummary_SetsTagCorrectly()
+    {
+        // Arrange
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: true,
+            reasonCode: 200,
+            reason: "Blocked due to policy violation.",
+            diagnostics: "{\"policy\":\"data-loss-prevention\"}");
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails);
+            scope.RecordThreatDiagnosticsSummary(threatSummary);
+        });
+
+        // Assert
+        var tagValue = activity.Tags.First(t => t.Key == ThreatDiagnosticsSummaryKey).Value;
+        tagValue.Should().Contain("\"blockAction\":true");
+        tagValue.Should().Contain("\"reasonCode\":200");
+        tagValue.Should().Contain("\"reason\":\"Blocked due to policy violation.\"");
+        tagValue.Should().Contain("data-loss-prevention");
     }
 }

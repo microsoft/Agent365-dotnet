@@ -30,7 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="callerAgentDetails">The details of the caller agent. Only used for agent-to-agent invocation.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
-        /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary data as JSON string.</param>
+        /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -50,9 +50,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, string? threatDiagnosticsSummary = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary);
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, string? threatDiagnosticsSummary)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary)
             : base(
                 kind: ActivityKind.Client,
                 agentDetails: invokeAgentDetails.Details,
@@ -69,7 +69,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
             SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
             SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
-            SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary);
+            SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary?.ToJson());
 
             // Only record port if it is different from 443
             if (endpoint?.Port != 443)
@@ -130,6 +130,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public void RecordOutputMessages(string[] messages)
         {
             SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+        }
+
+        /// <summary>
+        /// Records threat diagnostics summary for telemetry tracking.
+        /// </summary>
+        /// <param name="threatDiagnosticsSummary">The threat diagnostics summary containing security-related information about blocked actions.</param>
+        public void RecordThreatDiagnosticsSummary(ThreatDiagnosticsSummary threatDiagnosticsSummary)
+        {
+            SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary?.ToJson());
         }
     }
 }
