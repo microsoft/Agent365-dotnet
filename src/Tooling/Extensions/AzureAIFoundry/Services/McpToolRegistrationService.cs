@@ -276,7 +276,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             var content = ExtractContentFromMessage(message);
             
             // Convert Unix timestamp (seconds) to DateTimeOffset
-            var timestamp = DateTimeOffset.FromUnixTimeSeconds(message.CreatedAt);
+            // Use current time if timestamp is invalid
+            DateTimeOffset timestamp;
+            try
+            {
+                timestamp = DateTimeOffset.FromUnixTimeSeconds(message.CreatedAt);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                _logger.LogWarning(ex, "Invalid CreatedAt timestamp {Timestamp} for message {MessageId}, using current time instead", 
+                    message.CreatedAt, message.Id);
+                timestamp = DateTimeOffset.UtcNow;
+            }
             
             return new ChatHistoryMessage(
                 id: message.Id,

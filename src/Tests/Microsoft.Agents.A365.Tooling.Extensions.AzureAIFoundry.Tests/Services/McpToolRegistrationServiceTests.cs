@@ -708,7 +708,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests.Services
         {
             var messageMock = new Mock<PersistentThreadMessage>();
             messageMock.Setup(m => m.Id).Returns(id);
-            messageMock.Setup(m => m.Role).Returns(Enum.Parse<MessageRole>(role, ignoreCase: true));
+            
+            // Parse role with error handling
+            if (!Enum.TryParse<MessageRole>(role, ignoreCase: true, out var messageRole))
+            {
+                throw new ArgumentException($"Invalid role: {role}", nameof(role));
+            }
+            messageMock.Setup(m => m.Role).Returns(messageRole);
             messageMock.Setup(m => m.CreatedAt).Returns(createdAt);
             
             // Setup ContentItems with text content
