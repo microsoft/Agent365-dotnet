@@ -7,7 +7,7 @@ namespace Microsoft.Agents.A365.Notifications.Models
     /// <summary>
     /// Represents an email response entity containing HTML body content.
     /// </summary>
-    [EntityName(name:"emailNotification")]
+    [EntityName(name:"emailResponse")]
     public class EmailResponse : Entity
     {
         /// <summary>
