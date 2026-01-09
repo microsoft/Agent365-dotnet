@@ -2,31 +2,61 @@
 // Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
-	using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
-	using Microsoft.Agents.A365.Tooling.Models;
-	using Microsoft.Agents.A365.Tooling.Services;
-	using Microsoft.Agents.Builder;
-	using Microsoft.Agents.Builder.App.UserAuth;
-	using Microsoft.SemanticKernel;
-	using System;
-	using System.Linq;
+     using System;
+     using System.Configuration;
+     using System.Linq;
+     using Microsoft.Agents.A365.Runtime;
+     using Microsoft.Agents.A365.Runtime.Authentication;
+     using Microsoft.Agents.A365.Tooling.Models;
+     using Microsoft.Agents.A365.Tooling.Services;
+     using Microsoft.Agents.Builder;
+     using Microsoft.Agents.Builder.App.UserAuth;
+     using Microsoft.Extensions.Configuration;
+     using Microsoft.Extensions.DependencyInjection;
+     using Microsoft.Extensions.Logging;
+     using Microsoft.SemanticKernel;
+     using Microsoft.SemanticKernel.ChatCompletion;
+     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
-	/// <summary>
-	/// Provides services related to tools in the Semantic Kernel.
-	/// </summary>
-	public class McpToolRegistrationService : IMcpToolRegistrationService
+     /// <summary>
+     /// Provides services related to tools in the Semantic Kernel.
+     /// </summary>
+     public class McpToolRegistrationService : IMcpToolRegistrationService
     {
-        private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
+		private readonly ILogger<IMcpToolRegistrationService> _logger;
+		private readonly IServiceProvider _serviceProvider;
+		private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+		private readonly IConfiguration _configuration;
+		private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
-        /// </summary>
-        /// <param name="mcpToolEnumerationService">
-        /// MCP tool enumeration service.
+		/// <summary>
+		/// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
+		/// </summary>
+		/// <param name="logger">
+		/// Logger instance for logging.
         /// </param>
-        public McpToolRegistrationService(IMcpToolEnumerationService mcpToolEnumerationService)
+		/// <param name="serviceProvider">
+		/// Service provider.
+		/// </param>
+		/// <param name="mcpServerConfigurationService">
+		/// MCP server configuration service.
+		/// </param>
+		/// <param name="mcpToolEnumerationService">
+		/// MCP tool enumeration service.
+		/// </param>
+		/// <param name="configuration">Configuration Service for the application</param>
+		public McpToolRegistrationService(
+            ILogger<IMcpToolRegistrationService> logger,
+            IServiceProvider serviceProvider,
+            IMcpToolServerConfigurationService mcpServerConfigurationService,
+            IMcpToolEnumerationService mcpToolEnumerationService,
+			IConfiguration configuration)
         {
+            _logger = logger;
+            _serviceProvider = serviceProvider;
+            _mcpServerConfigurationService = mcpServerConfigurationService;
             _mcpToolEnumerationService = mcpToolEnumerationService;
+            _configuration = configuration;
         }
 
         /// <inheritdoc />
