@@ -2,14 +2,12 @@
 // Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Runtime;
-using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -22,20 +20,30 @@ using System.Threading.Tasks;
 /// </summary>
 public class McpToolRegistrationService : IMcpToolRegistrationService
 {
-    private readonly ILogger<IMcpToolRegistrationService> _logger;
+	private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
+	private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
-    /// </summary>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="mcpToolEnumerationService">The MCP tool enumeration service.</param>
-    public McpToolRegistrationService(
+	/// <summary>
+	/// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
+	/// </summary>
+	/// <param name="logger">
+	/// Logger instance for logging.
+	/// </param>
+	/// <param name="mcpServerConfigurationService">
+	/// MCP server configuration service.
+	/// </param>
+	/// <param name="mcpToolEnumerationService">
+	/// MCP Tool Enumeration Service
+	/// </param>
+	public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
-        IMcpToolEnumerationService mcpToolEnumerationService)
-    {
-        _logger = logger;
-        _mcpToolEnumerationService = mcpToolEnumerationService;
+        IMcpToolServerConfigurationService mcpServerConfigurationService,
+		IMcpToolEnumerationService mcpToolEnumerationService)
+	{
+		_logger = logger;
+		_mcpServerConfigurationService = mcpServerConfigurationService;
+	    _mcpToolEnumerationService = mcpToolEnumerationService;
     }
 
     /// <inheritdoc />
