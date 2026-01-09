@@ -49,7 +49,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="providedAuthToken">Optional pre-existing authentication token.</param>
         /// <returns>The authentication token.</returns>
-        public async Task<string> GetAuthTokenAsync(
+        public virtual async Task<string> GetAuthTokenAsync(
             UserAuthorization userAuthorization,
             string authHandlerName,
             ITurnContext turnContext,
@@ -82,7 +82,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
         /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
-        public async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
+        public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
@@ -179,7 +179,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
         /// <returns>A flat list of all MCP tools from all configured servers.</returns>
-        public async Task<IList<McpClientTool>> EnumerateAllToolsAsync(
+        public virtual async Task<IList<McpClientTool>> EnumerateAllToolsAsync(
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
