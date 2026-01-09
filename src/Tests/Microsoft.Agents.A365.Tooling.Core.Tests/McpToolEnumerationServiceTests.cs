@@ -160,7 +160,7 @@ public class McpToolEnumerationServiceTests
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
-        var (resultServers, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
+        var (_, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
             "agent-id",
             "auth-token",
             _mockTurnContext.Object,
@@ -196,7 +196,7 @@ public class McpToolEnumerationServiceTests
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
-        var (resultServers, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
+        var (_, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
             "agent-id",
             "auth-token",
             _mockTurnContext.Object,
@@ -242,7 +242,7 @@ public class McpToolEnumerationServiceTests
             .ReturnsAsync(tools2);
 
         // Act
-        var (resultServers, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
+        var (_, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
             "agent-id",
             "auth-token",
             _mockTurnContext.Object,
@@ -290,7 +290,7 @@ public class McpToolEnumerationServiceTests
             .ReturnsAsync(workingTools);
 
         // Act
-        var (resultServers, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
+        var (_, toolsByServer) = await _service.EnumerateToolsFromServersAsync(
             "agent-id",
             "auth-token",
             _mockTurnContext.Object,
@@ -392,7 +392,7 @@ public class McpToolEnumerationServiceTests
         tcs2.SetResult(new List<McpClientTool>());
         tcs3.SetResult(new List<McpClientTool>());
 
-        var (resultServers, toolsByServer) = await enumerationTask;
+        var (_, toolsByServer) = await enumerationTask;
 
         // Assert
         toolsByServer.Should().HaveCount(3);
