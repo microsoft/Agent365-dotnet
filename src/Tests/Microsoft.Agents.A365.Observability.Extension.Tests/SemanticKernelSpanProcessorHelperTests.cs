@@ -176,5 +176,61 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
             Assert.AreEqual(1, choiceMessages.Count);
             Assert.AreEqual("not a json", choiceMessages[0]);
         }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_ExtractsNestedContentFromAssistantMessages()
+        {
+            var activity = new Activity("test");
+
+            // JSON array with an assistant message containing nested content structure
+            var nestedContentJson = @"{""contentType"": ""'Text'"", ""content"": ""Hello! Before I can assist you, you must accept the terms and conditions.""}";
+            var jsonArrayOfObjects = $@"[{{""role"":""Assistant"",""name"":""Agent365Agent"",""content"":{JsonSerializer.Serialize(nestedContentJson)}}}]";
+
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationOutputKey, jsonArrayOfObjects);
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
+
+            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationOutputKey).Value as string;
+            Assert.IsNotNull(filtered);
+            Assert.IsTrue(filtered.Contains("Hello! Before I can assist you, you must accept the terms and conditions."), "Nested content should be extracted");
+            Assert.IsFalse(filtered.Contains("contentType"), "contentType property should be removed");
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_PreservesNonNestedContent()
+        {
+            var activity = new Activity("test");
+
+            // JSON array with a user message that has simple string content (not nested)
+            var jsonArrayOfObjects = @"[{""role"":""user"",""name"":null,""content"":""Message:Simple text message""}]";
+
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, jsonArrayOfObjects);
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
+
+            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            Assert.IsNotNull(filtered);
+            Assert.IsTrue(filtered.Contains("Simple text message"), "Simple content should be preserved after Message: trimming");
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_HandlesNestedContentWithUserRole()
+        {
+            var activity = new Activity("test");
+
+            // JSON array with a user message containing nested content structure AND Message: prefix
+            var nestedContentJson = @"{""contentType"": ""'Text'"", ""content"": ""Message:User query with nested structure""}";
+            var jsonArrayOfObjects = $@"[{{""role"":""user"",""name"":null,""content"":{JsonSerializer.Serialize(nestedContentJson)}}}]";
+
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, jsonArrayOfObjects);
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity);
+
+            var filtered = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value as string;
+            Assert.IsNotNull(filtered);
+            Assert.IsTrue(filtered.Contains("User query with nested structure"), "Nested content should be extracted and Message: prefix trimmed");
+            Assert.IsFalse(filtered.Contains("contentType"), "contentType property should be removed");
+            Assert.IsFalse(filtered.Contains("Message:"), "Message: prefix should be trimmed");
+        }
     }
 }
