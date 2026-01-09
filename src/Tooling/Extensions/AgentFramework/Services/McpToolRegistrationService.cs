@@ -23,7 +23,7 @@ using System.Threading.Tasks;
 public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
-    private readonly McpToolEnumerationService _mcpToolEnumerationService;
+    private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -32,7 +32,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="mcpToolEnumerationService">The MCP tool enumeration service.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
-        McpToolEnumerationService mcpToolEnumerationService)
+        IMcpToolEnumerationService mcpToolEnumerationService)
     {
         _logger = logger;
         _mcpToolEnumerationService = mcpToolEnumerationService;

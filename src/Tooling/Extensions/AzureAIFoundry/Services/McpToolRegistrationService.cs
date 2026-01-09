@@ -29,7 +29,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
-    private readonly McpToolEnumerationService _mcpToolEnumerationService;
+    private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
@@ -40,7 +40,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IServiceProvider serviceProvider,
-        McpToolEnumerationService mcpToolEnumerationService)
+        IMcpToolEnumerationService mcpToolEnumerationService)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;

@@ -1,12 +1,11 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
-namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
+namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Extensions
 {
-    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
     using Microsoft.Agents.A365.Tooling.Services;
-    using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services;
+    using Microsoft.Extensions.DependencyInjection;
 
     /// <summary>
     /// Extension methods for service collection to register MCP services.
@@ -23,7 +22,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
             services.AddScoped<IMcpToolEnumerationService, McpToolEnumerationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
-            
+
             return services;
         }
     }

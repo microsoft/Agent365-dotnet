@@ -23,7 +23,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     {
         private readonly ILogger<IMcpToolRegistrationService> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly McpToolEnumerationService _mcpToolEnumerationService;
+        private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="mcpToolEnumerationService">
         /// MCP tool enumeration service.
         /// </param>
-        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, McpToolEnumerationService mcpToolEnumerationService)
+        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolEnumerationService mcpToolEnumerationService)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
