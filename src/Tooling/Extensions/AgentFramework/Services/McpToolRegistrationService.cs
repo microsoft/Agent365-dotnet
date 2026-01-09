@@ -1,6 +1,8 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
+
 using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -20,30 +22,24 @@ using System.Threading.Tasks;
 /// </summary>
 public class McpToolRegistrationService : IMcpToolRegistrationService
 {
-	private readonly ILogger<IMcpToolRegistrationService> _logger;
+    private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
-	private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
 
-	/// <summary>
-	/// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
-	/// </summary>
-	/// <param name="logger">
-	/// Logger instance for logging.
-	/// </param>
-	/// <param name="mcpServerConfigurationService">
-	/// MCP server configuration service.
-	/// </param>
-	/// <param name="mcpToolEnumerationService">
-	/// MCP Tool Enumeration Service
-	/// </param>
-	public McpToolRegistrationService(
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
+    /// </summary>
+    /// <param name="logger">Logger instance for logging.</param>
+    /// <param name="mcpServerConfigurationService">MCP server configuration service.</param>
+    /// <param name="mcpToolEnumerationService">MCP Tool Enumeration Service.</param>
+    public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IMcpToolServerConfigurationService mcpServerConfigurationService,
-		IMcpToolEnumerationService mcpToolEnumerationService)
-	{
-		_logger = logger;
-		_mcpServerConfigurationService = mcpServerConfigurationService;
-	    _mcpToolEnumerationService = mcpToolEnumerationService;
+        IMcpToolEnumerationService mcpToolEnumerationService)
+    {
+        _logger = logger;
+        _mcpServerConfigurationService = mcpServerConfigurationService;
+        _mcpToolEnumerationService = mcpToolEnumerationService;
     }
 
     /// <inheritdoc />
@@ -78,7 +74,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             };
 
             // Use the shared enumeration service to get tools from all servers
-            var (servers, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(
+            var (_, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(
                 agentUserId,
                 authToken,
                 turnContext,

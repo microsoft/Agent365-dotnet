@@ -10,7 +10,6 @@ using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Agents.Core.Models;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using Moq;
@@ -25,7 +24,7 @@ public class McpToolRegistrationServiceTests
 {
     private readonly Mock<ILogger<IMcpToolRegistrationService>> _mockLogger;
     private readonly Mock<IServiceProvider> _mockServiceProvider;
-    private readonly Mock<McpToolEnumerationService> _mockEnumerationService;
+    private readonly Mock<IMcpToolEnumerationService> _mockEnumerationService;
     private readonly Mock<ITurnContext> _mockTurnContext;
     private readonly McpToolRegistrationService _service;
 
@@ -34,15 +33,8 @@ public class McpToolRegistrationServiceTests
         _mockLogger = new Mock<ILogger<IMcpToolRegistrationService>>();
         _mockServiceProvider = new Mock<IServiceProvider>();
 
-        // Create mock for McpToolEnumerationService
-        var mockEnumLogger = new Mock<ILogger<McpToolEnumerationService>>();
-        var mockConfigService = new Mock<IMcpToolServerConfigurationService>();
-        var mockConfiguration = new Mock<IConfiguration>();
-
-        _mockEnumerationService = new Mock<McpToolEnumerationService>(
-            mockEnumLogger.Object,
-            mockConfigService.Object,
-            mockConfiguration.Object);
+        // Create mock for IMcpToolEnumerationService interface
+        _mockEnumerationService = new Mock<IMcpToolEnumerationService>();
 
         _mockTurnContext = new Mock<ITurnContext>();
 
@@ -168,8 +160,6 @@ public class McpToolRegistrationServiceTests
     public async Task AddToolServersToAgentAsync_CallsGetAuthTokenAsync()
     {
         // Arrange
-        var mockAgentClient = new Mock<PersistentAgentsClient>();
-
         _mockEnumerationService
             .Setup(x => x.GetAuthTokenAsync(
                 It.IsAny<UserAuthorization>(),

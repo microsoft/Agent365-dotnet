@@ -4,7 +4,6 @@
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
     using System;
-    using System.Configuration;
     using System.Linq;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Runtime.Authentication;
