@@ -20,11 +20,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         private bool _receivedRequest;
         private string? _receivedContent;
 
-        public Agent365ExporterE2ETests()
-        {
-            Environment.SetEnvironmentVariable("EnableAgent365Exporter", "true");
-        }
-
         [TestMethod]
         public async Task AddTracing_And_InvokeAgentScope_ExporterMakesExpectedRequest()
         {
@@ -60,12 +55,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 callerClientIP: IPAddress.Parse("203.0.113.42"),
                 tenantId: expectedAgentDetails.TenantId);
 
+            var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
+                blockAction: true,
+                reasonCode: 112,
+                reason: "The action was blocked due to security policy.",
+                diagnostics: "{\"flaggedField\":\"bcc\"}");
+
             // Act
             using (var scope = InvokeAgentScope.Start(
                 invokeAgentDetails: invokeAgentDetails,
                 tenantDetails: tenantDetails,
                 request: expectedRequest,
-                callerDetails: expectedCallerDetails))
+                callerDetails: expectedCallerDetails,
+                threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordInputMessages(new[] { "Input message 1", "Input message 2" });
                 scope.RecordOutputMessages(new[] { "Output message 1" });
@@ -109,6 +111,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            var threatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
+            threatSummaryJson.Should().Contain("\"blockAction\":true");
+            threatSummaryJson.Should().Contain("\"reasonCode\":112");
+            threatSummaryJson.Should().Contain("\"reason\":\"The action was blocked due to security policy.\"");
+            threatSummaryJson.Should().Contain("flaggedField");
+            threatSummaryJson.Should().Contain("bcc");
         }
 
         [TestMethod]
@@ -138,8 +146,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 toolType: "custom-type",
                 endpoint: endpoint);
 
+            var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
+                blockAction: false,
+                reasonCode: 200,
+                reason: "No threats detected during tool execution.",
+                diagnostics: null);
+
             // Act
-            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails))
+            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordResponse("Tool response content");
             }
@@ -180,6 +194,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            var toolThreatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
+            toolThreatSummaryJson.Should().Contain("\"blockAction\":false");
+            toolThreatSummaryJson.Should().Contain("\"reasonCode\":200");
+            toolThreatSummaryJson.Should().Contain("\"reason\":\"No threats detected during tool execution.\"");
+            toolThreatSummaryJson.Should().Contain("\"diagnostics\":null");
         }
 
         [TestMethod]
@@ -482,6 +501,83 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             foundExecuteTool.Should().BeTrue();
         }
 
+        /// <summary>
+        /// Verifies that multiple registrations of the Agent365 exporter through different APIs 
+        /// (direct OpenTelemetry configuration and AddA365Tracing) result in only a single 
+        /// exporter instance being registered, preventing duplicate telemetry exports.
+        /// This test ensures the exporter registry correctly implements singleton behavior
+        /// to avoid data duplication when the same exporter type is configured multiple times.
+        /// </summary>
+        [TestMethod]
+        public async Task AddTracing_MultipleInvocations_NoDuplicateExports()
+        {
+            List<string> receivedContents = new();
+            var requestCount = 0;
+
+            var handler = new TestHttpMessageHandler(req =>
+            {
+                Interlocked.Increment(ref requestCount);
+                var content = req.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "";
+                lock (receivedContents)
+                {
+                    receivedContents.Add(content);
+                }
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            });
+            var httpClient = new HttpClient(handler);
+
+            // Create builder and simulate mixed API usage that could cause duplicates
+            HostApplicationBuilder builder = new HostApplicationBuilder();
+            builder.Configuration["EnableAgent365Exporter"] = "true";
+            builder.Services.AddSingleton<HttpClient>(httpClient);
+            builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
+            {
+                UseS2SEndpoint = false,
+                TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+            });
+
+            // AddA365Tracing call
+            builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+
+            // Duplicate AddA365Tracing call
+            builder.AddA365Tracing(useOpenTelemetryBuilder: true, agent365ExporterType: Agent365ExporterType.Agent365Exporter);
+
+            var serviceProvider = builder.Services.BuildServiceProvider();
+
+            // Initialize the OpenTelemetry infrastructure by accessing the TracerProvider
+            // This ensures the tracing pipeline is built and exporters are initialized
+            _ = serviceProvider.GetService<OpenTelemetry.Trace.TracerProvider>();
+
+            var agentDetails = new AgentDetails(
+                agentId: Guid.NewGuid().ToString(),
+                agentName: "Singleton Test Agent",
+                agentDescription: "Testing singleton exporter behavior.",
+                agentAUID: Guid.NewGuid().ToString(),
+                agentUPN: "singleton@test.com",
+                agentBlueprintId: Guid.NewGuid().ToString(),
+                tenantId: Guid.NewGuid().ToString());
+
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var endpoint = new Uri("https://singleton-test-endpoint");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var request = new Request(
+                content: "Singleton test request",
+                executionType: ExecutionType.HumanToAgent,
+                sourceMetadata: new SourceMetadata(name: "test", description: "singleton test"));
+            using (var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            {
+                scope.RecordInputMessages(new[] { "Test input" });
+                scope.RecordOutputMessages(new[] { "Test output" });
+            }
+
+            // Wait for export(s) to complete
+            await Task.Delay(10000).ConfigureAwait(false);
+
+            // Assert - Should have exactly one export request, not two
+            requestCount.Should().Be(1, "Exporter registry should prevent duplicate exporter registration, resulting in only one export request");
+            receivedContents.Should().HaveCount(1, "Should receive exactly one export payload");
+        }
+
         private class TestHttpMessageHandler : HttpMessageHandler
         {
             private Func<HttpRequestMessage, HttpResponseMessage> _handler;
@@ -523,6 +619,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         {
             HostApplicationBuilder builder = new HostApplicationBuilder();
 
+            builder.Configuration["EnableAgent365Exporter"] = "true";
             builder.Services.AddSingleton<HttpClient>(httpClient);
             builder.Services.AddSingleton<Agent365ExporterOptions>(sp =>
             {

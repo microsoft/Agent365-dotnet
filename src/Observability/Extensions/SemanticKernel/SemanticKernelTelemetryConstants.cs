@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
@@ -18,4 +17,7 @@ internal static class SemanticKernelTelemetryConstants
     public const string SemanticKernelSource = "Microsoft.SemanticKernel";
     public const string SemanticKernelSourceWildcard = "Microsoft.SemanticKernel*";
     public const string AzureAISourceWildcard = "Azure.AI.*";
+
+    // Configuration Keys
+    public const string SuppressInvokeAgentInputConfigKey = "SuppressInvokeAgentInput";
 }

@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System;
 using System.Net;
@@ -27,7 +26,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         /// <param name="agentPlatformId">Optional platform ID for the agent.</param>
         /// <remarks>
+        /// <para>
+        /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements, and these values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
+        /// <list type="bullet">
+        ///   <item><paramref name="agentId"/></item>
+        ///   <item><paramref name="agentName"/></item>
+        ///   <item><paramref name="agentDescription"/></item>
+        ///   <item><paramref name="agentAUID"/></item>
+        ///   <item><paramref name="agentUPN"/></item>
+        ///   <item><paramref name="agentBlueprintId"/></item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// While many parameters are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements. <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
+        /// </para>
+        /// <para>
         /// Either <paramref name="agentId"/> or <paramref name="agentPlatformId"/> should be provided to identify the agent.
+        /// </para>
         /// </remarks>
         public AgentDetails(
             string? agentId = null,

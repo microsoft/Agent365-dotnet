@@ -32,6 +32,68 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
         }
 
         [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RemovesInputTagsAndPreservesOutput()
+        {
+            var activity = new Activity("test");
+            var agentMessages = new List<string>
+            {
+                JsonSerializer.Serialize(new MessageContent { Role = "system", Content = "System message" }),
+                JsonSerializer.Serialize(new MessageContent { Role = "user", Content = "Message:Sensitive user message" })
+            };
+            var inputMessages = JsonSerializer.Serialize(new[] { "Sensitive input message 1", "Sensitive input message 2" });
+            var outputMessages = new List<string>
+            {
+                JsonSerializer.Serialize(new MessageContent { Role = "assistant", Content = "Output message" })
+            };
+            
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, JsonSerializer.Serialize(agentMessages));
+            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, inputMessages);
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationOutputKey, JsonSerializer.Serialize(outputMessages));
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var removedAgentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
+            var removedInputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
+            var output = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationOutputKey).Value as string;
+            
+            Assert.IsNull(removedAgentInput);
+            Assert.IsNull(removedInputMessages);
+            Assert.IsNotNull(output);
+            Assert.IsTrue(output.Contains("Output message"));
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_HandlesMissingTags()
+        {
+            var activity = new Activity("test");
+            // GenAiInputMessagesKey and GenAiAgentInvocationInputKey intentionally not set
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
+            var inputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
+
+            Assert.IsNull(agentInput);
+            Assert.IsNull(inputMessages);
+        }
+
+        [TestMethod]
+        public void ProcessInvocationInputOutputTag_SuppressInvocationInput_RemovesEmptyStringInputTags()
+        {
+            var activity = new Activity("test");
+            activity.SetTag(OpenTelemetryConstants.GenAiAgentInvocationInputKey, "");
+            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, "");
+
+            SemanticKernelSpanProcessorHelper.ProcessInvocationInputOutputTag(activity, suppressInvocationInput: true);
+
+            var agentInput = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiAgentInvocationInputKey).Value;
+            var inputMessages = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value;
+
+            Assert.IsNull(agentInput);
+            Assert.IsNull(inputMessages);
+        }
+
+        [TestMethod]
         public void GetGenAiUserAndChoiceMessageContent_ExtractsUserAndChoiceMessages()
         {
             var activity = new Activity("test");

@@ -220,4 +220,90 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(GenAiAgentPlatformIdKey, platformId);
     }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsSetCorrectly_WhenProvided()
+    {
+        // Arrange
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: true,
+            reasonCode: 112,
+            reason: "The action was blocked because there is a noncompliant email address in the BCC field.",
+            diagnostics: "{\"flaggedField\":\"bcc\",\"flaggedValue\":\"hacker@evil.com\"}");
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails,
+                request: null,
+                callerAgentDetails: null,
+                callerDetails: null,
+                conversationId: null,
+                threatDiagnosticsSummary: threatSummary);
+        });
+
+        // Assert - use Contains checks to handle JSON Unicode encoding variations
+        var tagValue = activity.Tags.First(t => t.Key == ThreatDiagnosticsSummaryKey).Value;
+        tagValue.Should().Contain("\"blockAction\":true");
+        tagValue.Should().Contain("\"reasonCode\":112");
+        tagValue.Should().Contain("\"reason\":\"The action was blocked because there is a noncompliant email address in the BCC field.\"");
+        tagValue.Should().Contain("flaggedField");
+        tagValue.Should().Contain("bcc");
+        tagValue.Should().Contain("hacker@evil.com");
+    }
+
+    [TestMethod]
+    public void ThreatDiagnosticsSummary_IsNotSet_WhenNull()
+    {
+        // Arrange
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                invokeAgentDetails,
+                tenantDetails,
+                request: null,
+                callerAgentDetails: null,
+                callerDetails: null,
+                conversationId: null,
+                threatDiagnosticsSummary: null);
+        });
+
+        // Assert
+        activity.Tags.Should().NotContainKey(ThreatDiagnosticsSummaryKey);
+    }
+
+    [TestMethod]
+    public void RecordThreatDiagnosticsSummary_SetsTagCorrectly()
+    {
+        // Arrange
+        var threatSummary = new ThreatDiagnosticsSummary(
+            blockAction: true,
+            reasonCode: 200,
+            reason: "Blocked due to policy violation.",
+            diagnostics: "{\"policy\":\"data-loss-prevention\"}");
+        var invokeAgentDetails = Details;
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails);
+            scope.RecordThreatDiagnosticsSummary(threatSummary);
+        });
+
+        // Assert
+        var tagValue = activity.Tags.First(t => t.Key == ThreatDiagnosticsSummaryKey).Value;
+        tagValue.Should().Contain("\"blockAction\":true");
+        tagValue.Should().Contain("\"reasonCode\":200");
+        tagValue.Should().Contain("\"reason\":\"Blocked due to policy violation.\"");
+        tagValue.Should().Contain("data-loss-prevention");
+    }
 }

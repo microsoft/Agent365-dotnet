@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
@@ -38,6 +36,21 @@ namespace Microsoft.Agents.A365.Runtime.Utils
             return configuration["ASPNETCORE_ENVIRONMENT"] ??
                    configuration["DOTNET_ENVIRONMENT"] ??
                    "Development";
+        }
+
+        /// <summary>
+        /// Creates a default HttpClient configured with standard timeout and user agent header.
+        /// </summary>
+        /// <param name="httpClientFactory">The IHttpClientFactory to create the HttpClient instance. This parameter is required.</param>
+        /// <param name="userAgentConfiguration">The implementation that contains User-Agent information. If null, uses default Agent 365 SDK configuration.</param>
+        /// <param name="timeoutSeconds">Timeout in seconds. Defaults to 30 seconds.</param>
+        /// <returns>A configured HttpClient instance.</returns>
+        public static HttpClient GetDefaultHttpClient(IHttpClientFactory httpClientFactory, IUserAgentConfiguration? userAgentConfiguration = null, int timeoutSeconds = 30)
+        {
+            var httpClient = httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgentHelper.BuildUserAgent(userAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance));
+            return httpClient;
         }
 
         /// <summary>

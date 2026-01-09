@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
@@ -60,6 +59,24 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         {
             var baseUrl = GetMcpBaseUrl(configuration);
             return $"{baseUrl}/{serverName}";
+        }
+
+        /// <summary>
+        /// Gets the URL of the chat history endpoint used by the real-time threat protection service.
+        /// </summary>
+        /// <param name="configuration">Configuration Collection used to resolve the MCP platform base URL.</param>
+        /// <returns>
+        /// An absolute URL that tooling components can use to send or retrieve chat messages for
+        /// real-time threat protection scenarios.
+        /// </returns>
+        /// <remarks>
+        /// Call this method when constructing HTTP requests that need to access the chat-message history
+        /// for real-time threat protection. The returned URL already includes the MCP platform base address
+        /// and the fixed path segment <c>/agents/real-time-threat-protection/chat-message</c>.
+        /// </remarks>
+        public static string GetChatHistoryEndpoint(IConfiguration configuration)
+        {
+            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/real-time-threat-protection/chat-message";
         }
     }
 }

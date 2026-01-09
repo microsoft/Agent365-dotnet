@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 using System.Runtime.Serialization;
 
@@ -136,6 +135,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public const string GenAiToolTypeKey = "gen_ai.tool.type";
         #endregion
+
+        /// <summary>
+        /// The threat diagnostics summary key.
+        /// </summary>
+        public const string ThreatDiagnosticsSummaryKey = "threat.diagnostics.summary";
 
         #endregion
     }

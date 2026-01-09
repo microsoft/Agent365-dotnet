@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
 	using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
@@ -39,7 +37,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+            if (authToken == null)
+            {
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+            }
 
             // resolve agent identity from context or token.
             string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
@@ -62,6 +63,41 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             }
+        }
+
+        /// <inheritdoc />
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(turnContext);
+            ArgumentNullException.ThrowIfNull(chatHistory);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var toolOptions = new ToolOptions
+            {
+                UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
+            };
+
+            return await SendChatHistoryAsync(turnContext, chatHistory, toolOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <inheritdoc />
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, ToolOptions toolOptions, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(turnContext);
+            ArgumentNullException.ThrowIfNull(chatHistory);
+            ArgumentNullException.ThrowIfNull(toolOptions);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Convert ChatHistory to ChatHistoryMessage[]
+            // Note: ChatHistory does not include timestamps, so all messages are timestamped with the current UTC time
+            var chatHistoryMessages = chatHistory.Select(message => new ChatHistoryMessage(
+                id: Guid.NewGuid().ToString(),
+                role: message.Role.Label,
+                content: message.Content ?? string.Empty,
+                timestamp: DateTimeOffset.UtcNow
+            )).ToArray();
+
+            return await _mcpServerConfigurationService.SendChatHistoryAsync(turnContext, chatHistoryMessages, toolOptions, cancellationToken).ConfigureAwait(false);
         }
     }
 }

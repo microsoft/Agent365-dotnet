@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
 {
@@ -20,6 +19,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
         /// <returns>The service collection for chaining.</returns>
         public static IServiceCollection AddMcpServices(this IServiceCollection services)
         {
+            // Register HttpClient with default configuration
+            services.AddHttpClient();
+            
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
             services.AddScoped<IMcpToolEnumerationService, McpToolEnumerationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();

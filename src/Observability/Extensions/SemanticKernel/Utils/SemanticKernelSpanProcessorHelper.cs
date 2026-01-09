@@ -30,8 +30,16 @@ public static class SemanticKernelSpanProcessorHelper
     /// Processes and filters the gen_ai.agent.invocation_input and gen_ai.agent.invocation_output tags to remove system role messages.
     /// </summary>
     /// <param name="activity">The activity containing the tags to process.</param>
-    public static void ProcessInvocationInputOutputTag(Activity activity)
+    /// <param name="suppressInvocationInput">Whether to suppress the invocation input messages.</param>
+    public static void ProcessInvocationInputOutputTag(Activity activity, bool suppressInvocationInput = false)
     {
+        if (suppressInvocationInput)
+        {
+            RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
+            RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
+            return;
+        }
+
         var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
         if (inputJsonString != null)
         {
@@ -56,6 +64,19 @@ public static class SemanticKernelSpanProcessorHelper
         return activity.TagObjects
             .OfType<KeyValuePair<string, object>>()
             .FirstOrDefault(k => k.Key == key).Value as string;
+    }
+
+    /// <summary>
+    /// Removes a tag from the activity if it exists.
+    /// </summary>
+    /// <param name="activity">The activity containing the tag to remove.</param>
+    /// <param name="key">The key of the tag to remove.</param>
+    private static void RemoveTagIfExists(Activity activity, string key)
+    {
+        if (GetTagValue(activity, key) != null)
+        {
+            activity.SetTag(key, null);
+        }
     }
 
     /// <summary>

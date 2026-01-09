@@ -1,6 +1,5 @@
-// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
@@ -10,6 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Reflection;
+    using System.Text;
     using System.Text.Json;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
     /// Provides services for managing MCP server configurations.
@@ -30,6 +31,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
         private readonly ILoggerFactory? _loggerFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
@@ -37,11 +39,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="logger">Logger instance for logging.</param>
         /// <param name="configuration">Configuration collection.</param>
         /// <param name="serviceProvider">Service provider</param>
-        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider)
+        /// <param name="httpClientFactory">HTTP client factory for creating HTTP clients.</param>
+        public McpToolServerConfigurationService(ILogger<IMcpToolServerConfigurationService> logger, IConfiguration configuration, IServiceProvider serviceProvider, IHttpClientFactory httpClientFactory)
         {
-            _configuration = configuration;
-            _logger = logger;
-            _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            this._configuration = configuration;
+            this._logger = logger;
+            this._loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            this._httpClientFactory = httpClientFactory;
         }
 
         /// <inheritdoc/>
@@ -95,10 +99,67 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
         }
 
+        /// <inheritdoc/>
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, CancellationToken cancellationToken = default)
+        {
+            return await SendChatHistoryAsync(turnContext, chatHistoryMessages, new ToolOptions { UserAgentConfiguration = Agent365SdkUserAgentConfiguration.Instance }, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistoryMessage[] chatHistoryMessages, ToolOptions toolOptions, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
+            ArgumentNullException.ThrowIfNull(chatHistoryMessages, nameof(chatHistoryMessages));
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Extract required information from turn context
+            var conversationId = turnContext.Activity?.Conversation?.Id ?? throw new InvalidOperationException("Conversation ID is required but not found in turn context");
+            var messageId = turnContext.Activity?.Id ?? throw new InvalidOperationException("Message ID is required but not found in turn context");
+            var userMessage = turnContext.Activity?.Text ?? throw new InvalidOperationException("User message is required but not found in turn context");
+
+            // Get the endpoint URL
+            var endpoint = Utility.GetChatHistoryEndpoint(this._configuration);
+
+            this._logger.LogInformation($"Sending chat history to endpoint: {endpoint}");
+
+            // Create the request payload
+            var request = new ChatMessageRequest(conversationId, messageId, userMessage, chatHistoryMessages);
+
+            try
+            {
+                var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
+
+                var jsonContent = JsonSerializer.Serialize(request);
+                using var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                using var response = await httpClient.PostAsync(endpoint, content, cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                this._logger.LogInformation("Successfully sent chat history to MCP platform");
+                return OperationResult.Success;
+            }
+            catch (HttpRequestException httpEx)
+            {
+                this._logger.LogError(httpEx, "HTTP error sending chat history to '{Endpoint}': {Message}", endpoint, httpEx.Message);
+                return OperationResult.Failed(new OperationError(httpEx));
+            }
+            catch (TaskCanceledException tcEx)
+            {
+                this._logger.LogError(tcEx, "Request timeout sending chat history to '{Endpoint}': {Message}", endpoint, tcEx.Message);
+                return OperationResult.Failed(new OperationError(tcEx));
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "Failed to send chat history to '{Endpoint}': {Message}", endpoint, ex.Message);
+                return OperationResult.Failed(new OperationError(ex));
+            }
+        }
+
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
             string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
-            string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, _configuration);
+            string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, this._configuration);
 
             if (string.IsNullOrWhiteSpace(configEndpoint))
             {
@@ -107,13 +168,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+                var userAgentConfiguration = toolOptions?.UserAgentConfiguration ?? Agent365SdkUserAgentConfiguration.Instance;
+                var httpClient = RuntimeUtility.GetDefaultHttpClient(httpClientFactory: this._httpClientFactory, userAgentConfiguration: userAgentConfiguration);
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
-                if (toolOptions.UserAgentConfiguration != null)
-                {
-                    httpClient.DefaultRequestHeaders.Add("User-Agent", UserAgentHelper.BuildUserAgent(toolOptions.UserAgentConfiguration));
-                }
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
@@ -290,7 +348,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
 
                 // Construct full URL if not provided in manifest
-                var fullUrl = endpoint ?? Utility.BuildMcpServerUrl(name, _configuration);
+                var fullUrl = endpoint ?? Utility.BuildMcpServerUrl(name, this._configuration);
 
                 return new MCPServerConfig
                 {
@@ -449,7 +507,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: _loggerFactory);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
             }
             catch (Exception ex)
             {
@@ -460,8 +518,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private bool IsDevScenario()
         {
             // Determine environment from configuration (environment variables, appsettings.json, etc.), default to 'Development' if not set
-            var environment = _configuration["ASPNETCORE_ENVIRONMENT"] ??
-                             _configuration["DOTNET_ENVIRONMENT"] ??
+            var environment = this._configuration["ASPNETCORE_ENVIRONMENT"] ??
+                             this._configuration["DOTNET_ENVIRONMENT"] ??
                              "Development";
 
             return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);

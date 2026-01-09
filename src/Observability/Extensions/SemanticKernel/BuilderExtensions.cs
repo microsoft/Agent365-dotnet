@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -31,7 +29,7 @@ public static class BuilderExtensions
             var telmConfig = builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
                 .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
-                .AddProcessor(new SemanticKernelSpanProcessor()));
+                .AddProcessor(new SemanticKernelSpanProcessor(builder.Configuration)));
 
             if (builder.Configuration != null
                 && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])

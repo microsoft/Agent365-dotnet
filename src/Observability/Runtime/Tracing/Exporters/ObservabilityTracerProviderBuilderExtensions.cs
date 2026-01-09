@@ -1,7 +1,5 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// </summary>
         /// <param name="builder">The TracerProviderBuilder to configure.</param>
         /// <param name="exporterType">The Agent365 exporter type to use.</param>
-        public static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
+        internal static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
         {
             if (builder == null)
             {
@@ -47,7 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="builder">The TracerProviderBuilder to configure.</param>
         /// <param name="serviceCollection">The service collection to use for dependency injection.</param>
         /// <param name="exporterType">The Agent365 exporter type to use.</param>
-        public static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, IServiceCollection serviceCollection, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
+        internal static TracerProviderBuilder AddAgent365Exporter(this TracerProviderBuilder builder, IServiceCollection serviceCollection, Agent365ExporterType exporterType = Agent365ExporterType.Agent365Exporter)
         {
             if (builder == null)
             {

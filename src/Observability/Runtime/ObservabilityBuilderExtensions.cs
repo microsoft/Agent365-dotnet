@@ -1,12 +1,13 @@
-﻿// ------------------------------------------------------------------------------
-// Copyright (c) Microsoft Corporation. All rights reserved.
-// ------------------------------------------------------------------------------
-
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 namespace Microsoft.Agents.A365.Observability.Runtime
 {
-    using System;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
+    using System;
+    using System.Linq;
 
     /// <summary>
     /// Provides extension methods for configuring Microsoft Agent 365 SDK with OpenTelemetry tracing.
@@ -29,9 +30,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime
                 bool useOpenTelemetryBuilder = true,
                 Agent365ExporterType agent365ExporterType = Agent365ExporterType.Agent365Exporter) where TBuilder : IHostApplicationBuilder
         {
-            var localbuilder = new Builder(services: builder.Services!, useOpenTelemetryBuilder: useOpenTelemetryBuilder, agent365ExporterType: agent365ExporterType,configuration: builder.Configuration);
-            configure?.Invoke(localbuilder);
-            localbuilder.Build();
+            if (!builder.Services.Any(s => s.ServiceType == typeof(Builder)))
+            {
+                var localbuilder = new Builder(
+                        services: builder.Services!,
+                        useOpenTelemetryBuilder: useOpenTelemetryBuilder,
+                        agent365ExporterType: agent365ExporterType,
+                        configuration: builder.Configuration);
+                configure?.Invoke(localbuilder);
+                localbuilder.Build();
+                builder.Services.AddSingleton<Builder>(localbuilder);
+            }
+            else
+            {
+                Console.WriteLine("A365 tracing has already been configured. Duplicate call to AddA365Tracing() will be ignored.");
+            }
+
             return builder;
         }
     }
