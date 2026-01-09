@@ -17,8 +17,9 @@ public static class BuilderExtensions
     /// </summary>
     /// <param name="builder">The builder to configure.</param>
     /// <param name="enableRelatedSources">Whether to enable related tracing sources for OpenTelemetry.</param>
+    /// <param name="options">Configuration options for OpenAI span processing. If null, default options will be used.</param>
     /// <returns>The configured builder for method chaining.</returns>
-    public static Builder WithOpenAI(this Builder builder, bool enableRelatedSources = true)
+    public static Builder WithOpenAI(this Builder builder, bool enableRelatedSources = true, OpenAISpanProcessorOptions? options = null)
     {
         if (enableRelatedSources)
         {
@@ -26,7 +27,7 @@ public static class BuilderExtensions
             builder.Services.AddOpenTelemetry()
                 .WithTracing(tracing => tracing
                     .AddSource(OpenAITelemetryConstants.OpenAISourceWildcard)
-                    .AddProcessor(new OpenAISpanProcessor()));
+                    .AddProcessor(new OpenAISpanProcessor(options ?? new OpenAISpanProcessorOptions())));
         }
 
         return builder;
