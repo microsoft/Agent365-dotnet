@@ -42,12 +42,11 @@ internal class OpenAISpanProcessor : BaseProcessor<Activity>
         // Remove prompt data from InvokeAgent scopes if configured
         if (!_options.SendPromptInInvokeAgentScopes)
         {
-            if (activity.OperationName == "invoke_agent" ||
-                (activity.DisplayName != null && activity.DisplayName.StartsWith("invoke_agent")))
+            if (activity.OperationName == InvokeAgentScope.OperationName ||
+                (activity.DisplayName != null && activity.DisplayName.StartsWith(InvokeAgentScope.OperationName)))
             {
                 // Remove the gen_ai.input.messages tag to prevent sending prompt content
-                var tagToRemove = activity.Tags.FirstOrDefault(tag => tag.Key == OpenTelemetryConstants.GenAiInputMessagesKey);
-                if (!string.IsNullOrEmpty(tagToRemove.Key))
+                if (activity.Tags.Any(tag => tag.Key == OpenTelemetryConstants.GenAiInputMessagesKey))
                 {
                     activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, null);
                 }
