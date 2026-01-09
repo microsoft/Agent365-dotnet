@@ -22,5 +22,6 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj" />
+    <ProjectReference Include="..\..\Observability\Extensions\OpenAI\Microsoft.Agents.A365.Observability.Extensions.OpenAI.csproj" />
   </ItemGroup>
 </Project>

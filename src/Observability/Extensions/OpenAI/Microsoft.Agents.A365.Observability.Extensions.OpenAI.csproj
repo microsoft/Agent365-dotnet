@@ -18,6 +18,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extension.Tests" />
+  </ItemGroup>
 </Project>
 
 
