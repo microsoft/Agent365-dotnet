@@ -4,43 +4,30 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
-    using Microsoft.Agents.A365.Runtime.Authentication;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
-    using Microsoft.Agents.A365.Tooling.Models;
-    using Microsoft.Agents.A365.Tooling.Services;
-    using Microsoft.Agents.Builder;
-    using Microsoft.Agents.Builder.App.UserAuth;
-    using Microsoft.Extensions.Configuration;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.SemanticKernel;
-    using System;
-    using System.Linq;
+	using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
+	using Microsoft.Agents.A365.Tooling.Models;
+	using Microsoft.Agents.A365.Tooling.Services;
+	using Microsoft.Agents.Builder;
+	using Microsoft.Agents.Builder.App.UserAuth;
+	using Microsoft.SemanticKernel;
+	using System;
+	using System.Linq;
 
-    /// <summary>
-    /// Provides services related to tools in the Semantic Kernel.
-    /// </summary>
-    public class McpToolRegistrationService : IMcpToolRegistrationService
+	/// <summary>
+	/// Provides services related to tools in the Semantic Kernel.
+	/// </summary>
+	public class McpToolRegistrationService : IMcpToolRegistrationService
     {
-        private readonly ILogger<IMcpToolRegistrationService> _logger;
-        private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
         /// </summary>
-        /// <param name="logger">
-        /// Logger instance for logging.
-        /// </param>
-        /// <param name="serviceProvider">
-        /// Service provider.
-        /// </param>
         /// <param name="mcpToolEnumerationService">
         /// MCP tool enumeration service.
         /// </param>
-        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolEnumerationService mcpToolEnumerationService)
+        public McpToolRegistrationService(IMcpToolEnumerationService mcpToolEnumerationService)
         {
-            _logger = logger;
-            _serviceProvider = serviceProvider;
             _mcpToolEnumerationService = mcpToolEnumerationService;
         }
 
