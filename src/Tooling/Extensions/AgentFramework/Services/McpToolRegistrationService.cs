@@ -3,19 +3,21 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Agents.A365.Runtime;
+using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Agent Framework scenarios.
@@ -23,23 +25,23 @@ using System.Threading.Tasks;
 public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
-    private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
     private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
     /// </summary>
     /// <param name="logger">Logger instance for logging.</param>
     /// <param name="mcpServerConfigurationService">MCP server configuration service.</param>
-    /// <param name="mcpToolEnumerationService">MCP Tool Enumeration Service.</param>
+    /// <param name="configuration">Configuration service.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IMcpToolServerConfigurationService mcpServerConfigurationService,
-        IMcpToolEnumerationService mcpToolEnumerationService)
+        IConfiguration configuration)
     {
         _logger = logger;
         _mcpServerConfigurationService = mcpServerConfigurationService;
-        _mcpToolEnumerationService = mcpToolEnumerationService;
+        _configuration = configuration;
     }
 
     /// <inheritdoc />
@@ -58,7 +60,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+        if (authToken is null)
+        {
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+        }
 
         try
         {
@@ -74,7 +79,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             };
 
             // Use the shared enumeration service to get tools from all servers
-            var (_, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
                 agentUserId,
                 authToken,
                 turnContext,
@@ -115,7 +120,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+            if (authToken is null)
+            {
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+            }
 
             var toolOptions = new ToolOptions
             {
@@ -123,7 +131,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             };
 
             // Use the shared enumeration service to get all tools
-            var mcpTools = await _mcpToolEnumerationService.EnumerateAllToolsAsync(
+            var mcpTools = await _mcpServerConfigurationService.EnumerateAllToolsAsync(
                 agentUserId,
                 authToken,
                 turnContext,

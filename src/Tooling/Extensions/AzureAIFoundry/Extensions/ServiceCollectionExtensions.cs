@@ -20,7 +20,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Extensions
         public static IServiceCollection AddMcpServices(this IServiceCollection services)
         {
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
-            services.AddScoped<IMcpToolEnumerationService, McpToolEnumerationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
 
             return services;

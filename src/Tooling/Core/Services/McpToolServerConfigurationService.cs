@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// <summary>
     /// Provides services for managing MCP server configurations.
     /// </summary>
-    public class McpToolServerConfigurationService : IMcpToolServerConfigurationService
+    public partial class McpToolServerConfigurationService : IMcpToolServerConfigurationService
     {
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;

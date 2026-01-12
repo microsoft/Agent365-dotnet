@@ -27,22 +27,26 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 {
     private readonly ILogger<IMcpToolRegistrationService> _logger;
     private readonly IServiceProvider _serviceProvider; // reserved for future DI expansion
-    private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
+    private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpToolRegistrationService"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
-    /// <param name="mcpToolEnumerationService">The MCP tool enumeration service.</param>
+    /// <param name="mcpServerConfigurationService">The MCP server configuration service.</param>
+    /// <param name="configuration">The configuration service.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IServiceProvider serviceProvider,
-        IMcpToolEnumerationService mcpToolEnumerationService)
+        IMcpToolServerConfigurationService mcpServerConfigurationService,
+        IConfiguration configuration)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _mcpToolEnumerationService = mcpToolEnumerationService;
+        _mcpServerConfigurationService = mcpServerConfigurationService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -98,7 +102,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        authToken = await _mcpToolEnumerationService.GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+        if (authToken is null)
+        {
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+        }
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
 
@@ -140,7 +147,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         };
 
         // Use the shared enumeration service to get tools from all servers
-        var (servers, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(
+        var (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
             agentInstanceId,
             authToken,
             turnContext,

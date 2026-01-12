@@ -7,8 +7,8 @@ using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
-using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Agents.Core.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using Moq;
@@ -23,7 +23,8 @@ public class McpToolRegistrationServiceTests
 {
     private readonly Mock<ILogger<IMcpToolRegistrationService>> _mockLogger;
     private readonly Mock<IServiceProvider> _mockServiceProvider;
-    private readonly Mock<IMcpToolEnumerationService> _mockEnumerationService;
+    private readonly Mock<IMcpToolServerConfigurationService> _mockConfigService;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ITurnContext> _mockTurnContext;
     private readonly McpToolRegistrationService _service;
 
@@ -32,8 +33,9 @@ public class McpToolRegistrationServiceTests
         _mockLogger = new Mock<ILogger<IMcpToolRegistrationService>>();
         _mockServiceProvider = new Mock<IServiceProvider>();
 
-        // Create mock for IMcpToolEnumerationService interface
-        _mockEnumerationService = new Mock<IMcpToolEnumerationService>();
+        // Create mock for IMcpToolServerConfigurationService interface
+        _mockConfigService = new Mock<IMcpToolServerConfigurationService>();
+        _mockConfiguration = new Mock<IConfiguration>();
 
         _mockTurnContext = new Mock<ITurnContext>();
 
@@ -45,7 +47,8 @@ public class McpToolRegistrationServiceTests
         _service = new McpToolRegistrationService(
             _mockLogger.Object,
             _mockServiceProvider.Object,
-            _mockEnumerationService.Object);
+            _mockConfigService.Object,
+            _mockConfiguration.Object);
     }
 
     #region Helper Methods
@@ -86,7 +89,7 @@ public class McpToolRegistrationServiceTests
     /// </summary>
     private void SetupMocksForEmptyToolEnumeration(Action<ToolOptions>? captureToolOptions = null)
     {
-        var setup = _mockEnumerationService
+        var setup = _mockConfigService
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -106,7 +109,7 @@ public class McpToolRegistrationServiceTests
     /// </summary>
     private void SetupMocksForToolEnumeration(List<MCPServerConfig> servers, Dictionary<string, IList<McpClientTool>> toolsByServer)
     {
-        _mockEnumerationService
+        _mockConfigService
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -155,34 +158,6 @@ public class McpToolRegistrationServiceTests
             .WithParameterName("agentClient");
     }
 
-    [Fact]
-    public async Task AddToolServersToAgentAsync_CallsGetAuthTokenAsync()
-    {
-        // Arrange
-        _mockEnumerationService
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<UserAuthorization>(),
-                It.IsAny<string>(),
-                It.IsAny<ITurnContext>(),
-                It.IsAny<string?>()))
-            .ReturnsAsync(TestAuthToken);
-
-        SetupMocksForEmptyToolEnumeration();
-
-        // Act & Assert - just verify the method calls GetAuthTokenAsync
-        // We can't fully test this without a real PersistentAgentsClient
-        _mockEnumerationService.Verify(
-            x => x.GetAuthTokenAsync(
-                It.IsAny<UserAuthorization>(),
-                It.IsAny<string>(),
-                It.IsAny<ITurnContext>(),
-                It.IsAny<string?>()),
-            Times.Never); // Not called yet
-
-        // The actual call would fail because we can't mock PersistentAgentsClient properly
-        // This test verifies the argument validation works
-    }
-
     #endregion
 
     #region GetMcpToolDefinitionsAndResourcesAsync Tests
@@ -217,7 +192,7 @@ public class McpToolRegistrationServiceTests
             _mockTurnContext.Object);
 
         // Assert
-        _mockEnumerationService.Verify(
+        _mockConfigService.Verify(
             x => x.EnumerateToolsFromServersAsync(
                 TestAgentInstanceId,
                 TestAuthToken,

@@ -27,7 +27,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
         private readonly IConfiguration _configuration;
-        private readonly IMcpToolEnumerationService _mcpToolEnumerationService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -35,19 +34,16 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="logger">Logger instance for logging.</param>
         /// <param name="serviceProvider">Service provider.</param>
         /// <param name="mcpServerConfigurationService">MCP server configuration service.</param>
-        /// <param name="mcpToolEnumerationService">MCP tool enumeration service.</param>
         /// <param name="configuration">Configuration Service for the application.</param>
         public McpToolRegistrationService(
             ILogger<IMcpToolRegistrationService> logger,
             IServiceProvider serviceProvider,
             IMcpToolServerConfigurationService mcpServerConfigurationService,
-            IMcpToolEnumerationService mcpToolEnumerationService,
             IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
             _mcpServerConfigurationService = mcpServerConfigurationService;
-            _mcpToolEnumerationService = mcpToolEnumerationService;
             _configuration = configuration;
         }
 
@@ -59,7 +55,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            if (authToken == null)
+            if (authToken is null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
@@ -72,7 +68,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            var (_, toolsByServer) = await _mcpToolEnumerationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)
             {

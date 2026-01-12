@@ -32,7 +32,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         private readonly Mock<ILogger<IMcpToolRegistrationService>> _loggerMock;
         private readonly Mock<IServiceProvider> _serviceProviderMock;
         private readonly Mock<IMcpToolServerConfigurationService> _mcpServerConfigurationServiceMock;
-        private readonly Mock<IMcpToolEnumerationService> _mcpToolEnumerationServiceMock;
         private readonly Mock<IConfiguration> _configurationMock;
         private readonly string _testJwtToken;
 
@@ -41,7 +40,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             _loggerMock = new Mock<ILogger<IMcpToolRegistrationService>>();
             _serviceProviderMock = new Mock<IServiceProvider>();
             _mcpServerConfigurationServiceMock = new Mock<IMcpToolServerConfigurationService>();
-            _mcpToolEnumerationServiceMock = new Mock<IMcpToolEnumerationService>();
             _configurationMock = new Mock<IConfiguration>();
 
             // Create a valid JWT token for testing
@@ -59,7 +57,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 _loggerMock.Object,
                 _serviceProviderMock.Object,
                 _mcpServerConfigurationServiceMock.Object,
-                _mcpToolEnumerationServiceMock.Object,
                 _configurationMock.Object);
         }
 
@@ -109,7 +106,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         /// </summary>
         private void SetupMocksForEmptyToolEnumeration(Action<ToolOptions>? captureToolOptions = null)
         {
-            var setup = _mcpToolEnumerationServiceMock
+            var setup = _mcpServerConfigurationServiceMock
                 .Setup(x => x.EnumerateToolsFromServersAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
@@ -166,7 +163,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 authToken: _testJwtToken);
 
             // Assert
-            _mcpToolEnumerationServiceMock.Verify(
+            _mcpServerConfigurationServiceMock.Verify(
                 x => x.EnumerateToolsFromServersAsync(
                     It.IsAny<string>(),
                     _testJwtToken,

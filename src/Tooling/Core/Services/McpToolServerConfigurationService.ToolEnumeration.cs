@@ -3,11 +3,8 @@
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
-    using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.Builder;
-    using Microsoft.Agents.Builder.App.UserAuth;
-    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
     using System;
@@ -15,72 +12,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Provides common functionality for enumerating MCP tools from configured servers.
-    /// This service encapsulates the shared logic used across different agent framework implementations.
+    /// Partial class containing tool enumeration functionality.
     /// </summary>
-    public class McpToolEnumerationService : IMcpToolEnumerationService
+    public partial class McpToolServerConfigurationService
     {
-        private readonly ILogger<McpToolEnumerationService> _logger;
-        private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
-        private readonly IConfiguration _configuration;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="McpToolEnumerationService"/> class.
-        /// </summary>
-        /// <param name="logger">The logger instance.</param>
-        /// <param name="mcpServerConfigurationService">The MCP tool server configuration service.</param>
-        /// <param name="configuration">The application configuration.</param>
-        public McpToolEnumerationService(
-            ILogger<McpToolEnumerationService> logger,
-            IMcpToolServerConfigurationService mcpServerConfigurationService,
-            IConfiguration configuration)
-        {
-            _logger = logger;
-            _mcpServerConfigurationService = mcpServerConfigurationService;
-            _configuration = configuration;
-        }
-
-        /// <summary>
-        /// Retrieves the authentication token for accessing MCP servers.
-        /// </summary>
-        /// <param name="userAuthorization">User authorization information.</param>
-        /// <param name="authHandlerName">Name of the authentication handler.</param>
-        /// <param name="turnContext">Turn context for the current request.</param>
-        /// <param name="providedAuthToken">Optional pre-existing authentication token.</param>
-        /// <returns>The authentication token.</returns>
-        public virtual async Task<string> GetAuthTokenAsync(
-            UserAuthorization userAuthorization,
-            string authHandlerName,
-            ITurnContext turnContext,
-            string? providedAuthToken = null)
-        {
-            if (!string.IsNullOrEmpty(providedAuthToken))
-            {
-                return providedAuthToken;
-            }
-
-            var token = await AgenticAuthenticationService.GetAgenticUserTokenAsync(
-                userAuthorization,
-                authHandlerName,
-                turnContext,
-                _configuration).ConfigureAwait(false);
-
-            if (string.IsNullOrEmpty(token))
-            {
-                throw new InvalidOperationException("Failed to obtain authentication token for MCP tool retrieval.");
-            }
-
-            return token;
-        }
-
-        /// <summary>
-        /// Enumerates all MCP tools from configured servers for a given agent.
-        /// </summary>
-        /// <param name="agentInstanceId">The agent instance ID.</param>
-        /// <param name="authToken">Authentication token for MCP server access.</param>
-        /// <param name="turnContext">Turn context for the current request.</param>
-        /// <param name="toolOptions">Tool options including user agent configuration.</param>
-        /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
+        /// <inheritdoc/>
         public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,
             string authToken,
@@ -92,7 +28,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             List<MCPServerConfig> servers;
             try
             {
-                servers = await _mcpServerConfigurationService.ListToolServersAsync(
+                servers = await ListToolServersAsync(
                     agentInstanceId,
                     authToken,
                     toolOptions).ConfigureAwait(false);
@@ -128,7 +64,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 try
                 {
-                    var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(
+                    var mcpTools = await GetMcpClientToolsAsync(
                         turnContext,
                         server,
                         authToken,
@@ -170,14 +106,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             return (servers, toolsByServer);
         }
 
-        /// <summary>
-        /// Enumerates all MCP tools from configured servers, returning a flat list of all tools.
-        /// </summary>
-        /// <param name="agentInstanceId">The agent instance ID.</param>
-        /// <param name="authToken">Authentication token for MCP server access.</param>
-        /// <param name="turnContext">Turn context for the current request.</param>
-        /// <param name="toolOptions">Tool options including user agent configuration.</param>
-        /// <returns>A flat list of all MCP tools from all configured servers.</returns>
+        /// <inheritdoc/>
         public virtual async Task<IList<McpClientTool>> EnumerateAllToolsAsync(
             string agentInstanceId,
             string authToken,

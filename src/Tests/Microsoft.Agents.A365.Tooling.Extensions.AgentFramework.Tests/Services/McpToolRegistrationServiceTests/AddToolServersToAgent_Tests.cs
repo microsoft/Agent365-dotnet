@@ -4,7 +4,6 @@
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Tooling.Models;
-using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
 using Moq;
 using Xunit;
@@ -41,36 +40,6 @@ public class AddToolServersToAgent_Tests : McpToolRegistrationServiceTestBase
     }
 
     [Fact]
-    public async Task CallsGetAuthTokenAsync()
-    {
-        // Arrange
-        var mockChatClient = new Mock<IChatClient>();
-        var mockTurnContext = CreateMockTurnContext();
-        SetupMocksForAddToolServers();
-        var service = CreateService();
-
-        // Act
-        await service.AddToolServersToAgent(
-            chatClient: mockChatClient.Object,
-            agentInstructions: "instructions",
-            initialTools: new List<AITool>(),
-            agentUserId: TestAgentUserId,
-            userAuthorization: null!,
-            authHandlerName: "handler",
-            turnContext: mockTurnContext.Object,
-            authToken: TestAuthToken);
-
-        // Assert
-        McpToolEnumerationServiceMock.Verify(
-            x => x.GetAuthTokenAsync(
-                It.IsAny<UserAuthorization>(),
-                "handler",
-                mockTurnContext.Object,
-                TestAuthToken),
-            Times.Once);
-    }
-
-    [Fact]
     public async Task CallsEnumerateToolsFromServersAsync()
     {
         // Arrange
@@ -91,7 +60,7 @@ public class AddToolServersToAgent_Tests : McpToolRegistrationServiceTestBase
             authToken: TestAuthToken);
 
         // Assert
-        McpToolEnumerationServiceMock.Verify(
+        McpServerConfigurationServiceMock.Verify(
             x => x.EnumerateToolsFromServersAsync(
                 TestAgentUserId,
                 TestAuthToken,

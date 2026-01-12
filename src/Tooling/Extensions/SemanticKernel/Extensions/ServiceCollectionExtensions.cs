@@ -23,7 +23,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
             services.AddHttpClient();
             
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
-            services.AddScoped<IMcpToolEnumerationService, McpToolEnumerationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
             
             return services;

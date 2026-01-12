@@ -6,6 +6,7 @@ using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Core.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using Moq;
@@ -22,13 +23,13 @@ public abstract class McpToolRegistrationServiceTestBase
 
     protected readonly Mock<ILogger<IMcpToolRegistrationService>> LoggerMock;
     protected readonly Mock<IMcpToolServerConfigurationService> McpServerConfigurationServiceMock;
-    protected readonly Mock<IMcpToolEnumerationService> McpToolEnumerationServiceMock;
+    protected readonly Mock<IConfiguration> ConfigurationMock;
 
     protected McpToolRegistrationServiceTestBase()
     {
         LoggerMock = new Mock<ILogger<IMcpToolRegistrationService>>();
         McpServerConfigurationServiceMock = new Mock<IMcpToolServerConfigurationService>();
-        McpToolEnumerationServiceMock = new Mock<IMcpToolEnumerationService>();
+        ConfigurationMock = new Mock<IConfiguration>();
     }
 
     /// <summary>
@@ -39,7 +40,7 @@ public abstract class McpToolRegistrationServiceTestBase
         return new McpToolRegistrationService(
             LoggerMock.Object,
             McpServerConfigurationServiceMock.Object,
-            McpToolEnumerationServiceMock.Object);
+            ConfigurationMock.Object);
     }
 
     /// <summary>
@@ -72,15 +73,7 @@ public abstract class McpToolRegistrationServiceTestBase
     /// </summary>
     protected void SetupMocksForAddToolServers(Action<ToolOptions>? captureToolOptions = null)
     {
-        McpToolEnumerationServiceMock
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<Microsoft.Agents.Builder.App.UserAuth.UserAuthorization>(),
-                It.IsAny<string>(),
-                It.IsAny<ITurnContext>(),
-                It.IsAny<string?>()))
-            .ReturnsAsync(TestAuthToken);
-
-        var setup = McpToolEnumerationServiceMock
+        var setup = McpServerConfigurationServiceMock
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -104,15 +97,7 @@ public abstract class McpToolRegistrationServiceTestBase
     /// </summary>
     protected void SetupMocksForGetMcpTools(Action<ToolOptions>? captureToolOptions = null)
     {
-        McpToolEnumerationServiceMock
-            .Setup(x => x.GetAuthTokenAsync(
-                It.IsAny<Microsoft.Agents.Builder.App.UserAuth.UserAuthorization>(),
-                It.IsAny<string>(),
-                It.IsAny<ITurnContext>(),
-                It.IsAny<string?>()))
-            .ReturnsAsync(TestAuthToken);
-
-        var setup = McpToolEnumerationServiceMock
+        var setup = McpServerConfigurationServiceMock
             .Setup(x => x.EnumerateAllToolsAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
