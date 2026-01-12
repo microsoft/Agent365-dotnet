@@ -40,17 +40,10 @@ public static class SemanticKernelSpanProcessorHelper
             return;
         }
 
-        var inputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
-        if (inputJsonString != null)
-        {
-            TryFilterInvocationMessage(activity, inputJsonString, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
-        }
-
-        var outputJsonString = GetTagValue(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
-        if (outputJsonString != null)
-        {
-            TryFilterInvocationMessage(activity, outputJsonString, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
-        }
+        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
+        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
+        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
+        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiOutputMessagesKey);
     }
 
     /// <summary>
@@ -109,6 +102,15 @@ public static class SemanticKernelSpanProcessorHelper
         return quoted;
     }
 
+    private static void TryFilterInvocationMessage(Activity activity, string tagName)
+    {
+        var jsonString = GetTagValue(activity, tagName);
+        if (jsonString != null)
+        {
+            TryFilterInvocationMessage(activity, jsonString, tagName);
+        }
+    }
+
     /// <summary>
     /// Attempts to parse and filter the invocation input JSON string, removing system messages and encoding the result.
     /// </summary>
@@ -121,13 +123,22 @@ public static class SemanticKernelSpanProcessorHelper
         {
             List<MessageContent>? inputArray = null;
 
-            var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
-            if (strList != null)
+            // First, try to deserialize as a list of MessageContent objects directly
+            try
             {
-                inputArray = strList
-                    .Select(TryDeserializeMessageContent)
-                    .Where(mc => mc != null)
-                    .ToList()!;
+                inputArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
+            }
+            catch (JsonException)
+            {
+                // If that fails, try to deserialize as a list of strings and then parse each string
+                var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
+                if (strList != null)
+                {
+                    inputArray = strList
+                        .Select(TryDeserializeMessageContent)
+                        .Where(mc => mc != null)
+                        .ToList()!;
+                }
             }
 
             if (inputArray != null)
@@ -136,7 +147,7 @@ public static class SemanticKernelSpanProcessorHelper
                     .Where(e => !string.Equals(e.Role, "system", StringComparison.OrdinalIgnoreCase))
                     .Select(e =>
                     {
-                        FilterUserMessageContent(e);
+                        FilterMessageContent(e);
                         return e.Content;
                     })
                     .ToList();
@@ -177,18 +188,61 @@ public static class SemanticKernelSpanProcessorHelper
     }
 
     /// <summary>
-    /// Extracts the message content from user messages by trimming the prefix up to and including 'Message:'.
+    /// Filters and extracts the message content from messages.
+    /// For user messages, trims the prefix up to and including 'Message:'.
+    /// For all messages, if Content is a JSON object with a nested 'content' property, extracts the inner content.
     /// </summary>
     /// <param name="message">The MessageContent to filter.</param>
-    private static void FilterUserMessageContent(MessageContent? message)
+    private static void FilterMessageContent(MessageContent? message)
     {
-        if (message?.Role == "user" && !string.IsNullOrEmpty(message.Content))
+        if (message == null || string.IsNullOrEmpty(message.Content))
+        {
+            return;
+        }
+
+        // Try to extract nested content if Content is a JSON object with a 'content' property
+        TryExtractNestedContent(message);
+
+        // For user messages, trim the "Message:" prefix
+        if (string.Equals(message.Role, "user", StringComparison.OrdinalIgnoreCase))
         {
             var idx = message.Content.IndexOf("Message:", StringComparison.OrdinalIgnoreCase);
             if (idx >= 0)
             {
                 message.Content = message.Content[(idx + "Message:".Length)..].Trim();
             }
+        }
+    }
+
+    /// <summary>
+    /// Attempts to extract nested content from a message's Content property.
+    /// If Content is a JSON object with a 'content' property, replaces Content with the inner content value.
+    /// </summary>
+    /// <param name="message">The MessageContent to process.</param>
+    private static void TryExtractNestedContent(MessageContent message)
+    {
+        if (string.IsNullOrEmpty(message.Content))
+        {
+            return;
+        }
+
+        var content = message.Content.Trim();
+        if (!content.StartsWith("{", StringComparison.Ordinal) || !content.EndsWith("}", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        try
+        {
+            var nestedContent = JsonSerializer.Deserialize<NestedContent>(content, JsonOptions);
+            if (nestedContent?.Content != null)
+            {
+                message.Content = nestedContent.Content;
+            }
+        }
+        catch (JsonException)
+        {
+            // Content is not a valid nested content JSON, keep the original value
         }
     }
 
@@ -221,7 +275,7 @@ public static class SemanticKernelSpanProcessorHelper
                     var userMsg = JsonSerializer.Deserialize<MessageContent>(content, JsonOptions);
                     if (userMsg != null && userMsg.Role == "user" && !string.IsNullOrEmpty(userMsg.Content))
                     {
-                        FilterUserMessageContent(userMsg);
+                        FilterMessageContent(userMsg);
                         result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(userMsg.Content);
                     }
                 }
