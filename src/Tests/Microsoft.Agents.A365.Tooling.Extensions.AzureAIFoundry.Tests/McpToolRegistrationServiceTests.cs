@@ -3,7 +3,6 @@
 
 using Azure.AI.Agents.Persistent;
 using FluentAssertions;
-using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry;
 using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
@@ -15,7 +14,7 @@ using ModelContextProtocol.Client;
 using Moq;
 using Xunit;
 
-namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests;
+namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Tests;
 
 /// <summary>
 /// Unit tests for McpToolRegistrationService class.
@@ -302,7 +301,7 @@ public class McpToolRegistrationServiceTests
         SetupMocksForToolEnumeration(servers, toolsByServer);
 
         // Act
-        var (toolDefinitions, toolResources) = await _service.GetMcpToolDefinitionsAndResourcesAsync(
+        var (_, toolResources) = await _service.GetMcpToolDefinitionsAndResourcesAsync(
             TestAgentInstanceId,
             TestAuthToken,
             _mockTurnContext.Object);
