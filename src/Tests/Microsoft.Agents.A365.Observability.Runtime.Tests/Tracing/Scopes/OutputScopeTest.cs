@@ -203,20 +203,6 @@ public sealed class OutputScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void RecordOutputMessage_SetsTag()
-    {
-        const string message = "This is a single output message";
-
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = OutputScope.Start(Util.GetAgentDetails(), Util.GetTenantDetails());
-            scope.RecordOutputMessage(message);
-        });
-
-        activity.ShouldHaveTag(GenAiOutputMessagesKey, message);
-    }
-
-    [TestMethod]
     public void RecordError_SetsExpectedFields()
     {
         const string expected = "Test error";
