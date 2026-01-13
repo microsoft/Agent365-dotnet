@@ -27,7 +27,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="sessionId">Optional session identifier.</param>
         /// <param name="sessionDescription">Optional session description.</param>
         /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
-        /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <returns>A new InputScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -49,8 +48,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             string? conversationId = null,
             string? sessionId = null,
             string? sessionDescription = null,
-            string? parentId = null,
-            ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new InputScope(agentDetails, tenantDetails, request, callerDetails, conversationId, sessionId, sessionDescription, parentId);
+            string? parentId = null) => new InputScope(agentDetails, tenantDetails, request, callerDetails, conversationId, sessionId, sessionDescription, parentId);
 
         private InputScope(
             AgentDetails agentDetails,
