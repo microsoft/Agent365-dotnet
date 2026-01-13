@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         /// <param name="agentDetails">Information about the agent sending the output (service, version, identifiers).</param>
         /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
+        /// <param name="response">Optional response content containing output messages.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="conversationId">Optional conversation or session correlation ID.</param>
         /// <param name="sessionId">Optional session identifier.</param>
@@ -44,17 +45,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public static OutputScope Start(
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
+            Response? response = null,
             CallerDetails? callerDetails = null,
             string? conversationId = null,
             string? sessionId = null,
             string? sessionDescription = null,
             string? parentId = null,
             SourceMetadata? sourceMetadata = null,
-            ExecutionType? executionType = null) => new OutputScope(agentDetails, tenantDetails, callerDetails, conversationId, sessionId, sessionDescription, parentId, sourceMetadata, executionType);
+            ExecutionType? executionType = null) => new OutputScope(agentDetails, tenantDetails, response, callerDetails, conversationId, sessionId, sessionDescription, parentId, sourceMetadata, executionType);
 
         private OutputScope(
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
+            Response? response,
             CallerDetails? callerDetails,
             string? conversationId,
             string? sessionId,
@@ -86,6 +89,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
                 SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+            }
+
+            // Set output messages
+            if (response?.Content != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, response.Content);
             }
         }
 

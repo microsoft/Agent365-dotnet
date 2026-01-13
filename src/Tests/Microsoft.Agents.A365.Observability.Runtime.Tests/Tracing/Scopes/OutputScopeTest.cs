@@ -189,6 +189,23 @@ public sealed class OutputScopeTest : ActivityTest
     }
 
     [TestMethod]
+    public void Start_SetsOutputMessagesFromResponse()
+    {
+        const string responseContent = "This is the output message content";
+        var response = new Response(responseContent);
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                response: response);
+        });
+
+        activity.ShouldHaveTag(GenAiOutputMessagesKey, responseContent);
+    }
+
+    [TestMethod]
     public void RecordOutputMessages_SetsTag()
     {
         var messages = new[] { "Hello!", "Here is your response." };
