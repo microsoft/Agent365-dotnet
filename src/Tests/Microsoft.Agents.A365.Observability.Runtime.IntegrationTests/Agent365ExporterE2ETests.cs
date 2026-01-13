@@ -352,11 +352,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 finishReasons: new[] { "stop" },
                 responseId: "response-nested");
 
+            var callerDetails = new CallerDetails(
+                callerId: "caller-nested",
+                callerName: "Nested Caller",
+                callerUpn: "nested.caller@ztaittest12.onmicrosoft.com",
+                callerClientIP: IPAddress.Parse("192.168.1.1"),
+                tenantId: agentDetails.TenantId);
+
+            var response = new Response("Nested output response content");
+
             // Act
             using (var agentScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
             {
                 agentScope.RecordInputMessages(new[] { "Agent input" });
                 agentScope.RecordOutputMessages(new[] { "Agent output" });
+
+                using (var inputScope = InputScope.Start(agentDetails, tenantDetails, request, callerDetails, conversationId: "conv-nested", sessionId: "session-nested"))
+                {
+                    inputScope.RecordInputMessages(new[] { "Input scope message 1", "Input scope message 2" });
+                }
 
                 using (var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails))
                 {
@@ -371,6 +385,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         inferenceScope.RecordResponseId("response-nested");
                         inferenceScope.RecordFinishReasons(new[] { "stop" });
                     }
+                }
+
+                using (var outputScope = OutputScope.Start(agentDetails, tenantDetails, response, callerDetails, conversationId: "conv-nested", sessionId: "session-nested"))
+                {
+                    outputScope.RecordOutputMessages(new[] { "Output scope message 1" });
                 }
             }
 
@@ -401,7 +420,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         allAgentTypes.Add(agentTypeTag);
                 }
             }
-            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
+            allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString(), "input_messages", "output_messages" }, "All five nested scopes should be exported, even if batched in fewer requests.");
             allAgentTypes.Should().OnlyContain(t => t == agentType.ToString());
         }
 
