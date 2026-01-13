@@ -3,9 +3,13 @@
 namespace Microsoft.Agents.A365.Observability.Hosting
 {
     using System;
+    using Microsoft.Agents.A365.Observability.Hosting.Middleware;
     using Microsoft.Agents.A365.Observability.Runtime;
+    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
+    using Microsoft.Agents.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
 
     /// <summary>
@@ -64,6 +68,73 @@ namespace Microsoft.Agents.A365.Observability.Hosting
                 configure?.Invoke(localBuilder);
                 localBuilder.Build();
             });
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds the <see cref="ObservabilityMiddleware"/> to the builder's service collection.
+        /// </summary>
+        /// <typeparam name="TBuilder">The type of the application builder implementing <see cref="IHostApplicationBuilder"/>.</typeparam>
+        /// <param name="builder">The builder to configure.</param>
+        /// <returns>The configured builder for method chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// This method registers the <see cref="ObservabilityMiddleware"/> as a singleton service.
+        /// After calling this method, you need to add the middleware to your adapter's pipeline.
+        /// </para>
+        /// <example>
+        /// <code>
+        /// // In your startup/program configuration:
+        /// builder.WithObservabilityMiddleware();
+        /// 
+        /// // Then add to your adapter:
+        /// adapter.Use(serviceProvider.GetRequiredService&lt;ObservabilityMiddleware&gt;());
+        /// // Or use the extension method:
+        /// adapter.UseA365Observability(serviceProvider.GetRequiredService&lt;ObservabilityMiddleware&gt;());
+        /// </code>
+        /// </example>
+        /// </remarks>
+        public static TBuilder WithObservabilityMiddleware<TBuilder>(this TBuilder builder)
+            where TBuilder : IHostApplicationBuilder
+        {
+            builder.Services.AddSingleton<ObservabilityMiddleware>();
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds the <see cref="ObservabilityMiddleware"/> to the builder's service collection with custom resolvers.
+        /// </summary>
+        /// <typeparam name="TBuilder">The type of the application builder implementing <see cref="IHostApplicationBuilder"/>.</typeparam>
+        /// <param name="builder">The builder to configure.</param>
+        /// <param name="agentDetailsResolver">Optional resolver to extract agent details from the turn context.</param>
+        /// <param name="callerDetailsResolver">Optional resolver to extract caller details from the turn context.</param>
+        /// <returns>The configured builder for method chaining.</returns>
+        /// <remarks>
+        /// <para>
+        /// This method registers the <see cref="ObservabilityMiddleware"/> as a singleton service with custom resolvers.
+        /// Use this overload when you need to provide custom logic for extracting agent and caller details from the turn context.
+        /// </para>
+        /// <example>
+        /// <code>
+        /// // In your startup/program configuration:
+        /// builder.WithObservabilityMiddleware(
+        ///     agentDetailsResolver: turnContext => new AgentDetails(
+        ///         agentId: "my-agent-id",
+        ///         agentName: "My Agent"),
+        ///     callerDetailsResolver: turnContext => new CallerDetails(
+        ///         callerId: turnContext.Activity?.From?.Id ?? "unknown",
+        ///         callerName: turnContext.Activity?.From?.Name ?? "Unknown",
+        ///         callerUpn: turnContext.Activity?.From?.Name ?? "unknown"));
+        /// </code>
+        /// </example>
+        /// </remarks>
+        public static TBuilder WithObservabilityMiddleware<TBuilder>(
+            this TBuilder builder,
+            Func<ITurnContext, AgentDetails>? agentDetailsResolver = null,
+            Func<ITurnContext, CallerDetails?>? callerDetailsResolver = null)
+            where TBuilder : IHostApplicationBuilder
+        {
+            builder.Services.AddSingleton(sp => new ObservabilityMiddleware(agentDetailsResolver, callerDetailsResolver));
             return builder;
         }
     }
