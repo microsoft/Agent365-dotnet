@@ -207,4 +207,26 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         tagValue.Should().Contain("\"reason\":\"Blocked due to policy violation.\"");
         tagValue.Should().Contain("data-loss-prevention");
     }
+
+    [TestMethod]
+    public void Start_ToolServerName_IsSetCorrectly()
+    {
+        // Arrange
+        const string expectedToolServerName = "test-tool-server";
+        var toolCallDetails = new ToolCallDetails(
+            toolName: "TestTool",
+            arguments: "args",
+            toolServerName: expectedToolServerName);
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolServerNameKey, expectedToolServerName);
+    }
 }
