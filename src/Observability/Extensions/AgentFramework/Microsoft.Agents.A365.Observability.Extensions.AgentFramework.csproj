@@ -11,6 +11,10 @@
     <Product>Microsoft Agent 365 Agent Framework Observability SDK</Product>
     <PackageTags>Microsoft;Agents;A365;Observability;AgentFramework;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extension.Tests" />
+  </ItemGroup>
     
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
