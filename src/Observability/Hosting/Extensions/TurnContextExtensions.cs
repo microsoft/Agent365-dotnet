@@ -25,7 +25,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         {
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerIdKey, turnContext.Activity?.From?.Id);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerNameKey, turnContext.Activity?.From?.Name);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerUpnKey, turnContext.Activity?.From?.Name);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiCallerTenantIdKey, turnContext.Activity?.From?.TenantId);
         }
 
@@ -50,7 +49,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentIdKey, turnContext.Activity?.Recipient?.AgenticAppId ?? turnContext.Activity?.Recipient?.Id);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentNameKey, turnContext.Activity?.Recipient?.Name);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentAUIDKey, turnContext.Activity?.Recipient?.AgenticUserId ?? turnContext.Activity?.Recipient?.AadObjectId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentUPNKey, turnContext.Activity?.Recipient?.Name);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.GenAiAgentDescriptionKey, turnContext.Activity?.Recipient?.Role);
         }
 
