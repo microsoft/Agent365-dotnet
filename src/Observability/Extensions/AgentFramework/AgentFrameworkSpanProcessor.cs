@@ -11,6 +11,12 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
         private const string ExecuteToolOperation = "execute_tool";
         private const string ToolCallResultTag = "gen_ai.tool.call.result";
         private const string EventContentTag = "gen_ai.event.content";
+        private readonly string[] _additionalSources;
+
+        public AgentFrameworkSpanProcessor(params string[] additionalSources)
+        {
+            _additionalSources = additionalSources ?? [];
+        }
 
         public override void OnStart(Activity activity)
         {
@@ -21,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
             if (activity == null)
                 return;
 
-            if (activity.Source.Name.StartsWith(BuilderExtensions.AgentFrameworkSource))
+            if (IsTrackedSource(activity.Source.Name))
             {
                 var operationName = activity.GetTagItem(OpenTelemetryConstants.GenAiOperationNameKey);
                 if (operationName is string opName && opName == ExecuteToolOperation)
@@ -30,6 +36,24 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
                     activity.SetTag(EventContentTag, toolCallResult);
                 }
             }
+        }
+
+        private bool IsTrackedSource(string sourceName)
+        {
+            if (sourceName.StartsWith(BuilderExtensions.AgentFrameworkSource))
+            {
+                return true;
+            }
+
+            foreach (var source in _additionalSources)
+            {
+                if (!string.IsNullOrWhiteSpace(source) && sourceName.StartsWith(source))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
