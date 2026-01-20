@@ -30,6 +30,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// Foundry agent.
         /// </summary>
-        Foundry
+        Foundry,
+        
+        /// <summary>
+        /// Copilot Studio agent.
+        /// </summary>
+        CopilotStudio
     }
 }
