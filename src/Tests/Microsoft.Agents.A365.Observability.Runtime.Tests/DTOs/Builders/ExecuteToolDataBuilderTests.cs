@@ -51,7 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             // Arrange
             var endpoint = new Uri("https://example.com:7071");
-            var toolDetails = new ToolCallDetails("toolB", "{b:2}", "call-123", "Test tool", "function", endpoint);
+            var toolDetails = new ToolCallDetails("toolB", "{b:2}", "call-123", "Test tool", "function", endpoint, "my-tool-server");
             var agent = new AgentDetails("agent-2", "AgentTwo", "Desc", agentAUID: "auid", agentUPN: "upn@example.com", agentBlueprintId: "bp-1");
             var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-full";
@@ -64,6 +64,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolCallIdKey).WhoseValue.Should().Be("call-123");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolDescriptionKey).WhoseValue.Should().Be("Test tool");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolTypeKey).WhoseValue.Should().Be("function");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolServerNameKey).WhoseValue.Should().Be("my-tool-server");
             attrs.Should().ContainKey(OpenTelemetryConstants.ServerAddressKey).WhoseValue.Should().Be("example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.ServerPortKey).WhoseValue.Should().Be(7071);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentAUIDKey).WhoseValue.Should().Be("auid");
@@ -153,6 +154,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiToolCallIdKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiToolDescriptionKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiToolTypeKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiToolServerNameKey);
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiEventContent);
         }
@@ -201,7 +203,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             // Arrange
             var endpoint = new Uri("https://example.org:6060");
-            var toolDetails = new ToolCallDetails("toolJ", "{x:1}", "call-999", "Full tool", "extension", endpoint);
+            var toolDetails = new ToolCallDetails("toolJ", "{x:1}", "call-999", "Full tool", "extension", endpoint, "full-tool-server");
             var agent = new AgentDetails("agent-10", "AgentTen", "Desc", agentAUID: "auid10", agentUPN: "upn10@example.com", agentBlueprintId: "bp-10");
             var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-all";
@@ -228,6 +230,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolCallIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolDescriptionKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolTypeKey);
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolServerNameKey).WhoseValue.Should().Be("full-tool-server");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiEventContent);
             data.StartTime.Should().Be(start);

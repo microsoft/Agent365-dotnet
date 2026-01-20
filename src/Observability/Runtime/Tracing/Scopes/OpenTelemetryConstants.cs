@@ -134,6 +134,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// The GenAI tool type key.
         /// </summary>
         public const string GenAiToolTypeKey = "gen_ai.tool.type";
+
+        /// <summary>
+        /// The GenAI tool server name key.
+        /// </summary>
+        public const string GenAiToolServerNameKey = "gen_ai.tool.server.name";
         #endregion
 
         /// <summary>

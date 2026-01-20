@@ -144,7 +144,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 toolCallId: "call-456",
                 description: "Test tool call description",
                 toolType: "custom-type",
-                endpoint: endpoint);
+                endpoint: endpoint,
+                toolServerName: "test-tool-server");
 
             var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
                 blockAction: false,
@@ -190,6 +191,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.tool.call.id").Should().Be(toolCallDetails.ToolCallId);
             this.GetAttribute(attributes, "gen_ai.tool.description").Should().Be(toolCallDetails.Description);
             this.GetAttribute(attributes, "gen_ai.tool.type").Should().Be(toolCallDetails.ToolType);
+            this.GetAttribute(attributes, "gen_ai.tool.server.name").Should().Be(toolCallDetails.ToolServerName);
             this.GetAttribute(attributes, "server.address").Should().Be(endpoint.Host);
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
