@@ -1,5 +1,7 @@
-﻿// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
+﻿// ------------------------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// ------------------------------------------------------------------------------
+
 namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -32,17 +34,30 @@ public static class BuilderExtensions
     /// </summary>
     /// <param name="builder">The builder to configure.</param>
     /// <param name="enableRelatedSources">If true, enables Agent Framework activity source tracing for OpenTelemetry.</param>
+    /// <param name="additionalSources">Optional additional activity source names to include in tracing.</param>
     /// <returns>The configured builder for method chaining.</returns>
-    public static Builder WithAgentFramework(this Builder builder, bool enableRelatedSources = true)
+    public static Builder WithAgentFramework(this Builder builder, bool enableRelatedSources = true, params string[] additionalSources)
     {
         if (enableRelatedSources)
         {
             var telmConfig = builder.Services.AddOpenTelemetry()
-                .WithTracing(tracing => tracing
-                    .AddSource(AgentFrameworkSource)
-                    .AddSource(AgentFrameworkAgentSource)
-                    .AddSource(AgentFrameworkChatClientSource)
-                    .AddProcessor(new AgentFrameworkSpanProcessor()));
+                .WithTracing(tracing =>
+                {
+                    tracing
+                        .AddSource(AgentFrameworkSource)
+                        .AddSource(AgentFrameworkAgentSource)
+                        .AddSource(AgentFrameworkChatClientSource)
+                        .AddProcessor(new AgentFrameworkSpanProcessor(additionalSources));
+
+                    // Add any custom sources provided by the caller
+                    foreach (var source in additionalSources)
+                    {
+                        if (!string.IsNullOrWhiteSpace(source))
+                        {
+                            tracing.AddSource(source);
+                        }
+                    }
+                });
 
             if (builder.Configuration != null
                 && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
