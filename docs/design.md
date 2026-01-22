@@ -11,7 +11,9 @@ The Microsoft Agent 365 SDK for .NET is an enterprise-grade extension framework 
 - **Runtime**: Core utilities for multi-tenant agent applications
 - **Tooling**: MCP (Model Context Protocol) server integration for tool discovery and registration
 
-**Target Framework**: .NET 8.0 (with some components targeting netstandard2.0)
+**Target Frameworks**:
+- Most packages: `net8.0`
+- Observability Runtime and Hosting packages: `netstandard2.0` (for broader compatibility)
 
 ## Repository Structure
 
@@ -340,8 +342,9 @@ Tests are organized by package in the `src/Tests/` directory:
 
 ```
 src/Tests/
-├── Microsoft.Agents.A365.Runtime.Tests/
+├── Runtime.Tests/
 ├── Microsoft.Agents.A365.Observability.Runtime.Tests/
+├── Microsoft.Agents.A365.Observability.Runtime.IntegrationTests/
 ├── Microsoft.Agents.A365.Observability.Hosting.Tests/
 ├── Microsoft.Agents.A365.Observability.Extension.Tests/
 ├── Microsoft.Agents.A365.Notifications.Tests/
@@ -367,7 +370,7 @@ dotnet test
 ### Building
 
 ```bash
-dotnet build Microsoft.Agents.A365.Sdk.sln
+dotnet build src/Microsoft.Agents.A365.Sdk.sln
 ```
 
 ### Package Management
@@ -381,7 +384,7 @@ The solution uses centralized package management via `Directory.Packages.props`.
 | `Microsoft.Agents.Builder` | 1.3.163-beta | Core Agents SDK |
 | `OpenTelemetry` | 1.11.2 | Distributed tracing |
 | `Microsoft.SemanticKernel` | 1.65.0 | Semantic Kernel orchestration |
-| `Microsoft.Agents.AI` | 1.0.0-preview | Agent Framework |
+| `Microsoft.Agents.AI` | 1.0.0-preview.251016.1 | Agent Framework |
 | `ModelContextProtocol.Core` | 0.2.0-preview.3 | MCP client SDK |
 | `Azure.AI.Agents.Persistent` | 1.2.0-beta.4 | Azure AI Foundry |
 

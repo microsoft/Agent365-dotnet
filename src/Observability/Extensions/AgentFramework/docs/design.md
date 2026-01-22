@@ -32,11 +32,67 @@ new Builder(services, configuration)
     .WithAgentFramework()
     .Build();
 
+// Without related sources (manual configuration)
+new Builder(services, configuration)
+    .WithAgentFramework(enableRelatedSources: false)
+    .Build();
+
 // With additional activity sources
 new Builder(services, configuration)
-    .WithAgentFramework("Custom.Source.Name", "Another.Source")
+    .WithAgentFramework(true, "Custom.Source.Name", "Another.Source")
     .Build();
 ```
+
+**Implementation:**
+
+```csharp
+public static Builder WithAgentFramework(this Builder builder, bool enableRelatedSources = true, params string[] additionalSources)
+{
+    if (enableRelatedSources)
+    {
+        var telmConfig = builder.Services.AddOpenTelemetry()
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddSource(AgentFrameworkSource)
+                    .AddSource(AgentFrameworkAgentSource)
+                    .AddSource(AgentFrameworkChatClientSource)
+                    .AddProcessor(new AgentFrameworkSpanProcessor(additionalSources));
+
+                // Add any custom sources provided by the caller
+                foreach (var source in additionalSources)
+                {
+                    if (!string.IsNullOrWhiteSpace(source))
+                    {
+                        tracing.AddSource(source);
+                    }
+                }
+            });
+
+        if (builder.Configuration != null
+            && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+            && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
+        {
+            telmConfig.UseOtlpExporter();
+        }
+    }
+
+    return builder;
+}
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enableRelatedSources` | `bool` | `true` | Enable OpenTelemetry for Agent Framework and add related sources |
+| `additionalSources` | `string[]` | `[]` | Additional activity source names to track |
+
+**Configuration:**
+
+| Key | Description |
+|-----|-------------|
+| `EnableOtlpExporter` | Set to `true` to enable OTLP exporter |
 
 **Tracked Activity Sources:**
 - `Experimental.Microsoft.Agents.AI`
@@ -127,21 +183,36 @@ The package extends the core `Builder` through extension methods:
 public static class BuilderExtensions
 {
     public const string AgentFrameworkSource = "Experimental.Microsoft.Agents.AI";
+    public const string AgentFrameworkAgentSource = "Experimental.Microsoft.Agents.AI.Agent";
+    public const string AgentFrameworkChatClientSource = "Experimental.Microsoft.Agents.AI.ChatClient";
 
     public static Builder WithAgentFramework(
         this Builder builder,
+        bool enableRelatedSources = true,
         params string[] additionalSources)
     {
-        // Add activity sources
-        builder.AddSource(AgentFrameworkSource);
-        builder.AddSource($"{AgentFrameworkSource}.Agent");
-        builder.AddSource($"{AgentFrameworkSource}.ChatClient");
+        if (enableRelatedSources)
+        {
+            var telmConfig = builder.Services.AddOpenTelemetry()
+                .WithTracing(tracing =>
+                {
+                    tracing
+                        .AddSource(AgentFrameworkSource)
+                        .AddSource(AgentFrameworkAgentSource)
+                        .AddSource(AgentFrameworkChatClientSource)
+                        .AddProcessor(new AgentFrameworkSpanProcessor(additionalSources));
 
-        foreach (var source in additionalSources)
-            builder.AddSource(source);
+                    foreach (var source in additionalSources)
+                    {
+                        if (!string.IsNullOrWhiteSpace(source))
+                            tracing.AddSource(source);
+                    }
+                });
 
-        // Add span processor
-        builder.AddProcessor(new AgentFrameworkSpanProcessor(additionalSources));
+            // Optional OTLP exporter
+            if (builder.Configuration?["EnableOtlpExporter"] == "true")
+                telmConfig.UseOtlpExporter();
+        }
 
         return builder;
     }

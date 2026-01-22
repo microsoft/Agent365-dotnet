@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `Microsoft.Agents.A365.Observability.Extensions.OpenAI` package provides OpenTelemetry tracing integration for the Azure OpenAI SDK. It includes a span processor that intercepts OpenAI API telemetry and extension methods for working with tool calls.
+The `Microsoft.Agents.A365.Observability.Extensions.OpenAI` package provides OpenTelemetry tracing integration for the OpenAI SDK. It includes a span processor that intercepts OpenAI API telemetry and extension methods for working with tool calls.
 
 ## Architecture
 
@@ -29,36 +29,72 @@ Provides the `WithOpenAI()` extension method for the observability `Builder`.
 new Builder(services, configuration)
     .WithOpenAI()
     .Build();
+
+// Without related sources (manual configuration)
+new Builder(services, configuration)
+    .WithOpenAI(enableRelatedSources: false)
+    .Build();
 ```
+
+**Implementation:**
+
+```csharp
+public static Builder WithOpenAI(this Builder builder, bool enableRelatedSources = true)
+{
+    if (enableRelatedSources)
+    {
+        AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
+        builder.Services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddSource(OpenAITelemetryConstants.OpenAISourceWildcard)
+                .AddProcessor(new OpenAISpanProcessor()));
+    }
+
+    return builder;
+}
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enableRelatedSources` | `bool` | `true` | Enable OpenTelemetry for OpenAI SDK and add related sources |
 
 ### OpenAISpanProcessor
 
 **Source**: [OpenAISpanProcessor.cs](../OpenAISpanProcessor.cs)
 
-A `BaseProcessor<Activity>` that processes spans from the Azure OpenAI SDK activity source.
+A `BaseProcessor<Activity>` that processes spans from the OpenAI SDK activity source (`OpenAI.*`).
 
 **Processed Operations:**
-- Chat completions
-- Embeddings
-- Other OpenAI API calls
+- `chat` - Chat completions
 
 ```csharp
 internal class OpenAISpanProcessor : BaseProcessor<Activity>
 {
-    public override void OnEnd(Activity activity)
+    private static readonly string TargetSourceName = OpenAITelemetryConstants.OpenAISource;
+
+    public override void OnStart(Activity activity)
     {
-        if (IsOpenAISource(activity.Source.Name))
-        {
-            // Process OpenAI-specific span attributes
-            ProcessOpenAISpan(activity);
-        }
     }
 
-    private void ProcessOpenAISpan(Activity activity)
+    public override void OnEnd(Activity activity)
     {
-        // Normalize tag names to Agent365 schema
-        // Extract token usage
-        // Process response data
+        if (activity.Source.Name.StartsWith(TargetSourceName))
+        {
+            var tags = activity.Tags.ToDictionary(kv => kv.Key, kv => kv.Value);
+            if (tags.TryGetValue(OpenTelemetryConstants.GenAiOperationNameKey, out var operationName))
+            {
+                switch (operationName)
+                {
+                    case OpenAITelemetryConstants.ChatOperation:
+                        // Span emitted by OpenAI SDK follows Microsoft Agent 365 schema,
+                        // so no modification needed.
+                        // Placeholder for any plumbing if needed in the future.
+                        break;
+                }
+            }
+        }
     }
 }
 ```
@@ -96,14 +132,12 @@ Constants for OpenAI telemetry integration.
 ```csharp
 internal static class OpenAITelemetryConstants
 {
-    public const string OpenAISource = "Azure.AI.OpenAI";
-    public const string ChatCompletionsOperation = "chat.completions";
-    public const string EmbeddingsOperation = "embeddings";
+    // Operation Names
+    public const string ChatOperation = "chat";
 
-    // OpenAI-specific tag keys
-    public const string ModelKey = "gen_ai.request.model";
-    public const string PromptTokensKey = "gen_ai.usage.prompt_tokens";
-    public const string CompletionTokensKey = "gen_ai.usage.completion_tokens";
+    // Activity Source Names
+    public const string OpenAISource = "OpenAI";
+    public const string OpenAISourceWildcard = "OpenAI.*";
 }
 ```
 
@@ -111,15 +145,24 @@ internal static class OpenAITelemetryConstants
 
 ### Extension Pattern
 
-The package extends the core `Builder`:
+The package extends the core `Builder` and enables OpenTelemetry for the OpenAI SDK:
 
 ```csharp
 public static class BuilderExtensions
 {
-    public static Builder WithOpenAI(this Builder builder)
+    public static Builder WithOpenAI(this Builder builder, bool enableRelatedSources = true)
     {
-        builder.AddSource(OpenAITelemetryConstants.OpenAISource);
-        builder.AddProcessor(new OpenAISpanProcessor());
+        if (enableRelatedSources)
+        {
+            // Enable OpenAI SDK's experimental OpenTelemetry support
+            AppContext.SetSwitch("OpenAI.Experimental.EnableOpenTelemetry", true);
+
+            builder.Services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing
+                    .AddSource(OpenAITelemetryConstants.OpenAISourceWildcard)
+                    .AddProcessor(new OpenAISpanProcessor()));
+        }
+
         return builder;
     }
 }
@@ -127,28 +170,17 @@ public static class BuilderExtensions
 
 ### Span Processor Pattern
 
-Processes spans from Azure OpenAI SDK:
+The processor monitors OpenAI spans and can enrich them if needed:
 
 ```csharp
 internal class OpenAISpanProcessor : BaseProcessor<Activity>
 {
     public override void OnEnd(Activity activity)
     {
-        if (activity.Source.Name.StartsWith(OpenAISource))
+        if (activity.Source.Name.StartsWith("OpenAI"))
         {
-            // Enrich with standard attributes
-            NormalizeTokenUsage(activity);
-            ProcessModelInformation(activity);
-        }
-    }
-
-    private void NormalizeTokenUsage(Activity activity)
-    {
-        // Map OpenAI token counts to standard keys
-        var promptTokens = activity.GetTagItem("prompt_tokens");
-        if (promptTokens != null)
-        {
-            activity.SetTag(GenAiUsageInputTokensKey, promptTokens);
+            // OpenAI SDK already follows Agent365 schema
+            // Processor provides extension point for future modifications
         }
     }
 }

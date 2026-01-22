@@ -34,7 +34,7 @@ dotnet test src/Microsoft.Agents.A365.Sdk.sln
 ./build/build.ps1 -Test
 
 # Run tests for a specific project
-dotnet test src/Tests/Microsoft.Agents.A365.Runtime.Tests/Microsoft.Agents.A365.Runtime.Tests.csproj
+dotnet test src/Tests/Runtime.Tests/Microsoft.Agents.A365.Runtime.Tests.csproj
 ```
 
 ### Package Management
@@ -154,7 +154,7 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 | Package | Version | Purpose |
 |---------|---------|---------|
 | `Microsoft.Agents.Builder` | 1.3.163-beta | Core Agents SDK |
-| `Microsoft.Agents.AI` | 1.0.0-preview | Agent Framework |
+| `Microsoft.Agents.AI` | 1.0.0-preview.251016.1 | Agent Framework |
 | `OpenTelemetry` | 1.11.2 | Distributed tracing foundation |
 | `Microsoft.SemanticKernel` | 1.65.0 | Semantic Kernel orchestration |
 | `Azure.AI.OpenAI` | 2.3.0-beta.2 | Azure OpenAI SDK |

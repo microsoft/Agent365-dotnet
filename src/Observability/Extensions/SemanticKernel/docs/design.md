@@ -36,7 +36,52 @@ Provides the `WithSemanticKernel()` extension method for the observability `Buil
 new Builder(services, configuration)
     .WithSemanticKernel()
     .Build();
+
+// Without related sources (manual configuration)
+new Builder(services, configuration)
+    .WithSemanticKernel(enableRelatedSources: false)
+    .Build();
 ```
+
+**Implementation:**
+
+```csharp
+public static Builder WithSemanticKernel(this Builder builder, bool enableRelatedSources = true)
+{
+    builder.Services.AddSingleton<IFunctionInvocationFilter, FunctionInvocationFilter>();
+
+    if (enableRelatedSources)
+    {
+        AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
+
+        var telmConfig = builder.Services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
+                .AddProcessor(new SemanticKernelSpanProcessor(builder.Configuration)));
+
+        if (builder.Configuration != null
+            && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+            && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
+        {
+            telmConfig.UseOtlpExporter();
+        }
+    }
+
+    return builder;
+}
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enableRelatedSources` | `bool` | `true` | Enable OpenTelemetry for Semantic Kernel and add related sources |
+
+**Configuration:**
+
+| Key | Description |
+|-----|-------------|
+| `EnableOtlpExporter` | Set to `true` to enable OTLP exporter |
 
 ### SemanticKernelSpanProcessor
 
@@ -50,7 +95,7 @@ A `BaseProcessor<Activity>` that processes spans from the Semantic Kernel activi
 |-----------|------------|
 | `invoke_agent` | Processes input/output tags, optionally suppresses input |
 | `execute_tool` | No modification (SK follows Agent365 schema) |
-| `chat_completions` | Transforms to `chat`, extracts user/choice messages |
+| `chat.completions` | Transforms to `chat`, extracts user/choice messages |
 
 ```csharp
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
@@ -75,10 +120,10 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                     ProcessInvocationInputOutputTag(activity, _suppressInvokeAgentInput);
                     break;
 
-                case "chat_completions":
+                case "chat.completions":
                     // Transform to standard "chat" operation
                     activity.SetTag(GenAiOperationNameKey, "Chat");
-                    activity.DisplayName = activity.DisplayName.Replace("chat_completions", "Chat");
+                    activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
 
                     // Extract user and choice messages from events
                     var messages = GetGenAiUserAndChoiceMessageContent(activity);
@@ -139,10 +184,17 @@ Constants for Semantic Kernel telemetry integration.
 ```csharp
 internal static class SemanticKernelTelemetryConstants
 {
-    public const string SemanticKernelSource = "Microsoft.SemanticKernel";
+    // Operation Names
     public const string InvokeAgentOperation = "invoke_agent";
     public const string ExecuteToolOperation = "execute_tool";
-    public const string ChatCompletionsOperation = "chat_completions";
+    public const string ChatCompletionsOperation = "chat.completions";
+
+    // Activity Source Names
+    public const string SemanticKernelSource = "Microsoft.SemanticKernel";
+    public const string SemanticKernelSourceWildcard = "Microsoft.SemanticKernel*";
+    public const string AzureAISourceWildcard = "Azure.AI.*";
+
+    // Configuration Keys
     public const string SuppressInvokeAgentInputConfigKey = "SuppressInvokeAgentInput";
 }
 ```
@@ -177,15 +229,32 @@ internal static class SemanticKernelSpanProcessorHelper
 
 ### Extension Pattern
 
-The package extends the core `Builder`:
+The package extends the core `Builder` and registers the function invocation filter:
 
 ```csharp
 public static class BuilderExtensions
 {
-    public static Builder WithSemanticKernel(this Builder builder)
+    public static Builder WithSemanticKernel(this Builder builder, bool enableRelatedSources = true)
     {
-        builder.AddSource(SemanticKernelTelemetryConstants.SemanticKernelSource);
-        builder.AddProcessor(new SemanticKernelSpanProcessor(builder.Configuration));
+        builder.Services.AddSingleton<IFunctionInvocationFilter, FunctionInvocationFilter>();
+
+        if (enableRelatedSources)
+        {
+            AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
+
+            var telmConfig = builder.Services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing
+                    .AddSource(SemanticKernelTelemetryConstants.SemanticKernelSourceWildcard)
+                    .AddProcessor(new SemanticKernelSpanProcessor(builder.Configuration)));
+
+            if (builder.Configuration != null
+                && !string.IsNullOrEmpty(builder.Configuration["EnableOtlpExporter"])
+                && bool.TryParse(builder.Configuration["EnableOtlpExporter"], out bool enabled) && enabled)
+            {
+                telmConfig.UseOtlpExporter();
+            }
+        }
+
         return builder;
     }
 }
@@ -218,10 +287,10 @@ public class FunctionInvocationFilter : IFunctionInvocationFilter
 Transforms Semantic Kernel spans to Agent365 schema:
 
 ```csharp
-// SK emits: gen_ai.operation.name = "chat_completions"
+// SK emits: gen_ai.operation.name = "chat.completions"
 // Transform to: gen_ai.operation.name = "Chat"
 activity.SetTag(GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
-activity.DisplayName = activity.DisplayName.Replace("chat_completions", "Chat");
+activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
 ```
 
 ## Data Flow
@@ -241,7 +310,7 @@ activity.DisplayName = activity.DisplayName.Replace("chat_completions", "Chat");
 │                             │
 │ Creates Activity/Span       │
 │ with SK-specific tags       │
-│ - chat_completions          │
+│ - chat.completions          │
 │ - invoke_agent              │
 │ - execute_tool              │
 └──────────────┬──────────────┘
@@ -253,7 +322,7 @@ activity.DisplayName = activity.DisplayName.Replace("chat_completions", "Chat");
 │ 1. Check if SK source       │
 │ 2. Get operation name       │
 │ 3. Transform:               │
-│    - chat_completions→Chat  │
+│    - chat.completions→Chat  │
 │    - Extract user/choice    │
 │    - Process input/output   │
 └──────────────┬──────────────┘
@@ -269,11 +338,11 @@ activity.DisplayName = activity.DisplayName.Replace("chat_completions", "Chat");
 
 ## Span Attribute Mapping
 
-### chat_completions Operation
+### chat.completions Operation
 
 | Source | Target |
 |--------|--------|
-| `gen_ai.operation.name = "chat_completions"` | `gen_ai.operation.name = "Chat"` |
+| `gen_ai.operation.name = "chat.completions"` | `gen_ai.operation.name = "Chat"` |
 | `gen_ai.user` events | `gen_ai.input_messages` |
 | `gen_ai.choice` events | `gen_ai.output_messages` |
 
