@@ -270,31 +270,42 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         cancellationToken.ThrowIfCancellationRequested();
 
         // Convert PersistentThreadMessage[] to ChatHistoryMessage[]
-        var chatHistoryMessages = messages.Select(message =>
-        {
-            // Validate message properties
-            if (message.Id == null)
+        var chatHistoryMessages = messages
+            .Where(message =>
             {
-                throw new InvalidOperationException("PersistentThreadMessage.Id cannot be null");
-            }
-            if (message.Role == null)
+                // Validate message properties and skip invalid messages
+                if (message == null)
+                {
+                    _logger.LogWarning("Skipping null message");
+                    return false;
+                }
+                if (message.Id == null)
+                {
+                    _logger.LogWarning("Skipping message with null Id");
+                    return false;
+                }
+                if (message.Role == null)
+                {
+                    _logger.LogWarning("Skipping message with null Role (Id: {MessageId})", message.Id);
+                    return false;
+                }
+                return true;
+            })
+            .Select(message =>
             {
-                throw new InvalidOperationException("PersistentThreadMessage.Role cannot be null");
-            }
-            
-            // Extract text content from ContentItems
-            var content = ExtractContentFromMessage(message);
-            
-            // CreatedAt is already a DateTimeOffset in Azure.AI.Agents.Persistent
-            var timestamp = message.CreatedAt;
-            
-            return new ChatHistoryMessage(
-                id: message.Id,
-                role: message.Role.ToString().ToLowerInvariant(),
-                content: content,
-                timestamp: timestamp
-            );
-        }).ToArray();
+                // Extract text content from ContentItems
+                var content = ExtractContentFromMessage(message);
+                
+                // CreatedAt is already a DateTimeOffset in Azure.AI.Agents.Persistent
+                var timestamp = message.CreatedAt;
+                
+                return new ChatHistoryMessage(
+                    id: message.Id,
+                    role: message.Role.ToString().ToLowerInvariant(),
+                    content: content,
+                    timestamp: timestamp
+                );
+            }).ToArray();
 
         return await _mcpServerConfigurationService.SendChatHistoryAsync(
             turnContext,
