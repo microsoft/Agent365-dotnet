@@ -13,6 +13,9 @@
     <PackageTags>Microsoft;Agent365;A365;Tooling;MCP;AI;Agents</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
     <!-- Source Link Support -->

@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         private const string ChannelIdHeader = "x-ms-channel-id";
         private const string SubChannelIdHeader = "x-ms-subchannel-id";
         private const string UserMessageHeader = "x-ms-usermessage";
+        private const string MessageIdHeader = "x-ms-message-id";
         private const string O11ySpanIdHeader = "x-ms-span-id";
         private const string O11yTraceIdHeader = "x-ms-trace-id";
         private const string UserAgentHeader = "User-Agent";
@@ -44,6 +45,16 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         {
             if (turnContext?.Activity != null)
             {
+                // Add message ID header for request correlation
+                if (!string.IsNullOrEmpty(turnContext.Activity.Id))
+                {
+                    request.Headers.Add(MessageIdHeader, turnContext.Activity.Id);
+                }
+                else
+                {
+                    logger?.LogWarning("Activity does not contain a message ID. MCP request will be sent without x-ms-message-id header.");
+                }
+
                 if (!string.IsNullOrEmpty(turnContext.Activity.Conversation.Id))
                 {
                     request.Headers.Add(ConversationIdHeader, turnContext.Activity.Conversation.Id);
@@ -61,7 +72,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
 
                 if (!string.IsNullOrEmpty(turnContext.Activity.Text))
                 {
-                    var sanitizedMessage = SanitizeTextForHeader(turnContext.Activity.Text, logger);
+                    var sanitizedMessage = SanitizeTextForHeader(turnContext.Activity.Text, logger!);
                     request.Headers.Add(UserMessageHeader, sanitizedMessage);
                 }
             }
