@@ -73,14 +73,117 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             foreach (var server in servers)
             {
-                var pluginName = $"{server.mcpServerName}";
+                // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
+                var pluginName = SanitizePluginName(server.mcpServerName);
+                _logger.LogInformation("Registering plugin '{PluginName}' (from server '{ServerName}')", pluginName, server.mcpServerName);
+
                 var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
+                var originalCount = listAvailableToolsForServer.Count;
+
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
+
+                if (listAvailableToolsForServer.Count < originalCount)
+                {
+                    _logger.LogWarning("Filtered out {FilteredCount} tools from '{PluginName}' because name length exceeded 64 characters (plugin name length: {PluginNameLength})",
+                        originalCount - listAvailableToolsForServer.Count, pluginName, pluginName.Length);
+                }
+
+                _logger.LogInformation("Adding {ToolCount} tools to plugin '{PluginName}'", listAvailableToolsForServer.Count, pluginName);
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
                 kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             }
+        }
+
+        /// <summary>
+        /// Maximum plugin name length to allow room for tool names within the 64-character limit.
+        /// </summary>
+        private const int MaxPluginNameLength = 30;
+
+        /// <summary>
+        /// Sanitizes a server name to be a valid Semantic Kernel plugin name.
+        /// Plugin names can only contain ASCII letters, digits, and underscores.
+        /// The result is truncated to MaxPluginNameLength to ensure tools fit within the 64-character limit.
+        /// </summary>
+        private static string SanitizePluginName(string serverName)
+        {
+            if (string.IsNullOrEmpty(serverName))
+            {
+                return "UnnamedPlugin";
+            }
+
+            // For very long server names (like Windows MCP server IDs), extract the meaningful part
+            // e.g., "MicrosoftWindows.Client.Core_cw5n1h2txyewy_com.microsoft.windows.ai.mcpServer_file-mcp-server"
+            // should become "file_mcp_server" or similar
+            var simplifiedName = ExtractMeaningfulName(serverName);
+
+            // Replace dots, hyphens, and other invalid characters with underscores
+            var sanitized = new System.Text.StringBuilder(simplifiedName.Length);
+            foreach (var c in simplifiedName)
+            {
+                if (char.IsLetterOrDigit(c) && c < 128) // ASCII letters and digits
+                {
+                    sanitized.Append(c);
+                }
+                else if (c == '_')
+                {
+                    sanitized.Append(c);
+                }
+                else
+                {
+                    sanitized.Append('_');
+                }
+            }
+
+            var result = sanitized.ToString();
+
+            // Ensure it doesn't start with a digit
+            if (result.Length > 0 && char.IsDigit(result[0]))
+            {
+                result = "_" + result;
+            }
+
+            // Truncate if still too long
+            if (result.Length > MaxPluginNameLength)
+            {
+                result = result.Substring(0, MaxPluginNameLength);
+            }
+
+            return string.IsNullOrEmpty(result) ? "UnnamedPlugin" : result;
+        }
+
+        /// <summary>
+        /// Extracts a meaningful short name from a long server identifier.
+        /// Handles Windows MCP server IDs like "MicrosoftWindows.Client.Core_cw5n1h2txyewy_com.microsoft.windows.ai.mcpServer_file-mcp-server"
+        /// </summary>
+        private static string ExtractMeaningfulName(string serverName)
+        {
+            // For Windows MCP server IDs, the meaningful part is usually after the last underscore
+            // e.g., "..._file-mcp-server" -> "file-mcp-server"
+            if (serverName.Contains("mcpServer_", StringComparison.OrdinalIgnoreCase))
+            {
+                var lastUnderscoreIndex = serverName.LastIndexOf('_');
+                if (lastUnderscoreIndex > 0 && lastUnderscoreIndex < serverName.Length - 1)
+                {
+                    return serverName.Substring(lastUnderscoreIndex + 1);
+                }
+            }
+
+            // If it looks like a package family name with underscores, try to extract the last part
+            var underscoreParts = serverName.Split('_');
+            if (underscoreParts.Length > 1)
+            {
+                var lastPart = underscoreParts[underscoreParts.Length - 1];
+                // If the last part is meaningful (not a hash or short ID), use it
+                if (lastPart.Length >= 4 && !string.IsNullOrWhiteSpace(lastPart))
+                {
+                    return lastPart;
+                }
+            }
+
+            // For names like "mcp_MailTools" or similar, return as-is
+            return serverName;
         }
 
         /// <inheritdoc />

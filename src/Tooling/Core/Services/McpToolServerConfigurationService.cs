@@ -15,6 +15,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Handlers;
     using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Transports;
     using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Configuration;
@@ -55,9 +56,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        public Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+            // Always read from the local manifest file for now
+            // This allows local MCP servers (with WNS transport) to be configured alongside cloud servers
+            return Task.FromResult(GetMCPServersFromManifest());
         }
 
         /// <inheritdoc/>
@@ -75,10 +78,26 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     throw new ArgumentException("MCP Server name cannot be null or empty", nameof(mCPServerConfig.mcpServerName));
                 }
 
-                this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
+                this._logger.LogInformation($"Creating MCP client for: {mCPServerConfig.mcpServerName} (transport: {mCPServerConfig.transportType})");
 
-                // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
+                IMcpClient mcpClient;
+
+                // Create appropriate client based on transport type
+                switch (mCPServerConfig.transportType)
+                {
+                    case McpTransportType.Wns:
+                        mcpClient = await CreateWnsMcpClientAsync(mCPServerConfig);
+                        break;
+
+                    case McpTransportType.WebSocket:
+                        throw new NotSupportedException("WebSocket transport is not yet implemented");
+
+                    case McpTransportType.Sse:
+                    default:
+                        mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
+                        break;
+                }
+
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -341,14 +360,35 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     publisher = publisherElement.GetString();
                 }
 
+                // Parse transport type
+                McpTransportType transportType = McpTransportType.Sse;
+                if (serverElement.TryGetProperty("transportType", out var transportTypeElement) &&
+                    transportTypeElement.ValueKind == JsonValueKind.String)
+                {
+                    var transportTypeStr = transportTypeElement.GetString();
+                    if (!string.IsNullOrEmpty(transportTypeStr) &&
+                        Enum.TryParse<McpTransportType>(transportTypeStr, ignoreCase: true, out var parsedType))
+                    {
+                        transportType = parsedType;
+                    }
+                }
+
+                // Parse WNS config if present
+                WnsTransportConfig? wnsConfig = null;
+                if (serverElement.TryGetProperty("wnsConfig", out var wnsConfigElement) &&
+                    wnsConfigElement.ValueKind == JsonValueKind.Object)
+                {
+                    wnsConfig = ParseWnsConfig(wnsConfigElement);
+                }
+
                 // Both Name and ServerName are required
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     return null;
                 }
 
-                // Construct full URL if not provided in manifest
-                var fullUrl = endpoint ?? Utility.BuildMcpServerUrl(name, this._configuration);
+                // Construct full URL if not provided in manifest (not required for WNS transport)
+                var fullUrl = endpoint ?? (transportType == McpTransportType.Wns ? string.Empty : Utility.BuildMcpServerUrl(name, this._configuration));
 
                 return new MCPServerConfig
                 {
@@ -357,7 +397,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     id = id ?? string.Empty,
                     scope = scope ?? string.Empty,
                     audience = audience ?? string.Empty,
-                    publisher = publisher ?? string.Empty
+                    publisher = publisher ?? string.Empty,
+                    transportType = transportType,
+                    wnsConfig = wnsConfig
                 };
             }
             catch (Exception)
@@ -365,6 +407,63 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 // Return null if parsing fails for this individual server
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Parses WNS configuration from a JSON element.
+        /// </summary>
+        private WnsTransportConfig? ParseWnsConfig(JsonElement wnsConfigElement)
+        {
+            string? clientName = null;
+            string? proxyBaseUrl = null;
+            string? channelUri = null;
+            string? localServerId = null;
+            int connectionTimeoutSeconds = 30;
+
+            if (wnsConfigElement.TryGetProperty("clientName", out var clientNameElement) &&
+                clientNameElement.ValueKind == JsonValueKind.String)
+            {
+                clientName = clientNameElement.GetString();
+            }
+
+            if (wnsConfigElement.TryGetProperty("proxyBaseUrl", out var proxyBaseUrlElement) &&
+                proxyBaseUrlElement.ValueKind == JsonValueKind.String)
+            {
+                proxyBaseUrl = proxyBaseUrlElement.GetString();
+            }
+
+            if (wnsConfigElement.TryGetProperty("channelUri", out var channelUriElement) &&
+                channelUriElement.ValueKind == JsonValueKind.String)
+            {
+                channelUri = channelUriElement.GetString();
+            }
+
+            if (wnsConfigElement.TryGetProperty("localServerId", out var localServerIdElement) &&
+                localServerIdElement.ValueKind == JsonValueKind.String)
+            {
+                localServerId = localServerIdElement.GetString();
+            }
+
+            if (wnsConfigElement.TryGetProperty("connectionTimeoutSeconds", out var timeoutElement) &&
+                timeoutElement.ValueKind == JsonValueKind.Number)
+            {
+                connectionTimeoutSeconds = timeoutElement.GetInt32();
+            }
+
+            // Client name is required for WNS config
+            if (string.IsNullOrWhiteSpace(clientName))
+            {
+                return null;
+            }
+
+            return new WnsTransportConfig
+            {
+                clientName = clientName,
+                proxyBaseUrl = proxyBaseUrl,
+                channelUri = channelUri,
+                localServerId = localServerId,
+                connectionTimeoutSeconds = connectionTimeoutSeconds
+            };
         }
 
         /// <summary>
@@ -512,6 +611,52 @@ namespace Microsoft.Agents.A365.Tooling.Services
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to create MCP client for endpoint '{endpoint}': {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates a WNS-based MCP client for communicating with local Windows desktop MCP servers.
+        /// </summary>
+        /// <param name="serverConfig">The MCP server configuration containing WNS settings.</param>
+        /// <returns>An IMcpClient that communicates via WNS.</returns>
+        private async Task<IMcpClient> CreateWnsMcpClientAsync(MCPServerConfig serverConfig)
+        {
+            // Validate WNS configuration
+            var wnsConfig = serverConfig.wnsConfig
+                ?? throw new ArgumentException("WNS configuration is required for WNS transport. Set wnsConfig in the server configuration.", nameof(serverConfig));
+
+            if (string.IsNullOrWhiteSpace(wnsConfig.clientName))
+            {
+                throw new ArgumentException("WNS client name is required for WNS transport", nameof(serverConfig));
+            }
+
+            // The proxy base URL should be set in WNS config or fall back to server URL
+            var proxyBaseUrl = wnsConfig.proxyBaseUrl ?? serverConfig.url
+                ?? throw new InvalidOperationException("WNS proxy base URL is required. Set proxyBaseUrl in wnsConfig or url in server config.");
+
+            this._logger.LogInformation($"Creating WNS MCP client for: {serverConfig.mcpServerName} (client: {wnsConfig.clientName})");
+
+            var transportOptions = new WnsClientTransportOptions
+            {
+                ClientName = wnsConfig.clientName,
+                ProxyBaseUrl = proxyBaseUrl,
+                ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
+                LocalServerId = wnsConfig.localServerId
+            };
+
+            // Create HTTP client for WNS proxy communication
+            var httpClient = this._httpClientFactory.CreateClient("WnsMcpClient");
+
+            var logger = this._loggerFactory?.CreateLogger<WnsClientTransport>();
+            var wnsTransport = new WnsClientTransport(transportOptions, httpClient, logger);
+
+            try
+            {
+                return await McpClientFactory.CreateAsync(wnsTransport, loggerFactory: this._loggerFactory);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to create WNS MCP client for '{serverConfig.mcpServerName}': {ex.Message}", ex);
             }
         }
 
