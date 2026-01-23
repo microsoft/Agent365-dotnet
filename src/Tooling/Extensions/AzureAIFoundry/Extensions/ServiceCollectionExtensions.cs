@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
+namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Extensions
 {
-    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
     using Microsoft.Agents.A365.Tooling.Services;
-    using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services;
+    using Microsoft.Extensions.DependencyInjection;
 
     /// <summary>
     /// Extension methods for service collection to register MCP services.
@@ -19,12 +19,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
         /// <returns>The service collection for chaining.</returns>
         public static IServiceCollection AddMcpServices(this IServiceCollection services)
         {
-            // Register HttpClient with default configuration
-            services.AddHttpClient();
-            
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
-            
+
             return services;
         }
     }

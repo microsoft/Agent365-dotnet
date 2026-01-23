@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// <summary>
     /// Provides services for managing MCP server configurations.
     /// </summary>
-    public class McpToolServerConfigurationService : IMcpToolServerConfigurationService
+    public partial class McpToolServerConfigurationService : IMcpToolServerConfigurationService
     {
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
@@ -49,19 +49,19 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
         {
             return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions());
         }
 
         /// <inheritdoc/>
-        public async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
             return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
         }
 
         /// <inheritdoc/>
-        public async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
+        public virtual async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
             ITurnContext turnContext,
             MCPServerConfig mCPServerConfig,
             string authToken,

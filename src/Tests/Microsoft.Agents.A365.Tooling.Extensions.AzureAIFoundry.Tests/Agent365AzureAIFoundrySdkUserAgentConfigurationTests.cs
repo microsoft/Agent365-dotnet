@@ -2,10 +2,9 @@
 // Licensed under the MIT License.
 
 using FluentAssertions;
-using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry;
 using Xunit;
 
-namespace Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests
+namespace Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Tests
 {
     /// <summary>
     /// Unit tests for Agent365AzureAIFoundrySdkUserAgentConfiguration class.

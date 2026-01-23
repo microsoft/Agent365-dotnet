@@ -35,17 +35,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="serviceProvider">The service provider for dependency injection.</param>
-    /// <param name="mcpToolServerConfigurationService">The MCP tool server configuration service.</param>
-    /// <param name="configuration">The application configuration.</param>
+    /// <param name="mcpServerConfigurationService">The MCP server configuration service.</param>
+    /// <param name="configuration">The configuration service.</param>
     public McpToolRegistrationService(
         ILogger<IMcpToolRegistrationService> logger,
         IServiceProvider serviceProvider,
-        IMcpToolServerConfigurationService mcpToolServerConfigurationService,
+        IMcpToolServerConfigurationService mcpServerConfigurationService,
         IConfiguration configuration)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _mcpServerConfigurationService = mcpToolServerConfigurationService;
+        _mcpServerConfigurationService = mcpServerConfigurationService;
         _configuration = configuration;
     }
 
@@ -102,7 +102,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken == null)
+        if (authToken is null)
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
@@ -146,16 +146,12 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
         };
 
-        List<MCPServerConfig> servers;
-        try
-        {
-            servers = await _mcpServerConfigurationService.ListToolServersAsync(agentInstanceId, authToken, toolOptions);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={agentInstanceId}", agentInstanceId);
-            return (new List<MCPToolDefinition>(), null);
-        }
+        // Use the shared enumeration service to get tools from all servers
+        var (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+            agentInstanceId,
+            authToken,
+            turnContext,
+            toolOptions).ConfigureAwait(false);
 
         if (servers.Count == 0)
         {
@@ -165,24 +161,28 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         // Collections we build for the return value
         var toolDefinitions = new List<MCPToolDefinition>();
-        var discoveredTools = new Dictionary<string, IList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
 
         // Initialize combined tool resources early
         ToolResources? combinedToolResources = new ToolResources();
 
-        foreach (var server in servers)
+        // Create a lookup dictionary for faster server config access
+        var serverLookup = servers.ToDictionary(s => s.mcpServerName, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var serverEntry in toolsByServer)
         {
-            // Defensive validation of config object
-            if (string.IsNullOrWhiteSpace(server.mcpServerName) || string.IsNullOrWhiteSpace(server.url))
+            var mcpServerName = serverEntry.Key;
+            var mcpTools = serverEntry.Value;
+
+            if (!serverLookup.TryGetValue(mcpServerName, out var server) || string.IsNullOrWhiteSpace(server.url))
             {
-                _logger.LogWarning("Skipping invalid MCP server config: Name='{Name}', Url='{Url}'", server.mcpServerName, server.url);
+                _logger.LogWarning("Could not find server config for '{ServerName}'", mcpServerName);
                 continue;
             }
 
             // TODO: to remove the "mcp_" prefix handling, after the fix from foundry team is rolled out.
-            var server_label = server.mcpServerName.StartsWith("mcp_", StringComparison.OrdinalIgnoreCase)
-                ? server.mcpServerName.Substring(4)
-                : server.mcpServerName;
+            var server_label = mcpServerName.StartsWith("mcp_", StringComparison.OrdinalIgnoreCase)
+                ? mcpServerName.Substring(4)
+                : mcpServerName;
 
             // Build MCP tool artifacts (definition + resource w/headers) - this is the logic moved from MyAgent.cs
             var toolDef = new MCPToolDefinition(server_label, server.url);
@@ -207,16 +207,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Add directly to combined tool resources
             combinedToolResources.Mcp.Add(resource);
 
-            // Attempt live validation by connecting and listing tools; not used for updating the agentClient directly
-            try
-            {
-                var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions);
-                discoveredTools[server.mcpServerName] = mcpTools;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Validation failed for MCP server {Server} at {Url}", server.mcpServerName, server.url);
-            }
+            _logger.LogInformation(" - {Server}: {ToolCount} MCP tools", mcpServerName, mcpTools.Count);
         }
 
         // Return null if no servers were processed successfully
@@ -225,14 +216,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             combinedToolResources = null;
         }
 
-        // Summarize for caller - keep important summary logs
-        _logger.LogInformation("MCP server discovery summary: Servers={ServerCount}, ToolDefinitions={ToolDefCount}", servers.Count, toolDefinitions.Count);
-        foreach (var kvp in discoveredTools)
-        {
-            _logger.LogInformation(" - {Server}: {ToolCount} MCP tools", kvp.Key, kvp.Value.Count);
-        }
-        _logger.LogInformation("MCP tool definitions and resources prepared: Servers={ServerCount}, ToolDefinitions={ToolDefCount}, ResourceCount={ResourceCount}",
-            servers.Count, toolDefinitions.Count, combinedToolResources?.Mcp.Count ?? 0);
+        _logger.LogInformation("MCP tool definitions and resources prepared: ToolDefinitions={ToolDefCount}, ResourceCount={ResourceCount}",
+            toolDefinitions.Count, combinedToolResources?.Mcp.Count ?? 0);
 
         return (toolDefinitions, combinedToolResources);
     }

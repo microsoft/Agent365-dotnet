@@ -7,17 +7,25 @@ using Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
+using Microsoft.Agents.Builder.App.UserAuth;
+using Microsoft.Agents.Core.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using ModelContextProtocol.Client;
 using Moq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Xunit;
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
 {
     /// <summary>
-    /// Unit tests for McpToolRegistrationService.SendChatHistoryAsync methods.
-    /// Tests parameter validation, chat history conversion, and delegation to underlying service.
+    /// Unit tests for McpToolRegistrationService class.
+    /// Tests parameter validation, chat history conversion, tool registration, and delegation to underlying services.
     /// </summary>
     public class McpToolRegistrationServiceTests
     {
@@ -25,6 +33,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         private readonly Mock<IServiceProvider> _serviceProviderMock;
         private readonly Mock<IMcpToolServerConfigurationService> _mcpServerConfigurationServiceMock;
         private readonly Mock<IConfiguration> _configurationMock;
+        private readonly string _testJwtToken;
 
         public McpToolRegistrationServiceTests()
         {
@@ -32,18 +41,190 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             _serviceProviderMock = new Mock<IServiceProvider>();
             _mcpServerConfigurationServiceMock = new Mock<IMcpToolServerConfigurationService>();
             _configurationMock = new Mock<IConfiguration>();
+
+            // Create a valid JWT token for testing
+            _testJwtToken = CreateTestJwtToken("test-app-id");
         }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Creates a new instance of McpToolRegistrationService with all mocked dependencies.
+        /// </summary>
+        private McpToolRegistrationService CreateService()
+        {
+            return new McpToolRegistrationService(
+                _loggerMock.Object,
+                _serviceProviderMock.Object,
+                _mcpServerConfigurationServiceMock.Object,
+                _configurationMock.Object);
+        }
+
+        /// <summary>
+        /// Creates a valid JWT token with an appid claim for testing purposes.
+        /// </summary>
+        private static string CreateTestJwtToken(string appId)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("test-secret-key-at-least-32-bytes-long"));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim("appid", appId),
+                new Claim("azp", appId)
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: "test-issuer",
+                audience: "test-audience",
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        /// <summary>
+        /// Creates a mock turn context with activity setup.
+        /// </summary>
+        private static Mock<ITurnContext> CreateMockTurnContext()
+        {
+            var mockTurnContext = new Mock<ITurnContext>();
+            var mockActivity = new Mock<IActivity>();
+            var recipient = new ChannelAccount { Id = "test-agent-id" };
+            mockActivity.Setup(a => a.Recipient).Returns(recipient);
+            mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+            return mockTurnContext;
+        }
+
+        /// <summary>
+        /// Sets up the mock enumeration service for a standard test scenario with empty results.
+        /// Note: McpClientTool is a sealed class and cannot be mocked with Moq. Since the SemanticKernel
+        /// service calls AsKernelFunction() on tools, we cannot use placeholder/null tools.
+        /// Empty tool lists still provide value by testing service orchestration, parameter passing,
+        /// and proper handling of the no-tools scenario.
+        /// </summary>
+        private void SetupMocksForEmptyToolEnumeration(Action<ToolOptions>? captureToolOptions = null)
+        {
+            var setup = _mcpServerConfigurationServiceMock
+                .Setup(x => x.EnumerateToolsFromServersAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ToolOptions>()));
+
+            if (captureToolOptions != null)
+            {
+                setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            }
+
+            setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
+        }
+
+        #endregion
+
+        #region AddToolServersToAgentAsync Tests
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_WithNullKernel_ThrowsArgumentNullException()
+        {
+            // Arrange
+            var service = CreateService();
+            var mockTurnContext = CreateMockTurnContext();
+
+            // Act
+            var act = () => service.AddToolServersToAgentAsync(
+                kernel: null!,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: mockTurnContext.Object,
+                authToken: _testJwtToken);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentNullException>()
+                .WithParameterName("kernel");
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_CallsEnumerateToolsFromServersAsync()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var mockTurnContext = CreateMockTurnContext();
+            SetupMocksForEmptyToolEnumeration();
+            var service = CreateService();
+
+            // Act
+            await service.AddToolServersToAgentAsync(
+                kernel: kernel,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: mockTurnContext.Object,
+                authToken: _testJwtToken);
+
+            // Assert
+            _mcpServerConfigurationServiceMock.Verify(
+                x => x.EnumerateToolsFromServersAsync(
+                    It.IsAny<string>(),
+                    _testJwtToken,
+                    mockTurnContext.Object,
+                    It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365SemanticKernelSdkUserAgentConfiguration.Instance)),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_WithNoServers_DoesNotAddPlugins()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var mockTurnContext = CreateMockTurnContext();
+            SetupMocksForEmptyToolEnumeration();
+            var service = CreateService();
+
+            // Act
+            await service.AddToolServersToAgentAsync(
+                kernel: kernel,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: mockTurnContext.Object,
+                authToken: _testJwtToken);
+
+            // Assert
+            kernel.Plugins.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_UsesCorrectUserAgentConfiguration()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var mockTurnContext = CreateMockTurnContext();
+            ToolOptions? capturedToolOptions = null;
+            SetupMocksForEmptyToolEnumeration(options => capturedToolOptions = options);
+            var service = CreateService();
+
+            // Act
+            await service.AddToolServersToAgentAsync(
+                kernel: kernel,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: mockTurnContext.Object,
+                authToken: _testJwtToken);
+
+            // Assert
+            capturedToolOptions.Should().NotBeNull();
+            capturedToolOptions!.UserAgentConfiguration.Should().BeSameAs(Agent365SemanticKernelSdkUserAgentConfiguration.Instance);
+        }
+
+        #endregion
+
+        #region SendChatHistoryAsync Tests
 
         [Fact]
         public async Task SendChatHistoryAsync_ThrowsArgumentNullException_WhenTurnContextIsNull()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
 
@@ -59,12 +240,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_ThrowsArgumentNullException_WhenChatHistoryIsNull()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
 
             // Act
@@ -79,12 +255,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_ThrowsOperationCanceledException_WhenCancellationTokenIsCanceled()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
@@ -103,12 +274,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_WithToolOptions_ThrowsArgumentNullException_WhenTurnContextIsNull()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
             var toolOptions = new ToolOptions();
@@ -125,12 +291,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_WithToolOptions_ThrowsArgumentNullException_WhenChatHistoryIsNull()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var toolOptions = new ToolOptions();
 
@@ -146,12 +307,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_WithToolOptions_ThrowsArgumentNullException_WhenToolOptionsIsNull()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
@@ -168,12 +324,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         public async Task SendChatHistoryAsync_WithToolOptions_ThrowsOperationCanceledException_WhenCancellationTokenIsCanceled()
         {
             // Arrange
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
@@ -201,12 +352,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
@@ -241,12 +387,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 })
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello, how are you?");
@@ -292,12 +433,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 })
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage((string)null!); // Content is null
@@ -326,12 +462,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(expectedResult);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Test message");
@@ -362,12 +493,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 })
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Test");
@@ -394,12 +520,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Hello");
@@ -438,12 +559,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 })
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Message 1");
@@ -481,12 +597,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 })
                 .ReturnsAsync(OperationResult.Success);
 
-            var service = new McpToolRegistrationService(
-                _loggerMock.Object,
-                _serviceProviderMock.Object,
-                _mcpServerConfigurationServiceMock.Object,
-                _configurationMock.Object);
-
+            var service = CreateService();
             var turnContextMock = new Mock<ITurnContext>();
             var chatHistory = new ChatHistory();
             chatHistory.AddUserMessage("Message 1");
@@ -510,5 +621,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 message.Timestamp.Should().BeOnOrBefore(afterCall);
             });
         }
+
+        #endregion
     }
 }

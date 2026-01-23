@@ -1,21 +1,22 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
+    using System;
+    using System.Linq;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Runtime.Authentication;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
     using Microsoft.SemanticKernel.ChatCompletion;
-    using System;
-    using System.Linq;
-    using System.Threading;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
     /// Provides services related to tools in the Semantic Kernel.
@@ -30,17 +31,15 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
         /// </summary>
-        /// <param name="logger">
-        /// Logger instance for logging.
-        /// </param>
-        /// <param name="serviceProvider">
-        /// Service provider.
-        /// </param>
-        /// <param name="mcpServerConfigurationService">
-        /// MCP server configuration service.
-        /// </param>
-        /// <param name="configuration">Configuration Service for the application</param>
-        public McpToolRegistrationService(ILogger<IMcpToolRegistrationService> logger, IServiceProvider serviceProvider, IMcpToolServerConfigurationService mcpServerConfigurationService, IConfiguration configuration)
+        /// <param name="logger">Logger instance for logging.</param>
+        /// <param name="serviceProvider">Service provider.</param>
+        /// <param name="mcpServerConfigurationService">MCP server configuration service.</param>
+        /// <param name="configuration">Configuration Service for the application.</param>
+        public McpToolRegistrationService(
+            ILogger<IMcpToolRegistrationService> logger,
+            IServiceProvider serviceProvider,
+            IMcpToolServerConfigurationService mcpServerConfigurationService,
+            IConfiguration configuration)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
@@ -56,7 +55,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            if (authToken == null)
+            if (authToken is null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
@@ -69,12 +68,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            var servers = await _mcpServerConfigurationService.ListToolServersAsync(agenticAppId, authToken, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
 
-            foreach (var server in servers)
+            foreach (var serverEntry in toolsByServer)
             {
-                var pluginName = $"{server.mcpServerName}";
-                var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
+                var pluginName = serverEntry.Key;
+                var listAvailableToolsForServer = serverEntry.Value;
+
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
