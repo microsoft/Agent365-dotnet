@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Constants = Utils.Constants;
 
@@ -220,5 +222,170 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             toolDefinitions.Count, combinedToolResources?.Mcp.Count ?? 0);
 
         return (toolDefinitions, combinedToolResources);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        PersistentThreadMessage[] messages,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(turnContext);
+        ArgumentNullException.ThrowIfNull(messages);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var toolOptions = new ToolOptions
+        {
+            UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
+        };
+
+        return await SendChatHistoryAsync(turnContext, messages, toolOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        ITurnContext turnContext,
+        PersistentThreadMessage[] messages,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(turnContext);
+        ArgumentNullException.ThrowIfNull(messages);
+        ArgumentNullException.ThrowIfNull(toolOptions);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Convert PersistentThreadMessage[] to ChatHistoryMessage[]
+        var chatHistoryMessages = messages
+            .Where(message =>
+            {
+                // Validate message properties and skip invalid messages
+                if (message == null)
+                {
+                    _logger.LogWarning("Skipping null message");
+                    return false;
+                }
+                if (message.Id == null)
+                {
+                    _logger.LogWarning("Skipping message with null Id");
+                    return false;
+                }
+                if (message.Role == null)
+                {
+                    _logger.LogWarning("Skipping message with null Role (Id: {MessageId})", message.Id);
+                    return false;
+                }
+                return true;
+            })
+            .Select(message =>
+            {
+                // Extract text content from ContentItems
+                var content = ExtractContentFromMessage(message);
+                
+                // CreatedAt is already a DateTimeOffset in Azure.AI.Agents.Persistent
+                var timestamp = message.CreatedAt;
+                
+                return new ChatHistoryMessage(
+                    id: message.Id,
+                    role: message.Role.ToString().ToLowerInvariant(),
+                    content: content,
+                    timestamp: timestamp
+                );
+            }).ToArray();
+
+        return await _mcpServerConfigurationService.SendChatHistoryAsync(
+            turnContext,
+            chatHistoryMessages,
+            toolOptions,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        PersistentAgentsClient agentClient,
+        string threadId,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentClient);
+        ArgumentException.ThrowIfNullOrWhiteSpace(threadId);
+        ArgumentNullException.ThrowIfNull(turnContext);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var toolOptions = new ToolOptions
+        {
+            UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
+        };
+
+        return await SendChatHistoryAsync(agentClient, threadId, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<OperationResult> SendChatHistoryAsync(
+        PersistentAgentsClient agentClient,
+        string threadId,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentClient);
+        ArgumentException.ThrowIfNullOrWhiteSpace(threadId);
+        ArgumentNullException.ThrowIfNull(turnContext);
+        ArgumentNullException.ThrowIfNull(toolOptions);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            // Retrieve messages from Azure AI Foundry
+            var messages = new List<PersistentThreadMessage>();
+            
+            await foreach (var message in agentClient.Messages.GetMessagesAsync(threadId, cancellationToken: cancellationToken))
+            {
+                messages.Add(message);
+            }
+
+            _logger.LogInformation("Retrieved {MessageCount} messages from thread {ThreadId}", messages.Count, threadId);
+
+            // Delegate to the overload that accepts PersistentThreadMessage[] directly
+            return await SendChatHistoryAsync(turnContext, messages.ToArray(), toolOptions, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("SendChatHistoryAsync operation was canceled for thread {ThreadId}", threadId);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send chat history for thread {ThreadId}: {Message}", threadId, ex.Message);
+            return OperationResult.Failed(new OperationError(ex));
+        }
+    }
+
+    /// <summary>
+    /// Extracts text content from a PersistentThreadMessage.
+    /// </summary>
+    /// <param name="message">The message to extract content from.</param>
+    /// <returns>The extracted text content, or an empty string if no text content is found.</returns>
+    private string ExtractContentFromMessage(PersistentThreadMessage message)
+    {
+        if (message.ContentItems == null || message.ContentItems.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var textContent = new System.Text.StringBuilder();
+        
+        foreach (var textContentItem in message.ContentItems.OfType<MessageTextContent>())
+        {
+            if (!string.IsNullOrEmpty(textContentItem.Text))
+            {
+                if (textContent.Length > 0)
+                {
+                    textContent.Append(" ");
+                }
+                textContent.Append(textContentItem.Text);
+            }
+        }
+
+        return textContent.ToString();
     }
 }
