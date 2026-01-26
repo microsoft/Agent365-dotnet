@@ -139,11 +139,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 try
                 {
                     token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
-                    this._logger?.LogInformation($"Obtained token for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogInformation($"Agent365ExporterCore: Obtained token for agent {agentId} tenant {tenantId}.");
                 }
                 catch (Exception ex)
                 {
-                    this._logger?.LogError(ex, $"TokenResolver threw for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, $"Agent365ExporterCore: TokenResolver threw for agent {agentId} tenant {tenantId}.");
                 }
 
                 if (!string.IsNullOrEmpty(token))
@@ -152,16 +152,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 HttpResponseMessage? resp = null;
                 try
                 {
-                    this._logger?.LogInformation($"Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogInformation($"Agent365ExporterCore: Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
                     resp = await sendAsync(request).ConfigureAwait(false);
                     var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
-                    this._logger?.LogInformation($"HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{CorrelationIdHeaderKey}': '{correlationId}'.");
+                    this._logger?.LogInformation($"Agent365ExporterCore: HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{CorrelationIdHeaderKey}': '{correlationId}'.");
                     if (!resp.IsSuccessStatusCode)
                         return ExportResult.Failure;
                 }
                 catch (Exception ex)
                 {
-                    this._logger?.LogError(ex, $"Exception exporting spans for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, $"Agent365ExporterCore: Exception exporting spans for agent {agentId} tenant {tenantId}.");
                     return ExportResult.Failure;
                 }
                 finally
