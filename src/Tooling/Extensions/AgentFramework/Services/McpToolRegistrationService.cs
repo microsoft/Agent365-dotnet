@@ -188,14 +188,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Convert to array to avoid multiple enumeration
             var chatMessageArray = chatMessages.ToArray();
 
-            if (chatMessageArray.Length == 0)
-            {
-                _logger.LogWarning("No chat messages provided");
-                return OperationResult.Success;
-            }
-
             // Convert ChatMessage objects to ChatHistoryMessage array
             // Messages are used in the order provided (no sorting)
+            // Empty arrays are sent to the MCP platform
             var chatHistoryMessages = chatMessageArray
                 .Select(msg => new ChatHistoryMessage(
                     id: msg.MessageId ?? Guid.NewGuid().ToString(),

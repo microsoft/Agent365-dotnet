@@ -80,9 +80,18 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
     }
 
     [Fact]
-    public async Task WithEmptyChatMessagesAndToolOptions_ReturnsSuccessWithoutCallingService()
+    public async Task WithEmptyChatMessagesAndToolOptions_CallsServiceWithEmptyArray()
     {
         // Arrange
+        var expectedResult = OperationResult.Success;
+        McpServerConfigurationServiceMock
+            .Setup(s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
         var service = CreateService();
         var chatMessages = new List<ChatMessage>();
         var turnContextMock = new Mock<ITurnContext>();
@@ -95,14 +104,15 @@ public class SendChatHistoryAsync_IEnumerable_WithToolOptions_Tests : McpToolReg
         result.Should().NotBeNull();
         result.Succeeded.Should().BeTrue();
 
-        // Verify underlying service was NOT called
+        // Verify underlying service WAS called with empty array
+        // Empty arrays must be passed to the MCP platform for correct behavior
         McpServerConfigurationServiceMock.Verify(
             s => s.SendChatHistoryAsync(
-                It.IsAny<ITurnContext>(),
-                It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>(),
+                turnContextMock.Object,
+                It.Is<ChatHistoryMessage[]>(messages => messages.Length == 0),
+                toolOptions,
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Fact]

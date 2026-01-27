@@ -62,13 +62,17 @@ public interface IMcpToolRegistrationService
     /// <summary>
     /// Sends chat history to the MCP platform.
     /// </summary>
-    /// <param name="chatMessages">The chat messages to send.</param>
+    /// <param name="chatMessages">The chat messages to send. Empty collections are valid and will be forwarded to the MCP platform.</param>
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An OperationResult indicating success or failure.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="chatMessages"/> or <paramref name="turnContext"/> is null.
     /// </exception>
+    /// <remarks>
+    /// Empty message collections are passed through to the MCP platform rather than being short-circuited.
+    /// This ensures the platform call is always made, allowing the platform to handle empty states as needed.
+    /// </remarks>
     Task<OperationResult> SendChatHistoryAsync(
         IEnumerable<ChatMessage> chatMessages,
         ITurnContext turnContext,
@@ -77,7 +81,7 @@ public interface IMcpToolRegistrationService
     /// <summary>
     /// Sends chat history to the MCP platform.
     /// </summary>
-    /// <param name="chatMessages">The chat messages to send.</param>
+    /// <param name="chatMessages">The chat messages to send. Empty collections are valid and will be forwarded to the MCP platform.</param>
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="toolOptions">Tool options for configuration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -85,6 +89,10 @@ public interface IMcpToolRegistrationService
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="chatMessages"/>, <paramref name="turnContext"/>, or <paramref name="toolOptions"/> is null.
     /// </exception>
+    /// <remarks>
+    /// Empty message collections are passed through to the MCP platform rather than being short-circuited.
+    /// This ensures the platform call is always made, allowing the platform to handle empty states as needed.
+    /// </remarks>
     Task<OperationResult> SendChatHistoryAsync(
         IEnumerable<ChatMessage> chatMessages,
         ITurnContext turnContext,
@@ -94,13 +102,17 @@ public interface IMcpToolRegistrationService
     /// <summary>
     /// Sends chat history from a ChatMessageStore to the MCP platform.
     /// </summary>
-    /// <param name="chatMessageStore">The chat message store containing the conversation history.</param>
+    /// <param name="chatMessageStore">The chat message store containing the conversation history. Empty stores are valid and will result in an empty array being forwarded to the MCP platform.</param>
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An OperationResult indicating success or failure.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="chatMessageStore"/> or <paramref name="turnContext"/> is null.
     /// </exception>
+    /// <remarks>
+    /// Empty message stores are passed through to the MCP platform rather than being short-circuited.
+    /// This ensures the platform call is always made, allowing the platform to handle empty states as needed.
+    /// </remarks>
     Task<OperationResult> SendChatHistoryAsync(
         ChatMessageStore chatMessageStore,
         ITurnContext turnContext,
@@ -109,7 +121,7 @@ public interface IMcpToolRegistrationService
     /// <summary>
     /// Sends chat history from a ChatMessageStore to the MCP platform.
     /// </summary>
-    /// <param name="chatMessageStore">The chat message store containing the conversation history.</param>
+    /// <param name="chatMessageStore">The chat message store containing the conversation history. Empty stores are valid and will result in an empty array being forwarded to the MCP platform.</param>
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="toolOptions">Tool options for configuration.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -117,6 +129,10 @@ public interface IMcpToolRegistrationService
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="chatMessageStore"/>, <paramref name="turnContext"/>, or <paramref name="toolOptions"/> is null.
     /// </exception>
+    /// <remarks>
+    /// Empty message stores are passed through to the MCP platform rather than being short-circuited.
+    /// This ensures the platform call is always made, allowing the platform to handle empty states as needed.
+    /// </remarks>
     Task<OperationResult> SendChatHistoryAsync(
         ChatMessageStore chatMessageStore,
         ITurnContext turnContext,
