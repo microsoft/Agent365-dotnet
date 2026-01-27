@@ -190,7 +190,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             // Convert ChatMessage objects to ChatHistoryMessage array
             // Messages are used in the order provided (no sorting)
-            // Empty arrays are still sent to the MCP platform as required
+            // Empty arrays are sent to the MCP platform
             var chatHistoryMessages = chatMessageArray
                 .Select(msg => new ChatHistoryMessage(
                     id: msg.MessageId ?? Guid.NewGuid().ToString(),
