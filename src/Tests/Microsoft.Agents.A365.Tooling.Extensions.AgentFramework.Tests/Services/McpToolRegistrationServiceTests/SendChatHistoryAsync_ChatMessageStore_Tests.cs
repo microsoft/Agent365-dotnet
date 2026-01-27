@@ -80,9 +80,18 @@ public class SendChatHistoryAsync_ChatMessageStore_Tests : McpToolRegistrationSe
     }
 
     [Fact]
-    public async Task WithEmptyStore_ReturnsSuccessWithoutCallingService()
+    public async Task WithEmptyStore_CallsServiceWithEmptyArray()
     {
         // Arrange
+        var expectedResult = OperationResult.Success;
+        McpServerConfigurationServiceMock
+            .Setup(s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
         var service = CreateService();
         var store = new TestChatMessageStore(new List<ChatMessage>());
         var turnContextMock = new Mock<ITurnContext>();
@@ -94,20 +103,31 @@ public class SendChatHistoryAsync_ChatMessageStore_Tests : McpToolRegistrationSe
         result.Should().NotBeNull();
         result.Succeeded.Should().BeTrue();
 
-        // Verify underlying service was NOT called
+        // Verify underlying service WAS called with empty array
+        // Empty arrays must be passed to the MCP platform for correct behavior
         McpServerConfigurationServiceMock.Verify(
             s => s.SendChatHistoryAsync(
-                It.IsAny<ITurnContext>(),
-                It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>(),
+                turnContextMock.Object,
+                It.Is<ChatHistoryMessage[]>(messages => messages.Length == 0),
+                It.Is<ToolOptions>(opts =>
+                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance),
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Fact]
-    public async Task WithEmptyStoreAndToolOptions_ReturnsSuccessWithoutCallingService()
+    public async Task WithEmptyStoreAndToolOptions_CallsServiceWithEmptyArray()
     {
         // Arrange
+        var expectedResult = OperationResult.Success;
+        McpServerConfigurationServiceMock
+            .Setup(s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
         var service = CreateService();
         var store = new TestChatMessageStore(new List<ChatMessage>());
         var turnContextMock = new Mock<ITurnContext>();
@@ -120,14 +140,15 @@ public class SendChatHistoryAsync_ChatMessageStore_Tests : McpToolRegistrationSe
         result.Should().NotBeNull();
         result.Succeeded.Should().BeTrue();
 
-        // Verify underlying service was NOT called
+        // Verify underlying service WAS called with empty array
+        // Empty arrays must be passed to the MCP platform for correct behavior
         McpServerConfigurationServiceMock.Verify(
             s => s.SendChatHistoryAsync(
-                It.IsAny<ITurnContext>(),
-                It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>(),
+                turnContextMock.Object,
+                It.Is<ChatHistoryMessage[]>(messages => messages.Length == 0),
+                toolOptions,
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Fact]

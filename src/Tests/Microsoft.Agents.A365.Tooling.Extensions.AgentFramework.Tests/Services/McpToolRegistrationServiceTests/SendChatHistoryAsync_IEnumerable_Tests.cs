@@ -49,9 +49,18 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
     }
 
     [Fact]
-    public async Task WithEmptyChatMessages_ReturnsSuccessWithoutCallingService()
+    public async Task WithEmptyChatMessages_CallsServiceWithEmptyArray()
     {
         // Arrange
+        var expectedResult = OperationResult.Success;
+        McpServerConfigurationServiceMock
+            .Setup(s => s.SendChatHistoryAsync(
+                It.IsAny<ITurnContext>(),
+                It.IsAny<ChatHistoryMessage[]>(),
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
         var service = CreateService();
         var chatMessages = new List<ChatMessage>();
         var turnContextMock = new Mock<ITurnContext>();
@@ -63,24 +72,16 @@ public class SendChatHistoryAsync_IEnumerable_Tests : McpToolRegistrationService
         result.Should().NotBeNull();
         result.Succeeded.Should().BeTrue();
 
-        // Verify warning was logged
-        LoggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No chat messages")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
-
-        // Verify underlying service was NOT called
+        // Verify underlying service WAS called with empty array
+        // Empty arrays must be passed to the MCP platform for correct behavior
         McpServerConfigurationServiceMock.Verify(
             s => s.SendChatHistoryAsync(
-                It.IsAny<ITurnContext>(),
-                It.IsAny<ChatHistoryMessage[]>(),
-                It.IsAny<ToolOptions>(),
+                turnContextMock.Object,
+                It.Is<ChatHistoryMessage[]>(messages => messages.Length == 0),
+                It.Is<ToolOptions>(opts =>
+                    opts.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance),
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Fact]

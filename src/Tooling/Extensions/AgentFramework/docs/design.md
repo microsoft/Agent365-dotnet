@@ -417,6 +417,20 @@ var newAgent = await _toolService.AddToolServersToAgent(
     chatClient, instructions, existingTools, ...);
 ```
 
+### Chat History and Empty Arrays
+
+The `SendChatHistoryAsync` method passes all messages to the MCP platform, including empty arrays. This is important because:
+- The MCP platform may need to be notified even when no messages exist
+- An empty array signals a valid state (e.g., conversation initialization)
+- The platform handles empty arrays according to its own logic
+
+```csharp
+// Empty arrays are passed to MCP platform - this is valid and expected
+var emptyMessages = new List<ChatMessage>();
+var result = await _toolService.SendChatHistoryAsync(emptyMessages, turnContext);
+// Result indicates success/failure from MCP platform, not local validation
+```
+
 ### Performance Considerations
 
 Since a new agent must be created when tools change, consider:
