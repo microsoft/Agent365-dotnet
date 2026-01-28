@@ -3,3 +3,11 @@
 /.github/ @microsoft/agent365-approvers
 /src/Observability/ @microsoft/agent365-observability-approvers
 /src/Tests/**/*Observability*/ @microsoft/agent365-observability-approvers
+/src/Notification/ @microsoft/agent365-tooling-approvers
+/src/Tooling/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Notifications.Tests/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Tooling.Core.Tests/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Tests/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests/ @microsoft/agent365-tooling-approvers
+/src/Tests/Microsoft.Agents.A365.Tooling.Tests/ @microsoft/agent365-tooling-approvers
