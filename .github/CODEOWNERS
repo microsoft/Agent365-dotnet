@@ -3,3 +3,7 @@
 /.github/ @microsoft/agent365-approvers
 /src/Observability/ @microsoft/agent365-observability-approvers
 /src/Tests/**/*Observability*/ @microsoft/agent365-observability-approvers
+/src/Notification/ @microsoft/agent365-tooling-approvers
+/src/Tooling/ @microsoft/agent365-tooling-approvers
+/src/Tests/**/*Notification*/ @microsoft/agent365-tooling-approvers
+/src/Tests/**/*Tooling*/ @microsoft/agent365-tooling-approvers
