@@ -31,6 +31,23 @@ namespace Microsoft.Agents.A365.Tooling.Services
         Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions);
 
         /// <summary>
+        /// Gets the list of MCP Servers from all sources including cloud (ATG) and local (Windows desktop).
+        /// This method dynamically discovers local MCP servers from the user's Windows desktop via WNS.
+        /// </summary>
+        /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
+        /// <param name="authToken">Auth token to access the MCP servers.</param>
+        /// <param name="toolOptions">Tool options for listing servers.</param>
+        /// <param name="localClientName">The name of the desktop client for local MCP server discovery. If null, only cloud servers are returned.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Returns the combined list of cloud and local MCP Servers.</returns>
+        Task<List<MCPServerConfig>> ListToolServersWithLocalDiscoveryAsync(
+            string agentInstanceId,
+            string authToken,
+            ToolOptions toolOptions,
+            string? localClientName,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the MCP Client Tools from the specified MCP server.
         /// </summary>
         /// <param name="turnContext">The turn context.</param>

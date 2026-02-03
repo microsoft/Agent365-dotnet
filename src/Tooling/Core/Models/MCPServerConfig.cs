@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+
 namespace Microsoft.Agents.A365.Tooling.Models
 {
     /// <summary>
@@ -49,6 +51,18 @@ namespace Microsoft.Agents.A365.Tooling.Models
         /// Only applicable when <see cref="transportType"/> is <see cref="McpTransportType.Wns"/>.
         /// </summary>
         public WnsTransportConfig? wnsConfig { get; set; }
+
+        /// <summary>
+        /// Gets or sets the static tools list from the discovery response.
+        /// When available, this allows skipping the tools/list MCP call.
+        /// This is a JSON array of tool definitions from odr mcp list's static_responses.
+        /// </summary>
+        public JsonElement? staticToolsList { get; set; }
+
+        /// <summary>
+        /// Gets whether this server has pre-cached static tool definitions.
+        /// </summary>
+        public bool HasStaticTools => staticToolsList != null && staticToolsList.Value.ValueKind == JsonValueKind.Array;
     }
 
     /// <summary>

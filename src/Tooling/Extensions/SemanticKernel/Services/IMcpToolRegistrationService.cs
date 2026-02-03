@@ -30,6 +30,28 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null);
 
         /// <summary>
+        /// Adds MCP Tool Servers from both cloud (ATG) and local (Windows desktop) sources.
+        /// This method dynamically discovers local MCP servers from the user's Windows desktop via WNS.
+        /// </summary>
+        /// <param name="kernel">The kernel to which the tools will be added.</param>
+        /// <param name="userAuthorization">Agents SDK UserAuthorization System.</param>
+        /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System.</param>
+        /// <param name="turnContext">The turn context.</param>
+        /// <param name="localClientName">The name of the desktop client for local MCP server discovery. If null, only cloud servers are used.</param>
+        /// <param name="authToken">Auth token to access the MCP servers. If null, will be obtained from UserAuthorization.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when kernel is null.</exception>
+        Task AddToolServersWithLocalDiscoveryAsync(
+            Kernel kernel,
+            UserAuthorization userAuthorization,
+            string authHandlerName,
+            ITurnContext turnContext,
+            string? localClientName,
+            string? authToken = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Sends chat history to the MCP platform for real-time threat protection.
         /// </summary>
         /// <param name="turnContext">The turn context containing conversation information.</param>

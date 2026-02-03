@@ -24,6 +24,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         private const string O11ySpanIdHeader = "x-ms-span-id";
         private const string O11yTraceIdHeader = "x-ms-trace-id";
         private const string UserAgentHeader = "User-Agent";
+        private const string UserAadObjectIdHeader = "x-ms-user-aad-id";
 
         // Keys set from Observability
         private const string O11ySpanIdKey = "O11ySpanId";
@@ -63,6 +64,19 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 {
                     var sanitizedMessage = SanitizeTextForHeader(turnContext.Activity.Text, logger);
                     request.Headers.Add(UserMessageHeader, sanitizedMessage);
+                }
+
+                // Pass the user's AAD Object ID so MCP servers can identify the calling user
+                // This is essential for Graph API calls to operate on the correct user's data
+                var userAadObjectId = turnContext.Activity.From?.AadObjectId;
+                if (!string.IsNullOrEmpty(userAadObjectId))
+                {
+                    request.Headers.Add(UserAadObjectIdHeader, userAadObjectId);
+                    logger?.LogInformation("[MCP-CONTEXT] Passing user AAD Object ID: {UserAadObjectId}", userAadObjectId);
+                }
+                else
+                {
+                    logger?.LogWarning("[MCP-CONTEXT] User AAD Object ID not available in Activity.From.AadObjectId");
                 }
             }
 

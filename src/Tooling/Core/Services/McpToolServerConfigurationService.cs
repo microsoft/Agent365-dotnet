@@ -6,11 +6,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Net.Http;
     using System.Net.Http.Headers;
+    using System.Net.Http.Json;
     using System.Reflection;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Handlers;
@@ -78,7 +81,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     throw new ArgumentException("MCP Server name cannot be null or empty", nameof(mCPServerConfig.mcpServerName));
                 }
 
-                this._logger.LogInformation($"Creating MCP client for: {mCPServerConfig.mcpServerName} (transport: {mCPServerConfig.transportType})");
+                this._logger.LogInformation("[GetTools] Creating MCP client for: {ServerName} (transport: {Transport}, hasStaticTools: {HasStatic})",
+                    mCPServerConfig.mcpServerName, mCPServerConfig.transportType, mCPServerConfig.HasStaticTools);
 
                 IMcpClient mcpClient;
 
@@ -86,6 +90,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 switch (mCPServerConfig.transportType)
                 {
                     case McpTransportType.Wns:
+                        this._logger.LogInformation("[GetTools] Using WNS transport for {ServerName}", mCPServerConfig.mcpServerName);
                         mcpClient = await CreateWnsMcpClientAsync(mCPServerConfig);
                         break;
 
@@ -94,13 +99,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
                     case McpTransportType.Sse:
                     default:
+                        this._logger.LogInformation("[GetTools] Using SSE transport for {ServerName}", mCPServerConfig.mcpServerName);
                         mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
                         break;
                 }
 
+                this._logger.LogInformation("[GetTools] MCP client created, calling ListToolsAsync for {ServerName}", mCPServerConfig.mcpServerName);
                 var tools = await mcpClient.ListToolsAsync();
 
-                this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
+                this._logger.LogInformation("[GetTools] Successfully retrieved {ToolCount} tools from {ServerName}", tools.Count, mCPServerConfig.mcpServerName);
 
                 return tools;
             }
@@ -668,6 +675,348 @@ namespace Microsoft.Agents.A365.Tooling.Services
                              "Development";
 
             return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<MCPServerConfig>> ListToolServersWithLocalDiscoveryAsync(
+            string agentInstanceId,
+            string authToken,
+            ToolOptions toolOptions,
+            string? localClientName,
+            CancellationToken cancellationToken = default)
+        {
+            var allServers = new List<MCPServerConfig>();
+
+            // 1. Get cloud servers from ATG (or manifest in dev)
+            try
+            {
+                var cloudServers = await ListToolServersAsync(agentInstanceId, authToken, toolOptions);
+                
+                // Filter to only include SSE (cloud) servers from the manifest
+                var sseServers = cloudServers.Where(s => s.transportType == McpTransportType.Sse).ToList();
+                allServers.AddRange(sseServers);
+                
+                this._logger.LogInformation("[Discovery] Found {Count} cloud MCP servers", sseServers.Count);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "[Discovery] Failed to get cloud MCP servers");
+            }
+
+            // 2. Discover local servers from Windows desktop via WNS (if client name provided)
+            // The desktop client receives a "list_servers" notification, runs `odr mcp list`,
+            // and returns the results via HTTP callback.
+            if (!string.IsNullOrEmpty(localClientName))
+            {
+                var proxyBaseUrl = this._configuration["LocalMcp:BaseUrl"];
+                if (!string.IsNullOrEmpty(proxyBaseUrl))
+                {
+                    try
+                    {
+                        var localServers = await DiscoverLocalServersAsync(localClientName, proxyBaseUrl, cancellationToken);
+                        allServers.AddRange(localServers);
+                        this._logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
+                            localServers.Count, localClientName);
+                    }
+                    catch (Exception ex)
+                    {
+                        this._logger.LogWarning(ex, "[Discovery] Failed to discover local MCP servers from desktop client '{ClientName}'", localClientName);
+                    }
+                }
+                else
+                {
+                    this._logger.LogDebug("[Discovery] LocalMcp:BaseUrl not configured, skipping local server discovery");
+                }
+            }
+
+            this._logger.LogInformation("[Discovery] Total MCP servers available: {Count}", allServers.Count);
+            return allServers;
+        }
+
+        /// <summary>
+        /// Gets local MCP servers from configuration (appsettings.json LocalMcp:Servers section).
+        /// This is a fallback configuration-based approach when dynamic discovery is not available.
+        /// </summary>
+        private List<MCPServerConfig> GetLocalServersFromConfiguration(string clientName)
+        {
+            var configs = new List<MCPServerConfig>();
+
+            var proxyBaseUrl = this._configuration["LocalMcp:BaseUrl"];
+            var connectionTimeout = this._configuration.GetValue("LocalMcp:ConnectionTimeoutSeconds", 30);
+
+            if (string.IsNullOrEmpty(proxyBaseUrl))
+            {
+                this._logger.LogWarning("[Discovery] LocalMcp:BaseUrl not configured");
+                return configs;
+            }
+
+            // Read servers from LocalMcp:Servers array
+            var serversSection = this._configuration.GetSection("LocalMcp:Servers");
+            if (!serversSection.Exists())
+            {
+                return configs;
+            }
+
+            foreach (var serverSection in serversSection.GetChildren())
+            {
+                var serverId = serverSection["ServerId"];
+                var serverName = serverSection["Name"] ?? serverId;
+                var description = serverSection["Description"] ?? string.Empty;
+
+                if (string.IsNullOrEmpty(serverId))
+                {
+                    this._logger.LogWarning("[Discovery] Skipping local server with empty ServerId");
+                    continue;
+                }
+
+                var config = new MCPServerConfig
+                {
+                    mcpServerName = serverName ?? serverId,
+                    id = serverId,
+                    url = string.Empty, // Not needed for WNS transport
+                    scope = string.Empty,
+                    audience = string.Empty,
+                    publisher = "Local",
+                    transportType = McpTransportType.Wns,
+                    wnsConfig = new WnsTransportConfig
+                    {
+                        clientName = clientName,
+                        proxyBaseUrl = proxyBaseUrl,
+                        localServerId = serverId,
+                        connectionTimeoutSeconds = connectionTimeout
+                    }
+                };
+
+                configs.Add(config);
+                this._logger.LogDebug("[Discovery] Configured local server: {ServerName} ({ServerId})", serverName, serverId);
+            }
+
+            return configs;
+        }
+
+        /// <summary>
+        /// Discovers local MCP servers from a Windows desktop client via WNS.
+        /// 
+        /// Flow:
+        /// 1. SDK sends WNS notification with type="list_servers" (no serverId)
+        /// 2. Desktop client receives notification and runs `odr mcp list` locally
+        /// 3. Desktop client posts results to callback URL: POST /api/discovery/{requestId}/servers
+        /// 4. SDK polls for results at: GET /api/discovery/{requestId}/servers
+        /// 
+        /// This is different from MCP tool invocation which sends a serverId to start a specific server.
+        /// </summary>
+        private async Task<List<MCPServerConfig>> DiscoverLocalServersAsync(
+            string clientName,
+            string proxyBaseUrl,
+            CancellationToken cancellationToken)
+        {
+            this._logger.LogInformation("[Discovery] Requesting local MCP server list from desktop client '{ClientName}'", clientName);
+
+            var httpClient = this._httpClientFactory.CreateClient("LocalMcpDiscovery");
+            var requestId = Guid.NewGuid().ToString();
+
+            try
+            {
+                // Step 1: Send a "list_servers" WNS notification (NOT an MCP request)
+                // This is a special discovery request - the desktop client should NOT start an MCP server
+                // Instead, it should run `odr mcp list` and POST the results back
+                var notifyRequest = new
+                {
+                    type = "list_servers",
+                    requestId = requestId,
+                    callbackUrl = $"{proxyBaseUrl}/api/discovery/{requestId}/servers"
+                };
+
+                var notifyRequestJson = JsonSerializer.Serialize(notifyRequest);
+                this._logger.LogDebug("[Discovery] Sending discovery notification: {Request}", notifyRequestJson);
+
+                // Send notification via the proxy's notify endpoint
+                var notifyResponse = await httpClient.PostAsync(
+                    $"{proxyBaseUrl}/api/notify/{clientName}",
+                    new StringContent(notifyRequestJson, Encoding.UTF8, "application/json"),
+                    cancellationToken);
+
+                notifyResponse.EnsureSuccessStatusCode();
+                this._logger.LogDebug("[Discovery] Notification sent, requestId: {RequestId}", requestId);
+
+                // Step 2: Poll for the discovery results
+                // The desktop client will POST the `odr mcp list` results to the callback URL
+                var timeout = TimeSpan.FromSeconds(this._configuration.GetValue("LocalMcp:ConnectionTimeoutSeconds", 30));
+                var servers = await PollForDiscoveryResultsAsync(httpClient, proxyBaseUrl, requestId, timeout, cancellationToken);
+
+                return ConvertLocalServersToConfig(servers, clientName, proxyBaseUrl);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "[Discovery] Failed to discover local MCP servers from '{ClientName}'", clientName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Polls the proxy for discovery results posted by the desktop client.
+        /// </summary>
+        private async Task<List<LocalMcpServerInfo>> PollForDiscoveryResultsAsync(
+            HttpClient httpClient,
+            string proxyBaseUrl,
+            string requestId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var startTime = DateTime.UtcNow;
+            var pollInterval = TimeSpan.FromSeconds(1);
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var response = await httpClient.GetAsync(
+                        $"{proxyBaseUrl}/api/discovery/{requestId}/servers",
+                        cancellationToken);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                        
+                        // Check if results are ready
+                        if (result.TryGetProperty("status", out var statusElement))
+                        {
+                            var status = statusElement.GetString();
+                            if (status == "completed")
+                            {
+                                if (result.TryGetProperty("servers", out var serversElement))
+                                {
+                                    var servers = JsonSerializer.Deserialize<List<LocalMcpServerInfo>>(serversElement.GetRawText())
+                                        ?? new List<LocalMcpServerInfo>();
+                                    
+                                    this._logger.LogInformation("[Discovery] Received {Count} servers from desktop", servers.Count);
+                                    return servers;
+                                }
+                            }
+                            else if (status == "error")
+                            {
+                                var errorMessage = result.TryGetProperty("error", out var errorElement) 
+                                    ? errorElement.GetString() 
+                                    : "Unknown error";
+                                throw new InvalidOperationException($"Desktop discovery failed: {errorMessage}");
+                            }
+                            // status == "pending" - continue polling
+                        }
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        // Request not yet received by proxy, continue polling
+                        this._logger.LogDebug("[Discovery] Results not ready yet, polling...");
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    this._logger.LogDebug(ex, "[Discovery] Poll request failed, will retry");
+                }
+
+                await Task.Delay(pollInterval, cancellationToken);
+            }
+
+            throw new TimeoutException($"Discovery request {requestId} timed out after {timeout.TotalSeconds}s");
+        }
+
+        /// <summary>
+        /// Converts local MCP server info (from odr mcp list) to MCPServerConfig objects.
+        /// </summary>
+        private List<MCPServerConfig> ConvertLocalServersToConfig(
+            List<LocalMcpServerInfo> localServers,
+            string clientName,
+            string proxyBaseUrl)
+        {
+            var configs = new List<MCPServerConfig>();
+
+            foreach (var server in localServers)
+            {
+                // ServerId is derived from packages[0].identifier
+                var serverId = server.ServerId;
+                if (string.IsNullOrEmpty(serverId))
+                {
+                    this._logger.LogWarning("[Discovery] Skipping local server '{Name}' with no package identifier", server.Name);
+                    continue;
+                }
+
+                // Use direct properties from the odr mcp list response
+                var serverName = server.Name ?? serverId;
+                var description = server.Description ?? string.Empty;
+
+                // Extract static tools from the discovery response (avoids needing tools/list call later)
+                var staticTools = server.GetStaticToolsList();
+                if (staticTools != null)
+                {
+                    this._logger.LogDebug("[Discovery] Server '{ServerName}' has static tools list with {Count} tools",
+                        serverName, staticTools.Value.GetArrayLength());
+                }
+
+                var config = new MCPServerConfig
+                {
+                    mcpServerName = serverName,
+                    id = serverId,
+                    url = string.Empty, // Not needed for WNS transport
+                    scope = string.Empty,
+                    audience = string.Empty,
+                    publisher = "Local",
+                    transportType = McpTransportType.Wns,
+                    staticToolsList = staticTools,
+                    wnsConfig = new WnsTransportConfig
+                    {
+                        clientName = clientName,
+                        proxyBaseUrl = proxyBaseUrl,
+                        localServerId = serverId,
+                        connectionTimeoutSeconds = this._configuration.GetValue("LocalMcp:ConnectionTimeoutSeconds", 30)
+                    }
+                };
+
+                configs.Add(config);
+                this._logger.LogDebug("[Discovery] Converted local server: {ServerName} ({ServerId}), hasStaticTools: {HasStatic}",
+                    serverName, serverId, config.HasStaticTools);
+            }
+
+            return configs;
+        }
+
+        /// <summary>
+        /// Waits for a desktop client to connect to a session.
+        /// </summary>
+        private async Task<bool> WaitForDesktopConnectionAsync(
+            HttpClient httpClient,
+            string proxyBaseUrl,
+            string sessionId,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            var startTime = DateTime.UtcNow;
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var response = await httpClient.GetAsync(
+                        $"{proxyBaseUrl}/api/status/{sessionId}",
+                        cancellationToken);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var status = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                        if (status.GetProperty("connected").GetBoolean())
+                        {
+                            return true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this._logger.LogDebug(ex, "[Discovery] Connection check failed");
+                }
+
+                await Task.Delay(1000, cancellationToken);
+            }
+
+            return false;
         }
     }
 }
