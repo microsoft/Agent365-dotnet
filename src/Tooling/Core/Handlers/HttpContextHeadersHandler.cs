@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     using Microsoft.Extensions.Logging;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Utils;
     using System;
     using System.Globalization;
     using System.Net.Http;
@@ -13,6 +14,7 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     internal class HttpContextHeadersHandler : DelegatingHandler
     {
@@ -32,12 +34,14 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         private readonly ITurnContext turnContext;
         private readonly ILogger logger;
         private readonly ToolOptions toolOptions;
+        private readonly string? authToken;
 
-        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger, ToolOptions toolOptions)
+        public HttpContextHeadersHandler(ITurnContext turnContext, ILogger logger, ToolOptions toolOptions, string? authToken = null)
         {
             this.turnContext = turnContext;
             this.logger = logger;
             this.toolOptions = toolOptions;
+            this.authToken = authToken;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -86,7 +90,70 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
                 request.Headers.Add(UserAgentHeader, UserAgentHelper.BuildUserAgent(this.toolOptions.UserAgentConfiguration));
             }
 
+            // Add x-ms-agentid header if auth token is available
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                var agentId = ResolveAgentIdForHeader();
+                if (!string.IsNullOrEmpty(agentId))
+                {
+                    request.Headers.Add(Constants.Headers.AgentIdHeader, agentId);
+                }
+            }
+
             return base.SendAsync(request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Resolves the best available agent identifier for the x-ms-agentid header.
+        /// Priority: TurnContext.agenticAppBlueprintId > token claims (xms_par_app_azp > appid > azp) > application name
+        /// </summary>
+        /// <returns>Agent ID string or null if not available.</returns>
+        private string? ResolveAgentIdForHeader()
+        {
+            // Priority 1: Agent Blueprint ID from TurnContext
+            // The 'From' property may include agenticAppBlueprintId when the request originates from an agentic app
+            var blueprintId = GetAgenticAppBlueprintIdFromContext();
+            if (!string.IsNullOrEmpty(blueprintId))
+            {
+                return blueprintId;
+            }
+
+            // Priority 2 & 3: Agent ID from token (xms_par_app_azp > appid > azp)
+            // Single decode, checks claims in priority order
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                var agentId = RuntimeUtility.GetAgentIdFromToken(authToken);
+                if (!string.IsNullOrEmpty(agentId))
+                {
+                    return agentId;
+                }
+            }
+
+            // Priority 4: Application name from assembly
+            return RuntimeUtility.GetApplicationName();
+        }
+
+        /// <summary>
+        /// Gets the agentic app blueprint ID from the turn context if available.
+        /// </summary>
+        /// <returns>The blueprint ID or null if not available.</returns>
+        private string? GetAgenticAppBlueprintIdFromContext()
+        {
+            if (turnContext?.Activity?.From?.Properties == null)
+            {
+                return null;
+            }
+
+            if (turnContext.Activity.From.Properties.TryGetValue("agenticAppBlueprintId", out var blueprintIdElement))
+            {
+                var blueprintId = blueprintIdElement.ToString();
+                if (!string.IsNullOrEmpty(blueprintId))
+                {
+                    return blueprintId;
+                }
+            }
+
+            return null;
         }
 
         public static string SanitizeTextForHeader(string input, ILogger logger)

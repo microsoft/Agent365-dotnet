@@ -482,7 +482,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             this._logger.LogInformation($"Configured authentication handler for MCP endpoint {endpoint}");
 
-            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, toolOptions)
+            var httpContextHeaderHandler = new HttpContextHeadersHandler(turnContext, this._logger, toolOptions, authToken)
             {
                 InnerHandler = authHandler,
             };
