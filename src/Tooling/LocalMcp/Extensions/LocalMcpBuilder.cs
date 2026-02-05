@@ -89,6 +89,8 @@ public class LocalMcpBuilder
     /// <returns>The builder for chaining.</returns>
     public LocalMcpBuilder UseInMemoryStorage()
     {
+        // Remove any existing ISessionManager registration and add InMemory
+        RemoveExistingSessionManager();
         _services.AddSingleton<ISessionManager, InMemorySessionManager>();
         _storageConfigured = true;
         return this;
@@ -122,6 +124,8 @@ public class LocalMcpBuilder
     public LocalMcpBuilder UseCustomStorage<TSessionManager>()
         where TSessionManager : class, ISessionManager
     {
+        // Remove any existing ISessionManager registration (including default InMemory)
+        RemoveExistingSessionManager();
         _services.AddSingleton<ISessionManager, TSessionManager>();
         _storageConfigured = true;
         return this;
@@ -149,9 +153,23 @@ public class LocalMcpBuilder
     /// </example>
     public LocalMcpBuilder UseCustomStorage(Func<IServiceProvider, ISessionManager> factory)
     {
+        // Remove any existing ISessionManager registration (including default InMemory)
+        RemoveExistingSessionManager();
         _services.AddSingleton(factory);
         _storageConfigured = true;
         return this;
+    }
+
+    /// <summary>
+    /// Removes any existing ISessionManager registration from the service collection.
+    /// </summary>
+    private void RemoveExistingSessionManager()
+    {
+        var existingRegistration = _services.FirstOrDefault(d => d.ServiceType == typeof(ISessionManager));
+        if (existingRegistration != null)
+        {
+            _services.Remove(existingRegistration);
+        }
     }
 
     /// <summary>

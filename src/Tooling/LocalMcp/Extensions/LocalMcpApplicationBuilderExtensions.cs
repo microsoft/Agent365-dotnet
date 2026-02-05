@@ -36,19 +36,25 @@ public static class LocalMcpApplicationBuilderExtensions
     {
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LocalMcpProxy");
 
-        // Check if ISessionManager is registered, if not, register InMemory with warning
+        // Check if ISessionManager is registered
         var sessionManager = app.Services.GetService<ISessionManager>();
         if (sessionManager == null)
         {
-            logger.LogWarning(
-                "[LocalMcp] No ISessionManager was configured. Defaulting to in-memory storage. " +
-                "This is suitable for development only. For production, configure a persistent storage " +
-                "backend using .UseCustomStorage<TSessionManager>() when calling AddLocalMcpProxy().");
-
-            // This shouldn't happen if AddLocalMcpProxy was called, but just in case
+            // This should not happen if AddLocalMcpProxy() was called (it registers InMemory by default)
             throw new InvalidOperationException(
-                "ISessionManager is not registered. Call AddLocalMcpProxy() before UseLocalMcpProxy() " +
-                "and configure storage using .UseInMemoryStorage() or .UseCustomStorage<T>().");
+                "ISessionManager is not registered. Ensure AddLocalMcpProxy() is called before " +
+                "UseLocalMcpProxy().");
+        }
+
+        // Log warning if using in-memory storage (the default)
+        if (sessionManager is InMemorySessionManager)
+        {
+            logger.LogWarning(
+                "[LocalMcp] Using in-memory storage for session management. " +
+                "WARNING: In-memory storage is suitable for DEVELOPMENT ONLY. " +
+                "Data will be lost on app restart and cannot scale horizontally. " +
+                "For production, configure a persistent storage backend using " +
+                ".UseCustomStorage<TSessionManager>() when calling AddLocalMcpProxy().");
         }
 
         // Enable WebSockets (required for MCP communication)

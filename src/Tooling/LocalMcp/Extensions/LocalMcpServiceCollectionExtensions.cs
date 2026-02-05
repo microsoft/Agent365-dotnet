@@ -52,13 +52,17 @@ public static class LocalMcpServiceCollectionExtensions
         services.Configure<WnsConfiguration>(configuration.GetSection("WnsConfiguration"));
         services.Configure<LocalMcpProxyOptions>(configuration.GetSection(LocalMcpProxyOptions.SectionName));
 
-        // Register core services (not storage - that's configured via builder)
+        // Register core services
         services.AddSingleton<IWnsNotificationService, WnsNotificationService>();
+
+        // Register default in-memory storage (can be overridden by builder methods)
+        // This ensures zero-config works for development
+        services.AddSingleton<ISessionManager, InMemorySessionManager>();
 
         // Ensure HttpClientFactory is available
         services.AddHttpClient();
 
-        // Return builder for fluent configuration
+        // Return builder for fluent configuration (storage methods will override the default)
         return new LocalMcpBuilder(services, configuration);
     }
 
@@ -86,8 +90,11 @@ public static class LocalMcpServiceCollectionExtensions
             services.Configure<LocalMcpProxyOptions>(_ => { });
         }
 
-        // Register core services (not storage - that's configured via builder)
+        // Register core services
         services.AddSingleton<IWnsNotificationService, WnsNotificationService>();
+
+        // Register default in-memory storage (can be overridden by builder methods)
+        services.AddSingleton<ISessionManager, InMemorySessionManager>();
 
         // Ensure HttpClientFactory is available
         services.AddHttpClient();
