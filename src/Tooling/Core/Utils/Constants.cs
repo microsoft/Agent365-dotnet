@@ -17,6 +17,11 @@ namespace Microsoft.Agents.A365.Tooling.Utils
             /// The prefix used for Bearer authentication tokens in HTTP headers.
             /// </summary>
             public const string BearerPrefix = "Bearer";
+
+            /// <summary>
+            /// Header name for sending the agent identifier to MCP platform for logging/analytics.
+            /// </summary>
+            public const string AgentIdHeader = "x-ms-agentid";
         }
     }
 }
