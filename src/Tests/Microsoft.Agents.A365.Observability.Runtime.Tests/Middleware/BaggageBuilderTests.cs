@@ -64,5 +64,24 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(GenAiCallerClientIpKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiAgentPlatformIdKey).Should().BeNull();
     }
-    
+
+    [TestMethod]
+    public void Apply_SetsAndRestores_HiringManagerId()
+    {
+        // Arrange
+        Baggage.Current = default;
+        var hiringManagerId = "hiring-mgr-123";
+
+        // Act
+        using (new BaggageBuilder()
+            .HiringManagerId(hiringManagerId)
+            .Build())
+        {
+            // Assert inside scope
+            Baggage.Current.GetBaggage(HiringManagerIdKey).Should().Be(hiringManagerId);
+        }
+
+        // Assert after dispose (restored -> no value)
+        Baggage.Current.GetBaggage(HiringManagerIdKey).Should().BeNull();
+    }
 }
