@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
@@ -45,6 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
+            string? hiringManagerId = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
@@ -56,6 +58,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 callerDetails,
                 inputMessages,
                 outputMessages,
+                hiringManagerId,
                 extraAttributes);
 
             return new InvokeAgentData(
@@ -77,6 +80,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="inputMessages">Optional input messages to include in the attributes.</param>
         /// <param name="outputMessages">Optional output messages to include in the attributes.</param>
+        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>A dictionary of attribute key-value pairs.</returns>
         private static Dictionary<string, object?> BuildAttributes(
@@ -88,6 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             CallerDetails? callerDetails = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
+            string? hiringManagerId = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -124,6 +129,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Add output messages
             AddOutputMessagesAttributes(attributes, outputMessages);
+
+            // Add hiring manager ID
+            AddIfNotNull(attributes, OpenTelemetryConstants.HiringManagerIdKey, hiringManagerId);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);

@@ -309,6 +309,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var endTime = DateTimeOffset.UtcNow;
             var spanId = "span123";
             var parentSpanId = "parent456";
+            var hiringManagerId = "hiring-manager-789";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
@@ -323,7 +324,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 startTime,
                 endTime,
                 spanId,
-                parentSpanId);
+                parentSpanId,
+                hiringManagerId);
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
@@ -331,6 +333,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentIdKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.HiringManagerIdKey).WhoseValue.Should().Be("hiring-manager-789");
             telemetry.StartTime.Should().Be(startTime);
             telemetry.EndTime.Should().Be(endTime);
             telemetry.Duration.Should().BeCloseTo(TimeSpan.FromMinutes(1), TimeSpan.FromMilliseconds(100));

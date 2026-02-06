@@ -289,6 +289,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the hiring manager ID baggage value.
+        /// </summary>
+        public BaggageBuilder HiringManagerId(string? v)
+        {
+            Set(OpenTelemetryConstants.HiringManagerIdKey, v);
+            return this;
+        }
+
+        /// <summary>
         /// Applies the collected baggage to the current context.
         /// </summary>
         public IDisposable Build()

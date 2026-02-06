@@ -212,6 +212,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var spanId = "span-all";
             var parentSpanId = "parent-all";
             var responseContent = "tool-response";
+            var hiringManagerId = "hiring-manager-tool-123";
 
             // Act
             var data = ExecuteToolDataBuilder.Build(
@@ -223,7 +224,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 startTime: start,
                 endTime: end,
                 spanId: spanId,
-                parentSpanId: parentSpanId);
+                parentSpanId: parentSpanId,
+                hiringManagerId: hiringManagerId);
 
             // Assert
             var attrs = data.Attributes;
@@ -233,6 +235,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolServerNameKey).WhoseValue.Should().Be("full-tool-server");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiEventContent);
+            attrs.Should().ContainKey(OpenTelemetryConstants.HiringManagerIdKey).WhoseValue.Should().Be("hiring-manager-tool-123");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
             data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));

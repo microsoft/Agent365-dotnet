@@ -76,6 +76,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiCallerNameKey = "gen_ai.caller.name";
         public const string GenAiCallerClientIpKey = "gen_ai.caller.client.ip";
         public const string GenAiCallerTenantIdKey = "gen_ai.caller.tenantid";
+        public const string HiringManagerIdKey = "hiring.manager.id";
 
         // Caller agent dimensions
         public const string GenAiCallerAgentNameKey = "gen_ai.caller.agent.name";
@@ -145,6 +146,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// The threat diagnostics summary key.
         /// </summary>
         public const string ThreatDiagnosticsSummaryKey = "threat.diagnostics.summary";
+        
+        /// <summary>
+        /// The GenAI agent thought process key.
+        /// </summary>
+        public const string GenAiAgentThoughtProcessKey = "gen_ai.agent.thought.process";
 
         #endregion
     }
