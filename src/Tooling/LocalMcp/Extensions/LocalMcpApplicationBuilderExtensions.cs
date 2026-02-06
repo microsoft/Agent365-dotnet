@@ -20,43 +20,10 @@ public static class LocalMcpApplicationBuilderExtensions
     /// <summary>
     /// Adds the Local MCP Proxy endpoints and starts the background cleanup task.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This method must be called after AddLocalMcpProxy has been called to register the required services.
-    /// </para>
-    /// <para>
-    /// If no storage was explicitly configured via the <see cref="LocalMcpBuilder"/>, this method
-    /// will default to in-memory storage and log a warning. For production deployments, you should
-    /// configure a persistent storage backend.
-    /// </para>
-    /// </remarks>
     /// <param name="app">The web application.</param>
     /// <returns>The web application for chaining.</returns>
     public static WebApplication UseLocalMcpProxy(this WebApplication app)
     {
-        var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("LocalMcpProxy");
-
-        // Check if ISessionManager is registered
-        var sessionManager = app.Services.GetService<ISessionManager>();
-        if (sessionManager == null)
-        {
-            // This should not happen if AddLocalMcpProxy() was called (it registers InMemory by default)
-            throw new InvalidOperationException(
-                "ISessionManager is not registered. Ensure AddLocalMcpProxy() is called before " +
-                "UseLocalMcpProxy().");
-        }
-
-        // Log warning if using in-memory storage (the default)
-        if (sessionManager is InMemorySessionManager)
-        {
-            logger.LogWarning(
-                "[LocalMcp] Using in-memory storage for session management. " +
-                "WARNING: In-memory storage is suitable for DEVELOPMENT ONLY. " +
-                "Data will be lost on app restart and cannot scale horizontally. " +
-                "For production, configure a persistent storage backend using " +
-                ".UseCustomStorage<TSessionManager>() when calling AddLocalMcpProxy().");
-        }
-
         // Enable WebSockets (required for MCP communication)
         app.UseWebSockets();
 
