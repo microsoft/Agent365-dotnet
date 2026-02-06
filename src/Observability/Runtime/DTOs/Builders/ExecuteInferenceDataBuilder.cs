@@ -28,6 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
+        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
@@ -43,6 +44,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null,
             string? thoughtProcess = null,
+            string? hiringManagerId = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
@@ -54,6 +56,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 outputMessages,
                 sourceMetadata,
                 thoughtProcess,
+                hiringManagerId,
                 extraAttributes);
 
             return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId);
@@ -68,6 +71,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string[]? outputMessages,
             SourceMetadata? sourceMetadata,
             string? thoughtProcess,
+            string? hiringManagerId,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -91,6 +95,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Source metadata
             AddSourceMetadataAttributes(attributes, sourceMetadata);
+
+            // Add hiring manager ID
+            AddIfNotNull(attributes, HiringManagerIdKey, hiringManagerId);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);

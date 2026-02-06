@@ -55,7 +55,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiUsageOutputTokensKey,
             OpenTelemetryConstants.GenAiResponseFinishReasonsKey,
             OpenTelemetryConstants.GenAiResponseIdKey,
-            OpenTelemetryConstants.GenAiAgentThoughtProcessKey
+            OpenTelemetryConstants.GenAiAgentThoughtProcessKey,
+            OpenTelemetryConstants.HiringManagerIdKey
         };
 
         /// <summary>

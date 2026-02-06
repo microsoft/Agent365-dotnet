@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the operation.</param>
+        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
         public static ExecuteToolData Build(
@@ -42,9 +43,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null,
+            string? hiringManagerId = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, hiringManagerId, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -56,6 +58,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string conversationId,
             string? responseContent,
             SourceMetadata? sourceMetadata,
+            string? hiringManagerId,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -78,6 +81,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Source metadata
             AddSourceMetadataAttributes(attributes, sourceMetadata);
+
+            // Add hiring manager ID
+            AddIfNotNull(attributes, OpenTelemetryConstants.HiringManagerIdKey, hiringManagerId);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);
