@@ -229,4 +229,22 @@ public sealed class InferenceScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
     }
+
+    [TestMethod]
+    public void RecordThoughtProcess_SetsTag()
+    {
+        var thoughtProcess = "First, I analyzed the user's request. Then, I determined the best approach would be to provide a structured response. Finally, I composed the answer.";
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+        
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            scope.RecordThoughtProcess(thoughtProcess);
+        });
+        
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentThoughtProcessKey, thoughtProcess);
+    }
 }

@@ -173,6 +173,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var end = DateTimeOffset.UtcNow;
             var spanId = "span-all-inf";
             var parentSpanId = "parent-all-inf";
+            var thoughtProcess = "First, I analyzed the request. Then, I formulated a response.";
 
             // Act
             var data = ExecuteInferenceDataBuilder.Build(
@@ -185,7 +186,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 startTime: start,
                 endTime: end,
                 spanId: spanId,
-                parentSpanId: parentSpanId);
+                parentSpanId: parentSpanId,
+                thoughtProcess: thoughtProcess);
 
             // Assert
             var attrs = data.Attributes;
@@ -196,6 +198,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentThoughtProcessKey).WhoseValue.Should().Be(thoughtProcess);
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
             data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));
@@ -289,5 +292,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().NotContainKey("inf.null");
             data.Attributes.Should().ContainKey("inf.valid").WhoseValue.Should().Be("yes");
         }
+
+
+
+
     }
 }

@@ -146,6 +146,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// The threat diagnostics summary key.
         /// </summary>
         public const string ThreatDiagnosticsSummaryKey = "threat.diagnostics.summary";
+        
+        /// <summary>
+        /// The GenAI agent thought process key.
+        /// </summary>
+        public const string GenAiAgentThoughtProcessKey = "gen_ai.agent.thought.process";
 
         #endregion
     }

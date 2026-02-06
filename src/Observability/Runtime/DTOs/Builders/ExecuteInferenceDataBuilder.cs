@@ -27,6 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
+        /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
@@ -41,6 +42,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null,
+            string? thoughtProcess = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
@@ -51,6 +53,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 inputMessages,
                 outputMessages,
                 sourceMetadata,
+                thoughtProcess,
                 extraAttributes);
 
             return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId);
@@ -64,6 +67,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string[]? inputMessages,
             string[]? outputMessages,
             SourceMetadata? sourceMetadata,
+            string? thoughtProcess,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -81,6 +85,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Input/output messages
             AddInputMessagesAttributes(attributes, inputMessages);
             AddOutputMessagesAttributes(attributes, outputMessages);
+
+            // Thought process
+            AddIfNotNull(attributes, GenAiAgentThoughtProcessKey, thoughtProcess);
 
             // Source metadata
             AddSourceMetadataAttributes(attributes, sourceMetadata);
