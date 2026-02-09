@@ -37,8 +37,8 @@ body:
 
   - type: input
     attributes:
-      label: Language/Runtime
-      description: e.g., .NET 8, Python 3.11, Node.js 20
+      label: .NET Version
+      description: e.g., .NET 8, .NET 9
     validations:
       required: true
 
