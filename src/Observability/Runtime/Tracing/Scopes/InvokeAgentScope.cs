@@ -62,7 +62,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     ? OperationName
                     : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
                 conversationId: conversationId,
-                sourceMetadata: request?.SourceMetadata)
+                sourceMetadata: request?.SourceMetadata,
+                callerDetails: callerDetails)
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
 
@@ -75,16 +76,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             if (endpoint?.Port != 443)
             {
                 SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint?.Port);
-            }
-
-            // Set caller details tags
-            if (callerDetails != null)
-            {
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
             }
 
             // Set caller agent details tags

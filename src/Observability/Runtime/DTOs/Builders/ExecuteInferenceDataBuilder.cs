@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
         /// <param name="hiringManagerId">Optional hiring manager ID.</param>
+        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
@@ -45,6 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             SourceMetadata? sourceMetadata = null,
             string? thoughtProcess = null,
             string? hiringManagerId = null,
+            CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = BuildAttributes(
@@ -57,6 +59,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 sourceMetadata,
                 thoughtProcess,
                 hiringManagerId,
+                callerDetails,
                 extraAttributes);
 
             return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId);
@@ -72,6 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             SourceMetadata? sourceMetadata,
             string? thoughtProcess,
             string? hiringManagerId,
+            CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -98,6 +102,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Add hiring manager ID
             AddIfNotNull(attributes, HiringManagerIdKey, hiringManagerId);
+
+            // Add caller details
+            AddCallerDetails(attributes, callerDetails);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);

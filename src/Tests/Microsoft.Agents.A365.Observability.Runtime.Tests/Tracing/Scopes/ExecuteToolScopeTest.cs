@@ -229,4 +229,33 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         // Assert
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolServerNameKey, expectedToolServerName);
     }
+
+    [TestMethod]
+    public void Start_SetsCallerDetails_WhenProvided()
+    {
+        // Arrange
+        var callerDetails = new CallerDetails(
+            callerId: "caller-123",
+            callerName: "Test Caller",
+            callerUpn: "caller@example.com",
+            callerClientIP: System.Net.IPAddress.Parse("192.168.1.1"),
+            tenantId: "tenant-456");
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                callerDetails: callerDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+    }
 }

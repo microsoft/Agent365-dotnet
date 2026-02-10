@@ -247,4 +247,37 @@ public sealed class InferenceScopeTest : ActivityTest
         
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentThoughtProcessKey, thoughtProcess);
     }
+
+    [TestMethod]
+    public void Start_SetsCallerDetails_WhenProvided()
+    {
+        // Arrange
+        var callerDetails = new CallerDetails(
+            callerId: "caller-inf-123",
+            callerName: "Inference Caller",
+            callerUpn: "caller-inf@example.com",
+            callerClientIP: System.Net.IPAddress.Parse("10.0.0.1"),
+            tenantId: "tenant-inf-456");
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            "gpt-4o",
+            "openai");
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(
+                details,
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                callerDetails: callerDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+    }
 }

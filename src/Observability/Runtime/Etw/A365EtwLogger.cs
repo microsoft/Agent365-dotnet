@@ -45,7 +45,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata)
+            SourceMetadata? sourceMetadata,
+            CallerDetails? callerDetails)
         {
             var data = ExecuteInferenceDataBuilder.Build(
                 inferenceCallDetails,
@@ -58,7 +59,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata);
+                sourceMetadata,
+                callerDetails: callerDetails);
 
             logger.Log(
                 LogLevel.Information,
@@ -118,7 +120,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata)
+            SourceMetadata? sourceMetadata,
+            CallerDetails? callerDetails)
         {
             var data = ExecuteToolDataBuilder.Build(
                 toolCallDetails,
@@ -130,7 +133,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata);
+                sourceMetadata,
+                callerDetails: callerDetails);
 
             logger.Log(
                 LogLevel.Information,

@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.Tracing;
+using System.Net;
 using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
@@ -37,10 +38,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot);
             var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
+            var callerDetails = new CallerDetails(callerId: "caller-id-1", callerName: "Caller Name", callerUpn: "caller@example.com", callerClientIP: IPAddress.Parse("192.168.1.100"), tenantId: "caller-tenant-id");
             string conversationId = "conv-123";
 
             // Act
-            logger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
+            logger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -65,6 +67,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual("caller-id-1", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerIdKey).GetString());
+            Assert.AreEqual("Caller Name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerNameKey).GetString());
+            Assert.AreEqual("caller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerUpnKey).GetString());
+            Assert.AreEqual("192.168.1.100", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerClientIpKey).GetString());
+            Assert.AreEqual("caller-tenant-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerTenantIdKey).GetString());
         }
 
         [TestMethod]
@@ -80,9 +87,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             string conversationId = "conv-inf-1";
             var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
+            var callerDetails = new CallerDetails(callerId: "inf-caller-id", callerName: "Inference Caller", callerUpn: "infcaller@example.com", callerClientIP: IPAddress.Parse("10.0.0.50"));
 
             // Act
-            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" }, sourceMetadata: source);
+            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" }, sourceMetadata: source, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -110,6 +118,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual("inf-caller-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerIdKey).GetString());
+            Assert.AreEqual("Inference Caller", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerNameKey).GetString());
+            Assert.AreEqual("infcaller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerUpnKey).GetString());
+            Assert.AreEqual("10.0.0.50", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerClientIpKey).GetString());
         }
 
         [TestMethod]
@@ -126,9 +138,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             string conversationId = "conv-tool-1";
             string responseContent = @"{ ""value"": ""result"" }";
             var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
+            var callerDetails = new CallerDetails(callerId: "tool-caller-id", callerName: "Tool Caller", callerUpn: "toolcaller@example.com", tenantId: "tool-caller-tenant");
 
             // Act
-            logger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent, sourceMetadata: source);
+            logger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent, sourceMetadata: source, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -158,6 +171,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
             Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual("tool-caller-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerIdKey).GetString());
+            Assert.AreEqual("Tool Caller", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerNameKey).GetString());
+            Assert.AreEqual("toolcaller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerUpnKey).GetString());
+            Assert.AreEqual("tool-caller-tenant", attrsElement.GetProperty(OpenTelemetryConstants.GenAiCallerTenantIdKey).GetString());
         }
 
         [TestMethod]
