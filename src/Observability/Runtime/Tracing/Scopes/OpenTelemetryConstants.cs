@@ -50,7 +50,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             ExecuteInference,
 
             [EnumMember(Value = "ExecuteTool")]
-            ExecuteTool
+            ExecuteTool,
+
+            [EnumMember(Value = "OutputMessages")]
+            OutputMessages
         }
 
         // AI invocation context dimensions

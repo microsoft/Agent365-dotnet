@@ -161,6 +161,44 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
+        public void Build_AddsEtwLogProcessor_AndWritesExpectedAttributes_FromOutputMessages()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            using var provider = BuildProvider();
+            var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot);
+            var response = new Response(new[] { "Hello", "World" });
+
+            // Act
+            logger.LogOutput(agentDetails, tenantDetails, response);
+
+            // Assert
+            var evt = listener.Events.Find(e => e.EventId == 2000);
+            Assert.IsNotNull(evt);
+            Assert.IsNotNull(evt.Payload);
+            var payloadStr = evt.Payload[0] as string;
+            Assert.IsNotNull(payloadStr);
+            var root = JsonDocument.Parse(payloadStr).RootElement;
+            Assert.IsTrue(root.TryGetProperty("Name", out var nameProp));
+            Assert.AreEqual(OpenTelemetryConstants.OperationNames.OutputMessages.ToString(), nameProp.GetString());
+            Assert.IsTrue(root.TryGetProperty("SpanId", out var spanIdProp));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(spanIdProp.GetString()));
+            Assert.IsTrue(root.TryGetProperty("Attributes", out var attrsElement));
+            Assert.AreEqual(JsonValueKind.Object, attrsElement.ValueKind, "Attributes JSON element should be an object.");
+            Assert.AreEqual("agent-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentIdKey).GetString());
+            Assert.AreEqual("agent-name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentNameKey).GetString());
+            Assert.AreEqual("output_messages", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
+            Assert.AreEqual("MicrosoftCopilot", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentTypeKey).GetString());
+            Assert.AreEqual("Hello,World", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
+            Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
+            Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+        }
+
+        [TestMethod]
         public void LoggerFilter_Allows_EtwCategoryPrefix_Only()
         {
             // Arrange
@@ -198,18 +236,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
+            var response = new Response(new[] { "output" });
             string conversationId = "conv-123";
 
             // Act
             etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
             etwLogger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
             etwLogger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, @"{ ""value"": ""result"" }");
+            etwLogger.LogOutput(agentDetails, tenantDetails, response);
 
             // Assert
             var payloads = listener.Events.Where(e => e.EventId == 2000).Select(e => e.Payload?[0] as string).Where(p => p != null).ToList();
             Assert.IsTrue(payloads.Any(p => p!.Contains("InvokeAgent")), "Expected at least one InvokeAgent log to be exported");
             Assert.IsTrue(payloads.Any(p => p!.Contains("ExecuteInference")), "Expected at least one ExecuteInference log to be exported");
             Assert.IsTrue(payloads.Any(p => p!.Contains("ExecuteTool")), "Expected at least one ExecuteTool log to be exported");
+            Assert.IsTrue(payloads.Any(p => p!.Contains("OutputMessages")), "Expected at least one OutputMessages log to be exported");
         }
     }
 }

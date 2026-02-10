@@ -88,5 +88,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? spanId = null,
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null);
+
+        /// <summary>
+        /// Logs an output_messages event.
+        /// </summary>
+        /// <param name="agentDetails">The details of the agent.</param>
+        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="response">The response containing output messages.</param>
+        /// <param name="startTime">Optional start time of the output operation.</param>
+        /// <param name="endTime">Optional end time of the output operation.</param>
+        /// <param name="spanId">Optional span ID for tracing.</param>
+        /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
+        public void LogOutput(
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            Response response,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null);
     }
 }
