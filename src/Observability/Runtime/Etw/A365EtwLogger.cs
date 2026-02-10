@@ -20,6 +20,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         private static readonly EventId ExecuteInferenceEventId = new EventId(1002, ExecuteInferenceEventName);
         private const string ExecuteToolEventName = "ExecuteTool";
         private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
+        private const string OutputMessagesEventName = "OutputMessages";
+        private static readonly EventId OutputMessagesEventId = new EventId(1004, OutputMessagesEventName);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="A365EtwLogger{T}"/> class.
@@ -133,6 +135,34 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             logger.Log(
                 LogLevel.Information,
                 ExecuteToolEventId,
+                data.ToDictionary(),
+                null,
+                LogFormatter
+            );
+        }
+
+        /// <inheritdoc/>
+        public void LogOutput(
+            AgentDetails agentDetails,
+            TenantDetails tenantDetails,
+            Response response,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            string? parentSpanId = null)
+        {
+            var data = OutputDataBuilder.Build(
+                agentDetails,
+                tenantDetails,
+                response,
+                startTime,
+                endTime,
+                spanId,
+                parentSpanId);
+
+            logger.Log(
+                LogLevel.Information,
+                OutputMessagesEventId,
                 data.ToDictionary(),
                 null,
                 LogFormatter

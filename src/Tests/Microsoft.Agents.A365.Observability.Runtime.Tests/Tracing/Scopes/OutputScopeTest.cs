@@ -1,0 +1,93 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
+
+using FluentAssertions;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+
+[TestClass]
+public sealed class OutputScopeTest : ActivityTest
+{
+    [TestMethod]
+    public void Start_SetsExpectedTags()
+    {
+        // Arrange
+        var initialMessages = new[] { "Hello", "World" };
+        var response = new Response(initialMessages);
+        var agentDetails = new AgentDetails(
+            agentId: "agent-output-123",
+            agentName: "OutputAgent",
+            agentType: AgentType.MicrosoftCopilot);
+        var tenantDetails = new TenantDetails(Guid.NewGuid());
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(agentDetails, tenantDetails, response);
+        });
+
+        // Assert - operation name and activity name
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, OutputScope.OperationName);
+        activity.DisplayName.Should().Be($"{OutputScope.OperationName} {agentDetails.AgentId}");
+
+        // Assert - agent details
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentDetails.AgentType!.ToString()!);
+
+        // Assert - output messages
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", initialMessages));
+    }
+
+    [TestMethod]
+    public void RecordOutputMessages_AppendsMessages()
+    {
+        // Arrange
+        var initialMessages = new[] { "Hello", "World" };
+        var additionalMessages = new[] { "Goodbye", "Moon" };
+        var response = new Response(initialMessages);
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(agentDetails, tenantDetails, response);
+            scope.RecordOutputMessages(additionalMessages);
+        });
+
+        // Assert - output messages are appended (initial + additional)
+        var expectedMessages = string.Join(",", initialMessages) + "," + string.Join(",", additionalMessages);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, expectedMessages);
+    }
+
+    [TestMethod]
+    public void Start_WithParentId_SetsParentIdCorrectly()
+    {
+        // Arrange
+        var response = new Response(new[] { "Test message" });
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Create a parent activity to get a valid parent ID
+        string? parentId = null;
+        ListenForActivity(() =>
+        {
+            using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
+            parentId = parentScope.Id;
+        });
+
+        // Act
+        var childActivity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(agentDetails, tenantDetails, response, parentId: parentId);
+        });
+
+        // Assert - child activity should have the parent set
+        childActivity.ParentId.Should().Be(parentId);
+        childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, OutputScope.OperationName);
+        childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
+    }
+}
