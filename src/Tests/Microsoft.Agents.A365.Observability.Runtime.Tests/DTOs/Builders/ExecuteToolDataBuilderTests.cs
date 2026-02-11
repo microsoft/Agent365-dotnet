@@ -213,6 +213,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var parentSpanId = "parent-all";
             var responseContent = "tool-response";
             var hiringManagerId = "hiring-manager-tool-123";
+            var callerDetails = new CallerDetails("caller-tool-123", "Caller Tool Name", "callertool@example.com", System.Net.IPAddress.Parse("10.0.0.50"), "caller-tenant-tool");
 
             // Act
             var data = ExecuteToolDataBuilder.Build(
@@ -225,7 +226,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 endTime: end,
                 spanId: spanId,
                 parentSpanId: parentSpanId,
-                hiringManagerId: hiringManagerId);
+                hiringManagerId: hiringManagerId,
+                callerDetails: callerDetails);
 
             // Assert
             var attrs = data.Attributes;
@@ -236,6 +238,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiEventContent);
             attrs.Should().ContainKey(OpenTelemetryConstants.HiringManagerIdKey).WhoseValue.Should().Be("hiring-manager-tool-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey).WhoseValue.Should().Be("caller-tool-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey).WhoseValue.Should().Be("Caller Tool Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey).WhoseValue.Should().Be("callertool@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerClientIpKey).WhoseValue.Should().Be("10.0.0.50");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey).WhoseValue.Should().Be("caller-tenant-tool");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
             data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));

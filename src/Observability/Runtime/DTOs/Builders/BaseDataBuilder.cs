@@ -40,6 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiCallerAgentAUIDKey,
             OpenTelemetryConstants.GenAiCallerAgentUPNKey,
             OpenTelemetryConstants.GenAiCallerAgentTenantKey,
+            OpenTelemetryConstants.GenAiCallerClientIpKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.SessionIdKey,
             OpenTelemetryConstants.GenAiToolNameKey,
@@ -145,6 +146,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
         }
 

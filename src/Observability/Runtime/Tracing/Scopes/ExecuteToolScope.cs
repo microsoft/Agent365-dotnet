@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="conversationId">Optional conversation or session correlation ID for the tool execution.</param>
         /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
+        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <returns>A new ExecuteToolScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -43,9 +44,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, threatDiagnosticsSummary);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null)
             : base(
                 kind: ActivityKind.Internal,
                 agentDetails: agentDetails,
@@ -54,7 +55,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 activityName: $"{OperationName} {details.ToolName}",
                 parentId: parentId,
                 conversationId: conversationId,
-                sourceMetadata: sourceMetadata)
+                sourceMetadata: sourceMetadata,
+                callerDetails: callerDetails)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);

@@ -153,8 +153,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 reason: "No threats detected during tool execution.",
                 diagnostics: null);
 
+            var expectedToolCallerDetails = new CallerDetails(
+                callerId: "tool-caller-456",
+                callerName: "Tool Caller",
+                callerUpn: "tool-caller@ztaitest12.onmicrosoft.com",
+                callerClientIP: IPAddress.Parse("10.0.0.42"),
+                tenantId: expectedAgentDetails.TenantId);
+
             // Act
-            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
+            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary, callerDetails: expectedToolCallerDetails))
             {
                 scope.RecordResponse("Tool response content");
             }
@@ -196,6 +203,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
             this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedToolCallerDetails.CallerId);
+            this.GetAttribute(attributes, "gen_ai.caller.upn").Should().Be(expectedToolCallerDetails.CallerUpn);
+            this.GetAttribute(attributes, "gen_ai.caller.name").Should().Be(expectedToolCallerDetails.CallerName);
+            this.GetAttribute(attributes, "gen_ai.caller.client.ip").Should().Be(expectedToolCallerDetails.CallerClientIP?.ToString());
+            this.GetAttribute(attributes, "gen_ai.caller.tenantid").Should().Be(expectedToolCallerDetails.TenantId);
             var toolThreatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
             toolThreatSummaryJson.Should().Contain("\"blockAction\":false");
             toolThreatSummaryJson.Should().Contain("\"reasonCode\":200");
@@ -231,8 +243,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 finishReasons: new[] { "stop", "length" },
                 responseId: "response-xyz");
 
+            var expectedInferenceCallerDetails = new CallerDetails(
+                callerId: "inference-caller-789",
+                callerName: "Inference Caller",
+                callerUpn: "inference-caller@ztaitest12.onmicrosoft.com",
+                callerClientIP: IPAddress.Parse("172.16.0.42"),
+                tenantId: expectedAgentDetails.TenantId);
+
             // Act
-            using (var scope = InferenceScope.Start(inferenceDetails, expectedAgentDetails, tenantDetails))
+            using (var scope = InferenceScope.Start(inferenceDetails, expectedAgentDetails, tenantDetails, callerDetails: expectedInferenceCallerDetails))
             {
                 scope.RecordInputMessages(new[] { "Hello", "World" });
                 scope.RecordOutputMessages(new[] { "Hi there!" });
@@ -277,6 +296,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedInferenceCallerDetails.CallerId);
+            this.GetAttribute(attributes, "gen_ai.caller.upn").Should().Be(expectedInferenceCallerDetails.CallerUpn);
+            this.GetAttribute(attributes, "gen_ai.caller.name").Should().Be(expectedInferenceCallerDetails.CallerName);
+            this.GetAttribute(attributes, "gen_ai.caller.client.ip").Should().Be(expectedInferenceCallerDetails.CallerClientIP?.ToString());
+            this.GetAttribute(attributes, "gen_ai.caller.tenantid").Should().Be(expectedInferenceCallerDetails.TenantId);
         }
 
         [TestMethod]

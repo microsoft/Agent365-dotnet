@@ -46,7 +46,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="parentId">Optional parent ID for the activity.</param>
         /// <param name="conversationId">Optional conversation id.</param>
         /// <param name="sourceMetadata">Optional source metadata.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null)
+        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
         {
             customStartTime = startTime;
             activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
@@ -102,6 +103,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             {
                 SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
                 SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
+            }
+
+            if (callerDetails != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
+                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
             }
 
             activity?.Start();

@@ -51,6 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
+        /// <param name="callerDetails">Optional details of the non-agentic caller.</param>
         public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
@@ -62,7 +63,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            SourceMetadata? sourceMetadata = null);
+            SourceMetadata? sourceMetadata = null,
+            CallerDetails? callerDetails = null);
 
         /// <summary>
         /// Logs an execute_tool event.
@@ -77,6 +79,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="spanId">Optional span ID for tracing.</param>
         /// <param name="parentSpanId">Optional parent span ID for tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the tool call.</param>
+        /// <param name="callerDetails">Optional details of the non-agentic caller.</param>
         public void LogToolCall(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
@@ -87,7 +90,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            SourceMetadata? sourceMetadata = null);
+            SourceMetadata? sourceMetadata = null,
+            CallerDetails? callerDetails = null);
 
         /// <summary>
         /// Logs an output_messages event.
