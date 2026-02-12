@@ -604,6 +604,126 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             receivedContents.Should().HaveCount(1, "Should receive exactly one export payload");
         }
 
+        [TestMethod]
+        public async Task AddTracing_NestedScopes_ChildScopesHaveLaterStartTimes()
+        {
+            // Arrange
+            List<string> receivedContents = new();
+
+            var agentDetails = new AgentDetails(
+                agentId: Guid.NewGuid().ToString(),
+                agentName: "Timing Test Agent",
+                agentDescription: "Agent for start time ordering test.",
+                agentAUID: Guid.NewGuid().ToString(),
+                agentUPN: "timingagent@ztaittest12.onmicrosoft.com",
+                agentBlueprintId: Guid.NewGuid().ToString(),
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: AgentType.EntraEmbodied);
+
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var endpoint = new Uri("https://timing-test-endpoint");
+
+            var handler = new TestHttpMessageHandler(req =>
+            {
+                receivedContents.Add(req.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "");
+                return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            });
+            var httpClient = new HttpClient(handler);
+
+            var provider = this.CreateTestServiceProvider(httpClient);
+
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var request = new Request(
+                content: "Timing test request",
+                executionType: ExecutionType.HumanToAgent,
+                sourceMetadata: new SourceMetadata(name: "timing", description: "https://timingchannel.link"));
+
+            var toolCallDetails = new ToolCallDetails(
+                toolName: "TimingTool",
+                arguments: "{\"param\":\"timing\"}",
+                toolCallId: "call-timing",
+                description: "Timing tool call",
+                toolType: "timing-type",
+                endpoint: endpoint);
+
+            var inferenceDetails = new InferenceCallDetails(
+                operationName: InferenceOperationType.Chat,
+                model: "gpt-timing",
+                providerName: "OpenAI",
+                inputTokens: 10,
+                outputTokens: 20,
+                finishReasons: new[] { "stop" },
+                responseId: "response-timing");
+
+            // Act - Create nested scopes with delays to ensure different start times
+            using (var agentScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            {
+                agentScope.RecordInputMessages(new[] { "Agent input" });
+
+                // Delay before starting tool scope to ensure measurable time difference
+                await Task.Delay(100).ConfigureAwait(false);
+
+                using (var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails))
+                {
+                    toolScope.RecordResponse("Tool response");
+
+                    // Delay before starting inference scope
+                    await Task.Delay(100).ConfigureAwait(false);
+
+                    using (var inferenceScope = InferenceScope.Start(inferenceDetails, agentDetails, tenantDetails))
+                    {
+                        inferenceScope.RecordInputMessages(new[] { "Inference input" });
+                        inferenceScope.RecordOutputMessages(new[] { "Inference output" });
+                    }
+                }
+
+                agentScope.RecordOutputMessages(new[] { "Agent output" });
+            }
+
+            // Wait for spans to be exported
+            await Task.Delay(10000).ConfigureAwait(false);
+
+            // Assert - Extract start times from all spans
+            var spanStartTimes = new Dictionary<string, ulong>();
+            foreach (var content in receivedContents)
+            {
+                using var doc = JsonDocument.Parse(content);
+                var root = doc.RootElement;
+                var spans = root
+                    .GetProperty("resourceSpans")[0]
+                    .GetProperty("scopeSpans")[0]
+                    .GetProperty("spans")
+                    .EnumerateArray();
+
+                foreach (var span in spans)
+                {
+                    var opName = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.operation.name");
+                    if (opName != null && span.TryGetProperty("startTimeUnixNano", out var startTimeElement))
+                    {
+                        var startTime = startTimeElement.GetUInt64();
+                        spanStartTimes[opName] = startTime;
+                    }
+                }
+            }
+
+            // Verify all three scopes were exported
+            spanStartTimes.Should().ContainKey("invoke_agent", "InvokeAgentScope should be exported");
+            spanStartTimes.Should().ContainKey("execute_tool", "ExecuteToolScope should be exported");
+            spanStartTimes.Should().ContainKey(InferenceOperationType.Chat.ToString(), "InferenceScope should be exported");
+
+            var invokeAgentStartTime = spanStartTimes["invoke_agent"];
+            var executeToolStartTime = spanStartTimes["execute_tool"];
+            var inferenceStartTime = spanStartTimes[InferenceOperationType.Chat.ToString()];
+
+            // Verify start time ordering: parent should start before children
+            executeToolStartTime.Should().BeGreaterThan(invokeAgentStartTime,
+                "ExecuteToolScope should have a later start time than its parent InvokeAgentScope");
+            inferenceStartTime.Should().BeGreaterThan(executeToolStartTime,
+                "InferenceScope should have a later start time than its parent ExecuteToolScope");
+            inferenceStartTime.Should().BeGreaterThan(invokeAgentStartTime,
+                "InferenceScope should have a later start time than the root InvokeAgentScope");
+        }
+
         private class TestHttpMessageHandler : HttpMessageHandler
         {
             private Func<HttpRequestMessage, HttpResponseMessage> _handler;
