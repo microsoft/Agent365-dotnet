@@ -44,6 +44,19 @@ public class McpSession
     public ConcurrentDictionary<int, TaskCompletionSource<string>> PendingRequests { get; } = new();
 
     /// <summary>
+    /// Gets or sets a value indicating whether this session requires desktop re-registration.
+    /// This is set when locaproto returns a REREGISTRATION_REQUIRED error.
+    /// </summary>
+    public bool RequiresReregistration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the protocol URL for re-registration.
+    /// This is provided by locaproto when re-registration is required.
+    /// Format: locaproto:?action=register&amp;callback=https://agent.com/api/channels/register
+    /// </summary>
+    public string? ReregistrationProtocolUrl { get; set; }
+
+    /// <summary>
     /// Updates the last activity time to now.
     /// </summary>
     public void UpdateActivity()

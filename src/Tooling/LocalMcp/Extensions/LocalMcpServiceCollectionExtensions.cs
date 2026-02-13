@@ -28,6 +28,7 @@ public static class LocalMcpServiceCollectionExtensions
         // Register services
         services.AddSingleton<ISessionManager, InMemorySessionManager>();
         services.AddSingleton<IWnsNotificationService, WnsNotificationService>();
+        services.AddSingleton<IIntuneStatusService, IntuneStatusService>();
 
         // Ensure HttpClientFactory is available
         services.AddHttpClient();
@@ -62,6 +63,7 @@ public static class LocalMcpServiceCollectionExtensions
         // Register services
         services.AddSingleton<ISessionManager, InMemorySessionManager>();
         services.AddSingleton<IWnsNotificationService, WnsNotificationService>();
+        services.AddSingleton<IIntuneStatusService, IntuneStatusService>();
 
         // Ensure HttpClientFactory is available
         services.AddHttpClient();

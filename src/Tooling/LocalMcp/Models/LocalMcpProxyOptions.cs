@@ -42,4 +42,10 @@ public class LocalMcpProxyOptions
     /// Gets or sets the default MCP server ID if none is specified.
     /// </summary>
     public string DefaultServerId { get; set; } = "MicrosoftWindows.Client.Core_cw5n1h2txyewy_com.microsoft.windows.ai.mcpServer_file-mcp-server";
+
+    /// <summary>
+    /// Gets or sets the base URL for the LocalMcp proxy. This is used for generating callback URLs.
+    /// If not set, the proxy will use the request's Host header to determine the URL.
+    /// </summary>
+    public string? BaseUrl { get; set; }
 }

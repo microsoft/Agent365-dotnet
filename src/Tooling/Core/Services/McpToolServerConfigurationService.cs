@@ -16,6 +16,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
+    using Microsoft.Agents.A365.Tooling.Exceptions;
     using Microsoft.Agents.A365.Tooling.Handlers;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Transports;
@@ -36,6 +37,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private readonly IConfiguration _configuration;
         private readonly ILoggerFactory? _loggerFactory;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILocalMcpScopeValidator? _localMcpScopeValidator;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
@@ -50,6 +52,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             this._logger = logger;
             this._loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             this._httpClientFactory = httpClientFactory;
+            this._localMcpScopeValidator = serviceProvider.GetService<ILocalMcpScopeValidator>();
         }
 
         /// <inheritdoc/>
@@ -91,6 +94,24 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     case McpTransportType.Wns:
                         this._logger.LogInformation("[GetTools] Using WNS transport for {ServerName}", mCPServerConfig.mcpServerName);
+
+                        // Validate local MCP server scope before invocation
+                        // This is equivalent to how remote MCP servers validate scope via token
+                        if (this._localMcpScopeValidator != null)
+                        {
+                            var scopeResult = await this._localMcpScopeValidator.ValidateScopeAsync(mCPServerConfig.mcpServerName);
+                            if (!scopeResult.IsValid)
+                            {
+                                throw new UnauthorizedAccessException(
+                                    $"[LocalMcpScope] Access denied to local MCP server '{mCPServerConfig.mcpServerName}': {scopeResult.ErrorMessage}");
+                            }
+                            this._logger.LogInformation("[GetTools] Scope validation passed for local server {ServerName}", mCPServerConfig.mcpServerName);
+                        }
+                        else
+                        {
+                            this._logger.LogDebug("[GetTools] Local MCP scope validator not registered, skipping scope validation");
+                        }
+
                         mcpClient = await CreateWnsMcpClientAsync(mCPServerConfig);
                         break;
 
@@ -713,10 +734,29 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     try
                     {
-                        var localServers = await DiscoverLocalServersAsync(localClientName, proxyBaseUrl, cancellationToken);
-                        allServers.AddRange(localServers);
-                        this._logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
-                            localServers.Count, localClientName);
+                        // First, check Intune compliance before discovering local servers
+                        this._logger.LogInformation("[Discovery] Checking Intune compliance for client '{ClientName}'", localClientName);
+                        var intuneResult = await CheckIntuneComplianceAsync(localClientName, proxyBaseUrl, 30, cancellationToken);
+
+                        if (!intuneResult.IsIntuneManaged)
+                        {
+                            this._logger.LogWarning("[Discovery] Device for client '{ClientName}' is NOT Intune managed. Skipping local server discovery.", localClientName);
+                            this._logger.LogWarning("[Discovery] Intune check result: IsAzureAdJoined={IsAzureAdJoined}, Error={Error}",
+                                intuneResult.IsAzureAdJoined, intuneResult.ErrorMessage ?? "none");
+                        }
+                        else
+                        {
+                            this._logger.LogInformation("[Discovery] Device for client '{ClientName}' is Intune managed. Proceeding with local server discovery.", localClientName);
+                            var localServers = await DiscoverLocalServersAsync(localClientName, proxyBaseUrl, cancellationToken);
+                            allServers.AddRange(localServers);
+                            this._logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
+                                localServers.Count, localClientName);
+                        }
+                    }
+                    catch (LocalMcpDesktopRegistrationRequiredException)
+                    {
+                        // Let registration required exceptions propagate to the agent
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -731,6 +771,161 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             this._logger.LogInformation("[Discovery] Total MCP servers available: {Count}", allServers.Count);
             return allServers;
+        }
+
+        /// <inheritdoc/>
+        public async Task<LocalDiscoveryResult> ListToolServersWithUserDiscoveryAsync(
+            string agentInstanceId,
+            string authToken,
+            ToolOptions toolOptions,
+            string userIdentifier,
+            CancellationToken cancellationToken = default)
+        {
+            var result = new LocalDiscoveryResult
+            {
+                UserIdentifier = userIdentifier,
+                Servers = new List<MCPServerConfig>()
+            };
+
+            // 1. Get cloud servers from ATG (always available)
+            try
+            {
+                var cloudServers = await ListToolServersAsync(agentInstanceId, authToken, toolOptions);
+                var sseServers = cloudServers.Where(s => s.transportType == McpTransportType.Sse).ToList();
+                result.Servers.AddRange(sseServers);
+                this._logger.LogInformation("[UserDiscovery] Found {Count} cloud MCP servers", sseServers.Count);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "[UserDiscovery] Failed to get cloud MCP servers");
+            }
+
+            // 2. Look up registered desktops by user identity
+            var proxyBaseUrl = this._configuration["LocalMcp:BaseUrl"];
+            if (string.IsNullOrEmpty(proxyBaseUrl))
+            {
+                this._logger.LogDebug("[UserDiscovery] LocalMcp:BaseUrl not configured, skipping local server discovery");
+                return result;
+            }
+
+            try
+            {
+                var httpClient = this._httpClientFactory.CreateClient("LocalMcpDiscovery");
+                var encodedUserIdentifier = System.Net.WebUtility.UrlEncode(userIdentifier);
+                
+                using var response = await httpClient.GetAsync(
+                    $"{proxyBaseUrl}/api/channels/by-user/{encodedUserIdentifier}",
+                    cancellationToken);
+
+                var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                this._logger.LogDebug("[UserDiscovery] User lookup response: {StatusCode} - {Body}", 
+                    response.StatusCode, responseBody);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    // No desktops registered for this user
+                    var errorJson = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                    if (errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                    {
+                        result.RequiresRegistration = true;
+                        result.RegistrationProtocolUrl = regUrlProp.GetString();
+                        result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
+                        
+                        this._logger.LogWarning("[UserDiscovery] No desktops registered for user '{UserIdentifier}'. Registration URL: {RegistrationUrl}",
+                            userIdentifier, result.RegistrationProtocolUrl);
+                        
+                        throw new LocalMcpDesktopRegistrationRequiredException(
+                            userIdentifier,
+                            result.RegistrationProtocolUrl ?? string.Empty,
+                            result.ErrorMessage);
+                    }
+                    return result;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    result.ErrorMessage = $"Failed to look up user's desktops: {response.StatusCode}";
+                    this._logger.LogWarning("[UserDiscovery] {Error}", result.ErrorMessage);
+                    return result;
+                }
+
+                // Parse the list of registered desktops
+                var userDesktopsJson = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                if (userDesktopsJson.TryGetProperty("clients", out var clientsArray))
+                {
+                    foreach (var clientJson in clientsArray.EnumerateArray())
+                    {
+                        var desktop = new DesktopClientInfo
+                        {
+                            ClientName = clientJson.GetProperty("clientName").GetString() ?? string.Empty,
+                            MachineName = clientJson.GetProperty("machineName").GetString() ?? string.Empty,
+                            RegisteredAt = clientJson.TryGetProperty("registeredAt", out var regAt) 
+                                ? regAt.GetDateTime() : DateTime.MinValue,
+                            LastSeen = clientJson.TryGetProperty("lastSeen", out var lastSeen) 
+                                ? lastSeen.GetDateTime() : DateTime.MinValue
+                        };
+                        result.AllRegisteredDesktops.Add(desktop);
+                    }
+                }
+
+                if (result.AllRegisteredDesktops.Count == 0)
+                {
+                    result.RequiresRegistration = true;
+                    result.RegistrationProtocolUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUserIdentifier}";
+                    result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
+                    
+                    throw new LocalMcpDesktopRegistrationRequiredException(
+                        userIdentifier,
+                        result.RegistrationProtocolUrl,
+                        result.ErrorMessage);
+                }
+
+                // 3. Pick the most recently active desktop
+                result.ActiveDesktop = result.AllRegisteredDesktops
+                    .OrderByDescending(d => d.LastSeen)
+                    .First();
+
+                this._logger.LogInformation("[UserDiscovery] User '{UserIdentifier}' has {Count} registered desktop(s). Using '{ActiveDesktop}' (last seen: {LastSeen})",
+                    userIdentifier, result.AllRegisteredDesktops.Count, result.ActiveDesktop.ClientName, result.ActiveDesktop.LastSeen);
+
+                if (result.AllRegisteredDesktops.Count > 1)
+                {
+                    this._logger.LogInformation("[UserDiscovery] Other registered desktops: {Others}",
+                        string.Join(", ", result.AllRegisteredDesktops.Where(d => d.ClientName != result.ActiveDesktop.ClientName).Select(d => d.ClientName)));
+                }
+
+                // 4. Now perform Intune check and discovery using the selected desktop
+                var intuneResult = await CheckIntuneComplianceAsync(result.ActiveDesktop.ClientName, proxyBaseUrl, 30, cancellationToken);
+
+                if (!intuneResult.IsIntuneManaged)
+                {
+                    this._logger.LogWarning("[UserDiscovery] Desktop '{ClientName}' is NOT Intune managed. Skipping local server discovery.", 
+                        result.ActiveDesktop.ClientName);
+                }
+                else
+                {
+                    this._logger.LogInformation("[UserDiscovery] Desktop '{ClientName}' is Intune managed. Discovering local servers...", 
+                        result.ActiveDesktop.ClientName);
+                    
+                    var localServers = await DiscoverLocalServersAsync(result.ActiveDesktop.ClientName, proxyBaseUrl, cancellationToken);
+                    result.Servers.AddRange(localServers);
+                    
+                    this._logger.LogInformation("[UserDiscovery] Found {Count} local MCP servers from '{ClientName}'",
+                        localServers.Count, result.ActiveDesktop.ClientName);
+                }
+            }
+            catch (LocalMcpDesktopRegistrationRequiredException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "[UserDiscovery] Failed to discover desktops for user '{UserIdentifier}'", userIdentifier);
+                result.ErrorMessage = ex.Message;
+            }
+
+            this._logger.LogInformation("[UserDiscovery] Total MCP servers available: {Count}", result.Servers.Count);
+            return result;
         }
 
         /// <summary>
@@ -835,6 +1030,26 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     $"{proxyBaseUrl}/api/notify/{clientName}",
                     new StringContent(notifyRequestJson, Encoding.UTF8, "application/json"),
                     cancellationToken);
+
+                // Check if desktop client is not registered (404 with CLIENT_NOT_REGISTERED)
+                if (notifyResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var errorContent = await notifyResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                    
+                    if (errorContent.TryGetProperty("error", out var errorProp) && 
+                        errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
+                        errorContent.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                    {
+                        var registrationUrl = regUrlProp.GetString() ?? string.Empty;
+                        this._logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
+                            clientName, registrationUrl);
+                        
+                        throw new LocalMcpDesktopRegistrationRequiredException(
+                            clientName,
+                            registrationUrl,
+                            $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                    }
+                }
 
                 notifyResponse.EnsureSuccessStatusCode();
                 this._logger.LogDebug("[Discovery] Notification sent, requestId: {RequestId}", requestId);
@@ -1017,6 +1232,160 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Result of an Intune compliance check for a Windows device.
+        /// </summary>
+        private class IntuneComplianceCheckResult
+        {
+            public bool IsIntuneManaged { get; set; }
+            public bool IsAzureAdJoined { get; set; }
+            public string? TenantId { get; set; }
+            public string? DeviceId { get; set; }
+            public string? MachineName { get; set; }
+            public string? ErrorMessage { get; set; }
+        }
+
+        /// <summary>
+        /// Checks if a Windows desktop client is Intune managed before allowing local server discovery.
+        /// This is a security requirement to ensure only managed devices can expose local MCP servers.
+        /// </summary>
+        private async Task<IntuneComplianceCheckResult> CheckIntuneComplianceAsync(
+            string clientName,
+            string proxyBaseUrl,
+            int timeoutSeconds,
+            CancellationToken cancellationToken)
+        {
+            this._logger.LogInformation("[Intune] Checking Intune compliance for client '{ClientName}'", clientName);
+
+            var httpClient = this._httpClientFactory.CreateClient("LocalMcpDiscovery");
+
+            try
+            {
+                // Step 1: Send an Intune check request via the WNS proxy
+                using var initiateResponse = await httpClient.PostAsync(
+                    $"{proxyBaseUrl}/api/intune-check/{clientName}",
+                    null,
+                    cancellationToken);
+
+                if (!initiateResponse.IsSuccessStatusCode)
+                {
+                    var errorBody = await initiateResponse.Content.ReadAsStringAsync(cancellationToken);
+                    this._logger.LogWarning("[Intune] Failed to initiate Intune check: {StatusCode} - {Error}",
+                        initiateResponse.StatusCode, errorBody);
+                    
+                    // Check if the error is because the client is not registered
+                    if (initiateResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        // Try to parse the error to see if it contains registration info
+                        try
+                        {
+                            var errorJson = JsonSerializer.Deserialize<JsonElement>(errorBody);
+                            if (errorJson.TryGetProperty("error", out var errorProp) && 
+                                errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
+                                errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                            {
+                                var registrationUrl = regUrlProp.GetString() ?? string.Empty;
+                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
+                                    clientName, registrationUrl);
+                                
+                                throw new LocalMcpDesktopRegistrationRequiredException(
+                                    clientName,
+                                    registrationUrl,
+                                    $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                            }
+                            
+                            // Check for simple "Client not found" message - generate registration URL
+                            if (errorJson.TryGetProperty("message", out var msgProp) && 
+                                msgProp.GetString()?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
+                            {
+                                var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register";
+                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' not found. Registration URL: {RegistrationUrl}", 
+                                    clientName, registrationUrl);
+                                
+                                throw new LocalMcpDesktopRegistrationRequiredException(
+                                    clientName,
+                                    registrationUrl,
+                                    $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                            }
+                        }
+                        catch (JsonException)
+                        {
+                            // Not JSON, continue with default behavior
+                        }
+                    }
+                    
+                    return new IntuneComplianceCheckResult
+                    {
+                        IsIntuneManaged = false,
+                        ErrorMessage = $"Failed to initiate Intune check: {initiateResponse.StatusCode}"
+                    };
+                }
+
+                var initiateResult = await initiateResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var requestId = initiateResult.GetProperty("requestId").GetString()
+                    ?? throw new InvalidOperationException("Failed to get requestId from Intune check response");
+
+                this._logger.LogDebug("[Intune] Intune check initiated with requestId: {RequestId}", requestId);
+
+                // Step 2: Poll for the Intune status result
+                var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                var startTime = DateTime.UtcNow;
+
+                while (DateTime.UtcNow - startTime < timeout)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    using var pollResponse = await httpClient.GetAsync(
+                        $"{proxyBaseUrl}/api/intune-status/{requestId}",
+                        cancellationToken);
+
+                    if (pollResponse.IsSuccessStatusCode)
+                    {
+                        var statusResult = await pollResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+                        if (statusResult.TryGetProperty("status", out var statusElement))
+                        {
+                            var status = statusElement.GetString();
+
+                            if (status == "completed")
+                            {
+                                var result = new IntuneComplianceCheckResult
+                                {
+                                    IsIntuneManaged = statusResult.TryGetProperty("isIntuneManaged", out var im) && im.GetBoolean(),
+                                    IsAzureAdJoined = statusResult.TryGetProperty("isAzureAdJoined", out var aad) && aad.GetBoolean(),
+                                    TenantId = statusResult.TryGetProperty("tenantId", out var tid) ? tid.GetString() : null,
+                                    DeviceId = statusResult.TryGetProperty("deviceId", out var did) ? did.GetString() : null,
+                                    MachineName = statusResult.TryGetProperty("machineName", out var mn) ? mn.GetString() : null
+                                };
+
+                                this._logger.LogInformation("[Intune] Intune check completed: IsIntuneManaged={IsManaged}, IsAzureAdJoined={IsAadJoined}",
+                                    result.IsIntuneManaged, result.IsAzureAdJoined);
+                                return result;
+                            }
+                        }
+                    }
+
+                    await Task.Delay(500, cancellationToken);
+                }
+
+                this._logger.LogWarning("[Intune] Intune check timed out after {Timeout}s", timeoutSeconds);
+                return new IntuneComplianceCheckResult
+                {
+                    IsIntuneManaged = false,
+                    ErrorMessage = $"Intune check timed out after {timeoutSeconds} seconds"
+                };
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "[Intune] Failed to check Intune compliance for '{ClientName}'", clientName);
+                return new IntuneComplianceCheckResult
+                {
+                    IsIntuneManaged = false,
+                    ErrorMessage = $"Exception: {ex.Message}"
+                };
+            }
         }
     }
 }

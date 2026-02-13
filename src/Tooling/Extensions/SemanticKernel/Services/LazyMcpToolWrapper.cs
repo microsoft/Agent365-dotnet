@@ -26,6 +26,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly ILoggerFactory? _loggerFactory;
         private readonly ILogger? _logger;
         private readonly string? _cacheKey;
+        private readonly ILocalMcpScopeValidator? _scopeValidator;
         private IMcpClient? _mcpClient;
         private readonly SemaphoreSlim _clientLock = new(1, 1);
         private bool _disposed;
@@ -43,29 +44,37 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="httpClientFactory">HTTP client factory for creating connections.</param>
         /// <param name="loggerFactory">Logger factory for diagnostics.</param>
         /// <param name="cacheKey">Optional cache key for this wrapper instance.</param>
+        /// <param name="scopeValidator">Optional scope validator for local MCP servers.</param>
         public LazyMcpToolWrapper(
             MCPServerConfig serverConfig,
             IHttpClientFactory httpClientFactory,
             ILoggerFactory? loggerFactory = null,
-            string? cacheKey = null)
+            string? cacheKey = null,
+            ILocalMcpScopeValidator? scopeValidator = null)
         {
             _serverConfig = serverConfig ?? throw new ArgumentNullException(nameof(serverConfig));
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
             _loggerFactory = loggerFactory;
             _logger = loggerFactory?.CreateLogger<LazyMcpToolWrapper>();
             _cacheKey = cacheKey;
+            _scopeValidator = scopeValidator;
         }
 
         /// <summary>
         /// Gets or creates a cached wrapper for the given server configuration.
         /// </summary>
+        /// <param name="serverConfig">The MCP server configuration with static tools.</param>
+        /// <param name="httpClientFactory">HTTP client factory for creating connections.</param>
+        /// <param name="loggerFactory">Logger factory for diagnostics.</param>
+        /// <param name="scopeValidator">Optional scope validator for local MCP servers.</param>
         public static LazyMcpToolWrapper GetOrCreate(
             MCPServerConfig serverConfig,
             IHttpClientFactory httpClientFactory,
-            ILoggerFactory? loggerFactory = null)
+            ILoggerFactory? loggerFactory = null,
+            ILocalMcpScopeValidator? scopeValidator = null)
         {
             var cacheKey = $"{serverConfig.wnsConfig?.clientName}:{serverConfig.wnsConfig?.localServerId}";
-            return _sessionCache.GetOrAdd(cacheKey, _ => new LazyMcpToolWrapper(serverConfig, httpClientFactory, loggerFactory, cacheKey));
+            return _sessionCache.GetOrAdd(cacheKey, _ => new LazyMcpToolWrapper(serverConfig, httpClientFactory, loggerFactory, cacheKey, scopeValidator));
         }
 
         /// <summary>
@@ -246,9 +255,31 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <summary>
         /// Invokes a tool on the MCP server, lazily creating the connection if needed.
         /// Implements automatic retry with connection refresh on failure.
+        /// For local MCP servers, validates scope before invocation.
         /// </summary>
         private async Task<string> InvokeToolAsync(string toolName, KernelArguments arguments)
         {
+            // Validate scope on EVERY tool invocation for local MCP servers
+            // This ensures admin consent is still valid and hasn't been revoked
+            // Note: We intentionally do NOT cache the result because consent can be revoked at any time
+            if (_scopeValidator != null && _serverConfig.transportType == McpTransportType.Wns)
+            {
+                _logger?.LogDebug("[LazyMcp] Validating scope for local MCP server '{ServerName}' before tool invocation",
+                    _serverConfig.mcpServerName);
+
+                var scopeResult = await _scopeValidator.ValidateScopeAsync(_serverConfig.mcpServerName);
+                if (!scopeResult.IsValid)
+                {
+                    _logger?.LogWarning("[LazyMcp] Scope validation FAILED for '{ServerName}': {Error}",
+                        _serverConfig.mcpServerName, scopeResult.ErrorMessage);
+                    throw new UnauthorizedAccessException(
+                        $"[LocalMcpScope] Access denied to local MCP server '{_serverConfig.mcpServerName}': {scopeResult.ErrorMessage}");
+                }
+
+                _logger?.LogDebug("[LazyMcp] Scope validation PASSED for '{ServerName}' (scope: {Scope})",
+                    _serverConfig.mcpServerName, scopeResult.Scope ?? "none");
+            }
+
             const int maxRetries = 2;
             Exception? lastException = null;
 
@@ -284,11 +315,33 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                     _logger?.LogWarning(ex, "[LazyMcp] Tool invocation failed for '{ToolName}' with connection error, clearing client and retrying...", toolName);
                     lastException = ex;
 
+                    // Check if this is a re-registration required error
+                    if (IsReregistrationRequired(ex))
+                    {
+                        _logger?.LogWarning("[LazyMcp] Desktop requires re-registration for local MCP server '{ServerName}'",
+                            _serverConfig.mcpServerName);
+                        throw new LocalMcpReregistrationRequiredException(
+                            _serverConfig.mcpServerName,
+                            _serverConfig.wnsConfig?.clientName,
+                            GetReregistrationProtocolUrl());
+                    }
+
                     // Clear the stale client to force reconnection on next attempt
                     await ClearClientAsync();
                 }
                 catch (Exception ex)
                 {
+                    // Check if this is a re-registration required error
+                    if (IsReregistrationRequired(ex))
+                    {
+                        _logger?.LogWarning("[LazyMcp] Desktop requires re-registration for local MCP server '{ServerName}'",
+                            _serverConfig.mcpServerName);
+                        throw new LocalMcpReregistrationRequiredException(
+                            _serverConfig.mcpServerName,
+                            _serverConfig.wnsConfig?.clientName,
+                            GetReregistrationProtocolUrl());
+                    }
+
                     _logger?.LogError(ex, "[LazyMcp] Tool invocation failed for '{ToolName}'", toolName);
                     throw;
                 }
@@ -423,6 +476,75 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             }
 
             _clientLock.Dispose();
+        }
+
+        /// <summary>
+        /// Checks if the exception indicates a re-registration requirement from locaproto.
+        /// </summary>
+        private static bool IsReregistrationRequired(Exception ex)
+        {
+            return ex.Message.Contains("REREGISTRATION_REQUIRED", StringComparison.OrdinalIgnoreCase) ||
+                   ex.Message.Contains("Re-registration required", StringComparison.OrdinalIgnoreCase) ||
+                   ex.Message.Contains("not registered", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Gets the re-registration protocol URL for the current server configuration.
+        /// </summary>
+        private string? GetReregistrationProtocolUrl()
+        {
+            if (_serverConfig.wnsConfig?.proxyBaseUrl == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var proxyUri = new Uri(_serverConfig.wnsConfig.proxyBaseUrl);
+                return $"locaproto:?action=register&callback=https://{proxyUri.Host}/api/channels/register";
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Exception thrown when a local MCP server requires the desktop to re-register.
+    /// This occurs when the desktop's Windows Credential Manager does not have the agent registered.
+    /// </summary>
+    public class LocalMcpReregistrationRequiredException : Exception
+    {
+        /// <summary>
+        /// Gets the name of the MCP server that requires re-registration.
+        /// </summary>
+        public string ServerName { get; }
+
+        /// <summary>
+        /// Gets the client name (desktop) that needs to re-register.
+        /// </summary>
+        public string? ClientName { get; }
+
+        /// <summary>
+        /// Gets the protocol URL to invoke for re-registration.
+        /// Format: locaproto:?action=register&amp;callback=https://agent.com/api/channels/register
+        /// </summary>
+        public string? ProtocolUrl { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LocalMcpReregistrationRequiredException"/> class.
+        /// </summary>
+        /// <param name="serverName">The MCP server name.</param>
+        /// <param name="clientName">The client name.</param>
+        /// <param name="protocolUrl">The re-registration protocol URL.</param>
+        public LocalMcpReregistrationRequiredException(string serverName, string? clientName, string? protocolUrl)
+            : base($"Desktop '{clientName}' requires re-registration to access local MCP server '{serverName}'. " +
+                   $"Please click the registration link to re-register.")
+        {
+            ServerName = serverName;
+            ClientName = clientName;
+            ProtocolUrl = protocolUrl;
         }
     }
 }

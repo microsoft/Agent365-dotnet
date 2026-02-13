@@ -25,6 +25,13 @@ public interface ISessionManager
     ClientRegistration? GetClient(string clientName);
 
     /// <summary>
+    /// Gets all registered clients for a specific user.
+    /// </summary>
+    /// <param name="userIdentifier">The user identifier (email/UPN).</param>
+    /// <returns>All client registrations for this user.</returns>
+    IEnumerable<ClientRegistration> GetClientsByUser(string userIdentifier);
+
+    /// <summary>
     /// Gets all registered clients.
     /// </summary>
     /// <returns>All client registrations.</returns>
@@ -76,4 +83,24 @@ public interface ISessionManager
     /// <param name="requestId">The request ID.</param>
     /// <returns>The pending discovery result.</returns>
     DiscoveryResult CreatePendingDiscoveryResult(string requestId);
+
+    /// <summary>
+    /// Creates a pending Intune status result entry.
+    /// </summary>
+    /// <param name="requestId">The request ID.</param>
+    /// <returns>The pending Intune status result.</returns>
+    IntuneStatusResult CreatePendingIntuneStatusResult(string requestId);
+
+    /// <summary>
+    /// Stores an Intune status result.
+    /// </summary>
+    /// <param name="result">The Intune status result to store.</param>
+    void StoreIntuneStatusResult(IntuneStatusResult result);
+
+    /// <summary>
+    /// Gets an Intune status result by request ID.
+    /// </summary>
+    /// <param name="requestId">The request ID.</param>
+    /// <returns>The Intune status result, or null if not found.</returns>
+    IntuneStatusResult? GetIntuneStatusResult(string requestId);
 }

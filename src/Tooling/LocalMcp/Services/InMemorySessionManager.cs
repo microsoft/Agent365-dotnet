@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Concurrent;
+using System.Web;
 using Microsoft.Agents.A365.Tooling.LocalMcp.Models;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +18,7 @@ public class InMemorySessionManager : ISessionManager
     private readonly ConcurrentDictionary<string, McpSession> _sessions = new();
     private readonly ConcurrentDictionary<string, ClientRegistration> _clients = new();
     private readonly ConcurrentDictionary<string, DiscoveryResult> _discoveryResults = new();
+    private readonly ConcurrentDictionary<string, IntuneStatusResult> _intuneStatusResults = new();
     private readonly ILogger<InMemorySessionManager> _logger;
 
     /// <summary>
@@ -31,19 +33,30 @@ public class InMemorySessionManager : ISessionManager
     /// <inheritdoc />
     public ClientRegistration RegisterClient(ChannelRegistrationRequest request)
     {
+        // Use MachineName as ClientName if not provided
+        var clientName = !string.IsNullOrWhiteSpace(request.ClientName) 
+            ? request.ClientName 
+            : request.MachineName;
+        
+        // URL decode the user identifier to normalize it (e.g., "Bug+Bash+User+11" -> "Bug Bash User 11")
+        var userIdentifier = !string.IsNullOrWhiteSpace(request.UserIdentifier)
+            ? HttpUtility.UrlDecode(request.UserIdentifier)
+            : null;
+            
         var registration = new ClientRegistration
         {
-            ClientName = request.ClientName,
+            ClientName = clientName,
+            UserIdentifier = userIdentifier,
             ChannelUri = request.ChannelUri,
             MachineName = request.MachineName,
             RegisteredAt = request.RegisteredAt,
             LastSeen = DateTime.UtcNow
         };
 
-        _clients.AddOrUpdate(request.ClientName, registration, (key, old) => registration);
+        _clients.AddOrUpdate(clientName, registration, (key, old) => registration);
 
-        _logger.LogInformation("[SESSION MANAGER] Client '{ClientName}' registered from {MachineName}",
-            request.ClientName, request.MachineName);
+        _logger.LogInformation("[SESSION MANAGER] Client '{ClientName}' registered from {MachineName} for user '{UserIdentifier}'",
+            clientName, request.MachineName, userIdentifier ?? "unknown");
 
         return registration;
     }
@@ -53,6 +66,15 @@ public class InMemorySessionManager : ISessionManager
     {
         _clients.TryGetValue(clientName, out var client);
         return client;
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<ClientRegistration> GetClientsByUser(string userIdentifier)
+    {
+        // Case-insensitive comparison for email addresses
+        return _clients.Values
+            .Where(c => string.Equals(c.UserIdentifier, userIdentifier, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     /// <inheritdoc />
@@ -127,6 +149,38 @@ public class InMemorySessionManager : ISessionManager
 
         _logger.LogDebug("[SESSION MANAGER] Pending discovery result created for '{RequestId}'", requestId);
 
+        return result;
+    }
+
+    /// <inheritdoc />
+    public IntuneStatusResult CreatePendingIntuneStatusResult(string requestId)
+    {
+        var result = new IntuneStatusResult
+        {
+            RequestId = requestId,
+            Status = "pending",
+            ReceivedAt = DateTime.UtcNow
+        };
+
+        _intuneStatusResults.TryAdd(requestId, result);
+
+        _logger.LogDebug("[SESSION MANAGER] Pending Intune status result created for '{RequestId}'", requestId);
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public void StoreIntuneStatusResult(IntuneStatusResult result)
+    {
+        _intuneStatusResults.AddOrUpdate(result.RequestId, result, (key, old) => result);
+
+        _logger.LogDebug("[SESSION MANAGER] Intune status result stored for '{RequestId}'", result.RequestId);
+    }
+
+    /// <inheritdoc />
+    public IntuneStatusResult? GetIntuneStatusResult(string requestId)
+    {
+        _intuneStatusResults.TryGetValue(requestId, out var result);
         return result;
     }
 }

@@ -52,6 +52,27 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Adds MCP Tool Servers from both cloud (ATG) and local (Windows desktop) sources.
+        /// This method discovers the user's registered desktops by their identity (email/UPN) and 
+        /// automatically uses the most recently active desktop for local server discovery.
+        /// </summary>
+        /// <param name="kernel">The kernel to which the tools will be added.</param>
+        /// <param name="userAuthorization">Agents SDK UserAuthorization System.</param>
+        /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System.</param>
+        /// <param name="turnContext">The turn context.</param>
+        /// <param name="authToken">Auth token to access the MCP servers. If null, will be obtained from UserAuthorization.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A result containing information about which desktop was used and all registered desktops.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when kernel is null.</exception>
+        Task<LocalDiscoveryResult> AddToolServersWithUserDiscoveryAsync(
+            Kernel kernel,
+            UserAuthorization userAuthorization,
+            string authHandlerName,
+            ITurnContext turnContext,
+            string? authToken = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Sends chat history to the MCP platform for real-time threat protection.
         /// </summary>
         /// <param name="turnContext">The turn context containing conversation information.</param>

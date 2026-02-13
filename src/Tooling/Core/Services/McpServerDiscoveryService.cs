@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Tooling.Exceptions;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Transports;
 using Microsoft.Extensions.Configuration;
@@ -71,10 +72,29 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     try
                     {
-                        var localServers = await DiscoverLocalServersAsync(clientName, proxyBaseUrl, cancellationToken);
-                        allServers.AddRange(localServers);
-                        _logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
-                            localServers.Count, clientName);
+                        // First, check Intune compliance before discovering local servers
+                        _logger.LogInformation("[Discovery] Checking Intune compliance for client '{ClientName}'", clientName);
+                        var intuneResult = await CheckIntuneComplianceAsync(clientName, proxyBaseUrl, 30, cancellationToken);
+
+                        if (!intuneResult.IsIntuneManaged)
+                        {
+                            _logger.LogWarning("[Discovery] Device for client '{ClientName}' is NOT Intune managed. Skipping local server discovery.", clientName);
+                            _logger.LogWarning("[Discovery] Intune check result: IsAzureAdJoined={IsAzureAdJoined}, Error={Error}",
+                                intuneResult.IsAzureAdJoined, intuneResult.ErrorMessage ?? "none");
+                        }
+                        else
+                        {
+                            _logger.LogInformation("[Discovery] Device for client '{ClientName}' is Intune managed. Proceeding with local server discovery.", clientName);
+                            var localServers = await DiscoverLocalServersAsync(clientName, proxyBaseUrl, cancellationToken);
+                            allServers.AddRange(localServers);
+                            _logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
+                                localServers.Count, clientName);
+                        }
+                    }
+                    catch (LocalMcpDesktopRegistrationRequiredException)
+                    {
+                        // Let registration required exceptions propagate to the agent
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -128,6 +148,26 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     $"{proxyBaseUrl}/api/notify/{clientName}",
                     new StringContent(requestJson, Encoding.UTF8, "application/json"),
                     cancellationToken);
+
+                // Check if desktop client is not registered (404 with CLIENT_NOT_REGISTERED)
+                if (notifyResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    var errorContent = await notifyResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                    
+                    if (errorContent.TryGetProperty("error", out var errorProp) && 
+                        errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
+                        errorContent.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                    {
+                        var registrationUrl = regUrlProp.GetString() ?? string.Empty;
+                        _logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
+                            clientName, registrationUrl);
+                        
+                        throw new LocalMcpDesktopRegistrationRequiredException(
+                            clientName,
+                            registrationUrl,
+                            $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                    }
+                }
 
                 notifyResponse.EnsureSuccessStatusCode();
 
@@ -294,6 +334,102 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
 
             return false;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IntuneComplianceCheckResult> CheckIntuneComplianceAsync(
+            string clientName,
+            string proxyBaseUrl,
+            int timeoutSeconds = 30,
+            CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("[Intune] Checking Intune compliance for client '{ClientName}'", clientName);
+
+            var httpClient = _httpClientFactory.CreateClient("LocalMcpDiscovery");
+
+            try
+            {
+                // Step 1: Send an Intune check request via the WNS proxy
+                using var initiateResponse = await httpClient.PostAsync(
+                    $"{proxyBaseUrl}/api/intune-check/{clientName}",
+                    null,
+                    cancellationToken);
+
+                if (!initiateResponse.IsSuccessStatusCode)
+                {
+                    var errorBody = await initiateResponse.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning("[Intune] Failed to initiate Intune check: {StatusCode} - {Error}",
+                        initiateResponse.StatusCode, errorBody);
+                    return new IntuneComplianceCheckResult
+                    {
+                        IsIntuneManaged = false,
+                        ErrorMessage = $"Failed to initiate Intune check: {initiateResponse.StatusCode}"
+                    };
+                }
+
+                var initiateResult = await initiateResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+                var requestId = initiateResult.GetProperty("requestId").GetString()
+                    ?? throw new InvalidOperationException("Failed to get requestId from Intune check response");
+
+                _logger.LogDebug("[Intune] Intune check initiated with requestId: {RequestId}", requestId);
+
+                // Step 2: Poll for the Intune status result
+                var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                var startTime = DateTime.UtcNow;
+
+                while (DateTime.UtcNow - startTime < timeout)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    using var pollResponse = await httpClient.GetAsync(
+                        $"{proxyBaseUrl}/api/intune-status/{requestId}",
+                        cancellationToken);
+
+                    if (pollResponse.IsSuccessStatusCode)
+                    {
+                        var statusResult = await pollResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
+                        if (statusResult.TryGetProperty("status", out var statusElement))
+                        {
+                            var status = statusElement.GetString();
+
+                            if (status == "completed")
+                            {
+                                var result = new IntuneComplianceCheckResult
+                                {
+                                    IsIntuneManaged = statusResult.TryGetProperty("isIntuneManaged", out var im) && im.GetBoolean(),
+                                    IsAzureAdJoined = statusResult.TryGetProperty("isAzureAdJoined", out var aad) && aad.GetBoolean(),
+                                    TenantId = statusResult.TryGetProperty("tenantId", out var tid) ? tid.GetString() : null,
+                                    DeviceId = statusResult.TryGetProperty("deviceId", out var did) ? did.GetString() : null,
+                                    MachineName = statusResult.TryGetProperty("machineName", out var mn) ? mn.GetString() : null
+                                };
+
+                                _logger.LogInformation("[Intune] Intune check completed: IsIntuneManaged={IsManaged}, IsAzureAdJoined={IsAadJoined}",
+                                    result.IsIntuneManaged, result.IsAzureAdJoined);
+                                return result;
+                            }
+                        }
+                    }
+
+                    await Task.Delay(500, cancellationToken);
+                }
+
+                _logger.LogWarning("[Intune] Intune check timed out after {Timeout}s", timeoutSeconds);
+                return new IntuneComplianceCheckResult
+                {
+                    IsIntuneManaged = false,
+                    ErrorMessage = $"Intune check timed out after {timeoutSeconds} seconds"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Intune] Failed to check Intune compliance for '{ClientName}'", clientName);
+                return new IntuneComplianceCheckResult
+                {
+                    IsIntuneManaged = false,
+                    ErrorMessage = $"Exception: {ex.Message}"
+                };
+            }
         }
     }
 }

@@ -170,6 +170,36 @@ public class WnsNotificationService : IWnsNotificationService
         }
     }
 
+    /// <inheritdoc />
+    public async Task<(bool Success, string? ErrorMessage)> SendIntuneCheckNotificationAsync(
+        string channelUri, string requestId, string callbackUrl)
+    {
+        _logger.LogInformation("[WNS SERVICE] Sending INTUNE CHECK notification");
+        _logger.LogInformation("[WNS SERVICE] Request ID: {RequestId}", requestId);
+        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+
+        try
+        {
+            var accessToken = await GetAccessTokenAsync();
+
+            var notification = new
+            {
+                type = "intune_status",
+                requestId = requestId,
+                callback = callbackUrl,
+                timestamp = DateTime.UtcNow
+            };
+
+            return await SendWnsRawNotificationAsync(channelUri, notification, accessToken);
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Exception: {ex.Message}";
+            _logger.LogError(ex, "[WNS SERVICE] Error sending Intune check notification");
+            return (false, errorMessage);
+        }
+    }
+
     private async Task<(bool Success, string? ErrorMessage)> SendWnsRawNotificationAsync(
         string channelUri, object payload, string accessToken)
     {

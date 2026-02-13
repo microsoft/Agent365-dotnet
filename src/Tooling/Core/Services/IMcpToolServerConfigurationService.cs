@@ -48,6 +48,24 @@ namespace Microsoft.Agents.A365.Tooling.Services
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Gets the list of MCP Servers from all sources including cloud (ATG) and local (Windows desktop).
+        /// This method discovers the user's registered desktops by user identity (email/UPN) and uses 
+        /// the most recently active desktop for local server discovery.
+        /// </summary>
+        /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
+        /// <param name="authToken">Auth token to access the MCP servers.</param>
+        /// <param name="toolOptions">Tool options for listing servers.</param>
+        /// <param name="userIdentifier">The user's email/UPN to find registered desktops.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>A result containing the combined list of MCP Servers and information about which desktop was used.</returns>
+        Task<LocalDiscoveryResult> ListToolServersWithUserDiscoveryAsync(
+            string agentInstanceId,
+            string authToken,
+            ToolOptions toolOptions,
+            string userIdentifier,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the MCP Client Tools from the specified MCP server.
         /// </summary>
         /// <param name="turnContext">The turn context.</param>

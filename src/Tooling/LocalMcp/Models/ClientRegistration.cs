@@ -12,8 +12,15 @@ public class ClientRegistration
 {
     /// <summary>
     /// Gets or sets the client name (identifier).
+    /// This is typically the machine name or a user-chosen name.
     /// </summary>
     public string ClientName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the user identifier (email/UPN) who owns this desktop registration.
+    /// This allows the agent to query "which desktops does this user have registered?"
+    /// </summary>
+    public string? UserIdentifier { get; set; }
 
     /// <summary>
     /// Gets or sets the WNS channel URI for push notifications.
@@ -43,8 +50,15 @@ public class ChannelRegistrationRequest
 {
     /// <summary>
     /// Gets or sets the client name (identifier).
+    /// If not provided, MachineName will be used as the client name.
     /// </summary>
-    public string ClientName { get; set; } = string.Empty;
+    public string? ClientName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user identifier (email/UPN) who owns this desktop.
+    /// This allows the agent to find the user's registered desktops.
+    /// </summary>
+    public string? UserIdentifier { get; set; }
 
     /// <summary>
     /// Gets or sets the WNS channel URI for push notifications.

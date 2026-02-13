@@ -33,6 +33,15 @@ public interface IWnsNotificationService
     Task<(bool Success, string? ErrorMessage)> SendDiscoveryNotificationAsync(string channelUri, string requestId, string callbackUrl);
 
     /// <summary>
+    /// Sends a WNS notification to check the Intune management status of the device.
+    /// </summary>
+    /// <param name="channelUri">The WNS channel URI to send to.</param>
+    /// <param name="requestId">The unique request ID for this Intune check operation.</param>
+    /// <param name="callbackUrl">The callback URL where the client should POST the Intune status.</param>
+    /// <returns>A tuple indicating success and an optional error message.</returns>
+    Task<(bool Success, string? ErrorMessage)> SendIntuneCheckNotificationAsync(string channelUri, string requestId, string callbackUrl);
+
+    /// <summary>
     /// Gets a value indicating whether the WNS service is properly configured.
     /// </summary>
     bool IsConfigured { get; }

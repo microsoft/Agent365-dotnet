@@ -24,6 +24,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
             
             services.AddScoped<IMcpToolServerConfigurationService, McpToolServerConfigurationService>();
             services.AddScoped<IMcpToolRegistrationService, McpToolRegistrationService>();
+
+            // Register local MCP scope validator for WNS-based local MCP server access control
+            // This validates that admin has granted consent for local MCP server scopes
+            // before allowing invocation (similar to how remote MCP servers validate via token)
+            services.AddScoped<ILocalMcpScopeValidator, LocalMcpScopeValidator>();
             
             return services;
         }

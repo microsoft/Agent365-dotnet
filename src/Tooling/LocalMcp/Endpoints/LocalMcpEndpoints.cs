@@ -34,7 +34,12 @@ public static class LocalMcpEndpoints
             ISessionManager sessionManager) =>
         {
             var registration = sessionManager.RegisterClient(request);
-            return Results.Ok(new { message = "Registration successful", clientName = request.ClientName });
+            return Results.Ok(new { 
+                message = "Registration successful", 
+                clientName = registration.ClientName,
+                machineName = registration.MachineName,
+                userIdentifier = registration.UserIdentifier
+            });
         }).AllowAnonymous();
 
         // GET /api/channels - List registered clients
@@ -44,6 +49,7 @@ public static class LocalMcpEndpoints
                 .Select(c => new
                 {
                     c.ClientName,
+                    c.UserIdentifier,
                     c.MachineName,
                     ChannelUri = c.ChannelUri.Length > 40
                         ? c.ChannelUri.Substring(0, 40) + "..."
@@ -52,6 +58,54 @@ public static class LocalMcpEndpoints
                     c.LastSeen
                 });
             return Results.Json(clients);
+        }).AllowAnonymous();
+
+        // GET /api/channels/by-user/{userIdentifier} - Get clients registered to a specific user
+        app.MapGet("/api/channels/by-user/{userIdentifier}", (
+            string userIdentifier,
+            HttpContext context,
+            ISessionManager sessionManager) =>
+        {
+            // URL decode the user identifier (email addresses contain @ and other special chars)
+            var decodedUserIdentifier = System.Net.WebUtility.UrlDecode(userIdentifier);
+            
+            logger.LogInformation("[CHANNELS] Looking up clients for user '{UserIdentifier}'", decodedUserIdentifier);
+            
+            var clients = sessionManager.GetClientsByUser(decodedUserIdentifier);
+            var clientList = clients.ToList();
+            
+            if (clientList.Count == 0)
+            {
+                logger.LogWarning("[CHANNELS] No clients registered for user '{UserIdentifier}'", decodedUserIdentifier);
+                
+                // Return registration URL
+                var regScheme = context.Request.IsHttps ? "https" : "http";
+                var regHost = context.Request.Host.ToString();
+                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register&user={System.Net.WebUtility.UrlEncode(decodedUserIdentifier)}";
+                
+                return Results.Json(new 
+                { 
+                    error = "NO_CLIENTS_REGISTERED",
+                    message = $"No desktops are registered for user '{decodedUserIdentifier}'. Please register your desktop to enable local file access.",
+                    userIdentifier = decodedUserIdentifier,
+                    requiresRegistration = true,
+                    registrationProtocolUrl = registrationProtocolUrl
+                }, statusCode: 404);
+            }
+            
+            logger.LogInformation("[CHANNELS] Found {Count} client(s) for user '{UserIdentifier}'", clientList.Count, decodedUserIdentifier);
+            
+            return Results.Json(new
+            {
+                userIdentifier = decodedUserIdentifier,
+                clients = clientList.Select(c => new
+                {
+                    c.ClientName,
+                    c.MachineName,
+                    c.RegisteredAt,
+                    c.LastSeen
+                })
+            });
         }).AllowAnonymous();
 
         // POST /api/notify/{clientName} - Send WNS notification
@@ -65,8 +119,21 @@ public static class LocalMcpEndpoints
             var client = sessionManager.GetClient(clientName);
             if (client == null)
             {
-                logger.LogWarning("[WNS NOTIFY] Client '{ClientName}' not found", clientName);
-                return Results.NotFound(new { message = "Client not found" });
+                logger.LogWarning("[WNS NOTIFY] Client '{ClientName}' not found - desktop registration required", clientName);
+                
+                // Return a specific error with registration URL so the agent can prompt the user
+                var regScheme = context.Request.IsHttps ? "https" : "http";
+                var regHost = context.Request.Host.ToString();
+                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register";
+                
+                return Results.Json(new 
+                { 
+                    error = "CLIENT_NOT_REGISTERED",
+                    message = $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.",
+                    clientName = clientName,
+                    requiresRegistration = true,
+                    registrationProtocolUrl = registrationProtocolUrl
+                }, statusCode: 404);
             }
 
             // Read the request body
@@ -202,6 +269,45 @@ public static class LocalMcpEndpoints
                         try
                         {
                             var jsonDoc = JsonDocument.Parse(message);
+                            
+                            // Check for REREGISTRATION_REQUIRED error from locaproto
+                            if (jsonDoc.RootElement.TryGetProperty("error", out var errorElement))
+                            {
+                                var errorCode = errorElement.GetString();
+                                if (errorCode == "REREGISTRATION_REQUIRED")
+                                {
+                                    logger.LogWarning("[WS←LOCAPROTO] Desktop requires re-registration");
+                                    
+                                    // Extract details from the error response
+                                    var agentHost = jsonDoc.RootElement.TryGetProperty("agentHost", out var hostEl) 
+                                        ? hostEl.GetString() : null;
+                                    var machineName = jsonDoc.RootElement.TryGetProperty("machineName", out var machineEl) 
+                                        ? machineEl.GetString() : null;
+                                    var protocolUrl = jsonDoc.RootElement.TryGetProperty("protocolUrl", out var protoEl) 
+                                        ? protoEl.GetString() : null;
+
+                                    logger.LogWarning("[WS←LOCAPROTO] Machine '{MachineName}' needs to re-register with agent", machineName);
+                                    logger.LogInformation("[WS←LOCAPROTO] Re-registration protocol URL: {ProtocolUrl}", protocolUrl);
+
+                                    // Mark the session as requiring re-registration
+                                    session.RequiresReregistration = true;
+                                    session.ReregistrationProtocolUrl = protocolUrl;
+
+                                    // Complete any pending requests with the re-registration error
+                                    foreach (var pending in session.PendingRequests)
+                                    {
+                                        if (session.PendingRequests.TryRemove(pending.Key, out var pendingTcs))
+                                        {
+                                            pendingTcs.SetResult(message);
+                                        }
+                                    }
+
+                                    // Close the WebSocket since we need re-registration
+                                    await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Re-registration required", CancellationToken.None);
+                                    break;
+                                }
+                            }
+                            
                             if (jsonDoc.RootElement.TryGetProperty("id", out var idElement))
                             {
                                 var id = idElement.GetInt32();
@@ -418,6 +524,132 @@ public static class LocalMcpEndpoints
             if (result == null)
             {
                 sessionManager.CreatePendingDiscoveryResult(requestId);
+            }
+
+            return Results.Json(new { status = result?.Status ?? "pending", requestId });
+        }).AllowAnonymous();
+
+        // POST /api/intune-check/{clientName} - Initiate Intune status check via WNS
+        app.MapPost("/api/intune-check/{clientName}", async (
+            string clientName,
+            HttpContext context,
+            ISessionManager sessionManager,
+            IWnsNotificationService wnsService) =>
+        {
+            var client = sessionManager.GetClient(clientName);
+            if (client == null)
+            {
+                logger.LogWarning("[INTUNE CHECK] Client '{ClientName}' not found - desktop registration required", clientName);
+                
+                // Return the same CLIENT_NOT_REGISTERED error format used by /api/notify
+                var regScheme = context.Request.IsHttps ? "https" : "http";
+                var regHost = context.Request.Host.ToString();
+                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register";
+                
+                return Results.Json(new 
+                { 
+                    error = "CLIENT_NOT_REGISTERED",
+                    message = $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.",
+                    clientName = clientName,
+                    requiresRegistration = true,
+                    registrationProtocolUrl = registrationProtocolUrl
+                }, statusCode: 404);
+            }
+
+            var requestId = Guid.NewGuid().ToString();
+            var httpScheme = context.Request.IsHttps ? "https" : "http";
+            var host = context.Request.Host.ToString();
+            var callbackUrl = $"{httpScheme}://{host}/api/intune-response/{requestId}";
+
+            sessionManager.CreatePendingIntuneStatusResult(requestId);
+
+            logger.LogInformation("[INTUNE CHECK] Sending Intune check notification to '{ClientName}'", clientName);
+            logger.LogInformation("[INTUNE CHECK] Request ID: {RequestId}", requestId);
+            logger.LogInformation("[INTUNE CHECK] Callback URL: {CallbackUrl}", callbackUrl);
+
+            var (success, errorMessage) = await wnsService.SendIntuneCheckNotificationAsync(
+                client.ChannelUri, requestId, callbackUrl);
+
+            if (success)
+            {
+                return Results.Ok(new { message = "Intune check notification sent", requestId, callbackUrl });
+            }
+            else
+            {
+                return Results.Json(new { message = $"Failed to send notification: {errorMessage}" }, statusCode: 500);
+            }
+        }).AllowAnonymous();
+
+        // POST /api/intune-response/{requestId} - Callback for Intune status from locaproto
+        app.MapPost("/api/intune-response/{requestId}", async (
+            string requestId,
+            HttpContext context,
+            ISessionManager sessionManager) =>
+        {
+            logger.LogInformation("[INTUNE RESPONSE] Received Intune status for request {RequestId}", requestId);
+
+            string requestBody;
+            using (var reader = new StreamReader(context.Request.Body))
+            {
+                requestBody = await reader.ReadToEndAsync();
+            }
+
+            logger.LogInformation("[INTUNE RESPONSE] Raw response: {Response}", requestBody);
+
+            try
+            {
+                var statusResult = JsonSerializer.Deserialize<IntuneStatusResult>(requestBody, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (statusResult != null)
+                {
+                    statusResult.RequestId = requestId;
+                    statusResult.Status = "completed";
+                    statusResult.ReceivedAt = DateTime.UtcNow;
+                    sessionManager.StoreIntuneStatusResult(statusResult);
+                    return Results.Ok(new { message = "Intune status received", requestId });
+                }
+                else
+                {
+                    return Results.BadRequest(new { message = "Failed to parse Intune status" });
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[INTUNE RESPONSE] Failed to parse response");
+                return Results.BadRequest(new { message = $"Failed to parse Intune status: {ex.Message}" });
+            }
+        }).AllowAnonymous();
+
+        // GET /api/intune-status/{requestId} - Poll for Intune status result
+        app.MapGet("/api/intune-status/{requestId}", (string requestId, ISessionManager sessionManager) =>
+        {
+            logger.LogDebug("[INTUNE STATUS] Polling for request {RequestId}", requestId);
+
+            var result = sessionManager.GetIntuneStatusResult(requestId);
+
+            if (result != null && result.Status == "completed")
+            {
+                return Results.Json(new
+                {
+                    status = "completed",
+                    requestId,
+                    isIntuneManaged = result.IsIntuneManaged,
+                    isAzureAdJoined = result.IsAzureAdJoined,
+                    mdmUrl = result.MdmUrl,
+                    enrolledUserPrincipalName = result.EnrolledUserPrincipalName,
+                    tenantId = result.TenantId,
+                    deviceId = result.DeviceId,
+                    machineName = result.MachineName,
+                    checkedAt = result.CheckedAt
+                });
+            }
+
+            if (result == null)
+            {
+                sessionManager.CreatePendingIntuneStatusResult(requestId);
             }
 
             return Results.Json(new { status = result?.Status ?? "pending", requestId });

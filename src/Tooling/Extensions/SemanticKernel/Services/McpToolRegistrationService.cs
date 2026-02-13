@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILoggerFactory? _loggerFactory;
+        private readonly ILocalMcpScopeValidator? _scopeValidator;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -53,6 +54,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             _configuration = configuration;
             _httpClientFactory = httpClientFactory;
             _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            _scopeValidator = serviceProvider.GetService<ILocalMcpScopeValidator>();
         }
 
         /// <inheritdoc />
@@ -244,7 +246,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                         _logger.LogInformation("[LazyMcp] Using static tools for '{ServerName}' - deferring MCP connection until tool invocation",
                             server.mcpServerName);
 
-                        var lazyWrapper = LazyMcpToolWrapper.GetOrCreate(server, _httpClientFactory, _loggerFactory);
+                        // Pass scope validator for local MCP servers to validate consent before tool invocation
+                        var lazyWrapper = LazyMcpToolWrapper.GetOrCreate(server, _httpClientFactory, _loggerFactory, _scopeValidator);
                         kernelFunctions = lazyWrapper.CreateKernelFunctions();
                     }
                     else
@@ -282,6 +285,110 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                     _logger.LogError(ex, "Failed to register tools from server '{ServerName}'", server.mcpServerName);
                 }
             }
+        }
+
+        /// <inheritdoc />
+        public async Task<LocalDiscoveryResult> AddToolServersWithUserDiscoveryAsync(
+            Kernel kernel,
+            UserAuthorization userAuthorization,
+            string authHandlerName,
+            ITurnContext turnContext,
+            string? authToken = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (kernel == null)
+            {
+                throw new ArgumentNullException(nameof(kernel));
+            }
+
+            if (authToken == null)
+            {
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+            }
+
+            // Get user identity from the turn context
+            var userIdentifier = turnContext.Activity.From?.Name;
+            if (string.IsNullOrWhiteSpace(userIdentifier))
+            {
+                _logger.LogWarning("[UserDiscovery] No user identifier found in turnContext.Activity.From.Name. Falling back to cloud-only discovery.");
+                
+                // Fall back to cloud-only discovery
+                await AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+                return new LocalDiscoveryResult
+                {
+                    ErrorMessage = "No user identifier available. Only cloud tools loaded."
+                };
+            }
+
+            // Resolve agent identity from context or token.
+            string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
+
+            var toolOptions = new ToolOptions
+            {
+                UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
+            };
+
+            // Use the new user-based discovery method
+            var discoveryResult = await _mcpServerConfigurationService.ListToolServersWithUserDiscoveryAsync(
+                agenticAppId, authToken, toolOptions, userIdentifier, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("[UserDiscovery] Registering tools from {ServerCount} MCP servers. ActiveDesktop: {ActiveDesktop}, TotalDesktops: {TotalDesktops}", 
+                discoveryResult.Servers.Count,
+                discoveryResult.ActiveDesktop?.ClientName ?? "none",
+                discoveryResult.AllRegisteredDesktops.Count);
+
+            foreach (var server in discoveryResult.Servers)
+            {
+                try
+                {
+                    // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
+                    var pluginName = SanitizePluginName(server.mcpServerName);
+                    _logger.LogInformation("Registering plugin '{PluginName}' (from server '{ServerName}', transport: {Transport}, hasStaticTools: {HasStatic})",
+                        pluginName, server.mcpServerName, server.transportType, server.HasStaticTools);
+
+                    IEnumerable<KernelFunction> kernelFunctions;
+
+                    // For WNS servers with static tools, use lazy loading to avoid unnecessary MCP connections
+                    if (server.HasStaticTools && server.transportType == McpTransportType.Wns)
+                    {
+                        _logger.LogInformation("[LazyMcp] Using static tools for '{ServerName}' - deferring MCP connection until tool invocation",
+                            server.mcpServerName);
+
+                        var lazyWrapper = LazyMcpToolWrapper.GetOrCreate(server, _httpClientFactory, _loggerFactory, _scopeValidator);
+                        kernelFunctions = lazyWrapper.CreateKernelFunctions();
+                    }
+                    else
+                    {
+                        var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(
+                            turnContext, server, authToken, toolOptions).ConfigureAwait(false);
+
+                        var filteredTools = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
+
+                        if (filteredTools.Count < listAvailableToolsForServer.Count)
+                        {
+                            _logger.LogWarning("Filtered out {FilteredCount} tools from '{PluginName}' because name length exceeded 64 characters",
+                                listAvailableToolsForServer.Count - filteredTools.Count, pluginName);
+                        }
+
+#pragma warning disable SKEXP0001 // Type is for evaluation purposes only
+                        kernelFunctions = filteredTools.Select(x => x.AsKernelFunction());
+#pragma warning restore SKEXP0001
+                    }
+
+                    var functionList = kernelFunctions.ToList();
+                    functionList = functionList.Where(f => (f.Name.Length + pluginName.Length + 1) <= 64).ToList();
+
+                    _logger.LogInformation("Adding {ToolCount} tools to plugin '{PluginName}': [{ToolNames}]", 
+                        functionList.Count, pluginName, string.Join(", ", functionList.Select(f => f.Name)));
+                    kernel.Plugins.AddFromFunctions(pluginName, functionList);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to register tools from server '{ServerName}'", server.mcpServerName);
+                }
+            }
+
+            return discoveryResult;
         }
 
         /// <inheritdoc />
