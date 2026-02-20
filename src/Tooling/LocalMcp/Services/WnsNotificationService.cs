@@ -113,11 +113,15 @@ public class WnsNotificationService : IWnsNotificationService
 
     /// <inheritdoc />
     public async Task<(bool Success, string? ErrorMessage)> SendNotificationAsync(
-        string channelUri, string callbackUrl, string? serverId = null)
+        string channelUri, string callbackUrl, string? serverId = null, string? agentAppId = null)
     {
         _logger.LogInformation("[WNS SERVICE] Sending notification to channel: {ChannelUri}",
             channelUri.Substring(0, Math.Min(60, channelUri.Length)) + "...");
         _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        if (!string.IsNullOrEmpty(agentAppId))
+        {
+            _logger.LogInformation("[WNS SERVICE] Agent App ID: {AgentAppId}", agentAppId);
+        }
 
         try
         {
@@ -127,6 +131,8 @@ public class WnsNotificationService : IWnsNotificationService
             {
                 callback = callbackUrl,
                 serverId = serverId,
+                serverType = "local",
+                agentAppId = agentAppId,
                 timestamp = DateTime.UtcNow
             };
 
@@ -136,6 +142,56 @@ public class WnsNotificationService : IWnsNotificationService
         {
             var errorMessage = $"Exception: {ex.Message}";
             _logger.LogError(ex, "[WNS SERVICE] Error sending notification");
+            return (false, errorMessage);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<(bool Success, string? ErrorMessage)> SendCloudMcpNotificationAsync(
+        string channelUri,
+        string callbackUrl,
+        CloudMcpProxyConfig cloudConfig,
+        string? agentAppId = null)
+    {
+        _logger.LogInformation("[WNS SERVICE] Sending CLOUD MCP notification for server '{ServerId}'", cloudConfig.ServerId);
+        _logger.LogInformation("[WNS SERVICE] Cloud endpoint: {Endpoint}", cloudConfig.Endpoint);
+        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        if (!string.IsNullOrEmpty(agentAppId))
+        {
+            _logger.LogInformation("[WNS SERVICE] Agent App ID: {AgentAppId}", agentAppId);
+        }
+
+        try
+        {
+            var accessToken = await GetAccessTokenAsync();
+
+            // Build extensible notification payload for cloud MCP proxy
+            // SECURITY: Token is NOT included in the WNS notification.
+            // It will be delivered securely via TLS WebSocket in the MCP request _meta.
+            var notification = new
+            {
+                callback = callbackUrl,
+                serverId = cloudConfig.ServerId,
+                serverType = "cloud",
+                agentAppId = agentAppId,
+                cloudConfig = new
+                {
+                    endpoint = cloudConfig.Endpoint,
+                    transport = cloudConfig.Transport,
+                    authType = cloudConfig.AuthType,
+                    scope = cloudConfig.Scope,
+                    audience = cloudConfig.Audience,
+                    additionalHeaders = cloudConfig.AdditionalHeaders
+                },
+                timestamp = DateTime.UtcNow
+            };
+
+            return await SendWnsRawNotificationAsync(channelUri, notification, accessToken);
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Exception: {ex.Message}";
+            _logger.LogError(ex, "[WNS SERVICE] Error sending cloud MCP notification");
             return (false, errorMessage);
         }
     }

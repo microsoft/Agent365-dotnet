@@ -29,6 +29,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Extensions
             // This validates that admin has granted consent for local MCP server scopes
             // before allowing invocation (similar to how remote MCP servers validate via token)
             services.AddScoped<ILocalMcpScopeValidator, LocalMcpScopeValidator>();
+
+            // Register policy enforcement service for Scenario 2 (device path routing)
+            // This enforces that certain MCP servers must be routed through a registered desktop
+            services.AddSingleton<IMcpPolicyEnforcementService, McpPolicyEnforcementService>();
+            
+            // Register the policy enforcement filter
+            services.AddScoped<PolicyEnforcingFunctionInvocationFilter>();
             
             return services;
         }

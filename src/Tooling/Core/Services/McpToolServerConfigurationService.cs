@@ -669,7 +669,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 ClientName = wnsConfig.clientName,
                 ProxyBaseUrl = proxyBaseUrl,
                 ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
-                LocalServerId = wnsConfig.localServerId
+                LocalServerId = wnsConfig.localServerId,
+                AgentAppId = wnsConfig.agentAppId
             };
 
             // Create HTTP client for WNS proxy communication

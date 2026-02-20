@@ -435,7 +435,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                     ClientName = wnsConfig.clientName,
                     ProxyBaseUrl = proxyBaseUrl,
                     ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
-                    LocalServerId = wnsConfig.localServerId
+                    LocalServerId = wnsConfig.localServerId,
+                    AgentAppId = wnsConfig.agentAppId
                 };
 
                 var httpClient = _httpClientFactory.CreateClient("WnsMcpClient");
@@ -540,7 +541,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="protocolUrl">The re-registration protocol URL.</param>
         public LocalMcpReregistrationRequiredException(string serverName, string? clientName, string? protocolUrl)
             : base($"Desktop '{clientName}' requires re-registration to access local MCP server '{serverName}'. " +
-                   $"Please click the registration link to re-register.")
+                   (string.IsNullOrEmpty(protocolUrl)
+                       ? "Please contact your administrator to re-register."
+                       : $"Copy and paste this link into the Windows Run dialog (Win+R) to re-register:\n\n```\n{protocolUrl}\n```\n\nIMPORTANT: Display this link exactly as shown in the code block. Do NOT convert it into a clickable markdown hyperlink. The user needs to copy the full text."))
         {
             ServerName = serverName;
             ClientName = clientName;

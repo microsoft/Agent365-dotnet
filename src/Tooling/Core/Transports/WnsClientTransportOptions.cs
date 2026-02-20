@@ -33,5 +33,12 @@ namespace Microsoft.Agents.A365.Tooling.Transports
         /// Example: "MicrosoftWindows.Client.Core_cw5n1h2txyewy_com.microsoft.windows.ai.mcpServer_file-mcp-server"
         /// </summary>
         public string? LocalServerId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Agent Application ID (Azure AD Client ID) of the calling agent.
+        /// This is sent to the desktop client so it can identify and log which agent is
+        /// requesting access to local MCP servers.
+        /// </summary>
+        public string? AgentAppId { get; set; }
     }
 }

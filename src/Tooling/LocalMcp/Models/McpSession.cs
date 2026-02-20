@@ -41,7 +41,7 @@ public class McpSession
     /// <summary>
     /// Gets the pending requests awaiting responses, keyed by request ID.
     /// </summary>
-    public ConcurrentDictionary<int, TaskCompletionSource<string>> PendingRequests { get; } = new();
+    public ConcurrentDictionary<string, TaskCompletionSource<string>> PendingRequests { get; } = new();
 
     /// <summary>
     /// Gets or sets a value indicating whether this session requires desktop re-registration.

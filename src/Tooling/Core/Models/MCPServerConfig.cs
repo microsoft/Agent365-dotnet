@@ -99,5 +99,12 @@ namespace Microsoft.Agents.A365.Tooling.Models
         /// This is used to identify which local MCP server to connect to.
         /// </summary>
         public string? localServerId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the Agent Application ID (Azure AD Client ID) of the calling agent.
+        /// This is sent to the desktop client so it can identify and log which agent
+        /// is requesting access to local MCP servers.
+        /// </summary>
+        public string? agentAppId { get; set; }
     }
 }

@@ -47,11 +47,15 @@ namespace Microsoft.Agents.A365.Tooling.Transports
             _logger?.LogInformation("[WNS Transport] Connecting to client: {ClientName}", _options.ClientName);
 
             // Step 1: Send WNS notification to trigger desktop connection
-            // Include localServerId in the payload if specified
+            // Include localServerId and agentAppId in the payload if specified
             HttpContent? notifyContent = null;
-            if (!string.IsNullOrEmpty(_options.LocalServerId))
+            if (!string.IsNullOrEmpty(_options.LocalServerId) || !string.IsNullOrEmpty(_options.AgentAppId))
             {
-                var payload = JsonSerializer.Serialize(new { serverId = _options.LocalServerId });
+                var payload = JsonSerializer.Serialize(new
+                {
+                    serverId = _options.LocalServerId,
+                    agentAppId = _options.AgentAppId
+                });
                 notifyContent = new StringContent(payload, Encoding.UTF8, "application/json");
             }
 
@@ -109,7 +113,10 @@ namespace Microsoft.Agents.A365.Tooling.Transports
                     if (response.IsSuccessStatusCode)
                     {
                         var status = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
-                        if (status.GetProperty("connected").GetBoolean())
+                        // Check 'connected', 'webSocketConnected', or 'registered' for compatibility
+                        if ((status.TryGetProperty("connected", out var connProp) && connProp.GetBoolean()) ||
+                            (status.TryGetProperty("webSocketConnected", out var wsProp) && wsProp.GetBoolean()) ||
+                            (status.TryGetProperty("registered", out var regProp) && regProp.GetBoolean()))
                         {
                             return true;
                         }
@@ -146,7 +153,10 @@ namespace Microsoft.Agents.A365.Tooling.Transports
                             return true;
                         }
                         // If wsReady property doesn't exist, assume it's ready if connected
-                        if (status.GetProperty("connected").GetBoolean())
+                        // Check 'connected', 'webSocketConnected', or 'registered' for compatibility
+                        if ((status.TryGetProperty("connected", out var connProp) && connProp.GetBoolean()) ||
+                            (status.TryGetProperty("webSocketConnected", out var wsProp2) && wsProp2.GetBoolean()) ||
+                            (status.TryGetProperty("registered", out var regProp) && regProp.GetBoolean()))
                         {
                             return true;
                         }

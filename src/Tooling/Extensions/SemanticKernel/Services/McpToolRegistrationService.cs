@@ -31,6 +31,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILoggerFactory? _loggerFactory;
         private readonly ILocalMcpScopeValidator? _scopeValidator;
+        private readonly IMcpPolicyEnforcementService? _policyService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IMcpToolRegistrationService"/> class.
@@ -55,6 +56,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             _httpClientFactory = httpClientFactory;
             _loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             _scopeValidator = serviceProvider.GetService<ILocalMcpScopeValidator>();
+            _policyService = serviceProvider.GetService<IMcpPolicyEnforcementService>();
         }
 
         /// <inheritdoc />
@@ -65,13 +67,36 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
+            // Auto-add the policy enforcement filter to the kernel (with duplicate guard)
+            EnsurePolicyFilterRegistered(kernel);
+
+            // Store user identifier in kernel data for policy enforcement filter
+            var userIdentifier = turnContext.Activity.From?.Name;
+            if (!string.IsNullOrEmpty(userIdentifier))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.UserIdentifierKey] = userIdentifier;
+            }
+
             if (authToken == null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
+            // Store auth token in kernel data for policy enforcement filter to pass to locaproto
+            // This token will be used when routing tool calls through the desktop for Intune policy enforcement
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.AuthTokenKey] = authToken;
+            }
+
             // resolve agent identity from context or token.
             string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
+
+            // Store agent app ID in kernel data for policy enforcement filter
+            if (!string.IsNullOrEmpty(agenticAppId))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentAppIdKey] = agenticAppId;
+            }
 
             var toolOptions = new ToolOptions
             {
@@ -82,8 +107,31 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             foreach (var server in servers)
             {
+                // Propagate the agent app ID to WNS transport config so it reaches the desktop client
+                if (server.transportType == McpTransportType.Wns && server.wnsConfig != null)
+                {
+                    server.wnsConfig.agentAppId = agenticAppId;
+                }
+
                 // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
                 var pluginName = SanitizePluginName(server.mcpServerName);
+
+                // Register all MCP servers with the policy service for Intune enforcement
+                if (_policyService != null)
+                {
+                    var cloudConfig = new CloudServerRegistration
+                    {
+                        ServerName = pluginName,
+                        Endpoint = server.url,
+                        Transport = server.transportType.ToString().ToLowerInvariant(),
+                        Scope = server.scope,
+                        Audience = server.audience
+                    };
+                    
+                    _policyService.RegisterDevicePathServer(pluginName, cloudConfig);
+                    _logger.LogInformation("[PolicyEnforcement] Server '{ServerName}' registered for policy enforcement (plugin: {PluginName}, endpoint: {Endpoint})", 
+                        server.mcpServerName, pluginName, server.url);
+                }
                 _logger.LogInformation("Registering plugin '{PluginName}' (from server '{ServerName}')", pluginName, server.mcpServerName);
 
                 var listAvailableToolsForServer = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
@@ -301,13 +349,29 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
+            // Auto-add the policy enforcement filter to the kernel (with duplicate guard)
+            EnsurePolicyFilterRegistered(kernel);
+
             if (authToken == null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
+            // Store auth token in kernel data for policy enforcement filter to pass to locaproto
+            if (!string.IsNullOrEmpty(authToken))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.AuthTokenKey] = authToken;
+            }
+
             // Get user identity from the turn context
             var userIdentifier = turnContext.Activity.From?.Name;
+
+            // Store user identifier in kernel data for policy enforcement filter
+            if (!string.IsNullOrEmpty(userIdentifier))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.UserIdentifierKey] = userIdentifier;
+            }
+            
             if (string.IsNullOrWhiteSpace(userIdentifier))
             {
                 _logger.LogWarning("[UserDiscovery] No user identifier found in turnContext.Activity.From.Name. Falling back to cloud-only discovery.");
@@ -322,6 +386,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             // Resolve agent identity from context or token.
             string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
+
+            // Store agent app ID in kernel data for policy enforcement filter
+            if (!string.IsNullOrEmpty(agenticAppId))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentAppIdKey] = agenticAppId;
+            }
 
             var toolOptions = new ToolOptions
             {
@@ -341,8 +411,32 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             {
                 try
                 {
+                    // Propagate the agent app ID to WNS transport config so it reaches the desktop client
+                    if (server.transportType == McpTransportType.Wns && server.wnsConfig != null)
+                    {
+                        server.wnsConfig.agentAppId = agenticAppId;
+                    }
+
                     // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
                     var pluginName = SanitizePluginName(server.mcpServerName);
+                    
+                    // Register all MCP servers with the policy service for Intune enforcement
+                    if (_policyService != null)
+                    {
+                        var cloudConfig = new CloudServerRegistration
+                        {
+                            ServerName = pluginName,
+                            Endpoint = server.url,
+                            Transport = server.transportType.ToString().ToLowerInvariant(),
+                            Scope = server.scope,
+                            Audience = server.audience
+                        };
+                        
+                        _policyService.RegisterDevicePathServer(pluginName, cloudConfig);
+                        _logger.LogInformation("[PolicyEnforcement] Server '{ServerName}' registered for policy enforcement (plugin: {PluginName}, endpoint: {Endpoint})", 
+                            server.mcpServerName, pluginName, server.url);
+                    }
+                    
                     _logger.LogInformation("Registering plugin '{PluginName}' (from server '{ServerName}', transport: {Transport}, hasStaticTools: {HasStatic})",
                         pluginName, server.mcpServerName, server.transportType, server.HasStaticTools);
 
@@ -424,6 +518,31 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             )).ToArray();
 
             return await _mcpServerConfigurationService.SendChatHistoryAsync(turnContext, chatHistoryMessages, toolOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Ensures the policy enforcement filter is registered on the kernel exactly once.
+        /// This is called automatically during tool registration so agent developers don't need to wire it up.
+        /// </summary>
+        private void EnsurePolicyFilterRegistered(Kernel kernel)
+        {
+            var policyFilter = _serviceProvider.GetService<PolicyEnforcingFunctionInvocationFilter>();
+            if (policyFilter == null)
+            {
+                _logger.LogDebug("[PolicyEnforcement] PolicyEnforcingFunctionInvocationFilter not available in DI, skipping auto-registration.");
+                return;
+            }
+
+            foreach (var existingFilter in kernel.FunctionInvocationFilters)
+            {
+                if (existingFilter is PolicyEnforcingFunctionInvocationFilter)
+                {
+                    return; // Already registered
+                }
+            }
+
+            kernel.FunctionInvocationFilters.Add(policyFilter);
+            _logger.LogInformation("[PolicyEnforcement] Auto-registered PolicyEnforcingFunctionInvocationFilter on kernel.");
         }
     }
 }

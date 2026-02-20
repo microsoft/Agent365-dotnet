@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Agents.A365.Tooling.LocalMcp.Models;
 using Microsoft.Agents.A365.Tooling.LocalMcp.Services;
+using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,9 +32,18 @@ public static class LocalMcpEndpoints
         // POST /api/channels/register - Desktop client registration
         app.MapPost("/api/channels/register", (
             ChannelRegistrationRequest request,
-            ISessionManager sessionManager) =>
+            ISessionManager sessionManager,
+            IServiceProvider serviceProvider) =>
         {
             var registration = sessionManager.RegisterClient(request);
+            
+            // Invalidate policy cache so next tool call finds the registered desktop
+            var policyService = serviceProvider.GetService<IMcpPolicyEnforcementService>();
+            if (policyService != null && !string.IsNullOrEmpty(registration.UserIdentifier))
+            {
+                policyService.InvalidateUserCache(registration.UserIdentifier);
+            }
+            
             return Results.Ok(new { 
                 message = "Registration successful", 
                 clientName = registration.ClientName,
@@ -147,6 +157,8 @@ public static class LocalMcpEndpoints
             string? requestId = null;
             string? serverId = null;
             string? callbackUrl = null;
+            string? agentAppId = null;
+            CloudMcpProxyConfig? cloudConfig = null;
 
             // Parse the request
             if (!string.IsNullOrEmpty(requestBody))
@@ -162,6 +174,37 @@ public static class LocalMcpEndpoints
                         callbackUrl = callbackElement.GetString();
                     if (jsonDoc.RootElement.TryGetProperty("serverId", out var serverIdElement))
                         serverId = serverIdElement.GetString();
+                    if (jsonDoc.RootElement.TryGetProperty("agentAppId", out var agentAppIdElement))
+                        agentAppId = agentAppIdElement.GetString();
+                    
+                    // Parse cloud server configuration if present
+                    if (jsonDoc.RootElement.TryGetProperty("cloudConfig", out var cloudConfigElement))
+                    {
+                        cloudConfig = new CloudMcpProxyConfig
+                        {
+                            ServerId = serverId ?? "unknown",
+                            Endpoint = cloudConfigElement.TryGetProperty("endpoint", out var ep) ? ep.GetString() ?? "" : "",
+                            Transport = cloudConfigElement.TryGetProperty("transport", out var tr) ? tr.GetString() ?? "sse" : "sse",
+                            AuthType = cloudConfigElement.TryGetProperty("authType", out var at) ? at.GetString() ?? "intune_managed" : "intune_managed",
+                            Scope = cloudConfigElement.TryGetProperty("scope", out var sc) ? sc.GetString() : null,
+                            Audience = cloudConfigElement.TryGetProperty("audience", out var au) ? au.GetString() : null,
+                            BearerToken = cloudConfigElement.TryGetProperty("bearerToken", out var bt) ? bt.GetString() : null
+                        };
+                        
+                        // Parse additional headers if present
+                        if (cloudConfigElement.TryGetProperty("additionalHeaders", out var headers) && 
+                            headers.ValueKind == JsonValueKind.Object)
+                        {
+                            cloudConfig.AdditionalHeaders = new Dictionary<string, string>();
+                            foreach (var header in headers.EnumerateObject())
+                            {
+                                cloudConfig.AdditionalHeaders[header.Name] = header.Value.GetString() ?? "";
+                            }
+                        }
+                        
+                        logger.LogInformation("[WNS NOTIFY] Cloud MCP config detected - Endpoint: {Endpoint}, AuthType: {AuthType}", 
+                            cloudConfig.Endpoint, cloudConfig.AuthType);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -204,17 +247,34 @@ public static class LocalMcpEndpoints
 
                 logger.LogInformation("[WNS NOTIFY] Sending MCP notification to '{ClientName}'", clientName);
                 logger.LogInformation("[WNS NOTIFY] Session ID: {SessionId}, Server ID: {ServerId}", sessionId, serverId);
-
-                var (success, errorMessage) = await wnsService.SendNotificationAsync(client.ChannelUri, callbackUrl, serverId);
-
-                if (success)
+                if (!string.IsNullOrEmpty(agentAppId))
                 {
-                    return Results.Ok(new { message = "Notification sent", sessionId, callbackUrl });
+                    logger.LogInformation("[WNS NOTIFY] Agent App ID: {AgentAppId}", agentAppId);
+                }
+
+                (bool success, string? errorMessage) result;
+                
+                if (cloudConfig != null)
+                {
+                    // Cloud MCP server - send extended notification with cloud config
+                    logger.LogInformation("[WNS NOTIFY] Using CLOUD MCP notification for '{ServerId}'", serverId);
+                    cloudConfig.ServerId = serverId;
+                    result = await wnsService.SendCloudMcpNotificationAsync(client.ChannelUri, callbackUrl, cloudConfig, agentAppId);
+                }
+                else
+                {
+                    // Local MCP server - send standard notification
+                    result = await wnsService.SendNotificationAsync(client.ChannelUri, callbackUrl, serverId, agentAppId);
+                }
+
+                if (result.success)
+                {
+                    return Results.Ok(new { message = "Notification sent", sessionId, callbackUrl, serverType = cloudConfig != null ? "cloud" : "local" });
                 }
                 else
                 {
                     sessionManager.RemoveSession(sessionId);
-                    return Results.Json(new { message = $"Failed to send notification: {errorMessage}" }, statusCode: 500);
+                    return Results.Json(new { message = $"Failed to send notification: {result.errorMessage}" }, statusCode: 500);
                 }
             }
         }).AllowAnonymous();
@@ -310,7 +370,7 @@ public static class LocalMcpEndpoints
                             
                             if (jsonDoc.RootElement.TryGetProperty("id", out var idElement))
                             {
-                                var id = idElement.GetInt32();
+                                var id = idElement.ToString();
                                 if (session.PendingRequests.TryRemove(id, out var tcs))
                                 {
                                     tcs.SetResult(message);
@@ -344,8 +404,9 @@ public static class LocalMcpEndpoints
             return Results.Json(new
             {
                 sessionId,
+                connected = isConnected,
                 registered = isConnected,
-                connected = isConnected
+                webSocketConnected = isConnected
             });
         }).AllowAnonymous();
 
@@ -391,7 +452,7 @@ public static class LocalMcpEndpoints
                     return Results.Ok(new { message = "Notification received" });
                 }
 
-                var requestId = idElement.GetInt32();
+                var requestId = idElement.ToString();
 
                 var tcs = new TaskCompletionSource<string>();
                 session.PendingRequests.TryAdd(requestId, tcs);

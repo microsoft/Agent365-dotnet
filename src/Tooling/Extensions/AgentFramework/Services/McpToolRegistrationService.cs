@@ -82,6 +82,12 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
+                // Propagate the agent app ID to WNS transport config so it reaches the desktop client
+                if (server.transportType == McpTransportType.Wns && server.wnsConfig != null)
+                {
+                    server.wnsConfig.agentAppId = agentUserId;
+                }
+
                 try
                 {
                     var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
@@ -148,6 +154,12 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             // Retrieve MCP tools from all configured servers
             foreach (var server in servers)
             {
+                // Propagate the agent app ID to WNS transport config so it reaches the desktop client
+                if (server.transportType == McpTransportType.Wns && server.wnsConfig != null)
+                {
+                    server.wnsConfig.agentAppId = agentUserId;
+                }
+
                 try
                 {
                     var mcpTools = await _mcpServerConfigurationService.GetMcpClientToolsAsync(turnContext, server, authToken, toolOptions).ConfigureAwait(false);
