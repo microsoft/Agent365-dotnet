@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 
@@ -31,6 +32,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
+        /// <param name="startTime">Optional explicit start time. Useful when recording an agent invocation after execution has already completed.</param>
+        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -50,9 +53,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary);
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime)
             : base(
                 kind: ActivityKind.Client,
                 agentDetails: invokeAgentDetails.Details,
@@ -61,6 +64,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 activityName: string.IsNullOrWhiteSpace(invokeAgentDetails.Details.AgentName)
                     ? OperationName
                     : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
+                startTime: startTime,
+                endTime: endTime,
                 conversationId: conversationId,
                 sourceMetadata: request?.SourceMetadata,
                 callerDetails: callerDetails)

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -26,17 +27,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
         /// <param name="response">Response containing output messages.</param>
         /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="startTime">Optional explicit start time. Useful when recording an output operation after execution has already completed.</param>
+        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
         /// <returns>A new OutputScope instance.</returns>
-        public static OutputScope Start(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId = null)
-            => new OutputScope(agentDetails, tenantDetails, response, parentId);
+        public static OutputScope Start(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
+            => new OutputScope(agentDetails, tenantDetails, response, parentId, startTime, endTime);
 
-        private OutputScope(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId)
+        private OutputScope(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId, DateTimeOffset? startTime, DateTimeOffset? endTime)
             : base(
                 kind: ActivityKind.Client,
                 agentDetails: agentDetails,
                 tenantDetails: tenantDetails,
                 operationName: OperationName,
                 activityName: $"{OperationName} {agentDetails?.AgentId}",
+                startTime: startTime,
+                endTime: endTime,
                 parentId: parentId)
         {
             if (response.Messages.Count > 0)

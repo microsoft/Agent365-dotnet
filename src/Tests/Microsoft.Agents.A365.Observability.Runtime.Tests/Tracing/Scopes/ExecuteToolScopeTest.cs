@@ -258,4 +258,73 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
     }
+
+    [TestMethod]
+    public void Start_WithCustomStartTime_SetsActivityStartTime()
+    {
+        // Arrange
+        var customStartTime = new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero);
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                startTime: customStartTime);
+        });
+
+        // Assert
+        var startTime = new DateTimeOffset(activity.StartTimeUtc);
+        startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
+    }
+
+    [TestMethod]
+    public void Start_WithCustomStartAndEndTime_SetsActivityTimes()
+    {
+        // Arrange
+        var customStartTime = new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero);
+        var customEndTime = new DateTimeOffset(2023, 11, 14, 22, 13, 25, TimeSpan.Zero); // 5 seconds later
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                startTime: customStartTime,
+                endTime: customEndTime);
+        });
+
+        // Assert - Start time should be set to custom time
+        var startTime = new DateTimeOffset(activity.StartTimeUtc);
+        startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
+    }
+
+    [TestMethod]
+    public void SetEndTime_OverridesEndTime()
+    {
+        // Arrange
+        var customStartTime = new DateTimeOffset(2023, 11, 14, 22, 13, 40, TimeSpan.Zero);
+        var initialEndTime = new DateTimeOffset(2023, 11, 14, 22, 13, 45, TimeSpan.Zero);
+        var laterEndTime = new DateTimeOffset(2023, 11, 14, 22, 13, 48, TimeSpan.Zero);
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                startTime: customStartTime,
+                endTime: initialEndTime);
+            scope.SetEndTime(laterEndTime);
+        });
+
+        // Assert - The start time should be set
+        var startTime = new DateTimeOffset(activity.StartTimeUtc);
+        startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
+    }
 }
