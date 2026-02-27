@@ -100,13 +100,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>The full request URI string.</returns>
         public string BuildRequestUri(string endpoint, string endpointPath)
         {
-            if (endpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                endpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            var normalizedEndpoint = endpoint.TrimEnd('/');
+
+            if (normalizedEndpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                normalizedEndpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
             {
-                return $"{endpoint}{endpointPath}?api-version=1";
+                return $"{normalizedEndpoint}{endpointPath}?api-version=1";
             }
 
-            return $"https://{endpoint}{endpointPath}?api-version=1";
+            return $"https://{normalizedEndpoint}{endpointPath}?api-version=1";
         }
 
         /// <summary>
