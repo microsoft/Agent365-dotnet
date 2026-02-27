@@ -43,13 +43,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="operationName">The name of the operation being traced.</param>
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
+        /// <param name="endTime">Optional custom end time for the scope. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
         /// <param name="parentId">Optional parent ID for the activity.</param>
         /// <param name="conversationId">Optional conversation id.</param>
         /// <param name="sourceMetadata">Optional source metadata.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
         {
             customStartTime = startTime;
+            customEndTime = endTime;
             activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
             if (!string.IsNullOrEmpty(parentId))
             {
