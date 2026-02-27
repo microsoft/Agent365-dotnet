@@ -77,26 +77,35 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Builds the endpoint path for the trace export request based on agent ID and S2S setting.
+        /// Builds the endpoint path for the trace export request based on tenant ID, agent ID and S2S setting.
         /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        public string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public string BuildEndpointPath(string tenantId, string agentId, bool useS2SEndpoint)
         {
             return useS2SEndpoint
-                ? $"/maven/agent365/service/agents/{agentId}/traces"
-                : $"/maven/agent365/agents/{agentId}/traces";
+                ? $"/observabilityService/tenants/{tenantId}/agents/{agentId}/traces"
+                : $"/observability/tenants/{tenantId}/agents/{agentId}/traces";
         }
 
         /// <summary>
         /// Builds the full request URI for the trace export request.
+        /// If the endpoint already includes a scheme (http:// or https://), it is used as-is.
+        /// Otherwise, https:// is prepended.
         /// </summary>
-        /// <param name="endpoint">The base endpoint.</param>
+        /// <param name="endpoint">The base endpoint (domain or full URL).</param>
         /// <param name="endpointPath">The endpoint path.</param>
         /// <returns>The full request URI string.</returns>
         public string BuildRequestUri(string endpoint, string endpointPath)
         {
+            if (endpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                endpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{endpoint}{endpointPath}?api-version=1";
+            }
+
             return $"https://{endpoint}{endpointPath}?api-version=1";
         }
 
@@ -127,7 +136,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     ? ppapiEndpointOverride
                     : options.DomainResolver.Invoke(tenantId);
 
-                var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
+                var endpointPath = BuildEndpointPath(tenantId, agentId, options.UseS2SEndpoint);
                 var requestUri = BuildRequestUri(ppapiEndpoint, endpointPath);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)

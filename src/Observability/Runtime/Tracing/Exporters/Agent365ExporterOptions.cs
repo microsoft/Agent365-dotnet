@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -25,13 +24,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public sealed class Agent365ExporterOptions
     {
         /// <summary>
+        /// The default endpoint URL for Agent365 observability.
+        /// </summary>
+        public const string DefaultEndpointUrl = "agent365.svc.cloud.microsoft";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterOptions"/> class with default settings.
         /// </summary>
-        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to resolve tenant
-        /// endpoints using the current <c>ClusterCategory</c> value.</remarks>
+        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to return the default
+        /// Agent365 endpoint URL (<c>agent365.svc.cloud.microsoft</c>).</remarks>
         public Agent365ExporterOptions()
         {
-            this.DomainResolver = tenantId => new PowerPlatformApiDiscovery(this.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+            this.DomainResolver = tenantId => DefaultEndpointUrl;
         }
 
         /// <summary>
@@ -50,8 +54,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
-        /// When true, uses the service-to-service (S2S) endpoint path: /maven/agent365/service/agents/{agentId}/traces
-        /// When false (default), uses the standard endpoint path: /maven/agent365/agents/{agentId}/traces
+        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/agents/{agentId}/traces
+        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/agents/{agentId}/traces
         /// Default is false.
         /// </summary>
         public bool UseS2SEndpoint { get; set; } = false;
