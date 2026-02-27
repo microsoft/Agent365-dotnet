@@ -13,29 +13,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
-    /// Delegate used by the exporter to resolve the island tenant domain for a given tenant id.
+    /// Delegate used by the exporter to resolve the endpoint host or URL for a given tenant id.
+    /// The return value may be a bare host name (e.g. "agent365.svc.cloud.microsoft") or a full URL
+    /// (e.g. "https://agent365.svc.cloud.microsoft").
     /// </summary>
     public delegate string TenantDomainResolver(string tenantId);
 
     /// <summary>
     /// Configuration for Agent365Exporter.
-    /// Only ClusterCategory and TokenResolver are required for core operation.
+    /// Only TokenResolver is required for core operation.
     /// </summary>
     public sealed class Agent365ExporterOptions
     {
         /// <summary>
-        /// The default endpoint URL for Agent365 observability.
+        /// The default endpoint host for Agent365 observability.
         /// </summary>
-        public const string DefaultEndpointUrl = "agent365.svc.cloud.microsoft";
+        public const string DefaultEndpointHost = "agent365.svc.cloud.microsoft";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterOptions"/> class with default settings.
         /// </summary>
         /// <remarks>The default constructor sets the <c>DomainResolver</c> property to return the default
-        /// Agent365 endpoint URL (<c>agent365.svc.cloud.microsoft</c>).</remarks>
+        /// Agent365 endpoint host (<c>agent365.svc.cloud.microsoft</c>).</remarks>
         public Agent365ExporterOptions()
         {
-            this.DomainResolver = tenantId => DefaultEndpointUrl;
+            this.DomainResolver = tenantId => DefaultEndpointHost;
         }
 
         /// <summary>
@@ -49,7 +51,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
 
         /// <summary>
-        /// Delegate used to resolve the island tenant domain for a given tenant id.
+        /// Delegate used to resolve the endpoint host or URL for a given tenant id.
+        /// Defaults to returning <see cref="DefaultEndpointHost"/>.
         /// </summary>
         public TenantDomainResolver DomainResolver { get; set; }
 
