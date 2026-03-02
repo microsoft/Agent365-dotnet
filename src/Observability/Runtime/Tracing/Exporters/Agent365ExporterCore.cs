@@ -77,27 +77,46 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Builds the endpoint path for the trace export request based on agent ID and S2S setting.
+        /// Builds the endpoint path for the trace export request based on tenant ID, agent ID and S2S setting.
         /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        public string BuildEndpointPath(string agentId, bool useS2SEndpoint)
+        public string BuildEndpointPath(string tenantId, string agentId, bool useS2SEndpoint)
         {
+            var encodedTenantId = Uri.EscapeDataString(tenantId);
+            var encodedAgentId = Uri.EscapeDataString(agentId);
+
             return useS2SEndpoint
-                ? $"/maven/agent365/service/agents/{agentId}/traces"
-                : $"/maven/agent365/agents/{agentId}/traces";
+                ? $"/observabilityService/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces"
+                : $"/observability/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces";
         }
 
         /// <summary>
         /// Builds the full request URI for the trace export request.
+        /// If the endpoint already includes a scheme (https://), it is used as-is.
+        /// Otherwise, https:// is prepended. Plaintext http:// is not supported.
         /// </summary>
-        /// <param name="endpoint">The base endpoint.</param>
+        /// <param name="endpoint">The base endpoint (domain or full HTTPS URL).</param>
         /// <param name="endpointPath">The endpoint path.</param>
         /// <returns>The full request URI string.</returns>
+        /// <exception cref="ArgumentException">Thrown when the endpoint uses an http:// (non-TLS) scheme.</exception>
         public string BuildRequestUri(string endpoint, string endpointPath)
         {
-            return $"https://{endpoint}{endpointPath}?api-version=1";
+            var normalizedEndpoint = endpoint.TrimEnd('/');
+
+            if (normalizedEndpoint.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Plaintext HTTP endpoints are not supported. Use HTTPS to protect credentials in transit.", nameof(endpoint));
+            }
+
+            if (normalizedEndpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{normalizedEndpoint}{endpointPath}?api-version=1";
+            }
+
+            return $"https://{normalizedEndpoint}{endpointPath}?api-version=1";
         }
 
         /// <summary>
@@ -122,13 +141,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 var json = _formatter.FormatMany(activities, resource);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var ppapiEndpointOverride = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
-                var ppapiEndpoint = !string.IsNullOrEmpty(ppapiEndpointOverride)
-                    ? ppapiEndpointOverride
+                var endpointOverride = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
+                var endpoint = !string.IsNullOrEmpty(endpointOverride)
+                    ? endpointOverride
                     : options.DomainResolver.Invoke(tenantId);
 
-                var endpointPath = BuildEndpointPath(agentId, options.UseS2SEndpoint);
-                var requestUri = BuildRequestUri(ppapiEndpoint, endpointPath);
+                var endpointPath = BuildEndpointPath(tenantId, agentId, options.UseS2SEndpoint);
+                var requestUri = BuildRequestUri(endpoint, endpointPath);
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
                 {

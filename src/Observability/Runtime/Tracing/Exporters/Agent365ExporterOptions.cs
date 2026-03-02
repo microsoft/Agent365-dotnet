@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Threading.Tasks;
-using Microsoft.Agents.A365.Observability.Runtime.Common;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
@@ -14,24 +13,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
-    /// Delegate used by the exporter to resolve the island tenant domain for a given tenant id.
+    /// Delegate used by the exporter to resolve the endpoint host or URL for a given tenant id.
+    /// The return value may be a bare host name (e.g. "agent365.svc.cloud.microsoft") or a full URL
+    /// (e.g. "https://agent365.svc.cloud.microsoft").
     /// </summary>
     public delegate string TenantDomainResolver(string tenantId);
 
     /// <summary>
     /// Configuration for Agent365Exporter.
-    /// Only ClusterCategory and TokenResolver are required for core operation.
+    /// Only TokenResolver is required for core operation.
     /// </summary>
     public sealed class Agent365ExporterOptions
     {
         /// <summary>
+        /// The default endpoint host for Agent365 observability.
+        /// </summary>
+        public const string DefaultEndpointHost = "agent365.svc.cloud.microsoft";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterOptions"/> class with default settings.
         /// </summary>
-        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to resolve tenant
-        /// endpoints using the current <c>ClusterCategory</c> value.</remarks>
+        /// <remarks>The default constructor sets the <c>DomainResolver</c> property to return the default
+        /// Agent365 endpoint host (<c>agent365.svc.cloud.microsoft</c>).</remarks>
         public Agent365ExporterOptions()
         {
-            this.DomainResolver = tenantId => new PowerPlatformApiDiscovery(this.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
+            this.DomainResolver = tenantId => DefaultEndpointHost;
         }
 
         /// <summary>
@@ -45,13 +51,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
 
         /// <summary>
-        /// Delegate used to resolve the island tenant domain for a given tenant id.
+        /// Delegate used to resolve the endpoint host or URL for a given tenant id.
+        /// Defaults to returning <see cref="DefaultEndpointHost"/>.
         /// </summary>
         public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
-        /// When true, uses the service-to-service (S2S) endpoint path: /maven/agent365/service/agents/{agentId}/traces
-        /// When false (default), uses the standard endpoint path: /maven/agent365/agents/{agentId}/traces
+        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/agents/{agentId}/traces
+        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/agents/{agentId}/traces
         /// Default is false.
         /// </summary>
         public bool UseS2SEndpoint { get; set; } = false;

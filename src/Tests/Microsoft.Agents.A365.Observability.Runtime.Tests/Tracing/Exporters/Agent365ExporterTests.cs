@@ -1062,7 +1062,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{overrideDomain}");
-        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observability/tenants/tenant-env-overrides/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
 
         // Cleanup
@@ -1111,7 +1111,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{overrideDomain}");
-        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observability/tenants/tenant-env/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
 
         // Cleanup
@@ -1162,14 +1162,14 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{resolverDomain}");
-        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observability/tenants/tenant-resolver/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
         // Cleanup
         Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
     }
 
     [TestMethod]
-    public void Export_RequestUri_UsesPpapiDiscovery_WhenNoResolverAndNoEnvVarSet()
+    public void Export_RequestUri_UsesDefaultEndpoint_WhenNoResolverAndNoEnvVarSet()
     {
         // Arrange
         Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
@@ -1203,17 +1203,54 @@ public sealed class Agent365ExporterTests
         using var activity = CreateActivity(tenantId: tenantId, agentId: "agent-xyz");
         var batch = CreateBatch(activity);
 
-        var expectedDomain = new PowerPlatformApiDiscovery(options.ClusterCategory).GetTenantIslandClusterEndpoint(tenantId);
-
         // Act
         var result = exporter.Export(in batch);
 
         // Assert
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
-        observedUri!.Should().StartWith($"https://{expectedDomain}");
-        observedUri!.Should().Contain($"/maven/agent365/agents/agent-xyz/traces");
+        observedUri!.Should().StartWith($"https://{Agent365ExporterOptions.DefaultEndpointHost}");
+        observedUri!.Should().Contain($"/observability/tenants/{tenantId}/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
+    }
+
+    #endregion
+
+    #region BuildRequestUri Tests
+
+    [TestMethod]
+    public void BuildRequestUri_BareHost_PrependsHttps()
+    {
+        var uri = _agent365ExporterCore.BuildRequestUri("agent365.svc.cloud.microsoft", "/observability/tenants/t1/agents/a1/traces");
+        uri.Should().Be("https://agent365.svc.cloud.microsoft/observability/tenants/t1/agents/a1/traces?api-version=1");
+    }
+
+    [TestMethod]
+    public void BuildRequestUri_HttpsEndpoint_DoesNotDoublePrependScheme()
+    {
+        var uri = _agent365ExporterCore.BuildRequestUri("https://custom.example.com", "/observability/tenants/t1/agents/a1/traces");
+        uri.Should().Be("https://custom.example.com/observability/tenants/t1/agents/a1/traces?api-version=1");
+    }
+
+    [TestMethod]
+    public void BuildRequestUri_TrailingSlash_IsNormalized()
+    {
+        var uri = _agent365ExporterCore.BuildRequestUri("https://custom.example.com/", "/observability/tenants/t1/agents/a1/traces");
+        uri.Should().Be("https://custom.example.com/observability/tenants/t1/agents/a1/traces?api-version=1");
+    }
+
+    [TestMethod]
+    public void BuildRequestUri_BareHostWithTrailingSlash_IsNormalized()
+    {
+        var uri = _agent365ExporterCore.BuildRequestUri("agent365.svc.cloud.microsoft/", "/observability/tenants/t1/agents/a1/traces");
+        uri.Should().Be("https://agent365.svc.cloud.microsoft/observability/tenants/t1/agents/a1/traces?api-version=1");
+    }
+
+    [TestMethod]
+    public void BuildRequestUri_HttpEndpoint_ThrowsArgumentException()
+    {
+        Action act = () => _agent365ExporterCore.BuildRequestUri("http://insecure.example.com", "/observability/tenants/t1/agents/a1/traces");
+        act.Should().Throw<ArgumentException>().WithParameterName("endpoint");
     }
 
     #endregion
