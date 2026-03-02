@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="request">The request content for the invoked agent.</param>
         /// <param name="callerAgentDetails">The details of the caller agent. Only used for agent-to-agent invocation.</param>
         /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <param name="startTime">Optional explicit start time. Useful when recording an agent invocation after execution has already completed.</param>
@@ -53,9 +54,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime);
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? parentId = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, parentId, conversationId, threatDiagnosticsSummary, startTime, endTime);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? parentId, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime)
             : base(
                 kind: ActivityKind.Client,
                 agentDetails: invokeAgentDetails.Details,
@@ -66,6 +67,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
                 startTime: startTime,
                 endTime: endTime,
+                parentId: parentId,
                 conversationId: conversationId,
                 sourceMetadata: request?.SourceMetadata,
                 callerDetails: callerDetails)
