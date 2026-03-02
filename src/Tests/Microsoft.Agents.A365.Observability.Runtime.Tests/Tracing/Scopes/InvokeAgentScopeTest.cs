@@ -308,6 +308,31 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
+    public void Start_WithParentId_SetsParentOnActivity()
+    {
+        // Arrange
+        var tenantDetails = Util.GetTenantDetails();
+        string? parentId = null;
+        ListenForActivity(() =>
+        {
+            using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
+            parentId = parentScope.Id;
+        });
+
+        // Act
+        var childActivity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                Details,
+                tenantDetails,
+                parentId: parentId);
+        });
+
+        // Assert
+        childActivity.ParentId.Should().Be(parentId);
+    }
+
+    [TestMethod]
     public void Start_WithCustomStartTime_SetsActivityStartTime()
     {
         // Arrange
