@@ -113,7 +113,10 @@ public class BaggageTurnMiddlewareTests
     {
         var mockActivity = new Mock<IActivity>();
         mockActivity.Setup(a => a.Type).Returns(activityType);
-        mockActivity.Setup(a => a.Name).Returns(activityName!);
+        if (activityName != null)
+        {
+            mockActivity.Setup(a => a.Name).Returns(activityName);
+        }
         mockActivity.Setup(a => a.Text).Returns("Hello");
         mockActivity.Setup(a => a.From).Returns(new ChannelAccount
         {
