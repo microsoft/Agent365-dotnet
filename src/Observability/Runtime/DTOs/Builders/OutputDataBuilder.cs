@@ -21,6 +21,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
         /// <param name="response">The response containing output messages.</param>
+        /// <param name="conversationId">Optional conversation ID for the output operation.</param>
+        /// <param name="sourceMetadata">Optional source metadata (channel name) for the output operation.</param>
+        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
@@ -31,13 +34,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
             Response response,
+            string? conversationId = null,
+            SourceMetadata? sourceMetadata = null,
+            CallerDetails? callerDetails = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
-            var attributes = BuildAttributes(agentDetails, tenantDetails, response, extraAttributes);
+            var attributes = BuildAttributes(agentDetails, tenantDetails, response, conversationId, sourceMetadata, callerDetails, extraAttributes);
 
             return new OutputData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -46,6 +52,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
             Response response,
+            string? conversationId,
+            SourceMetadata? sourceMetadata,
+            CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
         {
             var attributes = new Dictionary<string, object?>();
@@ -62,6 +71,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             {
                 AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", response.Messages));
             }
+
+            // Conversation ID
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+
+            // Source metadata
+            AddSourceMetadataAttributes(attributes, sourceMetadata);
+
+            // Caller details
+            AddCallerDetails(attributes, callerDetails);
 
             // Add any extra attributes
             AddExtraAttributes(attributes, extraAttributes);
