@@ -99,6 +99,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="agentDetails">The details of the agent.</param>
         /// <param name="tenantDetails">The details of the tenant.</param>
         /// <param name="response">The response containing output messages.</param>
+        /// <param name="conversationId">Optional conversation ID for the output.</param>
+        /// <param name="sourceMetadata">Optional source metadata (channel name) for the output.</param>
+        /// <param name="callerDetails">Optional details of the non-agentic caller.</param>
         /// <param name="startTime">Optional start time of the output operation.</param>
         /// <param name="endTime">Optional end time of the output operation.</param>
         /// <param name="spanId">Optional span ID for tracing.</param>
@@ -107,6 +110,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
             Response response,
+            string? conversationId = null,
+            SourceMetadata? sourceMetadata = null,
+            CallerDetails? callerDetails = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,

@@ -25,6 +25,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue.Should().Be("Hello");
             data.Name.Should().Be("OutputMessages");
+
+            // Null optional parameters should be omitted
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
         }
 
         [TestMethod]
@@ -115,6 +121,52 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey].Should().Be("real-output");
             data.Attributes.Should().ContainKey("output.custom").WhoseValue.Should().Be("abc");
             data.Attributes.Should().NotContainKey("output.null");
+        }
+
+        [TestMethod]
+        public void Build_WithAllParameters_SetsAllExpectedAttributes()
+        {
+            // Arrange
+            var agent = new AgentDetails("agent-all", "AgentAll", "Desc", agentAUID: "auid-all", agentUPN: "upn-all@example.com", agentBlueprintId: "bp-all", agentPlatformId: "platform-all");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var response = new Response(new[] { "Hello", "World" });
+            var conversationId = "conv-output-all";
+            var source = new SourceMetadata(id: "src-id", name: "ChannelOutput", role: Role.Human, description: "https://channel/output");
+            var callerDetails = new CallerDetails("caller-output-123", "Output Caller Name", "calleroutput@example.com", System.Net.IPAddress.Parse("192.168.1.50"), "caller-tenant-output");
+            var start = DateTimeOffset.UtcNow.AddSeconds(-5);
+            var end = DateTimeOffset.UtcNow;
+            var spanId = "span-all-output";
+            var parentSpanId = "parent-all-output";
+
+            // Act
+            var data = OutputDataBuilder.Build(
+                agent,
+                tenant,
+                response,
+                conversationId: conversationId,
+                sourceMetadata: source,
+                callerDetails: callerDetails,
+                startTime: start,
+                endTime: end,
+                spanId: spanId,
+                parentSpanId: parentSpanId);
+
+            // Assert
+            var attrs = data.Attributes;
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be("conv-output-all");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelOutput");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/output");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey).WhoseValue.Should().Be("caller-output-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey).WhoseValue.Should().Be("Output Caller Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey).WhoseValue.Should().Be("calleroutput@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey).WhoseValue.Should().Be("caller-tenant-output");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue.Should().Be("Hello,World");
+            data.StartTime.Should().Be(start);
+            data.EndTime.Should().Be(end);
+            data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));
+            data.SpanId.Should().Be(spanId);
+            data.ParentSpanId.Should().Be(parentSpanId);
         }
     }
 }
