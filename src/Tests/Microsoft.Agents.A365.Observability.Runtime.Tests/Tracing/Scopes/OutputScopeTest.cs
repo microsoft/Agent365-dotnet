@@ -142,6 +142,88 @@ public sealed class OutputScopeTest : ActivityTest
     }
 
     [TestMethod]
+    public void Start_SetsConversationId_WhenProvided()
+    {
+        // Arrange
+        var conversationId = "conv-output-123";
+        var response = new Response(new[] { "Test message" });
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(
+                agentDetails,
+                tenantDetails,
+                response,
+                parentId: null,
+                conversationId: conversationId);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
+    }
+
+    [TestMethod]
+    public void Start_SetsSourceMetadata_Tags()
+    {
+        // Arrange
+        var response = new Response(new[] { "Test message" });
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+        var metadata = new SourceMetadata(id: "src-id", name: "ChannelOutput", role: Role.Human, description: "https://channel/output");
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(
+                agentDetails,
+                tenantDetails,
+                response,
+                parentId: null,
+                conversationId: null,
+                sourceMetadata: metadata);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+    }
+
+    [TestMethod]
+    public void Start_SetsCallerDetails_WhenProvided()
+    {
+        // Arrange
+        var callerDetails = new CallerDetails(
+            callerId: "caller-output-123",
+            callerName: "Output Caller",
+            callerUpn: "caller-output@example.com",
+            callerClientIP: System.Net.IPAddress.Parse("10.0.0.2"),
+            tenantId: "tenant-output-456");
+        var response = new Response(new[] { "Test message" });
+        var agentDetails = Util.GetAgentDetails();
+        var tenantDetails = Util.GetTenantDetails();
+
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = OutputScope.Start(
+                agentDetails,
+                tenantDetails,
+                response,
+                callerDetails: callerDetails);
+        });
+
+        // Assert
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+    }
+
+    [TestMethod]
     public void SetEndTime_OverridesEndTime()
     {
         // Arrange

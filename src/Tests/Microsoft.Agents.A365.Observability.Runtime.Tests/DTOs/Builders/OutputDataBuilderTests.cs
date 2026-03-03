@@ -116,5 +116,64 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().ContainKey("output.custom").WhoseValue.Should().Be("abc");
             data.Attributes.Should().NotContainKey("output.null");
         }
+
+        [TestMethod]
+        public void Build_WithConversationId_IncludesConversationIdAttribute()
+        {
+            var agent = new AgentDetails("agent-conv");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var response = new Response(new[] { "Hello" });
+            var conversationId = "conv-output-123";
+
+            var data = OutputDataBuilder.Build(agent, tenant, response, conversationId: conversationId);
+
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be("conv-output-123");
+        }
+
+        [TestMethod]
+        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        {
+            var agent = new AgentDetails("agent-src");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var response = new Response(new[] { "Hello" });
+            var source = new SourceMetadata(id: "src-id", name: "ChannelOutput", role: Role.Human, description: "https://channel/output");
+
+            var data = OutputDataBuilder.Build(agent, tenant, response, sourceMetadata: source);
+
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelOutput");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/output");
+        }
+
+        [TestMethod]
+        public void Build_WithCallerDetails_IncludesCallerAttributes()
+        {
+            var agent = new AgentDetails("agent-caller");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var response = new Response(new[] { "Hello" });
+            var callerDetails = new CallerDetails("caller-output-123", "Output Caller Name", "calleroutput@example.com", System.Net.IPAddress.Parse("192.168.1.50"), "caller-tenant-output");
+
+            var data = OutputDataBuilder.Build(agent, tenant, response, callerDetails: callerDetails);
+
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey).WhoseValue.Should().Be("caller-output-123");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey).WhoseValue.Should().Be("Output Caller Name");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey).WhoseValue.Should().Be("calleroutput@example.com");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey).WhoseValue.Should().Be("caller-tenant-output");
+        }
+
+        [TestMethod]
+        public void Build_WithNullOptionalNewParameters_OmitsThoseAttributes()
+        {
+            var agent = new AgentDetails("agent-null");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var response = new Response(new[] { "Hello" });
+
+            var data = OutputDataBuilder.Build(agent, tenant, response);
+
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
+        }
     }
 }

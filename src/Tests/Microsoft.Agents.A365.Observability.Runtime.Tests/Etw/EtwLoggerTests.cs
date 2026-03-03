@@ -119,5 +119,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var root = JsonDocument.Parse(payloadStr!).RootElement;
             Assert.AreEqual(OpenTelemetryConstants.OperationNames.OutputMessages.ToString(), root.GetProperty("Name").GetString());
         }
+
+        [TestMethod]
+        public void Logs_Output_Event_WithConversationIdSourceMetadataAndCallerDetails()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            using var provider = BuildProvider();
+            var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var response = new Response(new[] { "Hello", "World" });
+            var conversationId = "conv-output-etw";
+            var sourceMetadata = new SourceMetadata(name: "EtwChannel", description: "https://channel/etw");
+            var callerDetails = new CallerDetails("caller-etw-123", "Etw Caller", "etw-caller@example.com");
+
+            // Act
+            etwLogger.LogOutput(agentDetails, tenantDetails, response, conversationId: conversationId, sourceMetadata: sourceMetadata, callerDetails: callerDetails);
+
+            // Assert
+            var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
+            Assert.IsNotNull(evt);
+            var payloadStr = evt!.Payload![0] as string;
+            Assert.IsNotNull(payloadStr);
+            var root = JsonDocument.Parse(payloadStr!).RootElement;
+            Assert.AreEqual(OpenTelemetryConstants.OperationNames.OutputMessages.ToString(), root.GetProperty("Name").GetString());
+        }
     }
 }
