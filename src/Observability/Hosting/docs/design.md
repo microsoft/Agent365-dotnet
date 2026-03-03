@@ -9,23 +9,20 @@ The `Microsoft.Agents.A365.Observability.Hosting` package provides ASP.NET Core 
 ```
 Microsoft.Agents.A365.Observability.Hosting
 ├── Middleware/
-│   ├── BaggageTurnMiddleware              # Bot Framework IMiddleware – baggage from TurnContext
-│   ├── OutputLoggingMiddleware            # Bot Framework IMiddleware – OutputScope for outgoing messages
-│   ├── ObservabilityMiddlewareExtensions  # IChannelAdapter.UseObservabilityMiddleware()
-│   └── ObservabilityBaggageMiddleware     # ASP.NET Core middleware – per-request baggage
+│   └── ObservabilityBaggageMiddleware   # Per-request baggage context
 ├── Caching/
-│   ├── IExporterTokenCache                # Token cache interface
-│   ├── AgenticTokenCache                  # Agentic token caching
-│   ├── ServiceTokenCache                  # Service token caching
-│   └── AgenticTokenStruct                 # Token data structure
+│   ├── IExporterTokenCache              # Token cache interface
+│   ├── AgenticTokenCache                # Agentic token caching
+│   ├── ServiceTokenCache                # Service token caching
+│   └── AgenticTokenStruct               # Token data structure
 ├── Extensions/
-│   ├── BaggageBuilderExtensions           # Baggage context helpers
-│   ├── InvokeAgentScopeExtensions         # Scope enrichment from TurnContext
-│   ├── TurnContextExtensions              # TurnContext telemetry extraction
-│   ├── ObservabilityBuilderExtensions     # Builder extensions
+│   ├── BaggageBuilderExtensions         # Baggage context helpers
+│   ├── InvokeAgentScopeExtensions       # Scope enrichment from TurnContext
+│   ├── TurnContextExtensions            # TurnContext telemetry extraction
+│   ├── ObservabilityBuilderExtensions   # Builder extensions
 │   └── ObservabilityServiceCollectionExtensions  # DI setup
 └── Internal/
-    └── AttributeKeys                      # Internal attribute key constants
+    └── AttributeKeys                    # Internal attribute key constants
 ```
 
 ## Key Components
@@ -57,47 +54,6 @@ app.UseObservabilityRequestContext(ctx =>
 1. Calls the resolver function with the current `HttpContext`
 2. Sets baggage context using `BaggageBuilder.SetRequestContext()`
 3. Context is automatically disposed after request completes
-
-### Bot Framework Turn-Level Middleware
-
-The package also provides two `IMiddleware` implementations that run inside the Bot Framework adapter pipeline (per-turn), and a convenience extension to register them.
-
-#### BaggageTurnMiddleware
-
-**Source**: [BaggageTurnMiddleware.cs](../Middleware/BaggageTurnMiddleware.cs)
-
-Propagates OpenTelemetry baggage context derived from `ITurnContext`. Skips `ContinueConversation` events (async replies) because their context is established by the originating turn.
-
-#### OutputLoggingMiddleware
-
-**Source**: [OutputLoggingMiddleware.cs](../Middleware/OutputLoggingMiddleware.cs)
-
-Creates `OutputScope` spans for outgoing messages. Links to a parent span when `OutputLoggingMiddleware.A365ParentSpanKey` is set in `ITurnContext.StackState`.
-
-> **Privacy note:** Outgoing message content is captured verbatim as span attributes.
-
-#### UseObservabilityMiddleware (convenience extension)
-
-**Source**: [ObservabilityMiddlewareExtensions.cs](../Middleware/ObservabilityMiddlewareExtensions.cs)
-
-Registers both middlewares on an `IChannelAdapter` in a single call:
-
-```csharp
-// In Program.cs — after building the app
-var app = builder.Build();
-var adapter = app.Services.GetRequiredService<IChannelAdapter>();
-adapter.UseObservabilityMiddleware();
-```
-
-You can selectively enable/disable each middleware:
-
-```csharp
-// Baggage only (no output logging)
-adapter.UseObservabilityMiddleware(enableOutputLogging: false);
-
-// Output logging only (no baggage)
-adapter.UseObservabilityMiddleware(enableBaggage: false);
-```
 
 ### InvokeAgentScopeExtensions
 
@@ -313,10 +269,7 @@ public static InvokeAgentScope SetCallerTags(
 ```
 src/Observability/Hosting/
 ├── Middleware/
-│   ├── BaggageTurnMiddleware.cs             # Bot Framework turn-level baggage
-│   ├── OutputLoggingMiddleware.cs           # Bot Framework turn-level output spans
-│   ├── ObservabilityMiddlewareExtensions.cs # IChannelAdapter.UseObservabilityMiddleware()
-│   └── ObservabilityBaggageMiddleware.cs    # ASP.NET Core per-request baggage
+│   └── ObservabilityBaggageMiddleware.cs  # Per-request baggage
 ├── Caching/
 │   ├── IExporterTokenCache.cs             # Token cache interface
 │   ├── AgenticTokenCache.cs               # Agentic token caching
@@ -350,28 +303,21 @@ src/Observability/Hosting/
 // Program.cs
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configure observability tracing
-builder.Services.AddAgenticTracingExporter();
-builder.AddA365Tracing(config =>
-{
-    config.WithSemanticKernel(); // if using SK
-});
-
-// 2. Register your agent
-builder.AddAgent<MyAgent>();
+// Add observability services
+builder.Services.AddAgent365Observability(builder.Configuration);
 
 var app = builder.Build();
 
-// 3. Register turn-level observability middleware on the adapter
-var adapter = app.Services.GetRequiredService<IChannelAdapter>();
-adapter.UseObservabilityMiddleware();
-
-// 4. (Optional) Add ASP.NET Core per-request baggage middleware
+// Add baggage middleware early in pipeline
 app.UseObservabilityRequestContext(ctx =>
 {
+    // Extract from JWT claims
     var tenantId = ctx.User?.FindFirst("tid")?.Value
                 ?? ctx.User?.FindFirst("tenant_id")?.Value;
+
+    // Extract from custom header
     var agentId = ctx.Request.Headers["X-Agent-Id"].FirstOrDefault();
+
     return (tenantId, agentId);
 });
 
