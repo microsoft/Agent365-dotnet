@@ -181,27 +181,14 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     agentDetails: agentDetails,
                     tenantDetails: tenantDetails,
                     response: new Response(messages),
+                    conversationId: conversationId,
+                    sourceMetadata: sourceMetadata,
+                    callerDetails: callerDetails,
                     parentId: parentId);
 
                 try
                 {
-                    outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
                     outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, executionType);
-
-                    if (sourceMetadata != null)
-                    {
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
-                    }
-
-                    if (callerDetails != null)
-                    {
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-                        outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
-                    }
-
                     return await nextSend().ConfigureAwait(false);
                 }
                 catch (Exception ex)
