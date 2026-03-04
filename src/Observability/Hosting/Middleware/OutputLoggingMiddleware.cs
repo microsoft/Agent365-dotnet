@@ -172,7 +172,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
 
                 // Read parent span lazily so the agent handler can set it during logic()
                 string? parentId = null;
-                if (turnContext.StackState.TryGetValue(A365ParentSpanKey, out var parentSpanValue) && parentSpanValue is not null)
+                if (turnContext.StackState.TryGetValue(A365ParentSpanKey, out var parentSpanValue) && parentSpanValue != null)
                 {
                     parentId = parentSpanValue.ToString();
                 }
