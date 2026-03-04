@@ -74,7 +74,8 @@ public static class LocalMcpEndpoints
         app.MapGet("/api/channels/by-user/{userIdentifier}", (
             string userIdentifier,
             HttpContext context,
-            ISessionManager sessionManager) =>
+            ISessionManager sessionManager,
+            IServiceProvider serviceProvider) =>
         {
             // URL decode the user identifier (email addresses contain @ and other special chars)
             var decodedUserIdentifier = System.Net.WebUtility.UrlDecode(userIdentifier);
@@ -92,6 +93,18 @@ public static class LocalMcpEndpoints
                 var regScheme = context.Request.IsHttps ? "https" : "http";
                 var regHost = context.Request.Host.ToString();
                 var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register&user={System.Net.WebUtility.UrlEncode(decodedUserIdentifier)}";
+
+                // Append serverIds so the Bridging App knows which local MCP servers to provision
+                var policyService = serviceProvider.GetService<IMcpPolicyEnforcementService>();
+                if (policyService != null)
+                {
+                    var localServerIds = policyService.GetRegisteredLocalServerIds();
+                    if (localServerIds.Count > 0)
+                    {
+                        var encodedServerIds = System.Net.WebUtility.UrlEncode(string.Join(",", localServerIds));
+                        registrationProtocolUrl += $"&serverIds={encodedServerIds}";
+                    }
+                }
                 
                 return Results.Json(new 
                 { 

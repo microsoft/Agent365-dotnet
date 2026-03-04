@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Tooling.Models;
+using Microsoft.Agents.A365.Tooling.Utils;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -94,8 +96,8 @@ namespace Microsoft.Agents.A365.Tooling.Transports
 
             _logger?.LogInformation("[WNS Transport] Connected to session: {SessionId}", sessionId);
 
-            // Return the transport for duplex messaging
-            return new WnsTransport(_options.ProxyBaseUrl, sessionId, _httpClient, _logger);
+            // Return the transport for duplex messaging, passing agent identity for _meta injection
+            return new WnsTransport(_options.ProxyBaseUrl, sessionId, _httpClient, _logger, _options.AgentIdentityContext);
         }
 
         private async Task<bool> WaitForConnectionAsync(string sessionId, TimeSpan timeout, CancellationToken cancellationToken)
@@ -183,15 +185,17 @@ namespace Microsoft.Agents.A365.Tooling.Transports
         private readonly string _sessionId;
         private readonly HttpClient _httpClient;
         private readonly ILogger? _logger;
+        private readonly AgentIdentityContext? _identityContext;
         private readonly Channel<JsonRpcMessage> _messageChannel;
         private bool _disposed;
 
-        public WnsTransport(string proxyBaseUrl, string sessionId, HttpClient httpClient, ILogger? logger)
+        public WnsTransport(string proxyBaseUrl, string sessionId, HttpClient httpClient, ILogger? logger, AgentIdentityContext? identityContext = null)
         {
             _proxyBaseUrl = proxyBaseUrl;
             _sessionId = sessionId;
             _httpClient = httpClient;
             _logger = logger;
+            _identityContext = identityContext;
             _messageChannel = Channel.CreateUnbounded<JsonRpcMessage>(new UnboundedChannelOptions
             {
                 SingleReader = true,
@@ -211,6 +215,17 @@ namespace Microsoft.Agents.A365.Tooling.Transports
             ObjectDisposedException.ThrowIf(_disposed, this);
 
             var messageJson = JsonSerializer.Serialize(message);
+
+            // Inject agent identity into tools/call _meta if identity context is available
+            if (_identityContext != null)
+            {
+                var modifiedJson = AgentIdentityHelper.InjectIdentityIntoMcpMessage(messageJson, _identityContext);
+                if (modifiedJson != messageJson)
+                {
+                    _logger?.LogDebug("[WNS Transport] Injected agent identity into tools/call _meta");
+                    messageJson = modifiedJson;
+                }
+            }
 
             _logger?.LogInformation("[WNS Transport] Sending message to session {SessionId}: {MessagePreview}",
                 _sessionId, messageJson.Length > 200 ? messageJson.Substring(0, 200) + "..." : messageJson);

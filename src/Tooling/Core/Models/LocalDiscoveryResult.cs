@@ -46,6 +46,18 @@ public class LocalDiscoveryResult
     /// Gets or sets any error message from the discovery process.
     /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets whether local desktop tools (WNS transport) were discovered on this turn.
+    /// This is true when at least one server uses WNS transport for local desktop access.
+    /// Used for detecting tool set changes between turns.
+    /// </summary>
+    public bool HasLocalTools => Servers.Any(s => s.transportType == McpTransportType.Wns);
+
+    /// <summary>
+    /// Gets the names of all discovered servers, useful for tracking tool set changes between turns.
+    /// </summary>
+    public IReadOnlyList<string> ServerNames => Servers.Select(s => s.mcpServerName).ToList();
 }
 
 /// <summary>

@@ -15,7 +15,21 @@ namespace Microsoft.Agents.A365.Tooling.Models
         /// Gets or sets the list of MCP servers.
         /// </summary>
         [JsonPropertyName("servers")]
-        public List<LocalMcpServerInfo>? Servers { get; set; }
+        public List<LocalMcpServerWrapper>? Servers { get; set; }
+    }
+
+    /// <summary>
+    /// Wrapper for an MCP server entry in the `odr mcp list` response.
+    /// Each element in the servers array has a nested "server" property
+    /// containing the actual server info.
+    /// </summary>
+    public class LocalMcpServerWrapper
+    {
+        /// <summary>
+        /// Gets or sets the actual server info nested inside the wrapper.
+        /// </summary>
+        [JsonPropertyName("server")]
+        public LocalMcpServerInfo? Server { get; set; }
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Agents.A365.Tooling.Exceptions;
+using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +41,11 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
     /// Context key for storing the resolved agent app ID (Azure AD Client ID).
     /// </summary>
     public const string AgentAppIdKey = "PolicyAgentAppId";
+
+    /// <summary>
+    /// Context key for storing the agent identity context for MCP _meta injection.
+    /// </summary>
+    public const string AgentIdentityContextKey = "PolicyAgentIdentityContext";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PolicyEnforcingFunctionInvocationFilter"/> class.
@@ -220,11 +226,27 @@ If you don't have the desktop application installed, please contact your adminis
         // Resolve agent app ID (Azure AD Client ID of the calling agent)
         var agentAppId = GetAgentAppId(context);
 
+        // Get agent identity context for _meta injection
+        var agentIdentityContext = GetAgentIdentityContext(context);
+
         // Build the MCP tools/call request
         var arguments = new Dictionary<string, object?>();
         foreach (var arg in context.Arguments)
         {
             arguments[arg.Key] = arg.Value;
+        }
+
+        // Build _meta object with optional agentIdentity
+        var meta = new Dictionary<string, object?>
+        {
+            ["originalServer"] = pluginName,
+            ["requiresPolicyEnforcement"] = true,
+            ["authToken"] = authToken
+        };
+
+        if (agentIdentityContext != null)
+        {
+            meta["agentIdentity"] = agentIdentityContext;
         }
 
         var mcpRequest = new
@@ -236,13 +258,7 @@ If you don't have the desktop application installed, please contact your adminis
             {
                 name = toolName,
                 arguments = arguments,
-                // Include metadata about the original cloud MCP server and auth token
-                _meta = new
-                {
-                    originalServer = pluginName,
-                    requiresPolicyEnforcement = true,
-                    authToken = authToken
-                }
+                _meta = meta
             }
         };
 
@@ -451,6 +467,20 @@ If you don't have the desktop application installed, please contact your adminis
         if (context.Kernel.Data.TryGetValue(AgentAppIdKey, out var agentAppIdObj) && agentAppIdObj is string agentAppId)
         {
             return agentAppId;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the agent identity context from the function invocation context.
+    /// </summary>
+    private static AgentIdentityContext? GetAgentIdentityContext(FunctionInvocationContext context)
+    {
+        // Try to get from kernel data (set during tool registration)
+        if (context.Kernel.Data.TryGetValue(AgentIdentityContextKey, out var identityObj) && identityObj is AgentIdentityContext identity)
+        {
+            return identity;
         }
 
         return null;

@@ -50,7 +50,9 @@ public class InMemorySessionManager : ISessionManager
             ChannelUri = request.ChannelUri,
             MachineName = request.MachineName,
             RegisteredAt = request.RegisteredAt,
-            LastSeen = DateTime.UtcNow
+            LastSeen = DateTime.UtcNow,
+            ServerIds = request.ServerIds ?? new(),
+            AgentUserId = request.AgentUserId
         };
 
         _clients.AddOrUpdate(clientName, registration, (key, old) => registration);

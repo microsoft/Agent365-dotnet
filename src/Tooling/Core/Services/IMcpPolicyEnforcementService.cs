@@ -58,6 +58,12 @@ public class CloudServerRegistration
     /// Gets or sets the audience for the access token.
     /// </summary>
     public string? Audience { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local MCP server ID on the desktop.
+    /// This is used during registration to tell the Bridging App which servers to provision.
+    /// </summary>
+    public string? LocalServerId { get; set; }
 }
 
 /// <summary>
@@ -150,4 +156,12 @@ public interface IMcpPolicyEnforcementService
     /// </summary>
     /// <param name="userIdentifier">The user's identity.</param>
     void InvalidateUserCache(string userIdentifier);
+
+    /// <summary>
+    /// Gets all local MCP server IDs registered for device path routing.
+    /// These IDs are included in the registration URL so the Bridging App knows
+    /// which servers to provision during desktop registration.
+    /// </summary>
+    /// <returns>A list of local server IDs.</returns>
+    IReadOnlyList<string> GetRegisteredLocalServerIds();
 }

@@ -104,6 +104,14 @@ public class McpPolicyEnforcementService : IMcpPolicyEnforcementService
             var encodedUser = System.Net.WebUtility.UrlEncode(userIdentifier);
             var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUser}";
 
+            // Append serverIds so the Bridging App knows which local MCP servers to provision
+            var localServerIds = GetRegisteredLocalServerIds();
+            if (localServerIds.Count > 0)
+            {
+                var encodedServerIds = System.Net.WebUtility.UrlEncode(string.Join(",", localServerIds));
+                registrationUrl += $"&serverIds={encodedServerIds}";
+            }
+
             _logger.LogWarning("[Policy] User '{User}' has no registered desktop. Tool '{Tool}' on '{Server}' blocked.", 
                 userIdentifier, toolName, serverName);
 
@@ -218,5 +226,20 @@ public class McpPolicyEnforcementService : IMcpPolicyEnforcementService
         {
             _logger.LogInformation("[Policy] Invalidated desktop registration cache for user '{User}'", userIdentifier);
         }
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> GetRegisteredLocalServerIds()
+    {
+        var serverIds = new List<string>();
+        foreach (var kvp in _cloudServerConfigs)
+        {
+            if (!string.IsNullOrEmpty(kvp.Value.LocalServerId))
+            {
+                serverIds.Add(kvp.Value.LocalServerId);
+            }
+        }
+
+        return serverIds;
     }
 }

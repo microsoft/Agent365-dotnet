@@ -213,8 +213,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (listResult.TryGetProperty("result", out var resultElement) &&
                     resultElement.TryGetProperty("servers", out var serversElement))
                 {
-                    var localServers = JsonSerializer.Deserialize<List<LocalMcpServerInfo>>(serversElement.GetRawText())
-                        ?? new List<LocalMcpServerInfo>();
+                    var localServers = UnwrapServerList(serversElement);
 
                     return ConvertLocalServersToConfig(localServers, clientName, proxyBaseUrl);
                 }
@@ -228,6 +227,41 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 _logger.LogError(ex, "[Discovery] Failed to discover local MCP servers from '{ClientName}'", clientName);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Unwraps the servers array from the odr mcp list response.
+        /// Each element may be either a direct LocalMcpServerInfo or wrapped in a "server" property.
+        /// </summary>
+        private List<LocalMcpServerInfo> UnwrapServerList(JsonElement serversElement)
+        {
+            var results = new List<LocalMcpServerInfo>();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            foreach (var element in serversElement.EnumerateArray())
+            {
+                // Check if this element has a "server" wrapper property
+                if (element.TryGetProperty("server", out var serverElement))
+                {
+                    var server = JsonSerializer.Deserialize<LocalMcpServerInfo>(serverElement.GetRawText(), options);
+                    if (server != null)
+                    {
+                        results.Add(server);
+                    }
+                }
+                else
+                {
+                    // Direct format (no wrapper) — deserialize as-is
+                    var server = JsonSerializer.Deserialize<LocalMcpServerInfo>(element.GetRawText(), options);
+                    if (server != null)
+                    {
+                        results.Add(server);
+                    }
+                }
+            }
+
+            _logger.LogInformation("[Discovery] Unwrapped {Count} servers from response", results.Count);
+            return results;
         }
 
         /// <inheritdoc/>

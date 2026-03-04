@@ -40,5 +40,11 @@ namespace Microsoft.Agents.A365.Tooling.Transports
         /// requesting access to local MCP servers.
         /// </summary>
         public string? AgentAppId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the agent identity context to inject into MCP request _meta.
+        /// When set, all tools/call requests will include this identity in _meta.agentIdentity.
+        /// </summary>
+        public Models.AgentIdentityContext? AgentIdentityContext { get; set; }
     }
 }

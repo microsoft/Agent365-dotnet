@@ -54,6 +54,33 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         }
 
         /// <summary>
+        /// Decodes the token and retrieves the user's UPN (email) from the "upn" or "preferred_username" claim.
+        /// In Teams, <c>Activity.From.Name</c> is the display name, not the email.
+        /// This method provides the correct email/UPN for user identity in registration URLs.
+        /// </summary>
+        /// <param name="token">JWT token to decode.</param>
+        /// <returns>The user's email/UPN, or null if not found or the token is empty.</returns>
+        public static string? GetUpnFromToken(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return null;
+            }
+
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+                var upnClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "upn" || c.Type == "preferred_username");
+                return upnClaim?.Value;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Decodes the current token and retrieves the App ID (appid or azp claim).
         /// </summary>
         /// <param name="token">Token to Decode</param>

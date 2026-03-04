@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Agents.A365.Tooling.LocalMcp.Models;
 
@@ -41,6 +42,18 @@ public class ClientRegistration
     /// Gets or sets when the client was last seen.
     /// </summary>
     public DateTime LastSeen { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of local MCP server IDs available on this desktop.
+    /// These are provisioned during registration via the provision-agent-user flow.
+    /// </summary>
+    public List<string> ServerIds { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Agent User ID provisioned on this desktop.
+    /// This is the identity used by the agent to interact with local MCP servers.
+    /// </summary>
+    public string? AgentUserId { get; set; }
 }
 
 /// <summary>
@@ -74,4 +87,14 @@ public class ChannelRegistrationRequest
     /// Gets or sets when the client was registered.
     /// </summary>
     public DateTime RegisteredAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of local MCP server IDs provisioned on this desktop.
+    /// </summary>
+    public List<string> ServerIds { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets the Agent User ID provisioned on this desktop.
+    /// </summary>
+    public string? AgentUserId { get; set; }
 }

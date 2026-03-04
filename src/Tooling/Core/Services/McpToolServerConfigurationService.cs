@@ -87,6 +87,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation("[GetTools] Creating MCP client for: {ServerName} (transport: {Transport}, hasStaticTools: {HasStatic})",
                     mCPServerConfig.mcpServerName, mCPServerConfig.transportType, mCPServerConfig.HasStaticTools);
 
+                // Build agent identity context from the turn context for _meta injection
+                string? agentInstanceId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
+                var agentIdentityContext = AgentIdentityHelper.BuildFromTurnContext(turnContext, agentInstanceId);
+                this._logger.LogInformation("[GetTools] Built agent identity context (agentInstanceId: {AgentInstanceId}, tenantId: {TenantId})",
+                    agentIdentityContext.AgentInstanceId, agentIdentityContext.TenantId);
+
                 IMcpClient mcpClient;
 
                 // Create appropriate client based on transport type
@@ -112,7 +118,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                             this._logger.LogDebug("[GetTools] Local MCP scope validator not registered, skipping scope validation");
                         }
 
-                        mcpClient = await CreateWnsMcpClientAsync(mCPServerConfig);
+                        mcpClient = await CreateWnsMcpClientAsync(mCPServerConfig, agentIdentityContext);
                         break;
 
                     case McpTransportType.WebSocket:
@@ -121,7 +127,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     case McpTransportType.Sse:
                     default:
                         this._logger.LogInformation("[GetTools] Using SSE transport for {ServerName}", mCPServerConfig.mcpServerName);
-                        mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
+                        mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions, agentIdentityContext);
                         break;
                 }
 
@@ -584,9 +590,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <summary>
-        /// Creates an MCP client with authentication handlers similar to your reference implementation
+        /// Creates an MCP client with authentication handlers similar to your reference implementation.
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
+        /// <param name="turnContext">The turn context for extracting headers and identity.</param>
+        /// <param name="endpoint">The MCP server endpoint URI.</param>
+        /// <param name="authToken">The bearer auth token.</param>
+        /// <param name="toolOptions">Tool options for user agent configuration.</param>
+        /// <param name="agentIdentityContext">Optional agent identity context to inject into tools/call _meta.</param>
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions, AgentIdentityContext? agentIdentityContext = null)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -630,7 +641,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
 
-            var clientTransport = new SseClientTransport(options, httpClient);
+            IClientTransport clientTransport = new SseClientTransport(options, httpClient);
+
+            // Wrap with identity-injecting transport if agent identity is available
+            if (agentIdentityContext != null)
+            {
+                var transportLogger = this._loggerFactory?.CreateLogger<IdentityInjectingClientTransport>();
+                clientTransport = new IdentityInjectingClientTransport(clientTransport, agentIdentityContext, transportLogger);
+                this._logger.LogInformation("[MCP-Identity] Wrapping SSE transport with agent identity injection for {Endpoint}", endpoint);
+            }
 
             try
             {
@@ -646,8 +665,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// Creates a WNS-based MCP client for communicating with local Windows desktop MCP servers.
         /// </summary>
         /// <param name="serverConfig">The MCP server configuration containing WNS settings.</param>
+        /// <param name="agentIdentityContext">Optional agent identity context for _meta injection.</param>
         /// <returns>An IMcpClient that communicates via WNS.</returns>
-        private async Task<IMcpClient> CreateWnsMcpClientAsync(MCPServerConfig serverConfig)
+        private async Task<IMcpClient> CreateWnsMcpClientAsync(MCPServerConfig serverConfig, AgentIdentityContext? agentIdentityContext = null)
         {
             // Validate WNS configuration
             var wnsConfig = serverConfig.wnsConfig
@@ -670,7 +690,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 ProxyBaseUrl = proxyBaseUrl,
                 ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
                 LocalServerId = wnsConfig.localServerId,
-                AgentAppId = wnsConfig.agentAppId
+                AgentAppId = wnsConfig.agentAppId,
+                AgentIdentityContext = agentIdentityContext
             };
 
             // Create HTTP client for WNS proxy communication
@@ -687,6 +708,41 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 throw new InvalidOperationException($"Failed to create WNS MCP client for '{serverConfig.mcpServerName}': {ex.Message}", ex);
             }
+        }
+
+        /// <summary>
+        /// Builds the serverIds query parameter for registration URLs by reading
+        /// the localMcpServers section from the ToolingManifest.json.
+        /// Returns the URL fragment (e.g., "&amp;serverIds=file-mcp-server,settings-mcp-server") or empty string.
+        /// </summary>
+        private async Task<string> GetServerIdsQueryParamAsync()
+        {
+            if (this._localMcpScopeValidator == null)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var localServers = await this._localMcpScopeValidator.LoadLocalMcpServersFromManifestAsync();
+                var serverIds = localServers
+                    .Where(s => !string.IsNullOrEmpty(s.ServerIdPattern))
+                    .Select(s => s.ServerIdPattern!)
+                    .ToList();
+
+                if (serverIds.Count > 0)
+                {
+                    var encoded = System.Net.WebUtility.UrlEncode(string.Join(",", serverIds));
+                    this._logger.LogDebug("[Registration] Including serverIds in registration URL: {ServerIds}", string.Join(",", serverIds));
+                    return $"&serverIds={encoded}";
+                }
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "[Registration] Failed to load local MCP server IDs from manifest");
+            }
+
+            return string.Empty;
         }
 
         private bool IsDevScenario()
@@ -809,6 +865,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 return result;
             }
 
+            // Pre-load serverIds from manifest so registration URLs include them
+            var serverIdsParam = await GetServerIdsQueryParamAsync();
+
             try
             {
                 var httpClient = this._httpClientFactory.CreateClient("LocalMcpDiscovery");
@@ -829,7 +888,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     if (errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
                     {
                         result.RequiresRegistration = true;
-                        result.RegistrationProtocolUrl = regUrlProp.GetString();
+                        // Append serverIds and user to the registration URL from AEB
+                        var baseRegUrl = regUrlProp.GetString() ?? string.Empty;
+                        result.RegistrationProtocolUrl = $"{baseRegUrl}&user={encodedUserIdentifier}{serverIdsParam}";
                         result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
                         
                         this._logger.LogWarning("[UserDiscovery] No desktops registered for user '{UserIdentifier}'. Registration URL: {RegistrationUrl}",
@@ -837,7 +898,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         
                         throw new LocalMcpDesktopRegistrationRequiredException(
                             userIdentifier,
-                            result.RegistrationProtocolUrl ?? string.Empty,
+                            result.RegistrationProtocolUrl,
                             result.ErrorMessage);
                     }
                     return result;
@@ -872,7 +933,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (result.AllRegisteredDesktops.Count == 0)
                 {
                     result.RequiresRegistration = true;
-                    result.RegistrationProtocolUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUserIdentifier}";
+                    result.RegistrationProtocolUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUserIdentifier}{serverIdsParam}";
                     result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
                     
                     throw new LocalMcpDesktopRegistrationRequiredException(
@@ -1102,10 +1163,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                             {
                                 if (result.TryGetProperty("servers", out var serversElement))
                                 {
-                                    var servers = JsonSerializer.Deserialize<List<LocalMcpServerInfo>>(serversElement.GetRawText())
-                                        ?? new List<LocalMcpServerInfo>();
+                                    var servers = UnwrapServerList(serversElement);
                                     
-                                    this._logger.LogInformation("[Discovery] Received {Count} servers from desktop", servers.Count);
+                                    this._logger.LogInformation("[Discovery] Received {Count} servers from desktop (after unwrap)", servers.Count);
                                     return servers;
                                 }
                             }
@@ -1134,6 +1194,41 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
 
             throw new TimeoutException($"Discovery request {requestId} timed out after {timeout.TotalSeconds}s");
+        }
+
+        /// <summary>
+        /// Unwraps the servers array from the odr mcp list response.
+        /// Each element may be either a direct LocalMcpServerInfo or wrapped in a "server" property.
+        /// </summary>
+        private List<LocalMcpServerInfo> UnwrapServerList(JsonElement serversElement)
+        {
+            var results = new List<LocalMcpServerInfo>();
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            foreach (var element in serversElement.EnumerateArray())
+            {
+                // Check if this element has a "server" wrapper property (odr mcp list format)
+                if (element.TryGetProperty("server", out var serverElement))
+                {
+                    var server = JsonSerializer.Deserialize<LocalMcpServerInfo>(serverElement.GetRawText(), options);
+                    if (server != null)
+                    {
+                        results.Add(server);
+                    }
+                }
+                else
+                {
+                    // Direct format (no wrapper) — deserialize as-is
+                    var server = JsonSerializer.Deserialize<LocalMcpServerInfo>(element.GetRawText(), options);
+                    if (server != null)
+                    {
+                        results.Add(server);
+                    }
+                }
+            }
+
+            this._logger.LogInformation("[Discovery] Unwrapped {Count} servers from response", results.Count);
+            return results;
         }
 
         /// <summary>
@@ -1301,7 +1396,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                             if (errorJson.TryGetProperty("message", out var msgProp) && 
                                 msgProp.GetString()?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
                             {
-                                var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register";
+                                var serverIdsParam = await GetServerIdsQueryParamAsync();
+                                var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register{serverIdsParam}";
                                 this._logger.LogWarning("[Intune] Desktop client '{ClientName}' not found. Registration URL: {RegistrationUrl}", 
                                     clientName, registrationUrl);
                                 
@@ -1317,6 +1413,25 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         }
                     }
                     
+                    // Check if the error indicates a dead/revoked WNS channel - the desktop
+                    // needs to re-register to get a fresh channel URI
+                    if (errorBody.Contains("WNS returned Gone", StringComparison.OrdinalIgnoreCase) ||
+                        errorBody.Contains("X-WNS-Status: revoked", StringComparison.OrdinalIgnoreCase) ||
+                        errorBody.Contains("X-WNS-Status: expired", StringComparison.OrdinalIgnoreCase) ||
+                        errorBody.Contains("Revoked channel URL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var wnsServerIdsParam = await GetServerIdsQueryParamAsync();
+                        var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register{wnsServerIdsParam}";
+                        this._logger.LogWarning(
+                            "[Intune] WNS channel for desktop '{ClientName}' is dead or revoked. Requiring re-registration. URL: {RegistrationUrl}",
+                            clientName, registrationUrl);
+
+                        throw new LocalMcpDesktopRegistrationRequiredException(
+                            clientName,
+                            registrationUrl,
+                            $"Desktop client '{clientName}' has a revoked WNS channel and cannot be reached. Please re-register your desktop to restore local file access.");
+                    }
+
                     return new IntuneComplianceCheckResult
                     {
                         IsIntuneManaged = false,

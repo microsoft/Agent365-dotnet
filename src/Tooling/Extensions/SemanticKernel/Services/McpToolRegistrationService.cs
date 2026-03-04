@@ -7,6 +7,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
+    using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
@@ -70,16 +71,16 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             // Auto-add the policy enforcement filter to the kernel (with duplicate guard)
             EnsurePolicyFilterRegistered(kernel);
 
-            // Store user identifier in kernel data for policy enforcement filter
-            var userIdentifier = turnContext.Activity.From?.Name;
-            if (!string.IsNullOrEmpty(userIdentifier))
-            {
-                kernel.Data[PolicyEnforcingFunctionInvocationFilter.UserIdentifierKey] = userIdentifier;
-            }
-
             if (authToken == null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+            }
+
+            // Extract user email (UPN) from the auth token — Activity.From.Name is only the display name in Teams
+            var userIdentifier = RuntimeUtility.GetUpnFromToken(authToken) ?? turnContext.Activity.From?.Name;
+            if (!string.IsNullOrEmpty(userIdentifier))
+            {
+                kernel.Data[PolicyEnforcingFunctionInvocationFilter.UserIdentifierKey] = userIdentifier;
             }
 
             // Store auth token in kernel data for policy enforcement filter to pass to locaproto
@@ -97,6 +98,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             {
                 kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentAppIdKey] = agenticAppId;
             }
+
+            // Build and store agent identity context for _meta injection in MCP requests
+            var agentIdentityContext = AgentIdentityHelper.BuildFromTurnContext(turnContext, agenticAppId);
+            kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentIdentityContextKey] = agentIdentityContext;
 
             var toolOptions = new ToolOptions
             {
@@ -281,6 +286,21 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             {
                 try
                 {
+                    // Validate consent for local (WNS) servers before registration.
+                    // This prevents tools from being shown to the LLM if consent hasn't been granted.
+                    if (server.transportType == McpTransportType.Wns && _scopeValidator != null)
+                    {
+                        var scopeResult = await _scopeValidator.ValidateScopeAsync(server.mcpServerName);
+                        if (!scopeResult.IsValid)
+                        {
+                            _logger.LogWarning("[ConsentCheck] Skipping local server '{ServerName}' during registration: {Error}",
+                                server.mcpServerName, scopeResult.ErrorMessage);
+                            continue;
+                        }
+                        _logger.LogInformation("[ConsentCheck] Consent verified for local server '{ServerName}' (scope: {Scope})",
+                            server.mcpServerName, scopeResult.Scope ?? "none");
+                    }
+
                     // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
                     var pluginName = SanitizePluginName(server.mcpServerName);
                     _logger.LogInformation("Registering plugin '{PluginName}' (from server '{ServerName}', transport: {Transport}, hasStaticTools: {HasStatic})",
@@ -363,8 +383,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 kernel.Data[PolicyEnforcingFunctionInvocationFilter.AuthTokenKey] = authToken;
             }
 
-            // Get user identity from the turn context
-            var userIdentifier = turnContext.Activity.From?.Name;
+            // Extract user email (UPN) from the auth token — Activity.From.Name is only the display name in Teams
+            var userIdentifier = RuntimeUtility.GetUpnFromToken(authToken) ?? turnContext.Activity.From?.Name;
 
             // Store user identifier in kernel data for policy enforcement filter
             if (!string.IsNullOrEmpty(userIdentifier))
@@ -374,7 +394,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             
             if (string.IsNullOrWhiteSpace(userIdentifier))
             {
-                _logger.LogWarning("[UserDiscovery] No user identifier found in turnContext.Activity.From.Name. Falling back to cloud-only discovery.");
+                _logger.LogWarning("[UserDiscovery] No user identifier found (checked auth token UPN and Activity.From.Name). Falling back to cloud-only discovery.");
                 
                 // Fall back to cloud-only discovery
                 await AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
@@ -392,6 +412,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             {
                 kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentAppIdKey] = agenticAppId;
             }
+
+            // Build and store agent identity context for _meta injection in MCP requests
+            var agentIdentityContext = AgentIdentityHelper.BuildFromTurnContext(turnContext, agenticAppId);
+            kernel.Data[PolicyEnforcingFunctionInvocationFilter.AgentIdentityContextKey] = agentIdentityContext;
 
             var toolOptions = new ToolOptions
             {
@@ -415,6 +439,21 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                     if (server.transportType == McpTransportType.Wns && server.wnsConfig != null)
                     {
                         server.wnsConfig.agentAppId = agenticAppId;
+                    }
+
+                    // Validate consent for local (WNS) servers before registration.
+                    // This prevents tools from being shown to the LLM if consent hasn't been granted.
+                    if (server.transportType == McpTransportType.Wns && _scopeValidator != null)
+                    {
+                        var scopeResult = await _scopeValidator.ValidateScopeAsync(server.mcpServerName);
+                        if (!scopeResult.IsValid)
+                        {
+                            _logger.LogWarning("[ConsentCheck] Skipping local server '{ServerName}' during registration: {Error}",
+                                server.mcpServerName, scopeResult.ErrorMessage);
+                            continue;
+                        }
+                        _logger.LogInformation("[ConsentCheck] Consent verified for local server '{ServerName}' (scope: {Scope})",
+                            server.mcpServerName, scopeResult.Scope ?? "none");
                     }
 
                     // Sanitize plugin name: Semantic Kernel only allows ASCII letters, digits, and underscores
@@ -543,6 +582,17 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 
             kernel.FunctionInvocationFilters.Add(policyFilter);
             _logger.LogInformation("[PolicyEnforcement] Auto-registered PolicyEnforcingFunctionInvocationFilter on kernel.");
+        }
+
+        /// <inheritdoc />
+        public bool AnnotateStaleToolResults(ChatHistory chatHistory, LocalDiscoveryResult discoveryResult, Kernel kernel, ToolAvailabilityTracker tracker)
+        {
+            ArgumentNullException.ThrowIfNull(chatHistory);
+            ArgumentNullException.ThrowIfNull(discoveryResult);
+            ArgumentNullException.ThrowIfNull(kernel);
+            ArgumentNullException.ThrowIfNull(tracker);
+
+            return tracker.AnnotateIfToolSetChanged(chatHistory, discoveryResult, kernel, _logger);
         }
     }
 }

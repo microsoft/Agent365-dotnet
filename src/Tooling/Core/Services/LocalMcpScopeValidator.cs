@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,13 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
     // Cache of local MCP server configs from manifest
     private List<LocalMcpServerManifestConfig>? _cachedLocalServers;
     private readonly object _cacheLock = new();
+
+    // TTL cache for consent check results to avoid repeated Graph API calls.
+    // Key: "tenantId:blueprintAppId:resourceAppId:scope" (case-insensitive).
+    // Positive results cached for ConsentCachePositiveTtl, negative for ConsentCacheNegativeTtl.
+    private static readonly TimeSpan ConsentCachePositiveTtl = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan ConsentCacheNegativeTtl = TimeSpan.FromMinutes(1);
+    private readonly ConcurrentDictionary<string, ConsentCacheEntry> _consentCache = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the LocalMcpScopeValidator.
@@ -337,7 +345,7 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
 
     /// <summary>
     /// Checks if the blueprint has been granted consent for the specified scope.
-    /// This queries Graph API for oauth2PermissionGrants.
+    /// Results are cached with a TTL to reduce Graph API overhead.
     /// </summary>
     private async Task<bool> CheckConsentGrantedAsync(
         string tenantId,
@@ -354,6 +362,14 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
             return true;
         }
 
+        // Check TTL cache first
+        var cacheKey = $"{tenantId}:{blueprintAppId}:{resourceAppId}:{scope}";
+        if (_consentCache.TryGetValue(cacheKey, out var cached) && !cached.IsExpired)
+        {
+            _logger.LogDebug("[LocalMcpScope] Consent cache hit for scope '{Scope}': {Result}", scope, cached.Granted);
+            return cached.Granted;
+        }
+
         // Try to verify consent via Graph API using Local MCP Resource App credentials
         // The Local MCP Resource App has Directory.Read.All permission to query consent
         try
@@ -362,6 +378,7 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
             if (consentGranted)
             {
                 _logger.LogInformation("[LocalMcpScope] Consent verified via Graph API for scope '{Scope}'", scope);
+                _consentCache[cacheKey] = ConsentCacheEntry.Create(true, ConsentCachePositiveTtl);
                 return true;
             }
         }
@@ -377,6 +394,7 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
         if (configConsent)
         {
             _logger.LogDebug("[LocalMcpScope] Consent found in configuration for scope '{Scope}'", scope);
+            _consentCache[cacheKey] = ConsentCacheEntry.Create(true, ConsentCachePositiveTtl);
             return true;
         }
 
@@ -386,10 +404,12 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
         if (!string.IsNullOrEmpty(envValue) && envValue.Equals("true", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogDebug("[LocalMcpScope] Consent found in environment variable for scope '{Scope}'", scope);
+            _consentCache[cacheKey] = ConsentCacheEntry.Create(true, ConsentCachePositiveTtl);
             return true;
         }
 
         _logger.LogDebug("[LocalMcpScope] No consent found for scope '{Scope}' from resource '{Resource}'", scope, resourceAppId);
+        _consentCache[cacheKey] = ConsentCacheEntry.Create(false, ConsentCacheNegativeTtl);
         return false;
     }
 
@@ -587,4 +607,18 @@ public class LocalMcpScopeValidator : ILocalMcpScopeValidator
 
         return null;
     }
+}
+
+/// <summary>
+/// Cache entry for consent check results with a TTL.
+/// </summary>
+internal sealed class ConsentCacheEntry
+{
+    public bool Granted { get; private init; }
+    private DateTimeOffset ExpiresAt { get; init; }
+
+    public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresAt;
+
+    public static ConsentCacheEntry Create(bool granted, TimeSpan ttl) =>
+        new() { Granted = granted, ExpiresAt = DateTimeOffset.UtcNow.Add(ttl) };
 }

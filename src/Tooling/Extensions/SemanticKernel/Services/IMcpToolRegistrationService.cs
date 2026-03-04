@@ -104,5 +104,22 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// Original message creation times are not preserved.
         /// </remarks>
         Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, ToolOptions toolOptions, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Checks whether the tool set has changed between the previous turn and the current turn,
+        /// and if local tools have become newly available, injects a system message into the chat
+        /// history instructing the LLM to re-execute file operations with local tools instead of
+        /// relying on stale cloud-only results.
+        /// <para>
+        /// Call this after tool registration and before invoking the LLM on each turn. The tracker
+        /// should be retrieved from turn state using <see cref="ToolAvailabilityTracker.TurnStateKey"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="chatHistory">The conversation's persisted chat history.</param>
+        /// <param name="discoveryResult">The discovery result from the current turn's tool registration.</param>
+        /// <param name="kernel">The Semantic Kernel instance with registered plugins for this turn.</param>
+        /// <param name="tracker">The per-conversation tracker retrieved from turn state.</param>
+        /// <returns>True if the chat history was annotated with a stale-result notice, false otherwise.</returns>
+        bool AnnotateStaleToolResults(ChatHistory chatHistory, LocalDiscoveryResult discoveryResult, Kernel kernel, ToolAvailabilityTracker tracker);
     }
 }
