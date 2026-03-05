@@ -257,7 +257,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 scope.RecordOutputMessages(new[] { "Hi there!" });
                 scope.RecordInputTokens(42);
                 scope.RecordOutputTokens(84);
-                scope.RecordResponseId("response-xyz");
                 scope.RecordFinishReasons(new[] { "stop", "length" });
             }
 
@@ -292,7 +291,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.usage.input_tokens").Should().Be("42");
             this.GetAttribute(attributes, "gen_ai.usage.output_tokens").Should().Be("84");
             this.GetAttribute(attributes, "gen_ai.response.finish_reasons").Should().Be("stop,length");
-            this.GetAttribute(attributes, "gen_ai.response.id").Should().Be("response-xyz");
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
             this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
@@ -394,7 +392,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         inferenceScope.RecordOutputMessages(new[] { "Inference output" });
                         inferenceScope.RecordInputTokens(10);
                         inferenceScope.RecordOutputTokens(20);
-                        inferenceScope.RecordResponseId("response-nested");
                         inferenceScope.RecordFinishReasons(new[] { "stop" });
                     }
                 }

@@ -79,9 +79,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             var request = new Request("content", ExecutionType.HumanToAgent, "session", new SourceMetadata(id: "src-id", name: "src-name", role: Role.Human, description: "src-desc"));
             var dict = TestBuilder.BuildAll(request: request);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiExecutionTypeKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
         }
 
         [TestMethod]
@@ -89,10 +88,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             var caller = new CallerDetails("caller-1", "Caller Name", "caller@upn", tenantId: "tenant-y");
             var dict = TestBuilder.BuildAll(caller: caller);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
         }
 
         [TestMethod]
@@ -100,13 +98,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             var callerAgent = new AgentDetails("c-agent", "CallerAgent", agentAUID: "ca-uid", agentUPN: "ca-upn", agentBlueprintId: "ca-bp", tenantId: "ca-tenant", agentPlatformId: "ca-platform");
             var dict = TestBuilder.BuildAll(callerAgent: callerAgent);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentNameKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentAUIDKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentUPNKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentTenantKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiCallerAgentPlatformIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentNameKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentBlueprintIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentAUIDKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentUPNKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentPlatformIdKey);
         }
 
         [TestMethod]

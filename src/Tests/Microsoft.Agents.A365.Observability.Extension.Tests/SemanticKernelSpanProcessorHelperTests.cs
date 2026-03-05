@@ -136,11 +136,11 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiUserMessageEventName, tags: new ActivityTagsCollection
         {
-            { OpenTelemetryConstants.GenAiEventContent, JsonSerializer.Serialize(userMsg) }
+            { OpenTelemetryConstants.GenAiToolCallResultKey, JsonSerializer.Serialize(userMsg) }
         }));
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiChoiceEventName, tags: new ActivityTagsCollection
         {
-            { OpenTelemetryConstants.GenAiEventContent, JsonSerializer.Serialize(choiceMsg) }
+            { OpenTelemetryConstants.GenAiToolCallResultKey, JsonSerializer.Serialize(choiceMsg) }
         }));
 
             var result = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
