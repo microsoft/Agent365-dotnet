@@ -113,9 +113,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, GenAiOperationNameKey, operationName.ToString().ToLowerInvariant());
             AddIfNotNull(attributes, GenAiRequestModelKey, model);
             AddIfNotNull(attributes, GenAiProviderNameKey, providerName);
-            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inputTokens);
-            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, outputTokens);
-            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, finishReasons);
+            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, outputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, finishReasons != null ? string.Join(",", finishReasons) : null);
         }
     }
 }

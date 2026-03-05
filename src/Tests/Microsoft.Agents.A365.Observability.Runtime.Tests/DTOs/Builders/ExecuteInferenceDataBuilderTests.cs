@@ -58,8 +58,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be(10);
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be(20);
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be("10");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be("20");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiResponseFinishReasonsKey).WhoseValue.Should().Be("stop");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }

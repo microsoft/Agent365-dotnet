@@ -140,7 +140,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             activity?.SetTag(OpenTelemetryConstants.GenAiToolCallIdKey, "tool-call-1");
             activity?.SetTag(OpenTelemetryConstants.GenAiToolDescriptionKey, "desc");
             activity?.SetTag(OpenTelemetryConstants.GenAiToolTypeKey, "function");
-            activity?.SetTag(OpenTelemetryConstants.GenAiEventContent, "{ \"value\": \"result\" }");
+            activity?.SetTag(OpenTelemetryConstants.GenAiToolCallResultKey, "{ \"value\": \"result\" }");
 
             // Act
             activity?.Stop();
@@ -166,7 +166,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("tool-call-1", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolCallIdKey).GetString());
             Assert.AreEqual("desc", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolDescriptionKey).GetString());
             Assert.AreEqual("function", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolTypeKey).GetString());
-            Assert.AreEqual("{ \"value\": \"result\" }", attrsElement.GetProperty(OpenTelemetryConstants.GenAiEventContent).GetString());
+            Assert.AreEqual("{ \"value\": \"result\" }", attrsElement.GetProperty(OpenTelemetryConstants.GenAiToolCallResultKey).GetString());
             Assert.AreEqual("execute_tool", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
         }
     }
