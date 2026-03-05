@@ -77,7 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
                 if (endpoint.Port != 443)
                 {
-                    SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                    SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
                 }
             }
         }
@@ -87,7 +87,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiEventContent, response);
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
         }
 
         /// <summary>

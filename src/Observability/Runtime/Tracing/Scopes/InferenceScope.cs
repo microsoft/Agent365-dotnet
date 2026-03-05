@@ -61,10 +61,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
             SetTagMaybe(GenAiProviderNameKey, details.ProviderName);
-            SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
-            SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
-            SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
-            SetTagMaybe(GenAiResponseIdKey, details.ResponseId);
+            SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens);
+            SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens);
+            SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons);
         }
 
         /// <summary>
@@ -88,7 +87,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordInputTokens(int inputTokens)
         {
-            SetTagMaybe(GenAiUsageInputTokensKey, inputTokens.ToString());
+            SetTagMaybe(GenAiUsageInputTokensKey, inputTokens);
         }
 
         /// <summary>
@@ -96,18 +95,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordOutputTokens(int outputTokens)
         {
-            SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens.ToString());
-        }
-
-        /// <summary>
-        /// Records the response id for telemetry tracking.
-        /// </summary>
-        public void RecordResponseId(string responseId)
-        {
-            if (!string.IsNullOrEmpty(responseId))
-            {
-                SetTagMaybe(GenAiResponseIdKey, responseId);
-            }
+            SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens);
         }
 
         /// <summary>
@@ -117,7 +105,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             if (finishReasons != null)
             {
-                SetTagMaybe(GenAiResponseFinishReasonsKey, string.Join(",", finishReasons));
+                SetTagMaybe(GenAiResponseFinishReasonsKey, finishReasons);
             }
         }
 

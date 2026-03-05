@@ -3,7 +3,6 @@
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
 {
     using Microsoft.Agents.A365.Observability.Runtime.Common;
-    using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
     using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
     using OpenTelemetry;
     using System.Diagnostics;
@@ -21,38 +20,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             OpenTelemetryConstants.GenAiAgentUPNKey,
             OpenTelemetryConstants.GenAiAgentBlueprintIdKey,
             OpenTelemetryConstants.GenAiAgentAUIDKey,
-            OpenTelemetryConstants.GenAiAgentTypeKey,
             OpenTelemetryConstants.GenAiAgentPlatformIdKey,
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.GenAiConversationItemLinkKey,
-            OpenTelemetryConstants.CorrelationIdKey,
-            OpenTelemetryConstants.OperationSourceKey,
             OpenTelemetryConstants.GenAiInputMessagesKey,
             OpenTelemetryConstants.GenAiOutputMessagesKey,
-            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiToolCallResultKey,
             OpenTelemetryConstants.GenAiToolNameKey,
             OpenTelemetryConstants.GenAiToolCallIdKey,
             OpenTelemetryConstants.GenAiToolDescriptionKey,
             OpenTelemetryConstants.GenAiToolArgumentsKey,
             OpenTelemetryConstants.GenAiToolTypeKey,
             OpenTelemetryConstants.GenAiProviderNameKey,
-            OpenTelemetryConstants.GenAiSystemKey,
             OpenTelemetryConstants.SessionIdKey,
             OpenTelemetryConstants.SessionDescriptionKey,
-            OpenTelemetryConstants.GenAiChannelNameKey,
-            OpenTelemetryConstants.GenAiChannelLinkKey,
-            OpenTelemetryConstants.HiringManagerIdKey,
+            OpenTelemetryConstants.ChannelNameKey,
+            OpenTelemetryConstants.ChannelLinkKey,
         };
 
         private static readonly string[] InvokeAgentAttributeKeys = new[]
         {
-            OpenTelemetryConstants.GenAiCallerIdKey,
-            OpenTelemetryConstants.GenAiCallerNameKey,
-            OpenTelemetryConstants.GenAiCallerUpnKey,
-            OpenTelemetryConstants.GenAiCallerClientIpKey,
-            OpenTelemetryConstants.GenAiCallerTenantIdKey,
-            OpenTelemetryConstants.GenAiExecutionTypeKey,
+            OpenTelemetryConstants.CallerIdKey,
+            OpenTelemetryConstants.CallerNameKey,
+            OpenTelemetryConstants.CallerUpnKey,
+            OpenTelemetryConstants.CallerClientIpKey,
         };
 
         /// <summary>
@@ -61,7 +53,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
         /// <param name="activity">The activity that is starting.</param>
         public override void OnStart(Activity activity)
         {
-            activity.CoalesceTag(OpenTelemetryConstants.OperationSourceKey, Baggage.Current.GetBaggage(OpenTelemetryConstants.OperationSourceKey), OperationSource.SDK.ToString());
+            // Set telemetry SDK attributes
+            activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkNameKey, OpenTelemetryConstants.TelemetrySdkNameValue);
+            activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkLanguageKey, OpenTelemetryConstants.TelemetrySdkLanguageValue);
 
             foreach (var key in AttributeKeys)
             {

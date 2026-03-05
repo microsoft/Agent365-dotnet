@@ -28,7 +28,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
-        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
@@ -45,7 +44,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null,
             string? thoughtProcess = null,
-            string? hiringManagerId = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
@@ -58,7 +56,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 outputMessages,
                 sourceMetadata,
                 thoughtProcess,
-                hiringManagerId,
                 callerDetails,
                 extraAttributes);
 
@@ -74,7 +71,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string[]? outputMessages,
             SourceMetadata? sourceMetadata,
             string? thoughtProcess,
-            string? hiringManagerId,
             CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
         {
@@ -100,9 +96,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Source metadata
             AddSourceMetadataAttributes(attributes, sourceMetadata);
 
-            // Add hiring manager ID
-            AddIfNotNull(attributes, HiringManagerIdKey, hiringManagerId);
-
             // Add caller details
             AddCallerDetails(attributes, callerDetails);
 
@@ -116,14 +109,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?> attributes,
             InferenceCallDetails inferenceCallDetails)
         {
-            var (operationName, model, providerName, inputTokens, outputTokens, finishReasons, responseId) = inferenceCallDetails;
+            var (operationName, model, providerName, inputTokens, outputTokens, finishReasons, _) = inferenceCallDetails;
             AddIfNotNull(attributes, GenAiOperationNameKey, operationName.ToString().ToLowerInvariant());
             AddIfNotNull(attributes, GenAiRequestModelKey, model);
             AddIfNotNull(attributes, GenAiProviderNameKey, providerName);
             AddIfNotNull(attributes, GenAiUsageInputTokensKey, inputTokens);
             AddIfNotNull(attributes, GenAiUsageOutputTokensKey, outputTokens);
-            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, finishReasons != null ? string.Join(",", finishReasons) : null);
-            AddIfNotNull(attributes, GenAiResponseIdKey, responseId);
+            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, finishReasons);
         }
     }
 }

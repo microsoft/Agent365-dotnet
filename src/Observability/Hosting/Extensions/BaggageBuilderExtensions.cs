@@ -23,7 +23,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
 
             baggageBuilder
                 .SetCallerBaggage(turnContext)
-                .SetExecutionTypeBaggage(turnContext)
                 .SetTargetAgentBaggage(turnContext)
                 .SetTenantIdBaggage(turnContext)
                 .SetSourceMetadataBaggage(turnContext)
@@ -41,18 +40,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         public static BaggageBuilder SetCallerBaggage(this BaggageBuilder baggageBuilder, ITurnContext turnContext)
         {
             baggageBuilder.SetRange(turnContext.GetCallerBaggagePairs());
-            return baggageBuilder;
-        }
-
-        /// <summary>
-        /// Sets the execution type baggage value based on caller and recipient agentic status.
-        /// </summary>
-        /// <param name="baggageBuilder">The BaggageBuilder instance.</param>
-        /// <param name="turnContext">The turn context containing activity information.</param>
-        /// <returns>The updated BaggageBuilder instance.</returns>
-        public static BaggageBuilder SetExecutionTypeBaggage(this BaggageBuilder baggageBuilder, ITurnContext turnContext)
-        {
-            baggageBuilder.SetRange(turnContext.GetExecutionTypePair());
             return baggageBuilder;
         }
 

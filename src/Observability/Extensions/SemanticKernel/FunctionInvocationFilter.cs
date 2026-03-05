@@ -30,7 +30,7 @@ public sealed class FunctionInvocationFilter : IFunctionInvocationFilter
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolTypeKey, ToolType.Function);
             await InvokeWithErrorHandlingAsync(next, context);
-            Activity.Current.AddTag(OpenTelemetryConstants.GenAiEventContent, GetResult(context));
+            Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolCallResultKey, GetResult(context));
             Activity.Current.AddTag(OpenTelemetryConstants.GenAiToolCallIdKey, context.Function.PluginName);
             return;
         }

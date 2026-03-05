@@ -24,7 +24,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
 
             invokeAgentScope
                 .SetCallerTags(turnContext)
-                .SetExecutionTypeTags(turnContext)
                 .SetTargetAgentTags(turnContext)
                 .SetTenantIdTags(turnContext)
                 .SetSourceMetadataTags(turnContext)
@@ -42,15 +41,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         public static InvokeAgentScope SetCallerTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
             invokeAgentScope.RecordAttributes(turnContext.GetCallerBaggagePairs());
-            return invokeAgentScope;
-        }
-
-        /// <summary>
-        /// Sets the execution type tag based on caller and recipient agentic status.
-        /// </summary>
-        public static InvokeAgentScope SetExecutionTypeTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
-        {
-            invokeAgentScope.RecordAttributes(turnContext.GetExecutionTypePair());
             return invokeAgentScope;
         }
 

@@ -27,20 +27,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.ServerAddressKey,
             OpenTelemetryConstants.ServerPortKey,
-            OpenTelemetryConstants.GenAiChannelNameKey,
-            OpenTelemetryConstants.GenAiChannelLinkKey,
-            OpenTelemetryConstants.GenAiExecutionTypeKey,
-            OpenTelemetryConstants.GenAiCallerIdKey,
-            OpenTelemetryConstants.GenAiCallerUpnKey,
-            OpenTelemetryConstants.GenAiCallerNameKey,
-            OpenTelemetryConstants.GenAiCallerTenantIdKey,
-            OpenTelemetryConstants.GenAiCallerAgentNameKey,
-            OpenTelemetryConstants.GenAiCallerAgentIdKey,
-            OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey,
-            OpenTelemetryConstants.GenAiCallerAgentAUIDKey,
-            OpenTelemetryConstants.GenAiCallerAgentUPNKey,
-            OpenTelemetryConstants.GenAiCallerAgentTenantKey,
-            OpenTelemetryConstants.GenAiCallerClientIpKey,
+            OpenTelemetryConstants.ChannelNameKey,
+            OpenTelemetryConstants.ChannelLinkKey,
+            OpenTelemetryConstants.CallerIdKey,
+            OpenTelemetryConstants.CallerUpnKey,
+            OpenTelemetryConstants.CallerNameKey,
+            OpenTelemetryConstants.CallerAgentNameKey,
+            OpenTelemetryConstants.CallerAgentIdKey,
+            OpenTelemetryConstants.CallerAgentBlueprintIdKey,
+            OpenTelemetryConstants.CallerAgentAUIDKey,
+            OpenTelemetryConstants.CallerAgentUPNKey,
+            OpenTelemetryConstants.CallerClientIpKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.SessionIdKey,
             OpenTelemetryConstants.GenAiToolNameKey,
@@ -48,16 +45,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiToolCallIdKey,
             OpenTelemetryConstants.GenAiToolDescriptionKey,
             OpenTelemetryConstants.GenAiToolTypeKey,
-            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiToolCallResultKey,
             OpenTelemetryConstants.GenAiOperationNameKey,
             OpenTelemetryConstants.GenAiRequestModelKey,
             OpenTelemetryConstants.GenAiProviderNameKey,
             OpenTelemetryConstants.GenAiUsageInputTokensKey,
             OpenTelemetryConstants.GenAiUsageOutputTokensKey,
             OpenTelemetryConstants.GenAiResponseFinishReasonsKey,
-            OpenTelemetryConstants.GenAiResponseIdKey,
-            OpenTelemetryConstants.GenAiAgentThoughtProcessKey,
-            OpenTelemetryConstants.HiringManagerIdKey
+            OpenTelemetryConstants.GenAiAgentThoughtProcessKey
         };
 
         /// <summary>
@@ -96,7 +91,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentUPNKey, agentDetails.AgentUPN);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentBlueprintIdKey, agentDetails.AgentBlueprintId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentPlatformIdKey, agentDetails.AgentPlatformId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentTypeKey, agentDetails.AgentType?.ToString());
         }
 
         /// <summary>
@@ -121,7 +115,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Only record port if it is different from 443
             if (endpoint.Port != 443)
             {
-                AddIfNotNull(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                AddIfNotNull(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
             }
         }
 
@@ -133,7 +127,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             if (request == null) return;
 
             AddSourceMetadataAttributes(attributes, request.SourceMetadata);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiExecutionTypeKey, request.ExecutionType?.ToString());
         }
 
         /// <summary>
@@ -143,11 +136,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (callerDetails == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
         }
 
         /// <summary>
@@ -157,14 +149,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (callerAgentDetails == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiCallerAgentTypeKey, callerAgentDetails.AgentType?.ToString());
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentNameKey, callerAgentDetails.AgentName);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentUPNKey, callerAgentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
         }
 
         /// <summary>
@@ -174,8 +164,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (sourceMetadata == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
+            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelNameKey, sourceMetadata.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelLinkKey, sourceMetadata.Description);
         }
 
         /// <summary>

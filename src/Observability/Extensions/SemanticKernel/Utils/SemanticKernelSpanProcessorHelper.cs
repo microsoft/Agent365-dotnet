@@ -300,7 +300,7 @@ public static class SemanticKernelSpanProcessorHelper
     private static string? GetEventContentTag(ActivityEvent activityEvent)
     {
         return activityEvent.Tags?
-            .FirstOrDefault(tag => tag.Key == OpenTelemetryConstants.GenAiEventContent).Value as string;
+            .FirstOrDefault(tag => tag.Key == OpenTelemetryConstants.GenAiToolCallResultKey).Value as string;
     }
 
     /// <summary>

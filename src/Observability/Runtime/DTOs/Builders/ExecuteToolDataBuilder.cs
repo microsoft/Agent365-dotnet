@@ -29,7 +29,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="sourceMetadata">Optional source metadata for the operation.</param>
-        /// <param name="hiringManagerId">Optional hiring manager ID.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
@@ -44,11 +43,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             SourceMetadata? sourceMetadata = null,
-            string? hiringManagerId = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, hiringManagerId, callerDetails, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, callerDetails, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId);
         }
@@ -60,7 +58,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string conversationId,
             string? responseContent,
             SourceMetadata? sourceMetadata,
-            string? hiringManagerId,
             CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
         {
@@ -80,13 +77,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
             // Response content if supplied
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiEventContent, responseContent);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
 
             // Source metadata
             AddSourceMetadataAttributes(attributes, sourceMetadata);
-
-            // Add hiring manager ID
-            AddIfNotNull(attributes, OpenTelemetryConstants.HiringManagerIdKey, hiringManagerId);
 
             // Add caller details
             AddCallerDetails(attributes, callerDetails);
@@ -113,7 +107,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 AddIfNotNull(attributes, OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
                 if (endpoint.Port != 443)
                 {
-                    AddIfNotNull(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port);
+                    AddIfNotNull(attributes, OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
                 }
             }
         }

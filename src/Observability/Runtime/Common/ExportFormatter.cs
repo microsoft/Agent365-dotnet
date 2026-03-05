@@ -24,7 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         private static readonly string[] LargePayloadAttributeKeys = new[]
         {
             OpenTelemetryConstants.GenAiToolArgumentsKey,
-            OpenTelemetryConstants.GenAiEventContent,
+            OpenTelemetryConstants.GenAiToolCallResultKey,
             OpenTelemetryConstants.GenAiInputMessagesKey,
             OpenTelemetryConstants.GenAiOutputMessagesKey,
             AutoInstrumentationConstants.GenAiInvocationInputKey,

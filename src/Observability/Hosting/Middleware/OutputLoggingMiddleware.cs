@@ -53,7 +53,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
             var callerDetails = DeriveCallerDetails(turnContext);
             var conversationId = turnContext.Activity?.Conversation?.Id;
             var sourceMetadata = DeriveSourceMetadata(turnContext);
-            var executionType = DeriveExecutionType(turnContext);
 
             turnContext.OnSendActivities(CreateSendHandler(
                 turnContext,
@@ -61,8 +60,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 tenantDetails,
                 callerDetails,
                 conversationId,
-                sourceMetadata,
-                executionType));
+                sourceMetadata));
 
             await next(cancellationToken).ConfigureAwait(false);
         }
@@ -130,28 +128,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 description: channelId.SubChannel);
         }
 
-        private static string? DeriveExecutionType(ITurnContext turnContext)
-        {
-            var pairs = turnContext.GetExecutionTypePair();
-            foreach (var pair in pairs)
-            {
-                if (pair.Key == OpenTelemetryConstants.GenAiExecutionTypeKey)
-                {
-                    return pair.Value?.ToString();
-                }
-            }
-
-            return null;
-        }
-
         private static SendActivitiesHandler CreateSendHandler(
             ITurnContext turnContext,
             AgentDetails agentDetails,
             TenantDetails tenantDetails,
             CallerDetails? callerDetails,
             string? conversationId,
-            SourceMetadata? sourceMetadata,
-            string? executionType)
+            SourceMetadata? sourceMetadata)
         {
             return async (ctx, activities, nextSend) =>
             {
@@ -188,7 +171,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
 
                 try
                 {
-                    outputScope.SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, executionType);
                     return await nextSend().ConfigureAwait(false);
                 }
                 catch (Exception ex)
