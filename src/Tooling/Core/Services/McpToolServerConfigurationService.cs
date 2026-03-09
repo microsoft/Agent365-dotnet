@@ -888,9 +888,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     if (errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
                     {
                         result.RequiresRegistration = true;
-                        // Append serverIds and user to the registration URL from AEB
+                        // The registration URL from the endpoint already includes &user= so only append serverIds
                         var baseRegUrl = regUrlProp.GetString() ?? string.Empty;
-                        result.RegistrationProtocolUrl = $"{baseRegUrl}&user={encodedUserIdentifier}{serverIdsParam}";
+                        result.RegistrationProtocolUrl = $"{baseRegUrl}{serverIdsParam}";
                         result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
                         
                         this._logger.LogWarning("[UserDiscovery] No desktops registered for user '{UserIdentifier}'. Registration URL: {RegistrationUrl}",

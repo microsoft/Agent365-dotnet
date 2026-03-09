@@ -76,8 +76,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
 
-            // Extract user email (UPN) from the auth token — Activity.From.Name is only the display name in Teams
-            var userIdentifier = RuntimeUtility.GetUpnFromToken(authToken) ?? turnContext.Activity.From?.Name;
+            // Extract user object ID from the auth token — stable, tenant-scoped GUID for user identity
+            var userIdentifier = RuntimeUtility.GetObjectIdFromToken(authToken) ?? turnContext.Activity.From?.AadObjectId;
             if (!string.IsNullOrEmpty(userIdentifier))
             {
                 kernel.Data[PolicyEnforcingFunctionInvocationFilter.UserIdentifierKey] = userIdentifier;
@@ -383,8 +383,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 kernel.Data[PolicyEnforcingFunctionInvocationFilter.AuthTokenKey] = authToken;
             }
 
-            // Extract user email (UPN) from the auth token — Activity.From.Name is only the display name in Teams
-            var userIdentifier = RuntimeUtility.GetUpnFromToken(authToken) ?? turnContext.Activity.From?.Name;
+            // Extract user object ID from the auth token — stable, tenant-scoped GUID for user identity
+            var userIdentifier = RuntimeUtility.GetObjectIdFromToken(authToken) ?? turnContext.Activity.From?.AadObjectId;
 
             // Store user identifier in kernel data for policy enforcement filter
             if (!string.IsNullOrEmpty(userIdentifier))
@@ -394,7 +394,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             
             if (string.IsNullOrWhiteSpace(userIdentifier))
             {
-                _logger.LogWarning("[UserDiscovery] No user identifier found (checked auth token UPN and Activity.From.Name). Falling back to cloud-only discovery.");
+                _logger.LogWarning("[UserDiscovery] No user identifier found (checked auth token oid and Activity.From.AadObjectId). Falling back to cloud-only discovery.");
                 
                 // Fall back to cloud-only discovery
                 await AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);

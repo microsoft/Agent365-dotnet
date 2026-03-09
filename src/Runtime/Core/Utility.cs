@@ -81,6 +81,34 @@ namespace Microsoft.Agents.A365.Runtime.Utils
         }
 
         /// <summary>
+        /// Decodes the token and retrieves the user's Object ID (oid) from the "oid" or
+        /// "http://schemas.microsoft.com/identity/claims/objectidentifier" claim.
+        /// The object ID is a stable, tenant-scoped GUID that uniquely identifies the user.
+        /// </summary>
+        /// <param name="token">JWT token to decode.</param>
+        /// <returns>The user's object ID, or null if not found or the token is empty.</returns>
+        public static string? GetObjectIdFromToken(string? token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return null;
+            }
+
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+                var oidClaim = jwtToken.Claims.FirstOrDefault(c =>
+                    c.Type == "oid" || c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier");
+                return oidClaim?.Value;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Decodes the current token and retrieves the App ID (appid or azp claim).
         /// </summary>
         /// <param name="token">Token to Decode</param>

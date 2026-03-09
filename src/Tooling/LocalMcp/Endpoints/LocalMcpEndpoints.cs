@@ -252,8 +252,12 @@ public static class LocalMcpEndpoints
             else
             {
                 // Handle MCP server invocation
+                if (string.IsNullOrEmpty(serverId))
+                {
+                    return Results.BadRequest(new { message = "serverId query parameter is required" });
+                }
+
                 var sessionId = Guid.NewGuid().ToString();
-                serverId ??= options.Value.DefaultServerId;
                 callbackUrl = $"{scheme}://{host}/ws/mcp/{sessionId}?serverId={Uri.EscapeDataString(serverId)}";
 
                 sessionManager.CreateSession(sessionId);
