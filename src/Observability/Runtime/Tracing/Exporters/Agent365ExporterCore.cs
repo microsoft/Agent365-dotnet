@@ -166,8 +166,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 }
 
                 if (!string.IsNullOrEmpty(token))
+                {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
+                }
+                else
+                {
+                    this._logger?.LogWarning($"Agent365ExporterCore: No token obtained for agent {agentId} tenant {tenantId}. Skipping export for this identity.");
+                    return ExportResult.Failure;
+                }
+                    
                 HttpResponseMessage? resp = null;
                 try
                 {
