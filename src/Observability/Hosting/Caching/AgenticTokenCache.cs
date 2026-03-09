@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using Azure.Core;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
@@ -111,7 +110,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             }
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
-            return jwtToken.ValidTo;
+            if (jwtToken.Payload.Expiration == null)
+                return null; 
+
+            return new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero);
         }
     }
 }
