@@ -503,11 +503,24 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
 
+            // Apply custom timeout only when explicitly configured
+            if (toolOptions.McpClientInitializationTimeoutSeconds.HasValue)
+            {
+                httpClient.Timeout = TimeSpan.FromSeconds(toolOptions.McpClientInitializationTimeoutSeconds.Value);
+            }
+
             var clientTransport = new SseClientTransport(options, httpClient);
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
+                var clientOptions = toolOptions.McpClientInitializationTimeoutSeconds.HasValue
+                    ? new McpClientOptions
+                    {
+                        InitializationTimeout = TimeSpan.FromSeconds(toolOptions.McpClientInitializationTimeoutSeconds.Value),
+                    }
+                    : new McpClientOptions();
+
+                return await McpClientFactory.CreateAsync(clientTransport, clientOptions, loggerFactory: this._loggerFactory);
             }
             catch (Exception ex)
             {
