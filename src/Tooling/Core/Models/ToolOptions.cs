@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Tooling.Models
         /// and the underlying HTTP connection. Increase this value if the MCP server performs
         /// slow operations during initialization (e.g., token exchanges in test environments).
         /// When null, the MCP SDK default timeout is used.
+        /// Valid range: 1 to 600 seconds. Values outside this range will throw <see cref="ArgumentOutOfRangeException"/>.
         /// </summary>
         public int? McpClientInitializationTimeoutSeconds { get; set; }
     }

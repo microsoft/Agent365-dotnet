@@ -506,21 +506,34 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Apply custom timeout only when explicitly configured
             if (toolOptions.McpClientInitializationTimeoutSeconds.HasValue)
             {
-                httpClient.Timeout = TimeSpan.FromSeconds(toolOptions.McpClientInitializationTimeoutSeconds.Value);
+                var timeoutSeconds = toolOptions.McpClientInitializationTimeoutSeconds.Value;
+                if (timeoutSeconds < 1 || timeoutSeconds > 600)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(toolOptions),
+                        timeoutSeconds,
+                        "McpClientInitializationTimeoutSeconds must be between 1 and 600 seconds.");
+                }
+
+                httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
             }
 
             var clientTransport = new SseClientTransport(options, httpClient);
 
             try
             {
-                var clientOptions = toolOptions.McpClientInitializationTimeoutSeconds.HasValue
-                    ? new McpClientOptions
+                // Only pass McpClientOptions when a custom timeout is set to preserve default SDK behavior
+                if (toolOptions.McpClientInitializationTimeoutSeconds.HasValue)
+                {
+                    var clientOptions = new McpClientOptions
                     {
                         InitializationTimeout = TimeSpan.FromSeconds(toolOptions.McpClientInitializationTimeoutSeconds.Value),
-                    }
-                    : new McpClientOptions();
+                    };
 
-                return await McpClientFactory.CreateAsync(clientTransport, clientOptions, loggerFactory: this._loggerFactory);
+                    return await McpClientFactory.CreateAsync(clientTransport, clientOptions, loggerFactory: this._loggerFactory);
+                }
+
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
             }
             catch (Exception ex)
             {
