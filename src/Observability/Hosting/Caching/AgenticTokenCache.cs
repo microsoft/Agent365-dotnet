@@ -3,6 +3,7 @@
 using Azure.Core;
 using System;
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
@@ -15,7 +16,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         private sealed class Entry
         {
             public AgenticTokenStruct AgenticTokenStruct { get; }
+            public string? Token { get; set; }
             public string[] Scopes { get; }
+            public DateTimeOffset? ExpiresAt { get; set; }
 
             public Entry(AgenticTokenStruct agenticTokenStruct, string[] scopes)
             {
@@ -62,6 +65,12 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
             try
             {
+                // Check current entry to avoid unnecessary token exchange calls if the token is still valid.
+                if (!string.IsNullOrEmpty(entry.Token) && entry.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5)) // Consider token valid if it expires in more than 5 minutes.
+                {
+                    return entry.Token;
+                }
+
                 // Use sync path; credential handles caching & refresh internally.
                 var ctx = new TokenRequestContext(entry.Scopes);
                 var userAuthorization = entry.AgenticTokenStruct.UserAuthorization;
@@ -72,12 +81,39 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                         exchangeConnection: entry.AgenticTokenStruct.ConnectionName!,
                         exchangeScopes: entry.Scopes).ConfigureAwait(false);
 
+                entry.Token = token;
+                entry.ExpiresAt = GetTokenExpiration(token);
+
                 return token;
             }
             catch
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Extracts the expiration date and time from a JWT access token.
+        /// </summary>
+        /// <remarks>The returned expiration is based on the 'exp' claim in the token payload. No
+        /// validation of token signature or claims is performed; callers should ensure the token is trusted before
+        /// relying on the expiration value.</remarks>
+        /// <param name="token">The JWT access token from which to retrieve the expiration information. Cannot be null, empty, or
+        /// whitespace.</param>
+        /// <returns>A <see cref="DateTimeOffset"/> representing the token's expiration date and time, or <see langword="null"/>
+        /// if the token is null, empty, or whitespace.</returns>
+        private static DateTimeOffset? GetTokenExpiration(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return null;
+            }
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            if (jwtToken.Payload.Expiration == null)
+                return null; 
+
+            return new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero);
         }
     }
 }
