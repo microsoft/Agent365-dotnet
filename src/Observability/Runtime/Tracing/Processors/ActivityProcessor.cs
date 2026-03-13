@@ -17,10 +17,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             OpenTelemetryConstants.GenAiAgentIdKey,
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
-            OpenTelemetryConstants.GenAiAgentUPNKey,
-            OpenTelemetryConstants.GenAiAgentBlueprintIdKey,
-            OpenTelemetryConstants.GenAiAgentAUIDKey,
-            OpenTelemetryConstants.GenAiAgentPlatformIdKey,
+            OpenTelemetryConstants.AgentUPNKey,
+            OpenTelemetryConstants.AgentBlueprintIdKey,
+            OpenTelemetryConstants.AgentAUIDKey,
+            OpenTelemetryConstants.AgentPlatformIdKey,
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.GenAiConversationItemLinkKey,
@@ -56,6 +56,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             // Set telemetry SDK attributes
             activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkNameKey, OpenTelemetryConstants.TelemetrySdkNameValue);
             activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkLanguageKey, OpenTelemetryConstants.TelemetrySdkLanguageValue);
+            activity.CoalesceTag(OpenTelemetryConstants.TelemetrySdkVersionKey, OpenTelemetryConstants.TelemetrySdkVersionValue);
 
             foreach (var key in AttributeKeys)
             {

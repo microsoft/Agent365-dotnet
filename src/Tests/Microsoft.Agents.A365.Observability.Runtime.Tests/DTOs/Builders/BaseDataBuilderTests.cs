@@ -42,10 +42,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentAUIDKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentUPNKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentBlueprintIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentPlatformIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.AgentAUIDKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.AgentUPNKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.AgentBlueprintIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.AgentPlatformIdKey);
         }
 
         [TestMethod]

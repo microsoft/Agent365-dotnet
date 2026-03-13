@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using OpenTelemetry;
 using System;
@@ -114,7 +115,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentAuid(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentAUIDKey, v);
+            Set(OpenTelemetryConstants.AgentAUIDKey, v);
             return this;
         }
 
@@ -126,7 +127,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentUpn(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentUPNKey, v);
+            Set(OpenTelemetryConstants.AgentUPNKey, v);
             return this;
         }
 
@@ -138,7 +139,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentBlueprintIdKey, v);
+            Set(OpenTelemetryConstants.AgentBlueprintIdKey, v);
             return this;
         }
 
@@ -147,7 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentPlatformId(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiAgentPlatformIdKey, v);
+            Set(OpenTelemetryConstants.AgentPlatformIdKey, v);
             return this;
         }
 
@@ -257,6 +258,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the service name baggage value.
+        /// </summary>
+        /// <param name="source">The operation source identifying where the operation originated.</param>
+        /// <returns>The current builder instance for method chaining.</returns>
+        public BaggageBuilder ServiceName(OperationSource source)
+        {
+            Set(OpenTelemetryConstants.ServiceNameKey, source.ToString());
+            return this;
+        }
+
+        /// <summary>
         /// Applies the collected baggage to the current context.
         /// </summary>
         public IDisposable Build()
@@ -272,15 +284,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             }
             return new Scope(previous);
         }
-
-        /// <summary>
-        /// Convenience: begin a request baggage scope with common fields.
-        /// </summary>
-        public static IDisposable SetRequestContext(string? tenantId, string? agentId)
-            => new BaggageBuilder()
-                .TenantId(tenantId)
-                .AgentId(agentId)
-                .Build();
 
         /// <summary>
         /// Adds a baggage key/value if the value is not null or whitespace.

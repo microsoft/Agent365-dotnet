@@ -41,7 +41,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
         {
             var (tenant, agent) = _resolver(ctx);
 
-            using (BaggageBuilder.SetRequestContext(tenant, agent))
+            using (new BaggageBuilder()
+                .TenantId(tenant)
+                .AgentId(agent)
+                .Build())
             {
                 await _next(ctx);
             }

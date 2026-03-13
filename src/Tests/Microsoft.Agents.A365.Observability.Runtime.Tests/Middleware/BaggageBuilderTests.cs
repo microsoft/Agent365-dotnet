@@ -48,7 +48,7 @@ public sealed class BaggageBuilderTest
             Baggage.Current.GetBaggage(SessionIdKey).Should().Be(session);
             Baggage.Current.GetBaggage(SessionDescriptionKey).Should().Be(sessionDescription);
             Baggage.Current.GetBaggage(CallerClientIpKey).Should().Be(callerClientIp.ToString());
-            Baggage.Current.GetBaggage(GenAiAgentPlatformIdKey).Should().Be(platformId);
+            Baggage.Current.GetBaggage(AgentPlatformIdKey).Should().Be(platformId);
         }
 
         // Assert after dispose (restored -> no values)
@@ -57,6 +57,6 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(SessionIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
         Baggage.Current.GetBaggage(CallerClientIpKey).Should().BeNull();
-        Baggage.Current.GetBaggage(GenAiAgentPlatformIdKey).Should().BeNull();
+        Baggage.Current.GetBaggage(AgentPlatformIdKey).Should().BeNull();
     }
 }

@@ -60,10 +60,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiAgentIdKey = "gen_ai.agent.id";
         public const string GenAiAgentNameKey = "gen_ai.agent.name";
         public const string GenAiAgentDescriptionKey = "gen_ai.agent.description";
-        public const string GenAiAgentAUIDKey = "microsoft.agent.user.id";
-        public const string GenAiAgentUPNKey = "microsoft.agent.user.upn";
-        public const string GenAiAgentBlueprintIdKey = "microsoft.a365.agent.blueprint.id";
-        public const string GenAiAgentPlatformIdKey = "microsoft.a365.agent.platform.id";
+        public const string AgentAUIDKey = "microsoft.agent.user.id";
+        public const string AgentUPNKey = "microsoft.agent.user.upn";
+        public const string AgentBlueprintIdKey = "microsoft.a365.agent.blueprint.id";
+        public const string AgentPlatformIdKey = "microsoft.a365.agent.platform.id";
 
         // Caller dimensions (renamed from gen_ai.caller.* to microsoft.caller.*)
         public const string CallerIdKey = "microsoft.caller.id";
@@ -88,6 +88,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string TelemetrySdkVersionKey = "telemetry.sdk.version";
         public const string TelemetrySdkNameValue = "A365ObservabilitySDK";
         public const string TelemetrySdkLanguageValue = "dotnet";
+        
+        /// <summary>
+        /// Gets the telemetry SDK version dynamically from the assembly.
+        /// </summary>
+        public static string TelemetrySdkVersionValue => 
+            typeof(OpenTelemetryConstants).Assembly.GetName().Version?.ToString() ?? "unknown";
 
         #region Public Constants
         /// <summary>

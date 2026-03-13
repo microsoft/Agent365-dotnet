@@ -20,10 +20,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiAgentIdKey,
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
-            OpenTelemetryConstants.GenAiAgentAUIDKey,
-            OpenTelemetryConstants.GenAiAgentUPNKey,
-            OpenTelemetryConstants.GenAiAgentBlueprintIdKey,
-            OpenTelemetryConstants.GenAiAgentPlatformIdKey,
+            OpenTelemetryConstants.AgentAUIDKey,
+            OpenTelemetryConstants.AgentUPNKey,
+            OpenTelemetryConstants.AgentBlueprintIdKey,
+            OpenTelemetryConstants.AgentPlatformIdKey,
             OpenTelemetryConstants.TenantIdKey,
             OpenTelemetryConstants.ServerAddressKey,
             OpenTelemetryConstants.ServerPortKey,
@@ -87,10 +87,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentDescriptionKey, agentDetails.AgentDescription);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentAUIDKey, agentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentUPNKey, agentDetails.AgentUPN);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentBlueprintIdKey, agentDetails.AgentBlueprintId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentPlatformIdKey, agentDetails.AgentPlatformId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentAUIDKey, agentDetails.AgentAUID);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentUPNKey, agentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentPlatformIdKey, agentDetails.AgentPlatformId);
         }
 
         /// <summary>

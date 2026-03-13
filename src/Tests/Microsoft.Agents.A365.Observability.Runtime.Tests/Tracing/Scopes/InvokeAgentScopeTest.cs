@@ -137,7 +137,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(GenAiAgentPlatformIdKey, platformId);
+        activity.ShouldHaveTag(AgentPlatformIdKey, platformId);
     }
 
     [TestMethod]

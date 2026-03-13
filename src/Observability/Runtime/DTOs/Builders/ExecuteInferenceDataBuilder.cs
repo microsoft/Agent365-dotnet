@@ -109,13 +109,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?> attributes,
             InferenceCallDetails inferenceCallDetails)
         {
-            var (operationName, model, providerName, inputTokens, outputTokens, finishReasons, _) = inferenceCallDetails;
-            AddIfNotNull(attributes, GenAiOperationNameKey, operationName.ToString().ToLowerInvariant());
-            AddIfNotNull(attributes, GenAiRequestModelKey, model);
-            AddIfNotNull(attributes, GenAiProviderNameKey, providerName);
-            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inputTokens?.ToString());
-            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, outputTokens?.ToString());
-            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, finishReasons != null ? string.Join(",", finishReasons) : null);
+            AddIfNotNull(attributes, GenAiOperationNameKey, inferenceCallDetails.OperationName.ToString().ToLowerInvariant());
+            AddIfNotNull(attributes, GenAiRequestModelKey, inferenceCallDetails.Model);
+            AddIfNotNull(attributes, GenAiProviderNameKey, inferenceCallDetails.ProviderName);
+            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inferenceCallDetails.InputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, inferenceCallDetails.OutputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, inferenceCallDetails.FinishReasons != null ? string.Join(",", inferenceCallDetails.FinishReasons) : null);
         }
     }
 }

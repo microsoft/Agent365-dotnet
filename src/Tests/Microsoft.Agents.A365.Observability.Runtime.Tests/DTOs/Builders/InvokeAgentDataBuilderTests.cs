@@ -474,8 +474,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 startTime: startTime);
 
             // Assert
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentPlatformIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiAgentPlatformIdKey].Should().Be("agent-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.AgentPlatformIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.AgentPlatformIdKey].Should().Be("agent-123");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey);
             telemetry.Attributes[OpenTelemetryConstants.GenAiAgentNameKey].Should().Be("TestAgent");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey);
