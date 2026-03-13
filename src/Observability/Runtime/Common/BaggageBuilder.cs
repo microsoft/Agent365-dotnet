@@ -258,13 +258,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the service name baggage value.
+        /// Sets the operation source baggage value. 
+        /// To be used with server spans to identify the source of the operation e.g(ACF, ATG)
         /// </summary>
+        /// <remarks>
+        /// This property must be set for the agent to pass certification requirements.
+        /// </remarks>        
         /// <param name="source">The operation source identifying where the operation originated.</param>
         /// <returns>The current builder instance for method chaining.</returns>
-        public BaggageBuilder ServiceName(OperationSource source)
+        public BaggageBuilder OperationSource(string source)
         {
-            Set(OpenTelemetryConstants.ServiceNameKey, source.ToString());
+            Set(OpenTelemetryConstants.ServiceNameKey, source);
             return this;
         }
 
