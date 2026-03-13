@@ -566,7 +566,7 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
     activity.SetTag("gen_ai.tool.arguments", new string('c', 200 * 1024));
-    activity.SetTag("gen_ai.event.content", new string('d', 100 * 1024));
+    activity.SetTag("gen_ai.tool.call.result", new string('d', 100 * 1024));
     var resource = ResourceBuilder.CreateEmpty().Build();
     var logs = new List<string>();
     var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
@@ -583,7 +583,7 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
     attr.GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
     logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = "));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = "));
 }
 
 [TestMethod]
@@ -592,7 +592,7 @@ public void FormatMany_LogsAllKeySizes()
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
     activity.SetTag("gen_ai.tool.arguments", new string('x', 100 * 1024));
-    activity.SetTag("gen_ai.event.content", new string('y', 125 * 1024));
+    activity.SetTag("gen_ai.tool.call.result", new string('y', 125 * 1024));
     activity.SetTag("gen_ai.input.messages", new string('z', 75 * 1024));
     activity.SetTag("gen_ai.agent.invocation_input", new string('z', 0));
     activity.SetTag("gen_ai.agent.invocation_output", new string('z', 0));
@@ -606,7 +606,7 @@ public void FormatMany_LogsAllKeySizes()
 
     // Assert
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = 100"));
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = 125"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = 125"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.input.messages' size = 75"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_input' size = 0"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_output' size = 0"));

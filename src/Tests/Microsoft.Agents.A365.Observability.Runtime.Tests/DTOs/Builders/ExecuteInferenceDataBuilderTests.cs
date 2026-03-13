@@ -41,8 +41,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, sourceMetadata: source);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelInf");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/inf");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelInf");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey).WhoseValue.Should().Be("https://channel/inf");
         }
 
         [TestMethod]
@@ -58,10 +58,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be(10);
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be(20);
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be("10");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be("20");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiResponseFinishReasonsKey).WhoseValue.Should().Be("stop");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiResponseIdKey).WhoseValue.Should().Be("resp-1");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
 
@@ -117,7 +116,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiResponseFinishReasonsKey);
-            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiResponseIdKey);
         }
 
         [TestMethod]
@@ -174,7 +172,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var spanId = "span-all-inf";
             var parentSpanId = "parent-all-inf";
             var thoughtProcess = "First, I analyzed the request. Then, I formulated a response.";
-            var hiringManagerId = "hiring-manager-inf-456";
             var callerDetails = new CallerDetails("caller-inf-123", "Caller Inf Name", "callerinf@example.com", System.Net.IPAddress.Parse("192.168.1.100"), "caller-tenant-inf");
 
             // Act
@@ -190,7 +187,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 spanId: spanId,
                 parentSpanId: parentSpanId,
                 thoughtProcess: thoughtProcess,
-                hiringManagerId: hiringManagerId,
                 callerDetails: callerDetails);
 
             // Assert
@@ -198,17 +194,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiResponseFinishReasonsKey);
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiResponseIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentThoughtProcessKey).WhoseValue.Should().Be(thoughtProcess);
-            attrs.Should().ContainKey(OpenTelemetryConstants.HiringManagerIdKey).WhoseValue.Should().Be("hiring-manager-inf-456");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey).WhoseValue.Should().Be("caller-inf-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey).WhoseValue.Should().Be("Caller Inf Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey).WhoseValue.Should().Be("callerinf@example.com");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerClientIpKey).WhoseValue.Should().Be("192.168.1.100");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey).WhoseValue.Should().Be("caller-tenant-inf");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-inf-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Caller Inf Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("callerinf@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.100");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
             data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));

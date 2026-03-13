@@ -85,25 +85,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
             this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint?.Host);
-            this.GetAttribute(attributes, "gen_ai.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
-            this.GetAttribute(attributes, "gen_ai.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
-            this.GetAttribute(attributes, "gen_ai.execution.type").Should().Be(expectedRequest.ExecutionType.ToString());
-            this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
-            this.GetAttribute(attributes, "gen_ai.caller.id").Should().Be(expectedCallerDetails.CallerId);
-            this.GetAttribute(attributes, "gen_ai.caller.upn").Should().Be(expectedCallerDetails.CallerUpn);
-            this.GetAttribute(attributes, "gen_ai.caller.name").Should().Be(expectedCallerDetails.CallerName);
-            this.GetAttribute(attributes, "gen_ai.caller.tenantid").Should().Be(expectedCallerDetails.TenantId);
+            this.GetAttribute(attributes, "microsoft.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
+            this.GetAttribute(attributes, "microsoft.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.caller.id").Should().Be(expectedCallerDetails.CallerId);
+            this.GetAttribute(attributes, "microsoft.caller.upn").Should().Be(expectedCallerDetails.CallerUpn);
+            this.GetAttribute(attributes, "microsoft.caller.name").Should().Be(expectedCallerDetails.CallerName);
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Input message 1,Input message 2");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Output message 1");
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "gen_ai.agent.userid").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "gen_ai.agent.upn").Should().Be(expectedAgentDetails.AgentUPN);
-            this.GetAttribute(attributes, "gen_ai.agent.applicationid").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
+            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
-            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
         }
 
         [TestMethod]
@@ -162,10 +159,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "gen_ai.agent.userid").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "gen_ai.agent.upn").Should().Be(expectedAgentDetails.AgentUPN);
-            this.GetAttribute(attributes, "gen_ai.agent.applicationid").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
+            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.tool.name").Should().Be(toolCallDetails.ToolName);
             this.GetAttribute(attributes, "gen_ai.tool.arguments").Should().Be(toolCallDetails.Arguments);
             this.GetAttribute(attributes, "gen_ai.tool.call.id").Should().Be(toolCallDetails.ToolCallId);
@@ -173,8 +170,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.tool.type").Should().Be(toolCallDetails.ToolType);
             this.GetAttribute(attributes, "server.address").Should().Be(endpoint.Host);
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
-            this.GetAttribute(attributes, "gen_ai.event.content").Should().Be("Tool response content");
-            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
+            this.GetAttribute(attributes, "gen_ai.tool.call.result").Should().Be("Tool response content");
         }
 
         [TestMethod]
@@ -212,7 +208,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 scope.RecordOutputMessages(new[] { "Hi there!" });
                 scope.RecordInputTokens(42);
                 scope.RecordOutputTokens(84);
-                scope.RecordResponseId("response-xyz");
                 scope.RecordFinishReasons(new[] { "stop", "length" });
             }
 
@@ -238,19 +233,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "gen_ai.agent.userid").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "gen_ai.agent.upn").Should().Be(expectedAgentDetails.AgentUPN);
-            this.GetAttribute(attributes, "gen_ai.agent.applicationid").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
+            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
             this.GetAttribute(attributes, "gen_ai.request.model").Should().Be(inferenceDetails.Model);
             this.GetAttribute(attributes, "gen_ai.provider.name").Should().Be(inferenceDetails.ProviderName);
             this.GetAttribute(attributes, "gen_ai.usage.input_tokens").Should().Be("42");
             this.GetAttribute(attributes, "gen_ai.usage.output_tokens").Should().Be("84");
             this.GetAttribute(attributes, "gen_ai.response.finish_reasons").Should().Be("stop,length");
-            this.GetAttribute(attributes, "gen_ai.response.id").Should().Be("response-xyz");
             this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
             this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
-            this.GetAttribute(attributes, "gen_ai.agent.type").Should().Be(expectedAgentType.ToString());
         }
 
         [TestMethod]
@@ -321,7 +314,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                         inferenceScope.RecordOutputMessages(new[] { "Inference output" });
                         inferenceScope.RecordInputTokens(10);
                         inferenceScope.RecordOutputTokens(20);
-                        inferenceScope.RecordResponseId("response-nested");
                         inferenceScope.RecordFinishReasons(new[] { "stop" });
                     }
                 }
@@ -332,7 +324,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             // Assert
             var allOperationNames = new List<string>();
-            var allAgentTypes = new List<string>();
             foreach (var content in receivedContents)
             {
                 using var doc = JsonDocument.Parse(content);
@@ -348,14 +339,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     var opName = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.operation.name");
                     if (opName != null)
                         allOperationNames.Add(opName);
-
-                    var agentTypeTag = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.agent.type");
-                    if (agentTypeTag != null)
-                        allAgentTypes.Add(agentTypeTag);
                 }
             }
             allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
-            allAgentTypes.Should().OnlyContain(t => t == agentType.ToString());
         }
 
         private class TestHttpMessageHandler : HttpMessageHandler

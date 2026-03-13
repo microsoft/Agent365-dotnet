@@ -30,7 +30,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             scope.RecordResponse(expected);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiEventContent, expected);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolCallResultKey, expected);
     }
 
     [TestMethod]
@@ -62,29 +62,6 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         // Activity start time should be close to the custom start time
         var startTime = new DateTimeOffset(activity.StartTimeUtc);
         startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
-    }
-
-    [TestMethod]
-    public void AgentTypeTag_IsSetCorrectly()
-    {
-        // Arrange
-        var agentType = AgentType.MicrosoftCopilot;
-        var agentDetails = new AgentDetails(
-            agentId: "agent-xyz",
-            agentName: "ToolAgent",
-            agentType: agentType);
-
-        var toolCallDetails = new ToolCallDetails("TestTool", "args");
-        var tenantDetails = Util.GetTenantDetails();
-
-        // Act
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
-        });
-
-        // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
     }
 
     [TestMethod]
@@ -121,8 +98,8 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 sourceMetadata: metadata);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
     }
 
     [TestMethod]
@@ -252,11 +229,10 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 
     [TestMethod]

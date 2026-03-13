@@ -78,11 +78,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiAgentIdKey, agentDetails.AgentId);
                 SetTagMaybe(GenAiAgentNameKey, agentDetails.AgentName);
                 SetTagMaybe(GenAiAgentDescriptionKey, agentDetails.AgentDescription);
-                SetTagMaybe(GenAiAgentAUIDKey, agentDetails.AgentAUID);
-                SetTagMaybe(GenAiAgentUPNKey, agentDetails.AgentUPN);
-                SetTagMaybe(GenAiAgentBlueprintIdKey, agentDetails.AgentBlueprintId);
-                SetTagMaybe(GenAiAgentTypeKey, agentDetails.AgentType?.ToString());
-                SetTagMaybe(GenAiAgentPlatformIdKey, agentDetails.AgentPlatformId);
+                SetTagMaybe(AgentAUIDKey, agentDetails.AgentAUID);
+                SetTagMaybe(AgentUPNKey, agentDetails.AgentUPN);
+                SetTagMaybe(AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
+                SetTagMaybe(AgentPlatformIdKey, agentDetails.AgentPlatformId);
             }
 
             if (tenantDetails != null)
@@ -103,17 +102,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
             if (sourceMetadata != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiChannelNameKey, sourceMetadata.Name);
-                SetTagMaybe(OpenTelemetryConstants.GenAiChannelLinkKey, sourceMetadata.Description);
+                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, sourceMetadata.Name);
+                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, sourceMetadata.Description);
             }
 
             if (callerDetails != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP?.ToString());
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId);
+                SetTagMaybe(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
+                SetTagMaybe(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+                SetTagMaybe(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
             }
 
             activity?.Start();

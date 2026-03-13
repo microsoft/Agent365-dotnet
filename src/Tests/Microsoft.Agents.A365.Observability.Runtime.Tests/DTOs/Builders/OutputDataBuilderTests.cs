@@ -28,9 +28,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Null optional parameters should be omitted
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
-            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelNameKey);
-            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiChannelLinkKey);
-            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiCallerIdKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.ChannelNameKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.ChannelLinkKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.CallerIdKey);
         }
 
         [TestMethod]
@@ -66,11 +66,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentIdKey).WhoseValue.Should().Be("agent-3");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey).WhoseValue.Should().Be("AgentThree");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey).WhoseValue.Should().Be("Description");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentAUIDKey).WhoseValue.Should().Be("auid");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentUPNKey).WhoseValue.Should().Be("upn@example.com");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentBlueprintIdKey).WhoseValue.Should().Be("bp-1");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentPlatformIdKey).WhoseValue.Should().Be("platform-1");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentTypeKey).WhoseValue.Should().Be("MicrosoftCopilot");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentAUIDKey).WhoseValue.Should().Be("auid");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentUPNKey).WhoseValue.Should().Be("upn@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentBlueprintIdKey).WhoseValue.Should().Be("bp-1");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentPlatformIdKey).WhoseValue.Should().Be("platform-1");
+
         }
 
         [TestMethod]
@@ -154,13 +154,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Assert
             var attrs = data.Attributes;
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be("conv-output-all");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiChannelNameKey).WhoseValue.Should().Be("ChannelOutput");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiChannelLinkKey).WhoseValue.Should().Be("https://channel/output");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerIdKey).WhoseValue.Should().Be("caller-output-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerNameKey).WhoseValue.Should().Be("Output Caller Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerUpnKey).WhoseValue.Should().Be("calleroutput@example.com");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiCallerTenantIdKey).WhoseValue.Should().Be("caller-tenant-output");
+            attrs.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelOutput");
+            attrs.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey).WhoseValue.Should().Be("https://channel/output");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-output-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Output Caller Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("calleroutput@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue.Should().Be("Hello,World");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);

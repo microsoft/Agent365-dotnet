@@ -76,27 +76,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
             SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
-            SetTagMaybe(OpenTelemetryConstants.GenAiExecutionTypeKey, request?.ExecutionType.ToString());
             SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary?.ToJson());
 
             // Only record port if it is different from 443
-            if (endpoint?.Port != 443)
+            if (endpoint != null && endpoint.Port != 443)
             {
-                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint?.Port);
+                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
             }
 
             // Set caller agent details tags
             if (callerAgentDetails != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentNameKey, callerAgentDetails.AgentName);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentIdKey, callerAgentDetails.AgentId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentApplicationIdKey, callerAgentDetails.AgentBlueprintId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentUPNKey, callerAgentDetails.AgentUPN);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTenantKey, callerAgentDetails.TenantId);
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentTypeKey, callerAgentDetails.AgentType?.ToString());
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentClientIpKey, callerAgentDetails.AgentClientIP?.ToString());
-                SetTagMaybe(OpenTelemetryConstants.GenAiCallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentNameKey, callerAgentDetails.AgentName);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentUPNKey, callerAgentDetails.AgentUPN);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
             }
 
             // Set input messages 

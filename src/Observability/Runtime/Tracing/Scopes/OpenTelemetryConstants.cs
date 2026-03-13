@@ -16,20 +16,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         public const string ServerAddressKey = "server.address";
         public const string ServerPortKey = "server.port";
-        public const string SessionIdKey = "session.id";
-        public const string SessionDescriptionKey = "session.description";
-        public const string TenantIdKey = "tenant.id";
-        public const string OperationSourceKey = "operation.source";
-        public const string CorrelationIdKey = "correlation.id";
+        public const string SessionIdKey = "microsoft.session.id";
+        public const string SessionDescriptionKey = "microsoft.session.description";
+        public const string TenantIdKey = "microsoft.tenant.id";
 
         public const string GenAiClientOperationDurationMetricName = "gen_ai.client.operation.duration";
         public const string GenAiRequestModelKey = "gen_ai.request.model";
-        public const string GenAiResponseIdKey = "gen_ai.response.id";
         public const string GenAiResponseFinishReasonsKey = "gen_ai.response.finish_reasons";
-        public const string GenAiSystemKey = "gen_ai.system";
 
         public const string GenAiConversationIdKey = "gen_ai.conversation.id";
-        public const string GenAiConversationItemLinkKey = "gen_ai.conversation.itemLink";
+        public const string GenAiConversationItemLinkKey = "microsoft.conversation.item.link";
         public const string GenAiUsageInputTokensKey = "gen_ai.usage.input_tokens";
         public const string GenAiUsageOutputTokensKey = "gen_ai.usage.output_tokens";
         public const string GenAiProviderNameKey = "gen_ai.provider.name";
@@ -56,52 +52,54 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             OutputMessages
         }
 
-        // AI invocation context dimensions
-        public const string GenAiExecutionTypeKey = "gen_ai.execution.type";
-
-        // AI channel metadata dimensions
-        public const string GenAiChannelNameKey = "gen_ai.channel.name";
-        public const string GenAiChannelLinkKey = "gen_ai.channel.link";
+        // Channel dimensions (renamed from gen_ai.channel.* to microsoft.channel.*)
+        public const string ChannelNameKey = "microsoft.channel.name";
+        public const string ChannelLinkKey = "microsoft.channel.link";
 
         // Target agent dimensions
         public const string GenAiAgentIdKey = "gen_ai.agent.id";
         public const string GenAiAgentNameKey = "gen_ai.agent.name";
         public const string GenAiAgentDescriptionKey = "gen_ai.agent.description";
-        public const string GenAiAgentAUIDKey = "gen_ai.agent.userid";
-        public const string GenAiAgentUPNKey = "gen_ai.agent.upn";
-        public const string GenAiAgentBlueprintIdKey = "gen_ai.agent.applicationid";
-        public const string GenAiAgentTypeKey = "gen_ai.agent.type";
-        public const string GenAiAgentPlatformIdKey = "gen_ai.agent.platformid";
+        public const string AgentAUIDKey = "microsoft.agent.user.id";
+        public const string AgentUPNKey = "microsoft.agent.user.upn";
+        public const string AgentBlueprintIdKey = "microsoft.a365.agent.blueprint.id";
+        public const string AgentPlatformIdKey = "microsoft.a365.agent.platform.id";
 
-        // Caller dimensions
-        public const string GenAiCallerIdKey = "gen_ai.caller.id";
-        public const string GenAiCallerUpnKey = "gen_ai.caller.upn";
-        public const string GenAiCallerNameKey = "gen_ai.caller.name";
-        public const string GenAiCallerClientIpKey = "gen_ai.caller.client.ip";
-        public const string GenAiCallerTenantIdKey = "gen_ai.caller.tenantid";
-        public const string HiringManagerIdKey = "hiring.manager.id";
+        // Caller dimensions (renamed from gen_ai.caller.* to microsoft.caller.*)
+        public const string CallerIdKey = "microsoft.caller.id";
+        public const string CallerUpnKey = "microsoft.caller.upn";
+        public const string CallerNameKey = "microsoft.caller.name";
+        public const string CallerClientIpKey = "client.address";
 
-        // Caller agent dimensions
-        public const string GenAiCallerAgentNameKey = "gen_ai.caller.agent.name";
-        public const string GenAiCallerAgentIdKey = "gen_ai.caller.agent.id";
-        public const string GenAiCallerAgentApplicationIdKey = "gen_ai.caller.agent.applicationid";
-        public const string GenAiCallerAgentAUIDKey = "gen_ai.caller.agent.userid";
-        public const string GenAiCallerAgentUPNKey = "gen_ai.caller.agent.upn";
-        public const string GenAiCallerAgentTenantKey = "gen_ai.caller.agent.tenantid";
-        public const string GenAiCallerAgentTypeKey = "gen_ai.caller.agent.type";
-        public const string GenAiCallerAgentClientIpKey = "gen_ai.caller.agent.user.client.ip";
-        public const string GenAiCallerAgentPlatformIdKey = "gen_ai.caller.agent.platformid";
+        // Caller agent dimensions (renamed from gen_ai.caller.agent.* to microsoft.a365.caller.agent.*)
+        public const string CallerAgentNameKey = "microsoft.a365.caller.agent.name";
+        public const string CallerAgentIdKey = "microsoft.a365.caller.agent.id";
+        public const string CallerAgentBlueprintIdKey = "microsoft.a365.caller.agent.blueprint.id";
+        public const string CallerAgentAUIDKey = "microsoft.a365.caller.agent.user.id";
+        public const string CallerAgentUPNKey = "microsoft.a365.caller.agent.user.upn";
+        public const string CallerAgentPlatformIdKey = "microsoft.a365.caller.agent.platform.id";
+
+        // Service attributes
+        public const string ServiceNameKey = "service.name";
+
+        // Telemetry SDK attributes
+        public const string TelemetrySdkNameKey = "telemetry.sdk.name";
+        public const string TelemetrySdkLanguageKey = "telemetry.sdk.language";
+        public const string TelemetrySdkVersionKey = "telemetry.sdk.version";
+        public const string TelemetrySdkNameValue = "A365ObservabilitySDK";
+        public const string TelemetrySdkLanguageValue = "dotnet";
+        
+        /// <summary>
+        /// Gets the telemetry SDK version dynamically from the assembly.
+        /// </summary>
+        public static string TelemetrySdkVersionValue => 
+            typeof(OpenTelemetryConstants).Assembly.GetName().Version?.ToString() ?? "unknown";
 
         #region Public Constants
         /// <summary>
         ///  The GenAI operation name key.
         /// </summary>
         public const string GenAiOperationNameKey = "gen_ai.operation.name";
-
-        /// <summary>
-        /// The GenAI event content key.
-        /// </summary>
-        public const string GenAiEventContent = "gen_ai.event.content";
         
         /// <summary>
         /// The error message key.
@@ -143,6 +141,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// The GenAI tool server name key.
         /// </summary>
         public const string GenAiToolServerNameKey = "gen_ai.tool.server.name";
+
+        /// <summary>
+        /// The GenAI tool call result key.
+        /// </summary>
+        public const string GenAiToolCallResultKey = "gen_ai.tool.call.result";
         #endregion
 
         /// <summary>
@@ -153,7 +156,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// The GenAI agent thought process key.
         /// </summary>
-        public const string GenAiAgentThoughtProcessKey = "gen_ai.agent.thought.process";
+        public const string GenAiAgentThoughtProcessKey = "microsoft.a365.agent.thought.process";
 
         #endregion
     }

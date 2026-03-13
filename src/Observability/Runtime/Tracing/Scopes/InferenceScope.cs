@@ -64,7 +64,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
             SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
-            SetTagMaybe(GenAiResponseIdKey, details.ResponseId);
         }
 
         /// <summary>
@@ -97,17 +96,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public void RecordOutputTokens(int outputTokens)
         {
             SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens.ToString());
-        }
-
-        /// <summary>
-        /// Records the response id for telemetry tracking.
-        /// </summary>
-        public void RecordResponseId(string responseId)
-        {
-            if (!string.IsNullOrEmpty(responseId))
-            {
-                SetTagMaybe(GenAiResponseIdKey, responseId);
-            }
         }
 
         /// <summary>

@@ -19,7 +19,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// <para>
     /// <b>Certification Requirements:</b> To ensure the agent passes certification, the following properties must be set using their respective methods:
     /// <list type="bullet">
-    ///   <item><see cref="OperationSource"/></item>
     ///   <item><see cref="TenantId"/></item>
     ///   <item><see cref="ConversationId"/></item>
     ///   <item><see cref="ChannelName"/></item>
@@ -59,18 +58,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         private readonly Dictionary<string, string?> _pairs = new Dictionary<string, string?>();
-
-        /// <summary>
-        /// Sets the operation source baggage value.
-        /// </summary>
-        /// <remarks>
-        /// This property must be set for the agent to pass certification requirements.
-        /// </remarks>
-        public BaggageBuilder OperationSource(OperationSource source)
-        {
-            Set(OpenTelemetryConstants.OperationSourceKey, source.ToString());
-            return this;
-        }
 
         /// <summary>
         /// Sets the tenant ID baggage value.
@@ -128,7 +115,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentAuid(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentAUIDKey, v);
+            Set(OpenTelemetryConstants.AgentAUIDKey, v);
             return this;
         }
 
@@ -140,7 +127,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentUpn(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentUPNKey, v);
+            Set(OpenTelemetryConstants.AgentUPNKey, v);
             return this;
         }
 
@@ -152,16 +139,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentBlueprintIdKey, v);
-            return this;
-        }
-
-        /// <summary>
-        /// Sets the agent type baggage value.
-        /// </summary>
-        public BaggageBuilder AgentType(AgentType? v)
-        { 
-            Set(OpenTelemetryConstants.GenAiAgentTypeKey, v?.ToString());
+            Set(OpenTelemetryConstants.AgentBlueprintIdKey, v);
             return this;
         }
 
@@ -170,16 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentPlatformId(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiAgentPlatformIdKey, v);
-            return this;
-        }
-
-        /// <summary>
-        /// Sets the correlation ID baggage value.
-        /// </summary>
-        public BaggageBuilder CorrelationId(string? v)
-        { 
-            Set(OpenTelemetryConstants.CorrelationIdKey, v);
+            Set(OpenTelemetryConstants.AgentPlatformIdKey, v);
             return this;
         }
 
@@ -191,7 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiCallerIdKey, v);
+            Set(OpenTelemetryConstants.CallerIdKey, v);
             return this;
         }
 
@@ -203,7 +172,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerUpn(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerUpnKey, v);
+            Set(OpenTelemetryConstants.CallerUpnKey, v);
             return this;
         }
 
@@ -215,7 +184,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerNameKey, v);
+            Set(OpenTelemetryConstants.CallerNameKey, v);
             return this;
         }
 
@@ -224,7 +193,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder CallerClientIp(IPAddress v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerClientIpKey, v.ToString());
+            Set(OpenTelemetryConstants.CallerClientIpKey, v.ToString());
             return this;
         }
 
@@ -257,7 +226,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder ChannelName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelNameKey, v);
+            Set(OpenTelemetryConstants.ChannelNameKey, v);
             return this;
         }
 
@@ -266,7 +235,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ChannelLink(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelLinkKey, v);
+            Set(OpenTelemetryConstants.ChannelLinkKey, v);
             return this;
         }
 
@@ -289,11 +258,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the hiring manager ID baggage value.
+        /// Sets the operation source baggage value. 
+        /// To be used with server spans to identify the source of the operation e.g(ACF, ATG)
         /// </summary>
-        public BaggageBuilder HiringManagerId(string? v)
+        /// <remarks>
+        /// This property must be set for the agent to pass certification requirements.
+        /// </remarks>        
+        /// <param name="source">The operation source identifying where the operation originated.</param>
+        /// <returns>The current builder instance for method chaining.</returns>
+        public BaggageBuilder OperationSource(string source)
         {
-            Set(OpenTelemetryConstants.HiringManagerIdKey, v);
+            Set(OpenTelemetryConstants.ServiceNameKey, source);
             return this;
         }
 
@@ -313,16 +288,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             }
             return new Scope(previous);
         }
-
-        /// <summary>
-        /// Convenience: begin a request baggage scope with common fields.
-        /// </summary>
-        public static IDisposable SetRequestContext(string? tenantId, string? agentId, string? correlationId = null)
-            => new BaggageBuilder()
-                .TenantId(tenantId)
-                .AgentId(agentId)
-                .CorrelationId(correlationId)
-                .Build();
 
         /// <summary>
         /// Adds a baggage key/value if the value is not null or whitespace.

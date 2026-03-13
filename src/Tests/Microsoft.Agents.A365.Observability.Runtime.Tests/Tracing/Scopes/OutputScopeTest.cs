@@ -35,7 +35,6 @@ public sealed class OutputScopeTest : ActivityTest
         // Assert - agent details
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentDetails.AgentType!.ToString()!);
 
         // Assert - output messages
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", initialMessages));
@@ -174,15 +173,14 @@ public sealed class OutputScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
         // Assert - source metadata
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
 
         // Assert - caller details
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 
     [TestMethod]

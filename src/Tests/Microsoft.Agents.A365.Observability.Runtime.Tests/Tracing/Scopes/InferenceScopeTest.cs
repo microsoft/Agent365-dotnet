@@ -32,7 +32,6 @@ public sealed class InferenceScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, details.InputTokens!.Value.ToString());
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, details.OutputTokens!.Value.ToString());
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseFinishReasonsKey, string.Join(",", details.FinishReasons!));
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseIdKey, details.ResponseId!);
     }
 
     [TestMethod]
@@ -65,22 +64,6 @@ public sealed class InferenceScopeTest : ActivityTest
             scope.RecordOutputTokens(outputTokens);
         });
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, outputTokens.ToString());
-    }
-
-    [TestMethod]
-    public void RecordResponseId_SetsTag()
-    {
-        var responseId = "resp-456";
-        var details = new InferenceCallDetails(
-            InferenceOperationType.Chat,
-            "gpt-4o",
-            "openai");
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
-            scope.RecordResponseId(responseId);
-        });
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseIdKey, responseId);
     }
 
     [TestMethod]
@@ -157,33 +140,6 @@ public sealed class InferenceScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void AgentTypeTag_IsSetCorrectly()
-    {
-        // Arrange
-        var agentType = AgentType.MicrosoftCopilot;
-        var agentDetails = new AgentDetails(
-            agentId: "agent-abc",
-            agentName: "InferenceAgent",
-            agentType: agentType);
-
-        var inferenceDetails = new InferenceCallDetails(
-            InferenceOperationType.Chat,
-            "gpt-4o",
-            "openai");
-
-        var tenantDetails = Util.GetTenantDetails();
-
-        // Act
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InferenceScope.Start(inferenceDetails, agentDetails, tenantDetails);
-        });
-
-        // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentTypeKey, agentType.ToString());
-    }
-
-    [TestMethod]
     public void Start_SetsConversationId_WhenProvided()
     {
         var conversationId = "conv-inf-123";
@@ -226,8 +182,8 @@ public sealed class InferenceScopeTest : ActivityTest
                 sourceMetadata: metadata);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
     }
 
     [TestMethod]
@@ -274,11 +230,10 @@ public sealed class InferenceScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerUpnKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerClientIpKey, callerDetails.CallerClientIP!.ToString());
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiCallerTenantIdKey, callerDetails.TenantId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 
     [TestMethod]

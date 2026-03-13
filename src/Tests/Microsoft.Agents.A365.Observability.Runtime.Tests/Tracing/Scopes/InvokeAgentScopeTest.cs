@@ -91,41 +91,6 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void AgentTypeTags_AreSetCorrectly_ForAgentAndCallerAgent()
-    {
-        // Arrange
-        var agentType = AgentType.MicrosoftCopilot;
-        var callerAgentType = AgentType.Foundry;
-
-        var agentDetails = new AgentDetails(
-            agentId: "agent-123",
-            agentName: "MainAgent",
-            agentType: agentType);
-
-        var callerAgentDetails = new AgentDetails(
-            agentId: "caller-agent-456",
-            agentName: "CallerAgent",
-            agentType: callerAgentType);
-
-        var invokeAgentDetails = new InvokeAgentDetails(agentDetails, new Uri("https://microsoft.com"));
-        var tenantDetails = Util.GetTenantDetails();
-
-        // Act
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails,
-                tenantDetails,
-                request: null,
-                callerAgentDetails: callerAgentDetails);
-        });
-
-        // Assert
-        activity.ShouldHaveTag(GenAiAgentTypeKey, agentType.ToString());
-        activity.ShouldHaveTag(GenAiCallerAgentTypeKey, callerAgentType.ToString());
-    }
-
-    [TestMethod]
     public void CallerClientIpTag_IsSetCorrectly()
     {
         var callerIp = IPAddress.Parse("203.0.113.42");
@@ -146,54 +111,8 @@ public sealed class InvokeAgentScopeTest : ActivityTest
                 callerDetails: callerDetails);
         });
 
-        activity.ShouldHaveTag(GenAiCallerClientIpKey, callerIp.ToString());
-    }
-
-    [TestMethod]
-    public void CallerAgentClientIpTag_IsSetCorrectly()
-    {
-        var agentClientIp = IPAddress.Parse("198.51.100.24");
-        var callerAgentDetails = new AgentDetails(
-            agentId: "agent-002",
-            agentName: "CallerAgent",
-            agentType: AgentType.Foundry,
-            agentClientIP: agentClientIp);
-
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails: Details,
-                tenantDetails: Util.GetTenantDetails(),
-                request: null,
-                callerAgentDetails: callerAgentDetails);
-        });
-
-        activity.ShouldHaveTag(GenAiCallerAgentClientIpKey, agentClientIp.ToString());
-    }
-
-    [TestMethod]
-    public void CallerAgentPlatformIdTag_IsSetCorrectly()
-    {
-        // Arrange
-        var platformId = "caller-platform-123";
-        var callerAgentDetails = new AgentDetails(
-            agentId: "agent-003",
-            agentName: "CallerAgentWithPlatform",
-            agentType: AgentType.Foundry,
-            agentPlatformId: platformId);
-
-        // Act
-        var activity = ListenForActivity(() =>
-        {
-            using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails: Details,
-                tenantDetails: Util.GetTenantDetails(),
-                request: null,
-                callerAgentDetails: callerAgentDetails);
-        });
-
         // Assert
-        activity.ShouldHaveTag(GenAiCallerAgentPlatformIdKey, platformId);
+        activity.ShouldHaveTag(CallerClientIpKey, callerIp.ToString());
     }
 
     [TestMethod]
@@ -218,7 +137,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(GenAiAgentPlatformIdKey, platformId);
+        activity.ShouldHaveTag(AgentPlatformIdKey, platformId);
     }
 
     [TestMethod]
