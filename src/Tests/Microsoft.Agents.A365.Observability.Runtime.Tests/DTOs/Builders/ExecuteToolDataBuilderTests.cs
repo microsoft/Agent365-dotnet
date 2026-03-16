@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -331,6 +332,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Assert
             data.Attributes.Should().NotContainKey("tool.null");
             data.Attributes.Should().ContainKey("tool.valid").WhoseValue.Should().Be("yes");
+        }
+
+        [TestMethod]
+        public void Build_SpanKind_DefaultsToNull()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("toolSK", null);
+            var agent = new AgentDetails("agent-sk");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-default";
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(tool, agent, tenant, conversationId);
+
+            // Assert
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void Build_SpanKind_PassesThroughProvidedValue()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("toolSK", null);
+            var agent = new AgentDetails("agent-sk");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-client";
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(
+                tool, agent, tenant, conversationId,
+                spanKind: SpanKindConstants.Client);
+
+            // Assert
+            data.SpanKind.Should().Be(SpanKindConstants.Client);
         }
     }
 }

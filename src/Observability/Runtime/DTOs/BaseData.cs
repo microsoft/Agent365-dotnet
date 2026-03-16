@@ -19,12 +19,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="spanKind">Optional span kind for the operation. Use <see cref="SpanKindConstants"/> values (e.g., <see cref="SpanKindConstants.Client"/>, <see cref="SpanKindConstants.Server"/>, <see cref="SpanKindConstants.Internal"/>).</param>
         public BaseData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
+            string? parentSpanId = null,
+            string? spanKind = null)
         {
             Attributes = attributes ?? new Dictionary<string, object?>();
             StartTime = startTime;
@@ -32,6 +34,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
             // Generate a random span ID if not provided. Use ActivitySpanId for consistency with tracing.
             SpanId = spanId ?? ActivitySpanId.CreateRandom().ToString();
             ParentSpanId = parentSpanId;
+            SpanKind = spanKind;
         }
 
         /// <summary>
@@ -65,6 +68,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public string? ParentSpanId { get; }
 
         /// <summary>
+        /// Gets the span kind for the operation, if provided. See <see cref="SpanKindConstants"/> for valid values.
+        /// </summary>
+        public string? SpanKind { get; }
+
+        /// <summary>
         /// Gets the duration of the operation if both start and end times are provided.
         /// </summary>
         public TimeSpan Duration => StartTime.HasValue && EndTime.HasValue
@@ -84,6 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
                 { "EndTime", EndTime },
                 { "SpanId", SpanId },
                 { "ParentSpanId", ParentSpanId },
+                { "SpanKind", SpanKind },
                 { "Duration", Duration }
             };
 

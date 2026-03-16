@@ -16,5 +16,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             var data = new ExecuteToolData();
             data.Name.Should().Be(OpenTelemetryConstants.OperationNames.ExecuteTool.ToString());
         }
+
+        [TestMethod]
+        public void SpanKind_DefaultsToNull()
+        {
+            var data = new ExecuteToolData();
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void SpanKind_UsesProvidedValue()
+        {
+            var data = new ExecuteToolData(spanKind: SpanKindConstants.Client);
+            data.SpanKind.Should().Be(SpanKindConstants.Client);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -146,7 +147,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 StartTimeUnixNano = data.TryGetValue("StartTime", out var startTimeObj) && startTimeObj != null ? ToUnixNanos(((DateTimeOffset)startTimeObj).UtcDateTime) : 0,
                 EndTimeUnixNano = data.TryGetValue("EndTime", out var endTimeObj) && endTimeObj != null ? ToUnixNanos(((DateTimeOffset)endTimeObj).UtcDateTime) : 0,
                 SpanId = data["SpanId"],
-                ParentSpanId = data["ParentSpanId"]
+                ParentSpanId = data["ParentSpanId"],
+                Kind = data.TryGetValue("SpanKind", out var spanKindObj) && spanKindObj != null ? spanKindObj : SpanKindConstants.Client
             };
 
             return SerializePayload(payload);
