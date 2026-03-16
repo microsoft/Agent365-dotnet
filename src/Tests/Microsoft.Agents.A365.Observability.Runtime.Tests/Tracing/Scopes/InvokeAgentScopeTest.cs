@@ -316,4 +316,33 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var startTime = new DateTimeOffset(activity.StartTimeUtc);
         startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
+
+    [TestMethod]
+    public void SpanKind_DefaultsToClient()
+    {
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+        });
+
+        // Assert
+        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Client);
+    }
+
+    [TestMethod]
+    public void SpanKind_OverrideToServer()
+    {
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InvokeAgentScope.Start(
+                Details,
+                Util.GetTenantDetails(),
+                spanKind: System.Diagnostics.ActivityKind.Server);
+        });
+
+        // Assert
+        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Server);
+    }
 }

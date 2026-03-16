@@ -303,4 +303,37 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var startTime = new DateTimeOffset(activity.StartTimeUtc);
         startTime.Should().BeCloseTo(customStartTime, TimeSpan.FromMilliseconds(100));
     }
+
+    [TestMethod]
+    public void SpanKind_DefaultsToInternal()
+    {
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails());
+        });
+
+        // Assert
+        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Internal);
+    }
+
+    [TestMethod]
+    public void SpanKind_OverrideToClient()
+    {
+        // Act
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = ExecuteToolScope.Start(
+                new ToolCallDetails("TestTool", "args"),
+                Util.GetAgentDetails(),
+                Util.GetTenantDetails(),
+                spanKind: System.Diagnostics.ActivityKind.Client);
+        });
+
+        // Assert
+        activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Client);
+    }
 }

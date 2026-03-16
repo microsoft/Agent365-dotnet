@@ -33,6 +33,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="startTime">Optional explicit start time. Useful when recording a tool call after execution has already completed.</param>
         /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
+        /// <param name="spanKind">Optional span kind override. Defaults to <see cref="ActivityKind.Internal"/>. Use <see cref="ActivityKind.Client"/> when the tool calls an external service.</param>
         /// <returns>A new ExecuteToolScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -47,11 +48,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails, startTime, endTime);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
             : base(
-                kind: ActivityKind.Internal,
+                kind: spanKind ?? ActivityKind.Internal,
                 agentDetails: agentDetails,
                 tenantDetails: tenantDetails,
                 operationName: OperationName,

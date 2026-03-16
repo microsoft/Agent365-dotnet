@@ -35,6 +35,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="startTime">Optional explicit start time. Useful when recording an agent invocation after execution has already completed.</param>
         /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
         /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="spanKind">Optional span kind override. Defaults to <see cref="ActivityKind.Client"/>. Use <see cref="ActivityKind.Server"/> when the agent is receiving an inbound request.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -54,11 +55,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime, parentId);
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null, ActivityKind? spanKind = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime, parentId, spanKind);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime, string? parentId)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime, string? parentId, ActivityKind? spanKind)
             : base(
-                kind: ActivityKind.Client,
+                kind: spanKind ?? ActivityKind.Client,
                 agentDetails: invokeAgentDetails.Details,
                 tenantDetails: tenantDetails,
                 operationName: OperationName,
