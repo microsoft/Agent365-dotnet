@@ -17,7 +17,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
                 DateTimeOffset? startTime = null,
                 DateTimeOffset? endTime = null,
                 string? spanId = null,
-                string? parentSpanId = null) : base(attributes, startTime, endTime, spanId, parentSpanId) { }
+                string? parentSpanId = null,
+                ActivityKind? spanKind = null) : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind) { }
             public override string Name => "Test";
         }
 
@@ -130,6 +131,36 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             data.Attributes["double"].Should().BeOfType<double>();
             data.Attributes["bool"].Should().BeOfType<bool>();
             data.Attributes["null"].Should().BeNull();
+        }
+
+        [TestMethod]
+        public void SpanKind_DefaultsToNull()
+        {
+            var data = new TestData();
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void SpanKind_UsesProvidedValue()
+        {
+            var data = new TestData(spanKind: ActivityKind.Client);
+            data.SpanKind.Should().Be(ActivityKind.Client);
+        }
+
+        [TestMethod]
+        public void SpanKind_IncludedInToDictionary()
+        {
+            var data = new TestData(spanKind: ActivityKind.Server);
+            var dict = data.ToDictionary();
+            dict.Should().ContainKey("SpanKind").WhoseValue.Should().Be(ActivityKind.Server);
+        }
+
+        [TestMethod]
+        public void SpanKind_NullInToDictionary_WhenNotProvided()
+        {
+            var data = new TestData();
+            var dict = data.ToDictionary();
+            dict.Should().ContainKey("SpanKind").WhoseValue.Should().BeNull();
         }
     }
 }

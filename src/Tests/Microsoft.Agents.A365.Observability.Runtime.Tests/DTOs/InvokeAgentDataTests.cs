@@ -13,5 +13,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             var data = new InvokeAgentData();
             data.Name.Should().Be(OpenTelemetryConstants.OperationNames.InvokeAgent.ToString());
         }
+
+        [TestMethod]
+        public void SpanKind_DefaultsToNull()
+        {
+            var data = new InvokeAgentData();
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void SpanKind_UsesProvidedValue()
+        {
+            var data = new InvokeAgentData(spanKind: System.Diagnostics.ActivityKind.Server);
+            data.SpanKind.Should().Be(System.Diagnostics.ActivityKind.Server);
+        }
     }
 }

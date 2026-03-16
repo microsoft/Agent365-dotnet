@@ -498,5 +498,43 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey].Should().Be("Hello");
         }
+
+        [TestMethod]
+        public void Build_SpanKind_DefaultsToNull()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-123", "TestAgent");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-default";
+
+            // Act
+            var data = InvokeAgentDataBuilder.Build(invokeAgentDetails, tenantDetails, conversationId);
+
+            // Assert
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void Build_SpanKind_PassesThroughProvidedValue()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-123", "TestAgent");
+            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-server";
+
+            // Act
+            var data = InvokeAgentDataBuilder.Build(
+                invokeAgentDetails,
+                tenantDetails,
+                conversationId,
+                spanKind: System.Diagnostics.ActivityKind.Server);
+
+            // Assert
+            data.SpanKind.Should().Be(System.Diagnostics.ActivityKind.Server);
+        }
     }
 }

@@ -332,5 +332,39 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().NotContainKey("tool.null");
             data.Attributes.Should().ContainKey("tool.valid").WhoseValue.Should().Be("yes");
         }
+
+        [TestMethod]
+        public void Build_SpanKind_DefaultsToNull()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("toolSK", null);
+            var agent = new AgentDetails("agent-sk");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-default";
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(tool, agent, tenant, conversationId);
+
+            // Assert
+            data.SpanKind.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void Build_SpanKind_PassesThroughProvidedValue()
+        {
+            // Arrange
+            var tool = new ToolCallDetails("toolSK", null);
+            var agent = new AgentDetails("agent-sk");
+            var tenant = new TenantDetails(Guid.NewGuid());
+            var conversationId = "conv-sk-client";
+
+            // Act
+            var data = ExecuteToolDataBuilder.Build(
+                tool, agent, tenant, conversationId,
+                spanKind: System.Diagnostics.ActivityKind.Client);
+
+            // Assert
+            data.SpanKind.Should().Be(System.Diagnostics.ActivityKind.Client);
+        }
     }
 }
