@@ -27,8 +27,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
         [TestMethod]
         public void SpanKind_UsesProvidedValue()
         {
-            var data = new ExecuteToolData(spanKind: System.Diagnostics.ActivityKind.Client);
-            data.SpanKind.Should().Be(System.Diagnostics.ActivityKind.Client);
+            var data = new ExecuteToolData(spanKind: SpanKindConstants.Client);
+            data.SpanKind.Should().Be(SpanKindConstants.Client);
         }
     }
 }

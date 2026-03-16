@@ -439,7 +439,8 @@ public partial class ExportFormatterTests : ActivityTest
             start,
             end,
             spanId,
-            parentSpanId);
+            parentSpanId,
+            spanKind: SpanKindConstants.Client);
         var formatter = CreateFormatter();
 
         // Act
@@ -453,6 +454,7 @@ public partial class ExportFormatterTests : ActivityTest
         root.GetProperty("Name").GetString().Should().Be("InvokeAgent");
         root.GetProperty("SpanId").GetString().Should().Be(spanId);
         root.GetProperty("ParentSpanId").GetString().Should().Be(parentSpanId);
+        root.GetProperty("Kind").GetString().Should().Be(SpanKindConstants.Client);
 
         var attrs = root.GetProperty("Attributes");
         attrs.GetProperty("attr1").GetString().Should().Be("value1");
@@ -496,6 +498,9 @@ public partial class ExportFormatterTests : ActivityTest
 
         // ParentSpanId should be omitted due to null (ignore when writing null)
         root.TryGetProperty("ParentSpanId", out _).Should().BeFalse();
+
+        // Kind defaults to Client when SpanKind is null
+        root.GetProperty("Kind").GetString().Should().Be(SpanKindConstants.Client);
 
         var attrs = root.GetProperty("Attributes");
         attrs.GetProperty("key").GetString().Should().Be("val");

@@ -5,7 +5,6 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
@@ -32,7 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="sourceMetadata">Optional source metadata for the operation.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
-        /// <param name="spanKind">Optional span kind override. Use <see cref="ActivityKind.Internal"/> or <see cref="ActivityKind.Client"/> as appropriate.</param>
+        /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
         public static ExecuteToolData Build(
             ToolCallDetails toolCallDetails,
@@ -47,7 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             SourceMetadata? sourceMetadata = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null,
-            ActivityKind? spanKind = null)
+            string? spanKind = null)
         {
             var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, callerDetails, extraAttributes);
 

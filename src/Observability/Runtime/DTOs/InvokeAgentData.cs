@@ -4,7 +4,6 @@
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
 {
@@ -21,14 +20,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
-        /// <param name="spanKind">Optional span kind override. Defaults to <c>null</c> (unset). Use <see cref="System.Diagnostics.ActivityKind.Client"/> or <see cref="System.Diagnostics.ActivityKind.Server"/> as appropriate.</param>
+        /// <param name="spanKind">Optional span kind override. Defaults to <c>null</c> (unset). Use <see cref="SpanKindConstants.Client"/> or <see cref="SpanKindConstants.Server"/> as appropriate.</param>
         public InvokeAgentData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            ActivityKind? spanKind = null)
+            string? spanKind = null)
             : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind)
         {
         }

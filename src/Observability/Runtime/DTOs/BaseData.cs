@@ -19,14 +19,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
-        /// <param name="spanKind">Optional span kind for the operation (e.g., Client, Server, Internal).</param>
+        /// <param name="spanKind">Optional span kind for the operation. Use <see cref="SpanKindConstants"/> values (e.g., <see cref="SpanKindConstants.Client"/>, <see cref="SpanKindConstants.Server"/>, <see cref="SpanKindConstants.Internal"/>).</param>
         public BaseData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            ActivityKind? spanKind = null)
+            string? spanKind = null)
         {
             Attributes = attributes ?? new Dictionary<string, object?>();
             StartTime = startTime;
@@ -68,9 +68,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public string? ParentSpanId { get; }
 
         /// <summary>
-        /// Gets the span kind for the operation, if provided.
+        /// Gets the span kind for the operation, if provided. See <see cref="SpanKindConstants"/> for valid values.
         /// </summary>
-        public ActivityKind? SpanKind { get; }
+        public string? SpanKind { get; }
 
         /// <summary>
         /// Gets the duration of the operation if both start and end times are provided.

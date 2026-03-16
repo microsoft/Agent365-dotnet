@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -531,10 +532,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 invokeAgentDetails,
                 tenantDetails,
                 conversationId,
-                spanKind: System.Diagnostics.ActivityKind.Server);
+                spanKind: SpanKindConstants.Server);
 
             // Assert
-            data.SpanKind.Should().Be(System.Diagnostics.ActivityKind.Server);
+            data.SpanKind.Should().Be(SpanKindConstants.Server);
         }
     }
 }

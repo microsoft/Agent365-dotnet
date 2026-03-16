@@ -18,7 +18,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
                 DateTimeOffset? endTime = null,
                 string? spanId = null,
                 string? parentSpanId = null,
-                ActivityKind? spanKind = null) : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind) { }
+                string? spanKind = null) : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind) { }
             public override string Name => "Test";
         }
 
@@ -143,16 +143,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
         [TestMethod]
         public void SpanKind_UsesProvidedValue()
         {
-            var data = new TestData(spanKind: ActivityKind.Client);
-            data.SpanKind.Should().Be(ActivityKind.Client);
+            var data = new TestData(spanKind: SpanKindConstants.Client);
+            data.SpanKind.Should().Be(SpanKindConstants.Client);
         }
 
         [TestMethod]
         public void SpanKind_IncludedInToDictionary()
         {
-            var data = new TestData(spanKind: ActivityKind.Server);
+            var data = new TestData(spanKind: SpanKindConstants.Server);
             var dict = data.ToDictionary();
-            dict.Should().ContainKey("SpanKind").WhoseValue.Should().Be(ActivityKind.Server);
+            dict.Should().ContainKey("SpanKind").WhoseValue.Should().Be(SpanKindConstants.Server);
         }
 
         [TestMethod]

@@ -4,7 +4,6 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
@@ -32,7 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
-        /// <param name="spanKind">Optional span kind override. Use <see cref="ActivityKind.Client"/> or <see cref="ActivityKind.Server"/> as appropriate.</param>
+        /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Client"/> or <see cref="SpanKindConstants.Server"/> as appropriate.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
             InvokeAgentDetails invokeAgentDetails,
@@ -48,7 +47,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null,
-            ActivityKind? spanKind = null)
+            string? spanKind = null)
         {
             var attributes = BuildAttributes(
                 invokeAgentDetails,
