@@ -805,9 +805,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         {
                             this._logger.LogInformation("[Discovery] Device for client '{ClientName}' is Intune managed. Proceeding with local server discovery.", localClientName);
                             var localServers = await DiscoverLocalServersAsync(localClientName, proxyBaseUrl, cancellationToken);
-                            allServers.AddRange(localServers);
-                            this._logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}'",
-                                localServers.Count, localClientName);
+                            var filteredServers = await FilterDiscoveredServersByManifestAsync(localServers);
+                            allServers.AddRange(filteredServers);
+                            this._logger.LogInformation("[Discovery] Found {Count} local MCP servers from desktop client '{ClientName}' ({FilteredCount} after manifest filtering)",
+                                localServers.Count, localClientName, filteredServers.Count);
                         }
                     }
                     catch (LocalMcpDesktopRegistrationRequiredException)
@@ -970,10 +971,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         result.ActiveDesktop.ClientName);
                     
                     var localServers = await DiscoverLocalServersAsync(result.ActiveDesktop.ClientName, proxyBaseUrl, cancellationToken);
-                    result.Servers.AddRange(localServers);
+                    var filteredLocalServers = await FilterDiscoveredServersByManifestAsync(localServers);
+                    result.Servers.AddRange(filteredLocalServers);
                     
-                    this._logger.LogInformation("[UserDiscovery] Found {Count} local MCP servers from '{ClientName}'",
-                        localServers.Count, result.ActiveDesktop.ClientName);
+                    this._logger.LogInformation("[UserDiscovery] Found {Count} local MCP servers from '{ClientName}' ({FilteredCount} after manifest filtering)",
+                        localServers.Count, result.ActiveDesktop.ClientName, filteredLocalServers.Count);
                 }
             }
             catch (LocalMcpDesktopRegistrationRequiredException)
@@ -1049,6 +1051,72 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
 
             return configs;
+        }
+
+        /// <summary>
+        /// Filters discovered local servers to only include those declared in the ToolingManifest.json.
+        /// Servers not matching any manifest entry's ServerIdPattern are excluded.
+        /// This prevents the LLM from seeing irrelevant tools from servers the agent didn't request.
+        /// </summary>
+        private async Task<List<MCPServerConfig>> FilterDiscoveredServersByManifestAsync(List<MCPServerConfig> discoveredServers)
+        {
+            if (this._localMcpScopeValidator == null)
+            {
+                this._logger.LogWarning("[Discovery] No scope validator configured - cannot filter discovered servers by manifest. All {Count} servers will be included.", discoveredServers.Count);
+                return discoveredServers;
+            }
+
+            try
+            {
+                var manifestServers = await this._localMcpScopeValidator.LoadLocalMcpServersFromManifestAsync();
+                if (manifestServers.Count == 0)
+                {
+                    this._logger.LogWarning("[Discovery] No local MCP servers declared in manifest - filtering out all {Count} discovered servers", discoveredServers.Count);
+                    return new List<MCPServerConfig>();
+                }
+
+                var allowedPatterns = manifestServers
+                    .Where(s => !string.IsNullOrEmpty(s.ServerIdPattern))
+                    .Select(s => s.ServerIdPattern!)
+                    .ToList();
+
+                if (allowedPatterns.Count == 0)
+                {
+                    this._logger.LogWarning("[Discovery] Manifest has {Count} local servers but none have ServerIdPattern - cannot filter. All discovered servers will be included.", manifestServers.Count);
+                    return discoveredServers;
+                }
+
+                var filtered = new List<MCPServerConfig>();
+                foreach (var server in discoveredServers)
+                {
+                    var serverId = server.id ?? string.Empty;
+                    var serverName = server.mcpServerName ?? string.Empty;
+
+                    var matches = allowedPatterns.Any(pattern =>
+                        serverId.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
+                        serverName.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+
+                    if (matches)
+                    {
+                        filtered.Add(server);
+                        this._logger.LogDebug("[Discovery] Server '{ServerName}' ({ServerId}) matches manifest pattern - included", serverName, serverId);
+                    }
+                    else
+                    {
+                        this._logger.LogInformation("[Discovery] Server '{ServerName}' ({ServerId}) not declared in manifest - excluded from registration", serverName, serverId);
+                    }
+                }
+
+                this._logger.LogInformation("[Discovery] Filtered {Before} discovered servers to {After} based on manifest (allowed patterns: [{Patterns}])",
+                    discoveredServers.Count, filtered.Count, string.Join(", ", allowedPatterns));
+
+                return filtered;
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(ex, "[Discovery] Failed to filter discovered servers by manifest - including all {Count} servers", discoveredServers.Count);
+                return discoveredServers;
+            }
         }
 
         /// <summary>

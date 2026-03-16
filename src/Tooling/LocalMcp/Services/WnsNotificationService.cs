@@ -113,11 +113,11 @@ public class WnsNotificationService : IWnsNotificationService
 
     /// <inheritdoc />
     public async Task<(bool Success, string? ErrorMessage)> SendNotificationAsync(
-        string channelUri, string callbackUrl, string? serverId = null, string? agentAppId = null)
+        string channelUri, string agentHost, string sessionId, string sessionToken, string? serverId = null, string? agentAppId = null)
     {
         _logger.LogInformation("[WNS SERVICE] Sending notification to channel: {ChannelUri}",
             channelUri.Substring(0, Math.Min(60, channelUri.Length)) + "...");
-        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        _logger.LogInformation("[WNS SERVICE] Agent Host: {AgentHost}, Session ID: {SessionId}", agentHost, sessionId);
         if (!string.IsNullOrEmpty(agentAppId))
         {
             _logger.LogInformation("[WNS SERVICE] Agent App ID: {AgentAppId}", agentAppId);
@@ -127,9 +127,14 @@ public class WnsNotificationService : IWnsNotificationService
         {
             var accessToken = await GetAccessTokenAsync();
 
+            // SECURITY: Callback URL is NOT included in the WNS notification.
+            // The desktop constructs the URL from its registered agent base URL + sessionId.
+            // The sessionToken must be presented when connecting to the WebSocket.
             var notification = new
             {
-                callback = callbackUrl,
+                agentHost = agentHost,
+                sessionId = sessionId,
+                sessionToken = sessionToken,
                 serverId = serverId,
                 serverType = "local",
                 agentAppId = agentAppId,
@@ -149,13 +154,15 @@ public class WnsNotificationService : IWnsNotificationService
     /// <inheritdoc />
     public async Task<(bool Success, string? ErrorMessage)> SendCloudMcpNotificationAsync(
         string channelUri,
-        string callbackUrl,
+        string agentHost,
+        string sessionId,
+        string sessionToken,
         CloudMcpProxyConfig cloudConfig,
         string? agentAppId = null)
     {
         _logger.LogInformation("[WNS SERVICE] Sending CLOUD MCP notification for server '{ServerId}'", cloudConfig.ServerId);
         _logger.LogInformation("[WNS SERVICE] Cloud endpoint: {Endpoint}", cloudConfig.Endpoint);
-        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        _logger.LogInformation("[WNS SERVICE] Agent Host: {AgentHost}, Session ID: {SessionId}", agentHost, sessionId);
         if (!string.IsNullOrEmpty(agentAppId))
         {
             _logger.LogInformation("[WNS SERVICE] Agent App ID: {AgentAppId}", agentAppId);
@@ -165,12 +172,14 @@ public class WnsNotificationService : IWnsNotificationService
         {
             var accessToken = await GetAccessTokenAsync();
 
-            // Build extensible notification payload for cloud MCP proxy
-            // SECURITY: Token is NOT included in the WNS notification.
-            // It will be delivered securely via TLS WebSocket in the MCP request _meta.
+            // SECURITY: Callback URL is NOT included in the WNS notification.
+            // The desktop constructs the URL from its registered agent base URL + sessionId.
+            // Token is NOT included for auth; it will be delivered securely via TLS WebSocket in the MCP request _meta.
             var notification = new
             {
-                callback = callbackUrl,
+                agentHost = agentHost,
+                sessionId = sessionId,
+                sessionToken = sessionToken,
                 serverId = cloudConfig.ServerId,
                 serverType = "cloud",
                 agentAppId = agentAppId,
@@ -198,21 +207,21 @@ public class WnsNotificationService : IWnsNotificationService
 
     /// <inheritdoc />
     public async Task<(bool Success, string? ErrorMessage)> SendDiscoveryNotificationAsync(
-        string channelUri, string requestId, string callbackUrl)
+        string channelUri, string agentHost, string requestId)
     {
         _logger.LogInformation("[WNS SERVICE] Sending DISCOVERY notification");
-        _logger.LogInformation("[WNS SERVICE] Request ID: {RequestId}", requestId);
-        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        _logger.LogInformation("[WNS SERVICE] Agent Host: {AgentHost}, Request ID: {RequestId}", agentHost, requestId);
 
         try
         {
             var accessToken = await GetAccessTokenAsync();
 
+            // SECURITY: Callback URL is NOT included. Desktop constructs it from registered agent host.
             var notification = new
             {
                 type = "list_servers",
+                agentHost = agentHost,
                 requestId = requestId,
-                callbackUrl = callbackUrl,
                 timestamp = DateTime.UtcNow
             };
 
@@ -228,21 +237,21 @@ public class WnsNotificationService : IWnsNotificationService
 
     /// <inheritdoc />
     public async Task<(bool Success, string? ErrorMessage)> SendIntuneCheckNotificationAsync(
-        string channelUri, string requestId, string callbackUrl)
+        string channelUri, string agentHost, string requestId)
     {
         _logger.LogInformation("[WNS SERVICE] Sending INTUNE CHECK notification");
-        _logger.LogInformation("[WNS SERVICE] Request ID: {RequestId}", requestId);
-        _logger.LogInformation("[WNS SERVICE] Callback URL: {CallbackUrl}", callbackUrl);
+        _logger.LogInformation("[WNS SERVICE] Agent Host: {AgentHost}, Request ID: {RequestId}", agentHost, requestId);
 
         try
         {
             var accessToken = await GetAccessTokenAsync();
 
+            // SECURITY: Callback URL is NOT included. Desktop constructs it from registered agent host.
             var notification = new
             {
                 type = "intune_status",
+                agentHost = agentHost,
                 requestId = requestId,
-                callback = callbackUrl,
                 timestamp = DateTime.UtcNow
             };
 

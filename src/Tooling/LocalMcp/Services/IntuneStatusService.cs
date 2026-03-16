@@ -63,7 +63,14 @@ public class IntuneStatusService : IIntuneStatusService
         }
 
         var requestId = Guid.NewGuid().ToString();
-        var callbackUrl = $"{_options.BaseUrl}/api/intune-response/{requestId}";
+
+        // Extract host from BaseUrl for the agentHost parameter
+        var baseUri = new Uri(_options.BaseUrl);
+        var agentHost = baseUri.Host;
+        if (!baseUri.IsDefaultPort)
+        {
+            agentHost = $"{baseUri.Host}:{baseUri.Port}";
+        }
 
         // Create pending result
         _sessionManager.CreatePendingIntuneStatusResult(requestId);
@@ -72,7 +79,7 @@ public class IntuneStatusService : IIntuneStatusService
 
         // Send WNS notification
         var (success, errorMessage) = await _wnsService.SendIntuneCheckNotificationAsync(
-            client.ChannelUri, requestId, callbackUrl);
+            client.ChannelUri, agentHost, requestId);
 
         if (!success)
         {

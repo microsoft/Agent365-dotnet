@@ -19,6 +19,13 @@ public class McpSession
     public string SessionId { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the session token used to authenticate WebSocket connections.
+    /// The desktop client must present this token when connecting to the WebSocket endpoint.
+    /// This prevents session hijacking even if the session ID is discovered.
+    /// </summary>
+    public string SessionToken { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the WebSocket connection for this session.
     /// </summary>
     public WebSocket? WebSocket { get; set; }

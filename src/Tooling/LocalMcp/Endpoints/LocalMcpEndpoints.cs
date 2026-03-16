@@ -233,16 +233,16 @@ public static class LocalMcpEndpoints
             if (notificationType == "list_servers")
             {
                 requestId ??= Guid.NewGuid().ToString();
-                callbackUrl ??= $"{httpScheme}://{host}/api/discovery/{requestId}/servers";
+                var discoveryCallbackUrl = $"{httpScheme}://{host}/api/discovery/{requestId}/servers";
 
                 logger.LogInformation("[WNS NOTIFY] Sending DISCOVERY notification to '{ClientName}'", clientName);
 
                 var (success, errorMessage) = await wnsService.SendDiscoveryNotificationAsync(
-                    client.ChannelUri, requestId, callbackUrl);
+                    client.ChannelUri, host, requestId);
 
                 if (success)
                 {
-                    return Results.Ok(new { message = "Discovery notification sent", requestId, callbackUrl });
+                    return Results.Ok(new { message = "Discovery notification sent", requestId, callbackUrl = discoveryCallbackUrl });
                 }
                 else
                 {
@@ -258,9 +258,13 @@ public static class LocalMcpEndpoints
                 }
 
                 var sessionId = Guid.NewGuid().ToString();
-                callbackUrl = $"{scheme}://{host}/ws/mcp/{sessionId}?serverId={Uri.EscapeDataString(serverId)}";
+                var sessionToken = Guid.NewGuid().ToString("N"); // Cryptographic session token for WebSocket auth
 
-                sessionManager.CreateSession(sessionId);
+                var session = sessionManager.CreateSession(sessionId);
+                session.SessionToken = sessionToken;
+
+                // Build the callback URL for the response (used by SDK transport, NOT sent via WNS)
+                var sessionCallbackUrl = $"{scheme}://{host}/ws/mcp/{sessionId}?serverId={Uri.EscapeDataString(serverId)}";
 
                 logger.LogInformation("[WNS NOTIFY] Sending MCP notification to '{ClientName}'", clientName);
                 logger.LogInformation("[WNS NOTIFY] Session ID: {SessionId}, Server ID: {ServerId}", sessionId, serverId);
@@ -276,17 +280,17 @@ public static class LocalMcpEndpoints
                     // Cloud MCP server - send extended notification with cloud config
                     logger.LogInformation("[WNS NOTIFY] Using CLOUD MCP notification for '{ServerId}'", serverId);
                     cloudConfig.ServerId = serverId;
-                    result = await wnsService.SendCloudMcpNotificationAsync(client.ChannelUri, callbackUrl, cloudConfig, agentAppId);
+                    result = await wnsService.SendCloudMcpNotificationAsync(client.ChannelUri, host, sessionId, sessionToken, cloudConfig, agentAppId);
                 }
                 else
                 {
                     // Local MCP server - send standard notification
-                    result = await wnsService.SendNotificationAsync(client.ChannelUri, callbackUrl, serverId, agentAppId);
+                    result = await wnsService.SendNotificationAsync(client.ChannelUri, host, sessionId, sessionToken, serverId, agentAppId);
                 }
 
                 if (result.success)
                 {
-                    return Results.Ok(new { message = "Notification sent", sessionId, callbackUrl, serverType = cloudConfig != null ? "cloud" : "local" });
+                    return Results.Ok(new { message = "Notification sent", sessionId, callbackUrl = sessionCallbackUrl, serverType = cloudConfig != null ? "cloud" : "local" });
                 }
                 else
                 {
@@ -309,6 +313,17 @@ public static class LocalMcpEndpoints
             if (session == null)
             {
                 context.Response.StatusCode = 404;
+                return;
+            }
+
+            // SECURITY: Validate session token to prevent unauthorized WebSocket connections.
+            // The desktop must present the session token (received via WNS notification)
+            // to prove it received the legitimate notification.
+            var sessionToken = context.Request.Query["token"].FirstOrDefault();
+            if (string.IsNullOrEmpty(sessionToken) || sessionToken != session.SessionToken)
+            {
+                logger.LogWarning("[MCP SESSION] {SessionId} WebSocket connection rejected: invalid or missing session token", sessionId);
+                context.Response.StatusCode = 403;
                 return;
             }
 
@@ -637,20 +652,19 @@ public static class LocalMcpEndpoints
             var requestId = Guid.NewGuid().ToString();
             var httpScheme = context.Request.IsHttps ? "https" : "http";
             var host = context.Request.Host.ToString();
-            var callbackUrl = $"{httpScheme}://{host}/api/intune-response/{requestId}";
+            var intuneCallbackUrl = $"{httpScheme}://{host}/api/intune-response/{requestId}";
 
             sessionManager.CreatePendingIntuneStatusResult(requestId);
 
             logger.LogInformation("[INTUNE CHECK] Sending Intune check notification to '{ClientName}'", clientName);
             logger.LogInformation("[INTUNE CHECK] Request ID: {RequestId}", requestId);
-            logger.LogInformation("[INTUNE CHECK] Callback URL: {CallbackUrl}", callbackUrl);
 
             var (success, errorMessage) = await wnsService.SendIntuneCheckNotificationAsync(
-                client.ChannelUri, requestId, callbackUrl);
+                client.ChannelUri, host, requestId);
 
             if (success)
             {
-                return Results.Ok(new { message = "Intune check notification sent", requestId, callbackUrl });
+                return Results.Ok(new { message = "Intune check notification sent", requestId, callbackUrl = intuneCallbackUrl });
             }
             else
             {

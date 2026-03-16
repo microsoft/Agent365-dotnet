@@ -28,6 +28,14 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
     private readonly ILogger<PolicyEnforcingFunctionInvocationFilter> _logger;
 
     /// <summary>
+    /// Circuit breaker: tracks desktop timeout failures to avoid repeated 30s waits.
+    /// Key: desktop client name. Value: timestamp of first failure.
+    /// Reset when a successful desktop call is made.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime FirstFailure, int FailureCount)> _desktopCircuitBreaker = new();
+    private const int MaxDesktopFailuresBeforeCircuitBreak = 2;
+
+    /// <summary>
     /// Context key for storing user identifier in Semantic Kernel.
     /// </summary>
     public const string UserIdentifierKey = "PolicyUserIdentifier";
@@ -115,9 +123,40 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
                 break;
 
             case PolicyEnforcementAction.RouteToDesktop:
+                // Circuit breaker: if this desktop has already timed out multiple times, fail fast
+                var desktopName = policyResult.DesktopClientName ?? "unknown";
+                if (_desktopCircuitBreaker.TryGetValue(desktopName, out var circuitState) &&
+                    circuitState.FailureCount >= MaxDesktopFailuresBeforeCircuitBreak &&
+                    (DateTime.UtcNow - circuitState.FirstFailure) < TimeSpan.FromMinutes(5))
+                {
+                    _logger.LogWarning(
+                        "[PolicyFilter] Circuit breaker OPEN for desktop '{Desktop}' - {FailureCount} consecutive timeouts since {FirstFailure:HH:mm:ss}. " +
+                        "Returning error immediately instead of waiting. The desktop may be offline or unresponsive.",
+                        desktopName, circuitState.FailureCount, circuitState.FirstFailure);
+                    context.Result = new FunctionResult(context.Function,
+                        $"Desktop '{desktopName}' is not responding (timed out {circuitState.FailureCount} times). " +
+                        "The user's desktop application may be offline. Please inform the user that their desktop needs to be online and running " +
+                        "the local MCP server application for this operation to work. Do NOT retry this tool call.");
+                    break;
+                }
+
                 _logger.LogInformation("[PolicyFilter] Routing '{Tool}' through desktop '{Desktop}' for policy enforcement",
                     toolName, policyResult.DesktopClientName);
-                await RouteToDesktopAsync(context, policyResult);
+                try
+                {
+                    await RouteToDesktopAsync(context, policyResult);
+                    // Success - reset circuit breaker
+                    _desktopCircuitBreaker.TryRemove(desktopName, out _);
+                }
+                catch (McpPolicyException ex) when (ex.Message.Contains("did not respond in time"))
+                {
+                    // Track the failure for circuit breaker
+                    _desktopCircuitBreaker.AddOrUpdate(
+                        desktopName,
+                        _ => (DateTime.UtcNow, 1),
+                        (_, existing) => (existing.FirstFailure, existing.FailureCount + 1));
+                    throw;
+                }
                 break;
         }
     }
