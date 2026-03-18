@@ -47,7 +47,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (_options.TokenResolver == null)
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
-            this._httpClient = httpClient ?? new HttpClient();
+            this._httpClient = httpClient ?? HttpClientFactory.CreateWithTimeout(options.ExporterTimeoutMilliseconds);
             this._resource = resource ?? ResourceBuilder.CreateEmpty().Build();
         }
 
@@ -59,14 +59,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>A <see cref="Task"/> representing the asynchronous export operation.</returns>
         public override async Task ExportAsync(IReadOnlyCollection<Activity> batch, CancellationToken cancellationToken)
         {
-            this._logger.LogInformation("Agent365ExporterAsync: Exporting batch of {Count} spans.", batch.Count);
+            this._logger.LogDebug("Agent365ExporterAsync: Exporting batch of {Count} spans.", batch.Count);
 
             try
             {
                 var groups = _core.PartitionByIdentity(batch);
                 if (groups.Count == 0)
                 {
-                    this._logger.LogInformation("Agent365ExporterAsync: No spans with tenant/agent identity found; nothing exported.");
+                    this._logger.LogDebug("Agent365ExporterAsync: No spans with tenant/agent identity found; nothing exported.");
                     return;
                 }
 
