@@ -40,7 +40,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         }
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
-        private readonly Timer _cleanupTimer;
+        private readonly Timer? _cleanupTimer;
         private bool _disposed;
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <summary>
         /// Initializes a new instance of the <see cref="AgenticTokenCache"/> class.
         /// </summary>
-        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to null or TimeSpan.Zero to disable automatic cleanup.</param>
+        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to TimeSpan.Zero to disable automatic cleanup.</param>
         public AgenticTokenCache(TimeSpan? cleanupInterval = null)
         {
             var interval = cleanupInterval ?? DefaultCleanupInterval;
@@ -63,11 +63,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                     interval,
                     interval);
             }
-            else
-            {
-                // Create a disabled timer (infinite due time)
-                _cleanupTimer = new Timer(_ => { }, null, Timeout.Infinite, Timeout.Infinite);
-            }
+            // When interval <= TimeSpan.Zero, _cleanupTimer remains null (no automatic cleanup)
         }
 
         /// <summary>

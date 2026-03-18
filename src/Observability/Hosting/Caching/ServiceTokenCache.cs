@@ -30,7 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly TimeSpan _defaultExpiration;
-        private readonly Timer _cleanupTimer;
+        private readonly Timer? _cleanupTimer;
         private bool _disposed;
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// Initializes a new instance of the <see cref="ServiceTokenCache"/> class.
         /// </summary>
         /// <param name="defaultExpiration">The default expiration time for tokens. Defaults to 1 hour if not specified.</param>
-        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to null to disable automatic cleanup.</param>
+        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to TimeSpan.Zero to disable automatic cleanup.</param>
         public ServiceTokenCache(TimeSpan? defaultExpiration = null, TimeSpan? cleanupInterval = null)
         {
             _defaultExpiration = defaultExpiration ?? TimeSpan.FromHours(1);
@@ -59,11 +59,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                     interval,
                     interval);
             }
-            else
-            {
-                // Create a disabled timer (infinite due time)
-                _cleanupTimer = new Timer(_ => { }, null, Timeout.Infinite, Timeout.Infinite);
-            }
+            // When interval <= TimeSpan.Zero, _cleanupTimer remains null (no automatic cleanup)
         }
 
         /// <summary>
