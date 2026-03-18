@@ -159,6 +159,9 @@ namespace AgentNotification
                 Events.AgenticUserIdentityCreated => true,
                 Events.AgenticUserWorkloadOnboardingUpdated => true,
                 Events.AgenticUserDeleted => true,
+                Events.AgenticUserUndeleted => true,
+                Events.AgenticUserIdentityUpdated => true,
+                Events.AgenticUserManagerUpdated => true,
                 _ => false,
             };
         }
@@ -285,6 +288,45 @@ namespace AgentNotification
             app.RegisterExtension(new AgentNotification(app), a365 =>
             {
                 a365.OnLifecycleNotification(Events.AgenticUserDeleted, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user un-deleted lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserUndeletedNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserUndeleted, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user identity updated lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserIdentityUpdatedNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserIdentityUpdated, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user manager updated lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserManagerUpdatedNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserManagerUpdated, routeHandler, rank, autoSignInHandlers);
             });
 
         /// <summary>
