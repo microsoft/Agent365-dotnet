@@ -47,21 +47,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (_options.TokenResolver == null)
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
-            this._httpClient = httpClient ?? CreateHttpClientWithTimeout(options.ExporterTimeoutMilliseconds);
+            this._httpClient = httpClient ?? HttpClientFactory.CreateWithTimeout(options.ExporterTimeoutMilliseconds);
             this._resource = resource ?? ResourceBuilder.CreateEmpty().Build();
-        }
-
-        /// <summary>
-        /// Creates a new HttpClient with the specified timeout.
-        /// </summary>
-        /// <param name="timeoutMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>A new HttpClient instance with the configured timeout.</returns>
-        private static HttpClient CreateHttpClientWithTimeout(int timeoutMilliseconds)
-        {
-            return new HttpClient
-            {
-                Timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds)
-            };
         }
 
         /// <summary>

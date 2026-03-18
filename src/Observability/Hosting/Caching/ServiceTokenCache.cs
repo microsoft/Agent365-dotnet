@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,7 +16,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
     {
         private sealed class Entry
         {
-            public string Token { get; }
+            public string? Token { get; set; }
             public string[] Scopes { get; }
             public DateTimeOffset ExpiresAt { get; }
 
@@ -26,12 +26,20 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 Scopes = scopes;
                 ExpiresAt = expiresAt;
             }
+
+            /// <summary>
+            /// Clears the cached token value for security purposes.
+            /// </summary>
+            public void ClearToken()
+            {
+                Token = null;
+            }
         }
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly TimeSpan _defaultExpiration;
         private readonly Timer? _cleanupTimer;
-        private bool _disposed;
+        private int _disposed; // Using int for Interlocked operations
 
         /// <summary>
         /// Default interval for automatic cleanup of expired tokens (5 minutes).
@@ -127,8 +135,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             // Check if token has expired
             if (DateTimeOffset.UtcNow >= entry.ExpiresAt)
             {
-                // Remove expired token
-                _map.TryRemove(key, out _);
+                // Clear token before removal for security
+                if (_map.TryRemove(key, out var removedEntry))
+                {
+                    removedEntry.ClearToken();
+                }
                 return null;
             }
 
@@ -147,7 +158,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 return false;
 
             var key = GetKey(agentId, tenantId);
-            return _map.TryRemove(key, out _);
+            if (_map.TryRemove(key, out var entry))
+            {
+                // Clear the token value for security
+                entry.ClearToken();
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -155,6 +172,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </summary>
         public void InvalidateAll()
         {
+            // Clear all token values before removing entries
+            foreach (var kvp in _map)
+            {
+                kvp.Value.ClearToken();
+            }
             _map.Clear();
         }
 
@@ -165,15 +187,26 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         public int RemoveExpiredTokens()
         {
             var now = DateTimeOffset.UtcNow;
-            var expiredKeys = _map.Where(kvp => now >= kvp.Value.ExpiresAt)
-                                  .Select(kvp => kvp.Key)
-                                  .ToList();
+            var expiredKeys = new List<string>();
+
+            // Find expired keys without using LINQ
+            foreach (var kvp in _map)
+            {
+                if (now >= kvp.Value.ExpiresAt)
+                {
+                    expiredKeys.Add(kvp.Key);
+                }
+            }
 
             int removedCount = 0;
             foreach (var key in expiredKeys)
             {
-                if (_map.TryRemove(key, out _))
+                if (_map.TryRemove(key, out var entry))
+                {
+                    // Clear the token value for security
+                    entry.ClearToken();
                     removedCount++;
+                }
             }
 
             return removedCount;
@@ -200,7 +233,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
+            // Thread-safe disposal check using Interlocked
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
 
             if (disposing)
@@ -208,8 +242,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 _cleanupTimer?.Dispose();
                 InvalidateAll();
             }
-
-            _disposed = true;
         }
 
         private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";

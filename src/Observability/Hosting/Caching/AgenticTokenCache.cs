@@ -3,8 +3,8 @@
 using Azure.Core;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,7 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly Timer? _cleanupTimer;
-        private bool _disposed;
+        private int _disposed; // Using int for Interlocked operations
 
         /// <summary>
         /// Default interval for automatic cleanup of expired tokens (5 minutes).
@@ -171,9 +171,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         public int RemoveExpiredTokens()
         {
             var now = DateTimeOffset.UtcNow;
-            var expiredKeys = _map.Where(kvp => kvp.Value.ExpiresAt.HasValue && now >= kvp.Value.ExpiresAt.Value)
-                                  .Select(kvp => kvp.Key)
-                                  .ToList();
+            var expiredKeys = new List<string>();
+
+            // Find expired keys without using LINQ
+            foreach (var kvp in _map)
+            {
+                if (kvp.Value.ExpiresAt.HasValue && now >= kvp.Value.ExpiresAt.Value)
+                {
+                    expiredKeys.Add(kvp.Key);
+                }
+            }
 
             int removedCount = 0;
             foreach (var key in expiredKeys)
@@ -234,7 +241,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
+            // Thread-safe disposal check using Interlocked
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
                 return;
 
             if (disposing)
@@ -242,8 +250,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 _cleanupTimer?.Dispose();
                 InvalidateAll();
             }
-
-            _disposed = true;
         }
     }
 }
