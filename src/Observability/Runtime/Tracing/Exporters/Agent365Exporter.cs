@@ -45,8 +45,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             if (_options.TokenResolver == null)
                 throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
 
-            _httpClient = httpClient ?? new HttpClient();
+            _httpClient = httpClient ?? CreateHttpClientWithTimeout(options.ExporterTimeoutMilliseconds);
             _resource = resource ?? ResourceBuilder.CreateEmpty().Build();
+        }
+
+        /// <summary>
+        /// Creates a new HttpClient with the specified timeout.
+        /// </summary>
+        /// <param name="timeoutMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>A new HttpClient instance with the configured timeout.</returns>
+        private static HttpClient CreateHttpClientWithTimeout(int timeoutMilliseconds)
+        {
+            return new HttpClient
+            {
+                Timeout = TimeSpan.FromMilliseconds(timeoutMilliseconds)
+            };
         }
 
         /// <summary>
@@ -56,14 +69,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <returns>The export result indicating success or failure.</returns>
         public override ExportResult Export(in Batch<Activity> batch)
         {
-            _logger.LogInformation("Agent365Exporter: Exporting batch of {Count} spans.", batch.Count);
+            _logger.LogDebug("Agent365Exporter: Exporting batch of {Count} spans.", batch.Count);
 
             try
             {
                 var groups = _core.PartitionByIdentity(batch);
                 if (groups.Count == 0)
                 {
-                    _logger.LogInformation("Agent365Exporter: No spans with tenant/agent identity found; nothing exported.");
+                    _logger.LogDebug("Agent365Exporter: No spans with tenant/agent identity found; nothing exported.");
                     return ExportResult.Success;
                 }
 

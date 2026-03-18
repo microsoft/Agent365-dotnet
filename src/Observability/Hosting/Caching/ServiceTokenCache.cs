@@ -3,14 +3,16 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
     /// <summary>
     /// Caches observability tokens per (agentId, tenantId) with expiration and invalidation support.
+    /// Includes automatic periodic cleanup of expired tokens for improved memory management.
     /// </summary>
-    public class ServiceTokenCache : IExporterTokenCache<string>
+    public class ServiceTokenCache : IExporterTokenCache<string>, IDisposable
     {
         private sealed class Entry
         {
@@ -28,17 +30,40 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly TimeSpan _defaultExpiration;
+        private readonly Timer _cleanupTimer;
+        private bool _disposed;
+
+        /// <summary>
+        /// Default interval for automatic cleanup of expired tokens (5 minutes).
+        /// </summary>
+        public static readonly TimeSpan DefaultCleanupInterval = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceTokenCache"/> class.
         /// </summary>
         /// <param name="defaultExpiration">The default expiration time for tokens. Defaults to 1 hour if not specified.</param>
-        public ServiceTokenCache(TimeSpan? defaultExpiration = null)
+        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to null to disable automatic cleanup.</param>
+        public ServiceTokenCache(TimeSpan? defaultExpiration = null, TimeSpan? cleanupInterval = null)
         {
             _defaultExpiration = defaultExpiration ?? TimeSpan.FromHours(1);
 
             if (_defaultExpiration <= TimeSpan.Zero)
                 throw new ArgumentException("Default expiration must be greater than zero.", nameof(defaultExpiration));
+
+            var interval = cleanupInterval ?? DefaultCleanupInterval;
+            if (interval > TimeSpan.Zero)
+            {
+                _cleanupTimer = new Timer(
+                    _ => RemoveExpiredTokens(),
+                    null,
+                    interval,
+                    interval);
+            }
+            else
+            {
+                // Create a disabled timer (infinite due time)
+                _cleanupTimer = new Timer(_ => { }, null, Timeout.Infinite, Timeout.Infinite);
+            }
         }
 
         /// <summary>
@@ -156,6 +181,39 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             }
 
             return removedCount;
+        }
+
+        /// <summary>
+        /// Gets the current number of tokens in the cache.
+        /// </summary>
+        /// <returns>The number of tokens currently cached.</returns>
+        public int Count => _map.Count;
+
+        /// <summary>
+        /// Disposes the cache and stops the automatic cleanup timer.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes the cache resources.
+        /// </summary>
+        /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                _cleanupTimer?.Dispose();
+                InvalidateAll();
+            }
+
+            _disposed = true;
         }
 
         private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";
