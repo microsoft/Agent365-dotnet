@@ -291,7 +291,7 @@ namespace AgentNotification
             });
 
         /// <summary>
-        /// Registers a handler for agentic user un-deleted lifecycle notifications.
+        /// Registers a handler for agentic user undeleted lifecycle notifications.
         /// </summary>
         /// <param name="app">The agent application to extend.</param>
         /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
