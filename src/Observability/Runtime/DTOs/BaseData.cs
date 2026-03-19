@@ -20,13 +20,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="spanKind">Optional span kind for the operation. Use <see cref="SpanKindConstants"/> values (e.g., <see cref="SpanKindConstants.Client"/>, <see cref="SpanKindConstants.Server"/>, <see cref="SpanKindConstants.Internal"/>).</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing. Groups all spans belonging to the same trace.</param>
         public BaseData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            string? spanKind = null)
+            string? spanKind = null,
+            string? traceId = null)
         {
             Attributes = attributes ?? new Dictionary<string, object?>();
             StartTime = startTime;
@@ -35,6 +37,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
             SpanId = spanId ?? ActivitySpanId.CreateRandom().ToString();
             ParentSpanId = parentSpanId;
             SpanKind = spanKind;
+            TraceId = traceId;
         }
 
         /// <summary>
@@ -73,6 +76,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public string? SpanKind { get; }
 
         /// <summary>
+        /// Gets the trace ID for distributed tracing. Groups all spans belonging to the same trace.
+        /// </summary>
+        public string? TraceId { get; }
+
+        /// <summary>
         /// Gets the duration of the operation if both start and end times are provided.
         /// </summary>
         public TimeSpan Duration => StartTime.HasValue && EndTime.HasValue
@@ -92,6 +100,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
                 { "EndTime", EndTime },
                 { "SpanId", SpanId },
                 { "ParentSpanId", ParentSpanId },
+                { "TraceId", TraceId },
                 { "SpanKind", SpanKind },
                 { "Duration", Duration }
             };

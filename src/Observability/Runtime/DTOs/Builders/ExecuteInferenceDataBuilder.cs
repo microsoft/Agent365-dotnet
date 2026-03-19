@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
             InferenceCallDetails inferenceCallDetails,
@@ -45,7 +46,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             SourceMetadata? sourceMetadata = null,
             string? thoughtProcess = null,
             CallerDetails? callerDetails = null,
-            IDictionary<string, object?>? extraAttributes = null)
+            IDictionary<string, object?>? extraAttributes = null,
+            string? traceId = null)
         {
             var attributes = BuildAttributes(
                 inferenceCallDetails,
@@ -59,7 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 callerDetails,
                 extraAttributes);
 
-            return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId);
+            return new ExecuteInferenceData(attributes, startTime, endTime, spanId, parentSpanId, traceId);
         }
 
         private static Dictionary<string, object?> BuildAttributes(

@@ -61,17 +61,17 @@ public sealed class ScopeTests : ActivityTest
     }
 
     [TestMethod]
-    public void SetParentId_SetsActivityParentId()
+    public void SetParentContext_SetsActivityParentId()
     {
         // Arrange
         var manualParentActivity = CreateActivity();
-        var parentId = manualParentActivity.Id;
+        var parentContext = manualParentActivity.Context;
         var parentSpanId = manualParentActivity.SpanId.ToString() ?? string.Empty;
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentId);
+            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentContext);
         });
         
         // Assert

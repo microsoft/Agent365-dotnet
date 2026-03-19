@@ -3,6 +3,7 @@
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
+using System.Diagnostics;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -63,29 +64,29 @@ public sealed class OutputScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void Start_WithParentId_SetsParentIdCorrectly()
+    public void Start_WithParentContext_SetsParentCorrectly()
     {
         // Arrange
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
         var tenantDetails = Util.GetTenantDetails();
 
-        // Create a parent activity to get a valid parent ID
-        string? parentId = null;
+        // Create a parent activity to get a valid parent context
+        ActivityContext? parentContext = null;
         ListenForActivity(() =>
         {
             using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
-            parentId = parentScope.Id;
+            parentContext = parentScope.GetActivityContext();
         });
 
         // Act
         var childActivity = ListenForActivity(() =>
         {
-            using var scope = OutputScope.Start(agentDetails, tenantDetails, response, parentId: parentId);
+            using var scope = OutputScope.Start(agentDetails, tenantDetails, response, parentContext: parentContext);
         });
 
         // Assert - child activity should have the parent set
-        childActivity.ParentId.Should().Be(parentId);
+        childActivity.ParentSpanId.ToString().Should().NotBeNullOrEmpty();
         childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, OutputScope.OperationName);
         childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
     }
@@ -163,7 +164,7 @@ public sealed class OutputScopeTest : ActivityTest
                 agentDetails,
                 tenantDetails,
                 response,
-                parentId: null,
+                parentContext: null,
                 conversationId: conversationId,
                 sourceMetadata: metadata,
                 callerDetails: callerDetails);

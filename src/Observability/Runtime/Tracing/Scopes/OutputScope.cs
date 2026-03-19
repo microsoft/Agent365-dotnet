@@ -26,17 +26,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="agentDetails">Information about the agent producing the output.</param>
         /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
         /// <param name="response">Response containing output messages.</param>
-        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
+        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="conversationId">Optional conversation or session correlation ID for the output operation.</param>
         /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., channel name) for observability.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="startTime">Optional explicit start time. Useful when recording an output operation after execution has already completed.</param>
         /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
         /// <returns>A new OutputScope instance.</returns>
-        public static OutputScope Start(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
-            => new OutputScope(agentDetails, tenantDetails, response, parentId, conversationId, sourceMetadata, callerDetails, startTime, endTime);
+        public static OutputScope Start(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
+            => new OutputScope(agentDetails, tenantDetails, response, parentContext, conversationId, sourceMetadata, callerDetails, startTime, endTime);
 
-        private OutputScope(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, string? parentId, string? conversationId, SourceMetadata? sourceMetadata, CallerDetails? callerDetails, DateTimeOffset? startTime, DateTimeOffset? endTime)
+        private OutputScope(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, ActivityContext? parentContext, string? conversationId, SourceMetadata? sourceMetadata, CallerDetails? callerDetails, DateTimeOffset? startTime, DateTimeOffset? endTime)
             : base(
                 kind: ActivityKind.Client,
                 agentDetails: agentDetails,
@@ -45,7 +46,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 activityName: $"{OperationName} {agentDetails?.AgentId}",
                 startTime: startTime,
                 endTime: endTime,
-                parentId: parentId,
+                parentContext: parentContext,
                 conversationId: conversationId,
                 sourceMetadata: sourceMetadata,
                 callerDetails: callerDetails)

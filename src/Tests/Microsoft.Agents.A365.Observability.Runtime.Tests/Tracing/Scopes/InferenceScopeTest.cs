@@ -154,7 +154,7 @@ public sealed class InferenceScopeTest : ActivityTest
                 details,
                 Util.GetAgentDetails(),
                 Util.GetTenantDetails(),
-                parentId: null,
+                parentContext: null,
                 conversationId: conversationId,
                 sourceMetadata: null);
         });
@@ -177,7 +177,7 @@ public sealed class InferenceScopeTest : ActivityTest
                 details,
                 Util.GetAgentDetails(),
                 Util.GetTenantDetails(),
-                parentId: null,
+                parentContext: null,
                 conversationId: null,
                 sourceMetadata: metadata);
         });

@@ -74,7 +74,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
                 Util.GetTenantDetails(),
-                parentId: null,
+                parentContext: null,
                 conversationId: conversationId,
                 sourceMetadata: null);
         });
@@ -93,7 +93,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
                 Util.GetTenantDetails(),
-                parentId: null,
+                parentContext: null,
                 conversationId: null,
                 sourceMetadata: metadata);
         });
@@ -122,7 +122,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 toolCallDetails,
                 agentDetails,
                 tenantDetails,
-                parentId: null,
+                parentContext: null,
                 conversationId: null,
                 sourceMetadata: null,
                 threatDiagnosticsSummary: threatSummary);
@@ -147,7 +147,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 toolCallDetails,
                 agentDetails,
                 tenantDetails,
-                parentId: null,
+                parentContext: null,
                 conversationId: null,
                 sourceMetadata: null,
                 threatDiagnosticsSummary: null);

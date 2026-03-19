@@ -26,7 +26,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="details">Details of the tool call (name, args, type, call ID, description, endpoint).</param>
         /// <param name="agentDetails">Information about the agent executing the tool (service, version, identifiers).</param>
         /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
-        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
+        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="conversationId">Optional conversation or session correlation ID for the tool execution.</param>
         /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
@@ -48,9 +49,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentContext, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
             : base(
                 kind: spanKind ?? ActivityKind.Internal,
                 agentDetails: agentDetails,
@@ -59,7 +60,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 activityName: $"{OperationName} {details.ToolName}",
                 startTime: startTime,
                 endTime: endTime,
-                parentId: parentId,
+                parentContext: parentContext,
                 conversationId: conversationId,
                 sourceMetadata: sourceMetadata,
                 callerDetails: callerDetails)
