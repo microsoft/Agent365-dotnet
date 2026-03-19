@@ -15,6 +15,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// </summary>
         public static EtwEventSource Log = new EtwEventSource();
 
+        private EtwEventSource() : base() { }
+
+        private EtwEventSource(EventSourceSettings settings) : base(settings) { }
+
+        /// <summary>
+        /// Reinitializes the singleton instance with the option to throw on event write errors.
+        /// Must be called before any events are written.
+        /// </summary>
+        public static void Initialize(bool throwOnEventWriteErrors)
+        {
+            if (throwOnEventWriteErrors)
+            {
+                Log = new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
+            }
+        }
+
         /// <summary>
         /// Handler for stopping a span.
         /// Writes an ETW event with the necessary information from the span.
