@@ -38,6 +38,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         private readonly ILoggerFactory? _loggerFactory;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILocalMcpScopeValidator? _localMcpScopeValidator;
+        private readonly IRdsTokenService? _rdsTokenService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="McpToolServerConfigurationService"/> class.
@@ -53,6 +54,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             this._loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             this._httpClientFactory = httpClientFactory;
             this._localMcpScopeValidator = serviceProvider.GetService<ILocalMcpScopeValidator>();
+            this._rdsTokenService = serviceProvider.GetService<IRdsTokenService>();
         }
 
         /// <inheritdoc/>
@@ -691,7 +693,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
                 LocalServerId = wnsConfig.localServerId,
                 AgentAppId = wnsConfig.agentAppId,
-                AgentIdentityContext = agentIdentityContext
+                AgentIdentityContext = agentIdentityContext,
+                RdsTokenService = this._rdsTokenService,
+                TenantId = this._configuration["LocalMcp:TenantId"],
+                DeviceId = this._configuration["LocalMcp:DeviceId"]
             };
 
             // Create HTTP client for WNS proxy communication
@@ -885,24 +890,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     // No desktops registered for this user
-                    var errorJson = JsonSerializer.Deserialize<JsonElement>(responseBody);
-                    if (errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
-                    {
-                        result.RequiresRegistration = true;
-                        // The registration URL from the endpoint already includes &user= so only append serverIds
-                        var baseRegUrl = regUrlProp.GetString() ?? string.Empty;
-                        result.RegistrationProtocolUrl = $"{baseRegUrl}{serverIdsParam}";
-                        result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
-                        
-                        this._logger.LogWarning("[UserDiscovery] No desktops registered for user '{UserIdentifier}'. Registration URL: {RegistrationUrl}",
-                            userIdentifier, result.RegistrationProtocolUrl);
-                        
-                        throw new LocalMcpDesktopRegistrationRequiredException(
-                            userIdentifier,
-                            result.RegistrationProtocolUrl,
-                            result.ErrorMessage);
-                    }
-                    return result;
+                    result.RequiresRegistration = true;
+                    result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.";
+                    
+                    this._logger.LogWarning("[UserDiscovery] No desktops registered for user '{UserIdentifier}'. User should open LocaProto and sign in.",
+                        userIdentifier);
+                    
+                    throw new LocalMcpDesktopRegistrationRequiredException(
+                        userIdentifier,
+                        result.ErrorMessage);
                 }
 
                 if (!response.IsSuccessStatusCode)
@@ -934,12 +930,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 if (result.AllRegisteredDesktops.Count == 0)
                 {
                     result.RequiresRegistration = true;
-                    result.RegistrationProtocolUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUserIdentifier}{serverIdsParam}";
-                    result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'.";
+                    result.ErrorMessage = $"No desktops registered for user '{userIdentifier}'. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.";
                     
                     throw new LocalMcpDesktopRegistrationRequiredException(
                         userIdentifier,
-                        result.RegistrationProtocolUrl,
                         result.ErrorMessage);
                 }
 
@@ -1167,17 +1161,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     var errorContent = await notifyResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
                     
                     if (errorContent.TryGetProperty("error", out var errorProp) && 
-                        errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
-                        errorContent.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                        errorProp.GetString() == "CLIENT_NOT_REGISTERED")
                     {
-                        var registrationUrl = regUrlProp.GetString() ?? string.Empty;
-                        this._logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
-                            clientName, registrationUrl);
+                        this._logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. User should open LocaProto and sign in.", 
+                            clientName);
                         
                         throw new LocalMcpDesktopRegistrationRequiredException(
                             clientName,
-                            registrationUrl,
-                            $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                            $"Desktop client '{clientName}' is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.");
                     }
                 }
 
@@ -1447,32 +1438,26 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         {
                             var errorJson = JsonSerializer.Deserialize<JsonElement>(errorBody);
                             if (errorJson.TryGetProperty("error", out var errorProp) && 
-                                errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
-                                errorJson.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                                errorProp.GetString() == "CLIENT_NOT_REGISTERED")
                             {
-                                var registrationUrl = regUrlProp.GetString() ?? string.Empty;
-                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
-                                    clientName, registrationUrl);
+                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' is not registered. User should open LocaProto and sign in.", 
+                                    clientName);
                                 
                                 throw new LocalMcpDesktopRegistrationRequiredException(
                                     clientName,
-                                    registrationUrl,
-                                    $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                                    $"Desktop client '{clientName}' is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.");
                             }
                             
-                            // Check for simple "Client not found" message - generate registration URL
+                            // Check for simple "Client not found" message
                             if (errorJson.TryGetProperty("message", out var msgProp) && 
                                 msgProp.GetString()?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true)
                             {
-                                var serverIdsParam = await GetServerIdsQueryParamAsync();
-                                var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register{serverIdsParam}";
-                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' not found. Registration URL: {RegistrationUrl}", 
-                                    clientName, registrationUrl);
+                                this._logger.LogWarning("[Intune] Desktop client '{ClientName}' not found. User should open LocaProto and sign in.", 
+                                    clientName);
                                 
                                 throw new LocalMcpDesktopRegistrationRequiredException(
                                     clientName,
-                                    registrationUrl,
-                                    $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                                    $"Desktop client '{clientName}' is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.");
                             }
                         }
                         catch (JsonException)
@@ -1488,16 +1473,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         errorBody.Contains("X-WNS-Status: expired", StringComparison.OrdinalIgnoreCase) ||
                         errorBody.Contains("Revoked channel URL", StringComparison.OrdinalIgnoreCase))
                     {
-                        var wnsServerIdsParam = await GetServerIdsQueryParamAsync();
-                        var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register{wnsServerIdsParam}";
                         this._logger.LogWarning(
-                            "[Intune] WNS channel for desktop '{ClientName}' is dead or revoked. Requiring re-registration. URL: {RegistrationUrl}",
-                            clientName, registrationUrl);
+                            "[Intune] WNS channel for desktop '{ClientName}' is dead or revoked. Requiring re-registration.",
+                            clientName);
 
                         throw new LocalMcpDesktopRegistrationRequiredException(
                             clientName,
-                            registrationUrl,
-                            $"Desktop client '{clientName}' has a revoked WNS channel and cannot be reached. Please re-register your desktop to restore local file access.");
+                            $"Desktop client '{clientName}' has a revoked WNS channel and cannot be reached. Please open the LocaProto app on your Windows device and sign in again to restore the connection.");
                     }
 
                     return new IntuneComplianceCheckResult

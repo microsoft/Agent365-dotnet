@@ -100,26 +100,13 @@ public class McpPolicyEnforcementService : IMcpPolicyEnforcementService
 
         if (!hasDesktop)
         {
-            var proxyBaseUrl = _configuration["LocalMcp:BaseUrl"] ?? _configuration["LocalMcpProxy:BaseUrl"];
-            var encodedUser = System.Net.WebUtility.UrlEncode(userIdentifier);
-            var registrationUrl = $"locaproto:?action=register&callback={proxyBaseUrl}/api/channels/register&user={encodedUser}";
-
-            // Append serverIds so the Bridging App knows which local MCP servers to provision
-            var localServerIds = GetRegisteredLocalServerIds();
-            if (localServerIds.Count > 0)
-            {
-                var encodedServerIds = System.Net.WebUtility.UrlEncode(string.Join(",", localServerIds));
-                registrationUrl += $"&serverIds={encodedServerIds}";
-            }
-
             _logger.LogWarning("[Policy] User '{User}' has no registered desktop. Tool '{Tool}' on '{Server}' blocked.", 
                 userIdentifier, toolName, serverName);
 
             return new PolicyEnforcementResult
             {
                 Action = PolicyEnforcementAction.BlockRequiresRegistration,
-                ErrorMessage = $"This action requires a registered desktop to enforce security policies. Please register your desktop application to use {toolName}.",
-                RegistrationProtocolUrl = registrationUrl
+                ErrorMessage = $"This action requires a registered desktop to enforce security policies. Please open the LocaProto app on your Windows device and sign in with your Microsoft account to register."
             };
         }
 

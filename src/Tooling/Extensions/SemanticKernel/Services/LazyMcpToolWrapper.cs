@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.A365.Tooling.Transports;
 using Microsoft.Agents.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using ModelContextProtocol.Client;
@@ -27,6 +28,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         private readonly ILogger? _logger;
         private readonly string? _cacheKey;
         private readonly ILocalMcpScopeValidator? _scopeValidator;
+        private readonly IRdsTokenService? _rdsTokenService;
+        private readonly IConfiguration? _configuration;
         private IMcpClient? _mcpClient;
         private readonly SemaphoreSlim _clientLock = new(1, 1);
         private bool _disposed;
@@ -45,12 +48,16 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="loggerFactory">Logger factory for diagnostics.</param>
         /// <param name="cacheKey">Optional cache key for this wrapper instance.</param>
         /// <param name="scopeValidator">Optional scope validator for local MCP servers.</param>
+        /// <param name="rdsTokenService">Optional RDS token service for device-bound authentication.</param>
+        /// <param name="configuration">Optional configuration for reading RDS settings (TenantId, DeviceId).</param>
         public LazyMcpToolWrapper(
             MCPServerConfig serverConfig,
             IHttpClientFactory httpClientFactory,
             ILoggerFactory? loggerFactory = null,
             string? cacheKey = null,
-            ILocalMcpScopeValidator? scopeValidator = null)
+            ILocalMcpScopeValidator? scopeValidator = null,
+            IRdsTokenService? rdsTokenService = null,
+            IConfiguration? configuration = null)
         {
             _serverConfig = serverConfig ?? throw new ArgumentNullException(nameof(serverConfig));
             _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
@@ -58,6 +65,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             _logger = loggerFactory?.CreateLogger<LazyMcpToolWrapper>();
             _cacheKey = cacheKey;
             _scopeValidator = scopeValidator;
+            _rdsTokenService = rdsTokenService;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -67,14 +76,18 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="httpClientFactory">HTTP client factory for creating connections.</param>
         /// <param name="loggerFactory">Logger factory for diagnostics.</param>
         /// <param name="scopeValidator">Optional scope validator for local MCP servers.</param>
+        /// <param name="rdsTokenService">Optional RDS token service for device-bound authentication.</param>
+        /// <param name="configuration">Optional configuration for reading RDS settings.</param>
         public static LazyMcpToolWrapper GetOrCreate(
             MCPServerConfig serverConfig,
             IHttpClientFactory httpClientFactory,
             ILoggerFactory? loggerFactory = null,
-            ILocalMcpScopeValidator? scopeValidator = null)
+            ILocalMcpScopeValidator? scopeValidator = null,
+            IRdsTokenService? rdsTokenService = null,
+            IConfiguration? configuration = null)
         {
             var cacheKey = $"{serverConfig.wnsConfig?.clientName}:{serverConfig.wnsConfig?.localServerId}";
-            return _sessionCache.GetOrAdd(cacheKey, _ => new LazyMcpToolWrapper(serverConfig, httpClientFactory, loggerFactory, cacheKey, scopeValidator));
+            return _sessionCache.GetOrAdd(cacheKey, _ => new LazyMcpToolWrapper(serverConfig, httpClientFactory, loggerFactory, cacheKey, scopeValidator, rdsTokenService, configuration));
         }
 
         /// <summary>
@@ -322,8 +335,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                             _serverConfig.mcpServerName);
                         throw new LocalMcpReregistrationRequiredException(
                             _serverConfig.mcpServerName,
-                            _serverConfig.wnsConfig?.clientName,
-                            GetReregistrationProtocolUrl());
+                            _serverConfig.wnsConfig?.clientName);
                     }
 
                     // Clear the stale client to force reconnection on next attempt
@@ -338,8 +350,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                             _serverConfig.mcpServerName);
                         throw new LocalMcpReregistrationRequiredException(
                             _serverConfig.mcpServerName,
-                            _serverConfig.wnsConfig?.clientName,
-                            GetReregistrationProtocolUrl());
+                            _serverConfig.wnsConfig?.clientName);
                     }
 
                     _logger?.LogError(ex, "[LazyMcp] Tool invocation failed for '{ToolName}'", toolName);
@@ -436,7 +447,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                     ProxyBaseUrl = proxyBaseUrl,
                     ConnectionTimeoutSeconds = wnsConfig.connectionTimeoutSeconds > 0 ? wnsConfig.connectionTimeoutSeconds : 30,
                     LocalServerId = wnsConfig.localServerId,
-                    AgentAppId = wnsConfig.agentAppId
+                    AgentAppId = wnsConfig.agentAppId,
+                    RdsTokenService = _rdsTokenService,
+                    TenantId = _configuration?["LocalMcp:TenantId"],
+                    DeviceId = _configuration?["LocalMcp:DeviceId"]
                 };
 
                 var httpClient = _httpClientFactory.CreateClient("WnsMcpClient");
@@ -488,32 +502,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                    ex.Message.Contains("Re-registration required", StringComparison.OrdinalIgnoreCase) ||
                    ex.Message.Contains("not registered", StringComparison.OrdinalIgnoreCase);
         }
-
-        /// <summary>
-        /// Gets the re-registration protocol URL for the current server configuration.
-        /// </summary>
-        private string? GetReregistrationProtocolUrl()
-        {
-            if (_serverConfig.wnsConfig?.proxyBaseUrl == null)
-            {
-                return null;
-            }
-
-            try
-            {
-                var proxyUri = new Uri(_serverConfig.wnsConfig.proxyBaseUrl);
-                return $"locaproto:?action=register&callback=https://{proxyUri.Host}/api/channels/register";
-            }
-            catch
-            {
-                return null;
-            }
-        }
     }
 
     /// <summary>
     /// Exception thrown when a local MCP server requires the desktop to re-register.
     /// This occurs when the desktop's Windows Credential Manager does not have the agent registered.
+    /// The user should open the LocaProto app and sign in again to re-register.
     /// </summary>
     public class LocalMcpReregistrationRequiredException : Exception
     {
@@ -528,26 +522,16 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         public string? ClientName { get; }
 
         /// <summary>
-        /// Gets the protocol URL to invoke for re-registration.
-        /// Format: locaproto:?action=register&amp;callback=https://agent.com/api/channels/register
-        /// </summary>
-        public string? ProtocolUrl { get; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="LocalMcpReregistrationRequiredException"/> class.
         /// </summary>
         /// <param name="serverName">The MCP server name.</param>
         /// <param name="clientName">The client name.</param>
-        /// <param name="protocolUrl">The re-registration protocol URL.</param>
-        public LocalMcpReregistrationRequiredException(string serverName, string? clientName, string? protocolUrl)
+        public LocalMcpReregistrationRequiredException(string serverName, string? clientName)
             : base($"Desktop '{clientName}' requires re-registration to access local MCP server '{serverName}'. " +
-                   (string.IsNullOrEmpty(protocolUrl)
-                       ? "Please contact your administrator to re-register."
-                       : $"Copy and paste this link into the Windows Run dialog (Win+R) to re-register:\n\n```\n{protocolUrl}\n```\n\nIMPORTANT: Display this link exactly as shown in the code block. Do NOT convert it into a clickable markdown hyperlink. The user needs to copy the full text."))
+                   "Please open the LocaProto app on your Windows device and sign in with your Microsoft account to re-register.")
         {
             ServerName = serverName;
             ClientName = clientName;
-            ProtocolUrl = protocolUrl;
         }
     }
 }

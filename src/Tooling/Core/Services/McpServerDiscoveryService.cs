@@ -155,17 +155,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     var errorContent = await notifyResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
                     
                     if (errorContent.TryGetProperty("error", out var errorProp) && 
-                        errorProp.GetString() == "CLIENT_NOT_REGISTERED" &&
-                        errorContent.TryGetProperty("registrationProtocolUrl", out var regUrlProp))
+                        errorProp.GetString() == "CLIENT_NOT_REGISTERED")
                     {
-                        var registrationUrl = regUrlProp.GetString() ?? string.Empty;
-                        _logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. Registration URL: {RegistrationUrl}", 
-                            clientName, registrationUrl);
+                        _logger.LogWarning("[Discovery] Desktop client '{ClientName}' is not registered. User should open LocaProto and sign in.", 
+                            clientName);
                         
                         throw new LocalMcpDesktopRegistrationRequiredException(
                             clientName,
-                            registrationUrl,
-                            $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.");
+                            $"Desktop client '{clientName}' is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.");
                     }
                 }
 

@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.Agents.A365.Tooling.Exceptions;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
+using Microsoft.Agents.A365.Tooling.Utils;
 using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -26,6 +27,7 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<PolicyEnforcingFunctionInvocationFilter> _logger;
+    private readonly IRdsTokenService? _rdsTokenService;
 
     /// <summary>
     /// Circuit breaker: tracks desktop timeout failures to avoid repeated 30s waits.
@@ -62,12 +64,14 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
         IMcpPolicyEnforcementService policyService,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<PolicyEnforcingFunctionInvocationFilter> logger)
+        ILogger<PolicyEnforcingFunctionInvocationFilter> logger,
+        IRdsTokenService? rdsTokenService = null)
     {
         _policyService = policyService ?? throw new ArgumentNullException(nameof(policyService));
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _rdsTokenService = rdsTokenService;
     }
 
     /// <inheritdoc />
@@ -114,7 +118,7 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
                 _logger.LogWarning("[PolicyFilter] Blocking '{Tool}' - user needs to register desktop. Returning error result.", toolName);
                 // Return a strongly-worded error result that instructs the LLM to relay registration info to the user.
                 // This avoids throwing exceptions that agent developers would need to catch.
-                context.Result = new FunctionResult(context.Function, BuildRegistrationBlockResult(toolName, policyResult.RegistrationProtocolUrl));
+                context.Result = new FunctionResult(context.Function, BuildRegistrationBlockResult(toolName));
                 break;
 
             case PolicyEnforcementAction.BlockPolicyDenied:
@@ -162,38 +166,25 @@ public class PolicyEnforcingFunctionInvocationFilter : IFunctionInvocationFilter
     }
 
     /// <summary>
-    /// Builds a user-friendly registration message with the URL displayed as plain text.
-    /// The URL is wrapped in a code block to prevent the LLM from converting it into a markdown hyperlink.
+    /// Builds a user-friendly registration message directing the user to open LocaProto and sign in.
     /// </summary>
-    private static string BuildRegistrationMessage(string toolName, string? registrationUrl)
+    private static string BuildRegistrationMessage(string toolName)
     {
-        if (string.IsNullOrEmpty(registrationUrl))
-        {
-            return $"Desktop registration required to use {toolName}. Please contact your administrator.";
-        }
+        return $@"To proceed with this action, you need to register your Windows desktop. Please follow these steps:
 
-        return $@"To proceed with sending an email, you need to register your Windows desktop application. Please follow these steps:
+1. Open the LocaProto app on your Windows device.
+2. Sign in with your Microsoft account.
+3. Once signed in, your desktop will be automatically registered.
+4. Try your request again.
 
-1. Copy this registration link and paste it into the Windows Run dialog (Win+R):
-
-```
-{registrationUrl}
-```
-
-2. Press Enter to launch the desktop registration.
-3. Complete the registration process within the desktop app.
-4. Refresh this conversation and try your request again.
-
-IMPORTANT: You MUST display the registration link above exactly as shown inside the code block. Do NOT convert it into a clickable markdown hyperlink. The user needs to copy the full text and paste it into the Windows Run dialog (Win+R). Show it as a code block so they can copy it.
-
-If you don't have the desktop application installed, please contact your administrator for assistance.";
+If you don't have the LocaProto app installed, please contact your administrator for assistance.";
     }
 
     /// <summary>
     /// Builds a FunctionResult string for when desktop registration is required.
     /// Uses strong language to prevent the LLM from hallucinating success.
     /// </summary>
-    private static string BuildRegistrationBlockResult(string toolName, string? registrationUrl)
+    private static string BuildRegistrationBlockResult(string toolName)
     {
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"ERROR: {toolName} FAILED - Desktop registration is required.");
@@ -204,23 +195,14 @@ If you don't have the desktop application installed, please contact your adminis
         sb.AppendLine("**Desktop Registration Required**");
         sb.AppendLine();
         sb.AppendLine("This action requires your desktop to be registered for security policy enforcement.");
-
-        if (!string.IsNullOrEmpty(registrationUrl))
-        {
-            sb.AppendLine();
-            sb.AppendLine("To register your desktop:");
-            sb.AppendLine("1. Copy this URL:");
-            sb.AppendLine($"   `{registrationUrl}`");
-            sb.AppendLine("2. Press Win+R (Windows Run dialog)");
-            sb.AppendLine("3. Paste the URL and press Enter");
-            sb.AppendLine();
-            sb.AppendLine("After registering, please try your request again.");
-        }
-        else
-        {
-            sb.AppendLine();
-            sb.AppendLine("Please contact your administrator to register your desktop.");
-        }
+        sb.AppendLine();
+        sb.AppendLine("To register your desktop:");
+        sb.AppendLine("1. Open the LocaProto app on your Windows device.");
+        sb.AppendLine("2. Sign in with your Microsoft account.");
+        sb.AppendLine("3. Your desktop will be automatically registered.");
+        sb.AppendLine("4. Try your request again.");
+        sb.AppendLine();
+        sb.AppendLine("If you do not have the LocaProto app, contact your administrator.");
 
         return sb.ToString();
     }
@@ -374,8 +356,11 @@ If you don't have the desktop application installed, please contact your adminis
             // Brief delay for WebSocket to be ready
             await Task.Delay(500);
 
-            // Step 3: Send the actual MCP request through the proxy
+            // Step 3: Inject RDS assertion if RDS token service is configured
             var mcpRequestJson = JsonSerializer.Serialize(mcpRequest);
+            mcpRequestJson = await InjectRdsAssertionIfConfiguredAsync(httpClient, proxyBaseUrl, sessionId, mcpRequestJson);
+
+            // Step 4: Send the actual MCP request through the proxy
             _logger.LogInformation("[PolicyFilter] Sending MCP request through desktop proxy: {Tool}", toolName);
 
             var mcpResponse = await httpClient.PostAsync(
@@ -421,6 +406,87 @@ If you don't have the desktop application installed, please contact your adminis
         {
             _logger.LogError(ex, "[PolicyFilter] Error routing '{Tool}' through desktop", toolName);
             throw new McpPolicyException($"Failed to route tool call through desktop for policy enforcement: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Acquires an RDS assertion from the desktop (server nonce) and Entra ID, then injects it into the MCP request.
+    /// This enables device-bound authentication for tool calls routed through the desktop.
+    /// </summary>
+    private async Task<string> InjectRdsAssertionIfConfiguredAsync(
+        HttpClient httpClient, string proxyBaseUrl, string sessionId, string mcpRequestJson)
+    {
+        if (_rdsTokenService == null)
+        {
+            return mcpRequestJson;
+        }
+
+        var tenantId = _configuration["LocalMcp:TenantId"];
+        var deviceId = _configuration["LocalMcp:DeviceId"];
+
+        if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(deviceId))
+        {
+            _logger.LogDebug("[PolicyFilter] RDS token service is available but TenantId or DeviceId not configured, skipping RDS assertion");
+            return mcpRequestJson;
+        }
+
+        try
+        {
+            _logger.LogInformation("[PolicyFilter] Requesting server nonce from desktop for RDS assertion...");
+
+            // Request server nonce from the desktop via the proxy session
+            var nonceRequest = JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = "rds-nonce-" + Guid.NewGuid().ToString("N")[..8],
+                method = "rds/getNonce",
+                @params = new { }
+            });
+
+            var nonceResponse = await httpClient.PostAsync(
+                $"{proxyBaseUrl}/api/mcp/{sessionId}",
+                new StringContent(nonceRequest, Encoding.UTF8, "application/json"));
+
+            nonceResponse.EnsureSuccessStatusCode();
+            var nonceContent = await nonceResponse.Content.ReadAsStringAsync();
+
+            string? serverNonce = null;
+            using (var nonceDoc = JsonDocument.Parse(nonceContent))
+            {
+                if (nonceDoc.RootElement.TryGetProperty("result", out var result))
+                {
+                    if (result.TryGetProperty("nonce", out var nonceProp))
+                    {
+                        serverNonce = nonceProp.GetString();
+                    }
+                    else if (result.ValueKind == JsonValueKind.String)
+                    {
+                        serverNonce = result.GetString();
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(serverNonce))
+            {
+                _logger.LogWarning("[PolicyFilter] Desktop did not return a server nonce, skipping RDS assertion");
+                return mcpRequestJson;
+            }
+
+            // Acquire the RDS token (binding key + RDP token + Entra nonce + assertion)
+            var rdsResult = await _rdsTokenService.AcquireRdsTokenAsync(
+                tenantId, deviceId, serverNonce, CancellationToken.None);
+
+            // Inject assertion into _meta
+            var modifiedJson = RdsAssertionHelper.InjectRdsAssertionIntoMcpMessage(mcpRequestJson, rdsResult.RdpAssertion);
+            _logger.LogInformation("[PolicyFilter] RDS assertion injected into tools/call _meta (assertion length: {Length})",
+                rdsResult.RdpAssertion.Length);
+
+            return modifiedJson;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[PolicyFilter] Failed to acquire RDS assertion, proceeding without it");
+            return mcpRequestJson;
         }
     }
 

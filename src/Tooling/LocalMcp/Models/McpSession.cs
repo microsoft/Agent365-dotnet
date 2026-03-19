@@ -57,13 +57,6 @@ public class McpSession
     public bool RequiresReregistration { get; set; }
 
     /// <summary>
-    /// Gets or sets the protocol URL for re-registration.
-    /// This is provided by locaproto when re-registration is required.
-    /// Format: locaproto:?action=register&amp;callback=https://agent.com/api/channels/register
-    /// </summary>
-    public string? ReregistrationProtocolUrl { get; set; }
-
-    /// <summary>
     /// Updates the last activity time to now.
     /// </summary>
     public void UpdateActivity()

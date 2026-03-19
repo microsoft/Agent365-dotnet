@@ -55,11 +55,6 @@ namespace Microsoft.Agents.A365.Tooling.Exceptions
         public string? ToolName { get; }
 
         /// <summary>
-        /// Gets the registration protocol URL when desktop registration is required.
-        /// </summary>
-        public string? RegistrationProtocolUrl { get; }
-
-        /// <summary>
         /// Gets additional data about the policy decision.
         /// </summary>
         public IDictionary<string, object>? AdditionalData { get; }
@@ -68,12 +63,10 @@ namespace Microsoft.Agents.A365.Tooling.Exceptions
         /// Initializes a new instance of the <see cref="McpPolicyException"/> class with a simple message.
         /// </summary>
         /// <param name="message">The error message.</param>
-        /// <param name="registrationProtocolUrl">Optional protocol URL for desktop registration.</param>
-        public McpPolicyException(string message, string? registrationProtocolUrl = null)
+        public McpPolicyException(string message)
             : base(message)
         {
-            ErrorCode = registrationProtocolUrl != null ? McpPolicyErrorCode.DevicePathRequired : McpPolicyErrorCode.AccessDenied;
-            RegistrationProtocolUrl = registrationProtocolUrl;
+            ErrorCode = McpPolicyErrorCode.AccessDenied;
         }
 
         /// <summary>

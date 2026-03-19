@@ -49,6 +49,7 @@ public class InMemorySessionManager : ISessionManager
             UserIdentifier = userIdentifier,
             ChannelUri = request.ChannelUri,
             MachineName = request.MachineName,
+            DeviceId = request.DeviceId,
             RegisteredAt = request.RegisteredAt,
             LastSeen = DateTime.UtcNow,
             ServerIds = request.ServerIds ?? new(),

@@ -38,11 +38,6 @@ public class LocalDiscoveryResult
     public bool RequiresRegistration { get; set; }
 
     /// <summary>
-    /// Gets or sets the registration URL if registration is required.
-    /// </summary>
-    public string? RegistrationProtocolUrl { get; set; }
-
-    /// <summary>
     /// Gets or sets any error message from the discovery process.
     /// </summary>
     public string? ErrorMessage { get; set; }

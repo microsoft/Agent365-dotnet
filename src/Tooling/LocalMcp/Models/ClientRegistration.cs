@@ -34,6 +34,12 @@ public class ClientRegistration
     public string MachineName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the Azure AD Device ID of the desktop client.
+    /// This is a platform-verified device identity from dsregcmd on AAD-joined devices.
+    /// </summary>
+    public string? DeviceId { get; set; }
+
+    /// <summary>
     /// Gets or sets when the client was registered.
     /// </summary>
     public DateTime RegisteredAt { get; set; }
@@ -82,6 +88,11 @@ public class ChannelRegistrationRequest
     /// Gets or sets the machine name of the desktop client.
     /// </summary>
     public string MachineName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Azure AD Device ID of the desktop client.
+    /// </summary>
+    public string? DeviceId { get; set; }
 
     /// <summary>
     /// Gets or sets when the client was registered.

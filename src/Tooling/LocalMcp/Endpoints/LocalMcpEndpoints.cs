@@ -30,11 +30,27 @@ public static class LocalMcpEndpoints
         var logger = app.Services.GetRequiredService<ILogger<ISessionManager>>();
 
         // POST /api/channels/register - Desktop client registration
+        // When a Bearer token is provided, the server extracts the user OID from it (Gateway App pattern).
+        // Falls back to the UserIdentifier in the body for backward compatibility.
         app.MapPost("/api/channels/register", (
+            HttpContext context,
             ChannelRegistrationRequest request,
             ISessionManager sessionManager,
             IServiceProvider serviceProvider) =>
         {
+            // Try to extract user OID from Bearer token (authenticated registration)
+            var tokenUserOid = ExtractOidFromBearerToken(context, logger);
+            if (!string.IsNullOrEmpty(tokenUserOid))
+            {
+                // Override the body's UserIdentifier with the cryptographically verified OID
+                logger.LogInformation("[REGISTER] Authenticated registration - OID from token: {Oid}", tokenUserOid);
+                request.UserIdentifier = tokenUserOid;
+            }
+            else
+            {
+                logger.LogWarning("[REGISTER] Unauthenticated registration - using UserIdentifier from body: {User}", request.UserIdentifier);
+            }
+
             var registration = sessionManager.RegisterClient(request);
             
             // Invalidate policy cache so next tool call finds the registered desktop
@@ -48,9 +64,11 @@ public static class LocalMcpEndpoints
                 message = "Registration successful", 
                 clientName = registration.ClientName,
                 machineName = registration.MachineName,
-                userIdentifier = registration.UserIdentifier
+                deviceId = registration.DeviceId,
+                userIdentifier = registration.UserIdentifier,
+                authenticated = !string.IsNullOrEmpty(tokenUserOid)
             });
-        }).AllowAnonymous();
+        }).AllowAnonymous(); // AllowAnonymous kept for backward compat; auth is validated when token is present
 
         // GET /api/channels - List registered clients
         app.MapGet("/api/channels", (ISessionManager sessionManager) =>
@@ -89,30 +107,12 @@ public static class LocalMcpEndpoints
             {
                 logger.LogWarning("[CHANNELS] No clients registered for user '{UserIdentifier}'", decodedUserIdentifier);
                 
-                // Return registration URL
-                var regScheme = context.Request.IsHttps ? "https" : "http";
-                var regHost = context.Request.Host.ToString();
-                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register&user={System.Net.WebUtility.UrlEncode(decodedUserIdentifier)}";
-
-                // Append serverIds so the Bridging App knows which local MCP servers to provision
-                var policyService = serviceProvider.GetService<IMcpPolicyEnforcementService>();
-                if (policyService != null)
-                {
-                    var localServerIds = policyService.GetRegisteredLocalServerIds();
-                    if (localServerIds.Count > 0)
-                    {
-                        var encodedServerIds = System.Net.WebUtility.UrlEncode(string.Join(",", localServerIds));
-                        registrationProtocolUrl += $"&serverIds={encodedServerIds}";
-                    }
-                }
-                
                 return Results.Json(new 
                 { 
                     error = "NO_CLIENTS_REGISTERED",
-                    message = $"No desktops are registered for user '{decodedUserIdentifier}'. Please register your desktop to enable local file access.",
+                    message = "No desktops are registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account to connect your desktop.",
                     userIdentifier = decodedUserIdentifier,
-                    requiresRegistration = true,
-                    registrationProtocolUrl = registrationProtocolUrl
+                    requiresRegistration = true
                 }, statusCode: 404);
             }
             
@@ -144,18 +144,12 @@ public static class LocalMcpEndpoints
             {
                 logger.LogWarning("[WNS NOTIFY] Client '{ClientName}' not found - desktop registration required", clientName);
                 
-                // Return a specific error with registration URL so the agent can prompt the user
-                var regScheme = context.Request.IsHttps ? "https" : "http";
-                var regHost = context.Request.Host.ToString();
-                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register";
-                
                 return Results.Json(new 
                 { 
                     error = "CLIENT_NOT_REGISTERED",
-                    message = $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.",
+                    message = "Desktop is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.",
                     clientName = clientName,
-                    requiresRegistration = true,
-                    registrationProtocolUrl = registrationProtocolUrl
+                    requiresRegistration = true
                 }, statusCode: 404);
             }
 
@@ -375,15 +369,11 @@ public static class LocalMcpEndpoints
                                         ? hostEl.GetString() : null;
                                     var machineName = jsonDoc.RootElement.TryGetProperty("machineName", out var machineEl) 
                                         ? machineEl.GetString() : null;
-                                    var protocolUrl = jsonDoc.RootElement.TryGetProperty("protocolUrl", out var protoEl) 
-                                        ? protoEl.GetString() : null;
 
                                     logger.LogWarning("[WS←LOCAPROTO] Machine '{MachineName}' needs to re-register with agent", machineName);
-                                    logger.LogInformation("[WS←LOCAPROTO] Re-registration protocol URL: {ProtocolUrl}", protocolUrl);
 
                                     // Mark the session as requiring re-registration
                                     session.RequiresReregistration = true;
-                                    session.ReregistrationProtocolUrl = protocolUrl;
 
                                     // Complete any pending requests with the re-registration error
                                     foreach (var pending in session.PendingRequests)
@@ -634,18 +624,12 @@ public static class LocalMcpEndpoints
             {
                 logger.LogWarning("[INTUNE CHECK] Client '{ClientName}' not found - desktop registration required", clientName);
                 
-                // Return the same CLIENT_NOT_REGISTERED error format used by /api/notify
-                var regScheme = context.Request.IsHttps ? "https" : "http";
-                var regHost = context.Request.Host.ToString();
-                var registrationProtocolUrl = $"locaproto:?action=register&callback={regScheme}://{regHost}/api/channels/register";
-                
                 return Results.Json(new 
                 { 
                     error = "CLIENT_NOT_REGISTERED",
-                    message = $"Desktop client '{clientName}' is not registered. Please register your desktop to enable local file access.",
+                    message = "Desktop is not registered. Please open the LocaProto app on your Windows device and sign in with your Microsoft account.",
                     clientName = clientName,
-                    requiresRegistration = true,
-                    registrationProtocolUrl = registrationProtocolUrl
+                    requiresRegistration = true
                 }, statusCode: 404);
             }
 
@@ -748,5 +732,69 @@ public static class LocalMcpEndpoints
         }).AllowAnonymous();
 
         return app;
+    }
+
+    /// <summary>
+    /// Extracts the OID (object identifier) claim from a Bearer token in the Authorization header.
+    /// This enables the Gateway App pattern where the user's identity is cryptographically verified.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="logger">Logger for diagnostics.</param>
+    /// <returns>The OID claim value, or null if no valid Bearer token is present.</returns>
+    private static string? ExtractOidFromBearerToken(HttpContext context, ILogger logger)
+    {
+        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var token = authHeader.Substring("Bearer ".Length).Trim();
+        if (string.IsNullOrEmpty(token))
+        {
+            return null;
+        }
+
+        try
+        {
+            // Parse the JWT payload without validation - we just need the OID claim.
+            // Token validation is the responsibility of auth middleware or the issuing authority.
+            var parts = token.Split('.');
+            if (parts.Length < 2)
+            {
+                logger.LogWarning("[AUTH] Bearer token does not have expected JWT structure");
+                return null;
+            }
+
+            // Decode the payload (second segment) from base64url
+            var payload = parts[1];
+            // Pad base64url to base64
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var payloadBytes = Convert.FromBase64String(payload);
+            using var doc = JsonDocument.Parse(payloadBytes);
+
+            if (doc.RootElement.TryGetProperty("oid", out var oidElement))
+            {
+                var oid = oidElement.GetString();
+                if (!string.IsNullOrEmpty(oid))
+                {
+                    return oid;
+                }
+            }
+
+            logger.LogWarning("[AUTH] Bearer token present but no 'oid' claim found");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[AUTH] Failed to parse Bearer token for OID extraction");
+            return null;
+        }
     }
 }

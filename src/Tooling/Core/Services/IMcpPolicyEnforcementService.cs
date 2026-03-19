@@ -82,11 +82,6 @@ public class PolicyEnforcementResult
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Protocol URL for desktop registration (when Action is BlockRequiresRegistration).
-    /// </summary>
-    public string? RegistrationProtocolUrl { get; set; }
-
-    /// <summary>
     /// The client name of the registered desktop (when Action is RouteToDesktop).
     /// </summary>
     public string? DesktopClientName { get; set; }
