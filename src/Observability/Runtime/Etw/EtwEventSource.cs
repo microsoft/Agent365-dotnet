@@ -1,6 +1,5 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-using System;
 using System.Diagnostics.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
@@ -11,9 +10,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
     [EventSource(Name = "A365-O11y-EventSource")]
     public class EtwEventSource : EventSource
     {
-        private static volatile EtwEventSource _log = new EtwEventSource();
-        private static readonly object _lock = new object();
-        private static bool _initialized = false;
+        private static readonly EtwEventSource _log = new EtwEventSource();
 
         /// <summary>
         /// Singleton instance of the EtwEventSource.
@@ -21,34 +18,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public static EtwEventSource Log => _log;
 
         private EtwEventSource() : base() { }
-
-        private EtwEventSource(EventSourceSettings settings) : base(settings) { }
-
-        /// <summary>
-        /// Configures the singleton to throw on event write errors.
-        /// Must be called once, before any events are written.
-        /// </summary>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown if called more than once.
-        /// </exception>
-        public static void Initialize(bool throwOnEventWriteErrors)
-        {
-            if (!throwOnEventWriteErrors) return;
-
-            lock (_lock)
-            {
-                if (_initialized)
-                {
-                    throw new InvalidOperationException(
-                        "EtwEventSource has already been initialized.");
-                }
-
-                var oldLog = _log;
-                _log = new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
-                _initialized = true;
-                oldLog.Dispose();
-            }
-        }
 
         /// <summary>
         /// Handler for stopping a span.
