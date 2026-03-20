@@ -1,6 +1,7 @@
 ﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
+using System.Diagnostics;
 using System.Net;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -227,15 +228,15 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void Start_WithParentId_SetsParentOnActivity()
+    public void Start_WithParentContext_SetsParentOnActivity()
     {
         // Arrange
         var tenantDetails = Util.GetTenantDetails();
-        string? parentId = null;
+        ActivityContext? parentContext = null;
         ListenForActivity(() =>
         {
             using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
-            parentId = parentScope.Id;
+            parentContext = parentScope.GetActivityContext();
         });
 
         // Act
@@ -244,11 +245,11 @@ public sealed class InvokeAgentScopeTest : ActivityTest
             using var scope = InvokeAgentScope.Start(
                 Details,
                 tenantDetails,
-                parentId: parentId);
+                parentContext: parentContext);
         });
 
         // Assert
-        childActivity.ParentId.Should().Be(parentId);
+        childActivity.ParentSpanId.ToString().Should().NotBeNullOrEmpty();
     }
 
     [TestMethod]

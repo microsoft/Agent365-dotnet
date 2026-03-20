@@ -148,6 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 EndTimeUnixNano = data.TryGetValue("EndTime", out var endTimeObj) && endTimeObj != null ? ToUnixNanos(((DateTimeOffset)endTimeObj).UtcDateTime) : 0,
                 SpanId = data["SpanId"],
                 ParentSpanId = data["ParentSpanId"],
+                TraceId = data.TryGetValue("TraceId", out var traceIdObj) ? traceIdObj : null,
                 Kind = data.TryGetValue("SpanKind", out var spanKindObj) && spanKindObj != null ? spanKindObj : SpanKindConstants.Client
             };
 

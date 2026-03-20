@@ -32,6 +32,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Client"/> or <see cref="SpanKindConstants.Server"/> as appropriate.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
             InvokeAgentDetails invokeAgentDetails,
@@ -47,7 +48,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null,
-            string? spanKind = null)
+            string? spanKind = null,
+            string? traceId = null)
         {
             var attributes = BuildAttributes(
                 invokeAgentDetails,
@@ -66,7 +68,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 endTime,
                 spanId,
                 parentSpanId,
-                spanKind);
+                spanKind,
+                traceId);
         }
 
         /// <summary>
