@@ -32,6 +32,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An ExecuteToolData object containing all telemetry data.</returns>
         public static ExecuteToolData Build(
             ToolCallDetails toolCallDetails,
@@ -46,11 +47,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             SourceMetadata? sourceMetadata = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null,
-            string? spanKind = null)
+            string? spanKind = null,
+            string? traceId = null)
         {
             var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, callerDetails, extraAttributes);
 
-            return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId, spanKind);
+            return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId);
         }
 
         private static Dictionary<string, object?> BuildAttributes(

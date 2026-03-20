@@ -193,15 +193,15 @@ public partial class ExportFormatterTests : ActivityTest
     }
 
     [TestMethod]
-    public void Format_ManuallySetParentId_IsReflectedInExport()
+    public void Format_ManuallySetParentContext_IsReflectedInExport()
     {
         // Arrange
         var manualParentActivity = CreateActivity();
-        var parentId = manualParentActivity.Id ?? string.Empty;
+        var parentContext = manualParentActivity.Context;
         var parentSpanId = manualParentActivity.SpanId.ToString();
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentId);
+            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentContext);
         });
 
         var resource = ResourceBuilder.CreateDefault().Build();

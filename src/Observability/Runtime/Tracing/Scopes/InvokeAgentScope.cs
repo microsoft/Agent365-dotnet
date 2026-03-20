@@ -34,7 +34,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <param name="startTime">Optional explicit start time. Useful when recording an agent invocation after execution has already completed.</param>
         /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
-        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
+        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
+        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="spanKind">Optional span kind override. Defaults to <see cref="ActivityKind.Client"/>. Use <see cref="ActivityKind.Server"/> when the agent is receiving an inbound request.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
@@ -55,9 +56,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null, ActivityKind? spanKind = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime, parentId, spanKind);
+            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityContext? parentContext = null, ActivityKind? spanKind = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime, parentContext, spanKind);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime, string? parentId, ActivityKind? spanKind)
+        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime, ActivityContext? parentContext, ActivityKind? spanKind)
             : base(
                 kind: spanKind ?? ActivityKind.Client,
                 agentDetails: invokeAgentDetails.Details,
@@ -68,8 +69,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
                 startTime: startTime,
                 endTime: endTime,
-                parentId: parentId,
-                conversationId: conversationId,
+                parentContext: parentContext,                conversationId: conversationId,
                 sourceMetadata: request?.SourceMetadata,
                 callerDetails: callerDetails)
         {

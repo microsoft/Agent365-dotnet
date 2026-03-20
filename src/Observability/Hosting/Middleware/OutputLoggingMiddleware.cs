@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Agents.A365.Observability.Hosting.Extensions;
@@ -19,7 +20,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Links to a parent span when <see cref="A365ParentSpanKey"/> is set in
+    /// Links to a parent span when <see cref="A365ParentTraceparentKey"/> is set in
     /// <see cref="ITurnContext.StackState"/>.
     /// </para>
     /// <para>
@@ -31,12 +32,12 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
     {
         /// <summary>
         /// The <see cref="ITurnContext.StackState"/> key used to store the parent
-        /// span reference. Set this value to a W3C traceparent string
+        /// trace context reference. Set this value to a W3C traceparent string
         /// (e.g. <c>"00-{trace_id}-{span_id}-{trace_flags}"</c>) to link
         /// <see cref="OutputScope"/> spans as children of an
         /// <see cref="InvokeAgentScope"/>.
         /// </summary>
-        public const string A365ParentSpanKey = "A365ParentSpanId";
+        public const string A365ParentTraceparentKey = "A365ParentTraceparent";
 
         /// <inheritdoc/>
         public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next, CancellationToken cancellationToken = default)
@@ -153,11 +154,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     return await nextSend().ConfigureAwait(false);
                 }
 
-                // Read parent span lazily so the agent handler can set it during logic()
-                string? parentId = null;
-                if (turnContext.StackState.TryGetValue(A365ParentSpanKey, out var parentSpanValue) && parentSpanValue != null)
+                // Read parent traceparent lazily so the agent handler can set it during logic()
+                ActivityContext? parentContext = null;
+                if (turnContext.StackState.TryGetValue(A365ParentTraceparentKey, out var traceparentValue) && traceparentValue != null)
                 {
-                    parentId = parentSpanValue.ToString();
+                    var traceparent = traceparentValue.ToString();
+                    if (!string.IsNullOrEmpty(traceparent))
+                    {
+                        parentContext = TraceContextHelper.ExtractContextFromHeaders(
+                            new Dictionary<string, string> { { "traceparent", traceparent } });
+                    }
                 }
 
                 var outputScope = OutputScope.Start(
@@ -167,7 +173,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     conversationId: conversationId,
                     sourceMetadata: sourceMetadata,
                     callerDetails: callerDetails,
-                    parentId: parentId);
+                    parentContext: parentContext);
 
                 try
                 {

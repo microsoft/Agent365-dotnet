@@ -44,19 +44,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
         /// <param name="endTime">Optional custom end time for the scope. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
-        /// <param name="parentId">Optional parent ID for the activity.</param>
+        /// <param name="parentContext">Optional parent <see cref="ActivityContext"/> used to link this span to an upstream
+        /// operation. Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an
+        /// <see cref="ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="conversationId">Optional conversation id.</param>
         /// <param name="sourceMetadata">Optional source metadata.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
         {
             customStartTime = startTime;
             customEndTime = endTime;
-            activity = ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
-            if (!string.IsNullOrEmpty(parentId))
-            {
-                activity?.SetParentId(parentId!);
-            }
+            activity = parentContext.HasValue && parentContext.Value.TraceId != default
+                ? ActivitySource.CreateActivity(activityName, kind, parentContext.Value)
+                : ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
 
             if (startTime != null) 
             {
@@ -249,6 +249,50 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         protected void AddBaggage(string key, string value)
         {
             activity?.AddBaggage(key, value);
+        }
+
+        /// <summary>
+        /// Gets the <see cref="ActivityContext"/> for this scope's span.
+        /// </summary>
+        /// <remarks>
+        /// The returned context can be passed as <c>parentContext</c> to child scope
+        /// <c>Start</c> methods to establish a parent-child relationship within the
+        /// same process.
+        /// </remarks>
+        /// <returns>
+        /// An <see cref="ActivityContext"/> for this scope's span, or <c>null</c> if
+        /// no activity exists.
+        /// </returns>
+        public ActivityContext? GetActivityContext()
+        {
+            return activity?.Context;
+        }
+
+        /// <summary>
+        /// Injects this span's trace context into W3C HTTP headers.
+        /// </summary>
+        /// <remarks>
+        /// Returns a dictionary containing <c>traceparent</c> and optionally
+        /// <c>tracestate</c> headers that can be forwarded to downstream services
+        /// for distributed trace propagation.
+        /// </remarks>
+        /// <returns>
+        /// A dictionary containing W3C trace context headers. Returns an empty
+        /// dictionary if no activity exists.
+        /// </returns>
+        public Dictionary<string, string> InjectTraceContext()
+        {
+            var headers = new Dictionary<string, string>();
+            if (activity != null && activity.Id != null)
+            {
+                headers["traceparent"] = activity.Id;
+                if (!string.IsNullOrEmpty(activity.TraceStateString))
+                {
+                    headers["tracestate"] = activity.TraceStateString!;
+                }
+            }
+
+            return headers;
         }
 
         /// <summary>

@@ -18,7 +18,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
                 DateTimeOffset? endTime = null,
                 string? spanId = null,
                 string? parentSpanId = null,
-                string? spanKind = null) : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind) { }
+                string? spanKind = null,
+                string? traceId = null) : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId) { }
             public override string Name => "Test";
         }
 
@@ -161,6 +162,38 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             var data = new TestData();
             var dict = data.ToDictionary();
             dict.Should().ContainKey("SpanKind").WhoseValue.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void TraceId_DefaultsToNull()
+        {
+            var data = new TestData();
+            data.TraceId.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void TraceId_UsesProvidedValue()
+        {
+            var traceId = "1234567890abcdef1234567890abcdef";
+            var data = new TestData(traceId: traceId);
+            data.TraceId.Should().Be(traceId);
+        }
+
+        [TestMethod]
+        public void TraceId_IncludedInToDictionary()
+        {
+            var traceId = "abcdef1234567890abcdef1234567890";
+            var data = new TestData(traceId: traceId);
+            var dict = data.ToDictionary();
+            dict.Should().ContainKey("TraceId").WhoseValue.Should().Be(traceId);
+        }
+
+        [TestMethod]
+        public void TraceId_NullInToDictionary_WhenNotProvided()
+        {
+            var data = new TestData();
+            var dict = data.ToDictionary();
+            dict.Should().ContainKey("TraceId").WhoseValue.Should().BeNull();
         }
     }
 }

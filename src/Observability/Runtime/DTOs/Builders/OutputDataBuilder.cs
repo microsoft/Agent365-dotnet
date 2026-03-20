@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An OutputData object containing all telemetry data.</returns>
         public static OutputData Build(
             AgentDetails agentDetails,
@@ -41,11 +42,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            IDictionary<string, object?>? extraAttributes = null)
+            IDictionary<string, object?>? extraAttributes = null,
+            string? traceId = null)
         {
             var attributes = BuildAttributes(agentDetails, tenantDetails, response, conversationId, sourceMetadata, callerDetails, extraAttributes);
 
-            return new OutputData(attributes, startTime, endTime, spanId, parentSpanId);
+            return new OutputData(attributes, startTime, endTime, spanId, parentSpanId, traceId);
         }
 
         private static Dictionary<string, object?> BuildAttributes(
