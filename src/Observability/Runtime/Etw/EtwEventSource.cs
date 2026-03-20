@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+using System;
 using System.Diagnostics.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
@@ -8,12 +9,82 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
     /// ETW Event Source for Observability
     /// </summary>
     [EventSource(Name = "A365-O11y-EventSource")]
-    public class EtwEventSource: EventSource
+    public class EtwEventSource : EventSource
     {
+        private static readonly object _lock = new object();
+        private static bool _throwOnEventWriteErrors = false;
+        private static Lazy<EtwEventSource> _lazy =
+            new Lazy<EtwEventSource>(CreateInstance);
+
+        private static EtwEventSource CreateInstance() =>
+            _throwOnEventWriteErrors
+                ? new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors)
+                : new EtwEventSource();
+
         /// <summary>
         /// Singleton instance of the EtwEventSource.
         /// </summary>
-        public static EtwEventSource Log = new EtwEventSource();
+        public static EtwEventSource Log
+        {
+            get
+            {
+                if (_lazy.IsValueCreated)
+                {
+                    return _lazy.Value;
+                }
+
+                lock (_lock)
+                {
+                    return _lazy.Value;
+                }
+            }
+        }
+
+        private EtwEventSource() : base() { }
+
+        private EtwEventSource(EventSourceSettings settings) : base(settings) { }
+
+        /// <summary>
+        /// Configures the singleton before it is first used.
+        /// Must be called before accessing <see cref="Log"/>.
+        /// </summary>
+        /// <param name="throwOnEventWriteErrors">
+        /// When <see langword="true"/>, the underlying <see cref="EventSource"/> will be created with
+        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>.
+        /// </param>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if the singleton has already been created (i.e. <see cref="Log"/> has been accessed).
+        /// </exception>
+        public static void Configure(bool throwOnEventWriteErrors)
+        {
+            lock (_lock)
+            {
+                if (_lazy.IsValueCreated)
+                {
+                    throw new InvalidOperationException(
+                        "EtwEventSource has already been created. Configure() must be called before the first access of Log.");
+                }
+
+                _throwOnEventWriteErrors = throwOnEventWriteErrors;
+            }
+        }
+
+        /// <summary>
+        /// Resets the singleton so tests can exercise <see cref="Configure"/> on a fresh instance.
+        /// </summary>
+        internal static void ResetForTesting()
+        {
+            lock (_lock)
+            {
+                if (_lazy.IsValueCreated)
+                {
+                    _lazy.Value.Dispose();
+                }
+
+                _throwOnEventWriteErrors = false;
+                _lazy = new Lazy<EtwEventSource>(CreateInstance);
+            }
+        }
 
         /// <summary>
         /// Handler for stopping a span.
