@@ -11,17 +11,34 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
     [EventSource(Name = "A365-O11y-EventSource")]
     public class EtwEventSource : EventSource
     {
+        private static readonly object _lock = new object();
         private static bool _throwOnEventWriteErrors = false;
-        private static readonly Lazy<EtwEventSource> _lazy =
-            new Lazy<EtwEventSource>(() =>
-                _throwOnEventWriteErrors
-                    ? new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors)
-                    : new EtwEventSource());
+        private static Lazy<EtwEventSource> _lazy =
+            new Lazy<EtwEventSource>(CreateInstance);
+
+        private static EtwEventSource CreateInstance() =>
+            _throwOnEventWriteErrors
+                ? new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors)
+                : new EtwEventSource();
 
         /// <summary>
         /// Singleton instance of the EtwEventSource.
         /// </summary>
-        public static EtwEventSource Log => _lazy.Value;
+        public static EtwEventSource Log
+        {
+            get
+            {
+                if (_lazy.IsValueCreated)
+                {
+                    return _lazy.Value;
+                }
+
+                lock (_lock)
+                {
+                    return _lazy.Value;
+                }
+            }
+        }
 
         private EtwEventSource() : base() { }
 
@@ -40,13 +57,33 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// </exception>
         public static void Configure(bool throwOnEventWriteErrors)
         {
-            if (_lazy.IsValueCreated)
+            lock (_lock)
             {
-                throw new InvalidOperationException(
-                    "EtwEventSource has already been created. Configure() must be called before the first access of Log.");
-            }
+                if (_lazy.IsValueCreated)
+                {
+                    throw new InvalidOperationException(
+                        "EtwEventSource has already been created. Configure() must be called before the first access of Log.");
+                }
 
-            _throwOnEventWriteErrors = throwOnEventWriteErrors;
+                _throwOnEventWriteErrors = throwOnEventWriteErrors;
+            }
+        }
+
+        /// <summary>
+        /// Resets the singleton so tests can exercise <see cref="Configure"/> on a fresh instance.
+        /// </summary>
+        internal static void ResetForTesting()
+        {
+            lock (_lock)
+            {
+                if (_lazy.IsValueCreated)
+                {
+                    _lazy.Value.Dispose();
+                }
+
+                _throwOnEventWriteErrors = false;
+                _lazy = new Lazy<EtwEventSource>(CreateInstance);
+            }
         }
 
         /// <summary>
