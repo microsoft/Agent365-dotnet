@@ -45,6 +45,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             OpenTelemetryConstants.UserNameKey,
             OpenTelemetryConstants.UserEmailKey,
             OpenTelemetryConstants.CallerClientIpKey,
+            OpenTelemetryConstants.ServerAddressKey,
+            OpenTelemetryConstants.ServerPortKey,
         };
 
         /// <summary>

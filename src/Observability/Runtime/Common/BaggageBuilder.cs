@@ -198,6 +198,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the invoke agent server address and port baggage values.
+        /// </summary>
+        /// <param name="address">The server address (hostname) of the target agent service.</param>
+        /// <param name="port">Optional server port. Only recorded when different from 443.</param>
+        /// <returns>The current builder instance for method chaining.</returns>
+        public BaggageBuilder InvokeAgentServer(string? address, int? port = null)
+        {
+            Set(OpenTelemetryConstants.ServerAddressKey, address);
+            if (port.HasValue && port.Value != 443)
+            {
+                Set(OpenTelemetryConstants.ServerPortKey, port.Value.ToString());
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Sets the conversation ID baggage value.
         /// </summary>
         /// <remarks>

@@ -346,4 +346,30 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         // Assert
         activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Server);
     }
+
+    [TestMethod]
+    public void ActivityProcessor_PropagatesServerBaggage_ForInvokeAgentSpan()
+    {
+        // Arrange
+        using var tracerProvider = ConstructTracerProvider();
+        var serverAddress = "myagent.azurewebsites.net";
+        var serverPort = "8443";
+
+        // Act - set server address/port in baggage, then start an invoke_agent span
+        using (new Runtime.Common.BaggageBuilder()
+            .InvokeAgentServer(serverAddress, 8443)
+            .Build())
+        {
+            var activity = ListenForActivity(() =>
+            {
+                using var scope = InvokeAgentScope.Start(
+                    new InvokeAgentDetails(new AgentDetails("agent-1"), null),
+                    Util.GetTenantDetails());
+            });
+
+            // Assert - processor should coalesce server baggage onto the span
+            activity.ShouldHaveTag(ServerAddressKey, serverAddress);
+            activity.ShouldHaveTag(ServerPortKey, serverPort);
+        }
+    }
 }
