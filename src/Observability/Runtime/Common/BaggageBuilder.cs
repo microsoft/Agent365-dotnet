@@ -127,7 +127,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentUpn(string? v)
         { 
-            Set(OpenTelemetryConstants.AgentUPNKey, v);
+            Set(OpenTelemetryConstants.AgentEmailKey, v);
             return this;
         }
 
@@ -160,7 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerId(string? v)
         { 
-            Set(OpenTelemetryConstants.CallerIdKey, v);
+            Set(OpenTelemetryConstants.UserIdKey, v);
             return this;
         }
 
@@ -172,7 +172,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerUpn(string? v)
         {
-            Set(OpenTelemetryConstants.CallerUpnKey, v);
+            Set(OpenTelemetryConstants.UserEmailKey, v);
             return this;
         }
 
@@ -184,7 +184,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder CallerName(string? v)
         {
-            Set(OpenTelemetryConstants.CallerNameKey, v);
+            Set(OpenTelemetryConstants.UserNameKey, v);
             return this;
         }
 

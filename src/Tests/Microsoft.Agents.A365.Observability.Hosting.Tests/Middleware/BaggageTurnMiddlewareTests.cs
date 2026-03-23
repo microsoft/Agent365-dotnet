@@ -27,7 +27,7 @@ public class BaggageTurnMiddlewareTests
         NextDelegate next = (ct) =>
         {
             capturedTenantId = Baggage.Current.GetBaggage(OpenTelemetryConstants.TenantIdKey);
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.CallerIdKey);
+            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 
@@ -54,7 +54,7 @@ public class BaggageTurnMiddlewareTests
         NextDelegate next = (ct) =>
         {
             logicCalled = true;
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.CallerIdKey);
+            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 

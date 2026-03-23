@@ -29,7 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
         /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="conversationId">Optional conversation or session correlation ID for the tool execution.</param>
-        /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
+        /// <param name="channel">Optional channel information for observability.</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="startTime">Optional explicit start time. Useful when recording a tool call after execution has already completed.</param>
@@ -49,9 +49,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentContext, conversationId, sourceMetadata, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
+        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentContext, conversationId, channel, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
+        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
             : base(
                 kind: spanKind ?? ActivityKind.Internal,
                 agentDetails: agentDetails,
@@ -62,7 +62,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 endTime: endTime,
                 parentContext: parentContext,
                 conversationId: conversationId,
-                sourceMetadata: sourceMetadata,
+                channel: channel,
                 callerDetails: callerDetails)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = details;

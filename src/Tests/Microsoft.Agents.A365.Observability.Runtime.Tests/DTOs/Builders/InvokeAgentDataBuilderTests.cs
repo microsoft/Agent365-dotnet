@@ -21,7 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 "test content",
                 ExecutionType.HumanToAgent,
                 "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+                new Channel(name: "source-name", link: "source-description"));
             var conversationId = "conv-123";
 
             // Act
@@ -35,7 +35,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
             telemetry.Attributes[OpenTelemetryConstants.ChannelNameKey].Should().Be("source-name");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
-                        telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
+            telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
         }
 
         [TestMethod]
@@ -78,10 +78,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 callerDetails: callerDetails);
 
             // Assert
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerIdKey].Should().Be("caller-123");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerNameKey].Should().Be("Caller Name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserIdKey].Should().Be("caller-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserNameKey].Should().Be("Caller Name");
         }
 
         [TestMethod]
@@ -298,7 +298,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 "test content",
                 ExecutionType.HumanToAgent,
                 "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+                new Channel(name: "source-name", link: "source-description"));
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
             var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
             var conversationId = "conv-999";
@@ -326,7 +326,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerAgentIdKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
@@ -458,7 +458,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 "test content",
                 ExecutionType.HumanToAgent,
                 "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+                new Channel(name: "source-name", link: "source-description"));
             var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
             var conversationId = "conv-999";
             var inputMessages = new[] { "Hello" };
@@ -488,12 +488,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes[OpenTelemetryConstants.ChannelNameKey].Should().Be("source-name");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
             telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerIdKey].Should().Be("caller-123");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerNameKey].Should().Be("Caller Name");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerUpnKey].Should().Be("caller@example.com");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserIdKey].Should().Be("caller-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserNameKey].Should().Be("Caller Name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserEmailKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserEmailKey].Should().Be("caller@example.com");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
             telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantDetails.TenantId);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);

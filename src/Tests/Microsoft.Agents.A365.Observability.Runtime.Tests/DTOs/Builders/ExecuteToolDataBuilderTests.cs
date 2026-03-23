@@ -30,17 +30,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
-        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        public void Build_WithChannel_IncludesChannelAttributes()
         {
             // Arrange
             var toolDetails = new ToolCallDetails("toolSource", null);
             var agent = new AgentDetails("agent-src");
             var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-src-tool";
-            var source = new SourceMetadata(id: "src-id", name: "ChannelTool", role: Role.Agent, description: "https://channel/tool");
+            var source = new Channel(name: "ChannelTool", link: "https://channel/tool");
 
             // Act
-            var data = ExecuteToolDataBuilder.Build(toolDetails, agent, tenant, conversationId, sourceMetadata: source);
+            var data = ExecuteToolDataBuilder.Build(toolDetails, agent, tenant, conversationId, channel: source);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelTool");
@@ -69,7 +69,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.ServerAddressKey).WhoseValue.Should().Be("example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.ServerPortKey).WhoseValue.Should().Be("7071");
             attrs.Should().ContainKey(OpenTelemetryConstants.AgentAUIDKey).WhoseValue.Should().Be("auid");
-            attrs.Should().ContainKey(OpenTelemetryConstants.AgentUPNKey).WhoseValue.Should().Be("upn@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentEmailKey).WhoseValue.Should().Be("upn@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.AgentBlueprintIdKey).WhoseValue.Should().Be("bp-1");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
@@ -236,9 +236,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolServerNameKey).WhoseValue.Should().Be("full-tool-server");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiToolCallResultKey);
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-tool-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Caller Tool Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("callertool@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserIdKey).WhoseValue.Should().Be("caller-tool-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserNameKey).WhoseValue.Should().Be("Caller Tool Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserEmailKey).WhoseValue.Should().Be("callertool@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("10.0.0.50");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);

@@ -43,7 +43,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey);
             dict.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey);
             dict.Should().ContainKey(OpenTelemetryConstants.AgentAUIDKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.AgentUPNKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.AgentEmailKey);
             dict.Should().ContainKey(OpenTelemetryConstants.AgentBlueprintIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.AgentPlatformIdKey);
         }
@@ -77,7 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         [TestMethod]
         public void AddRequestDetails_PopulatesRequestKeys()
         {
-            var request = new Request("content", ExecutionType.HumanToAgent, "session", new SourceMetadata(id: "src-id", name: "src-name", role: Role.Human, description: "src-desc"));
+            var request = new Request("content", ExecutionType.HumanToAgent, "session", new Channel(name: "src-name", link: "src-desc"));
             var dict = TestBuilder.BuildAll(request: request);
             dict.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
             dict.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
@@ -88,9 +88,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             var caller = new CallerDetails("caller-1", "Caller Name", "caller@upn", tenantId: "tenant-y");
             var dict = TestBuilder.BuildAll(caller: caller);
-            dict.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.UserEmailKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.UserNameKey);
         }
 
         [TestMethod]
@@ -102,7 +102,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentNameKey);
             dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentBlueprintIdKey);
             dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentAUIDKey);
-            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentUPNKey);
+            dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentEmailKey);
             dict.Should().ContainKey(OpenTelemetryConstants.CallerAgentPlatformIdKey);
         }
 

@@ -156,20 +156,20 @@ public sealed class InferenceScopeTest : ActivityTest
                 Util.GetTenantDetails(),
                 parentContext: null,
                 conversationId: conversationId,
-                sourceMetadata: null);
+                channel: null);
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
     }
 
     [TestMethod]
-    public void Start_SetsSourceMetadata_Tags()
+    public void Start_SetsChannel_Tags()
     {
         var details = new InferenceCallDetails(
             InferenceOperationType.Chat,
             "gpt-4o",
             "openai");
-        var metadata = new SourceMetadata(id: "src-id", name: "ChannelZ", role: Role.Human, description: "https://channel/link/z");
+        var metadata = new Channel(name: "ChannelZ", link: "https://channel/link/z");
 
         var activity = ListenForActivity(() =>
         {
@@ -179,11 +179,11 @@ public sealed class InferenceScopeTest : ActivityTest
                 Util.GetTenantDetails(),
                 parentContext: null,
                 conversationId: null,
-                sourceMetadata: metadata);
+                channel: metadata);
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Link!);
     }
 
     [TestMethod]
@@ -230,9 +230,9 @@ public sealed class InferenceScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
         activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 
