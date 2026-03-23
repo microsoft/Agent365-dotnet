@@ -1,4 +1,7 @@
-﻿using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
