@@ -48,9 +48,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// operation. Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an
         /// <see cref="ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="conversationId">Optional conversation id.</param>
-        /// <param name="sourceMetadata">Optional source metadata.</param>
+        /// <param name="channel">Optional channel information.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityContext? parentContext = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null)
+        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, CallerDetails? callerDetails = null)
         {
             customStartTime = startTime;
             customEndTime = endTime;
@@ -79,7 +79,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiAgentNameKey, agentDetails.AgentName);
                 SetTagMaybe(GenAiAgentDescriptionKey, agentDetails.AgentDescription);
                 SetTagMaybe(AgentAUIDKey, agentDetails.AgentAUID);
-                SetTagMaybe(AgentUPNKey, agentDetails.AgentUPN);
+                SetTagMaybe(AgentEmailKey, agentDetails.AgentUPN);
                 SetTagMaybe(AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
                 SetTagMaybe(AgentPlatformIdKey, agentDetails.AgentPlatformId);
             }
@@ -100,17 +100,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
             }
 
-            if (sourceMetadata != null)
+            if (channel != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, sourceMetadata.Name);
-                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, sourceMetadata.Description);
+                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, channel.Name);
+                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, channel.Link);
             }
 
             if (callerDetails != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
-                SetTagMaybe(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
-                SetTagMaybe(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+                SetTagMaybe(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
+                SetTagMaybe(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
+                SetTagMaybe(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
                 SetTagMaybe(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
             }
 

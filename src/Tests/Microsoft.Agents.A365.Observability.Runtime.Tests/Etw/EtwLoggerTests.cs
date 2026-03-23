@@ -108,11 +108,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var response = new Response(new[] { "Hello", "World" });
             var conversationId = "conv-output-etw";
-            var sourceMetadata = new SourceMetadata(name: "EtwChannel", description: "https://channel/etw");
+            var sourceMetadata = new Channel(name: "EtwChannel", link: "https://channel/etw");
             var callerDetails = new CallerDetails("caller-etw-123", "Etw Caller", "etw-caller@example.com");
 
             // Act
-            etwLogger.LogOutput(agentDetails, tenantDetails, response, conversationId: conversationId, sourceMetadata: sourceMetadata, callerDetails: callerDetails);
+            etwLogger.LogOutput(agentDetails, tenantDetails, response, conversationId: conversationId, channel: sourceMetadata, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
