@@ -76,16 +76,16 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 Util.GetTenantDetails(),
                 parentContext: null,
                 conversationId: conversationId,
-                sourceMetadata: null);
+                channel: null);
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
     }
 
     [TestMethod]
-    public void Start_SetsSourceMetadata_Tags()
+    public void Start_SetsChannel_Tags()
     {
-        var metadata = new SourceMetadata(id: "tool-src", name: "ChannelY", role: Role.Agent, description: "https://channel/link/y");
+        var metadata = new Channel(name: "ChannelY", link: "https://channel/link/y");
 
         var activity = ListenForActivity(() =>
         {
@@ -95,11 +95,11 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 Util.GetTenantDetails(),
                 parentContext: null,
                 conversationId: null,
-                sourceMetadata: metadata);
+                channel: metadata);
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Link!);
     }
 
     [TestMethod]
@@ -124,7 +124,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 tenantDetails,
                 parentContext: null,
                 conversationId: null,
-                sourceMetadata: null,
+                channel: null,
                 threatDiagnosticsSummary: threatSummary);
         });
 
@@ -149,7 +149,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
                 tenantDetails,
                 parentContext: null,
                 conversationId: null,
-                sourceMetadata: null,
+                channel: null,
                 threatDiagnosticsSummary: null);
         });
 
@@ -229,9 +229,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
         activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 

@@ -28,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
-        /// <param name="sourceMetadata">Optional source metadata for the operation.</param>
+        /// <param name="channel">Optional channel information for the operation.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
@@ -44,13 +44,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            SourceMetadata? sourceMetadata = null,
+            Channel? channel = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null,
             string? spanKind = null,
             string? traceId = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, sourceMetadata, callerDetails, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, channel, callerDetails, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId);
         }
@@ -61,7 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             TenantDetails tenantDetails,
             string conversationId,
             string? responseContent,
-            SourceMetadata? sourceMetadata,
+            Channel? channel,
             CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
         {
@@ -83,8 +83,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Response content if supplied
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
 
-            // Source metadata
-            AddSourceMetadataAttributes(attributes, sourceMetadata);
+            // Channel
+            AddChannelAttributes(attributes, channel);
 
             // Add caller details
             AddCallerDetails(attributes, callerDetails);

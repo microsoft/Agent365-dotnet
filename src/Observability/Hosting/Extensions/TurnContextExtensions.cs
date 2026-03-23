@@ -20,8 +20,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetCallerBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.CallerIdKey, turnContext.Activity?.From?.Id);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.CallerNameKey, turnContext.Activity?.From?.Name);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserIdKey, turnContext.Activity?.From?.Id);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserNameKey, turnContext.Activity?.From?.Name);
         }
 
         /// <summary>
@@ -65,9 +65,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         }
 
         /// <summary>
-        /// Extracts source metadata baggage key-value pairs from the provided turn context.
+        /// Extracts channel baggage key-value pairs from the provided turn context.
         /// </summary>
-        public static IEnumerable<KeyValuePair<string, object?>> GetSourceMetadataBaggagePairs(this ITurnContext turnContext)
+        public static IEnumerable<KeyValuePair<string, object?>> GetChannelBaggagePairs(this ITurnContext turnContext)
         {
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelNameKey, turnContext.Activity?.ChannelId?.Channel);
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelLinkKey, turnContext.Activity?.ChannelId?.SubChannel);

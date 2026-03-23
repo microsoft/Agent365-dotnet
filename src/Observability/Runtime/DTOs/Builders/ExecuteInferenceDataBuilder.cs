@@ -26,7 +26,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
-        /// <param name="sourceMetadata">Optional source metadata for the inference call.</param>
+        /// <param name="channel">Optional channel information for the inference call.</param>
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
         /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
@@ -43,7 +43,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            SourceMetadata? sourceMetadata = null,
+            Channel? channel = null,
             string? thoughtProcess = null,
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null,
@@ -56,7 +56,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 conversationId,
                 inputMessages,
                 outputMessages,
-                sourceMetadata,
+                channel,
                 thoughtProcess,
                 callerDetails,
                 extraAttributes);
@@ -71,7 +71,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string conversationId,
             string[]? inputMessages,
             string[]? outputMessages,
-            SourceMetadata? sourceMetadata,
+            Channel? channel,
             string? thoughtProcess,
             CallerDetails? callerDetails,
             IDictionary<string, object?>? extraAttributes = null)
@@ -95,8 +95,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Thought process
             AddIfNotNull(attributes, GenAiAgentThoughtProcessKey, thoughtProcess);
 
-            // Source metadata
-            AddSourceMetadataAttributes(attributes, sourceMetadata);
+            // Channel
+            AddChannelAttributes(attributes, channel);
 
             // Add caller details
             AddCallerDetails(attributes, callerDetails);

@@ -30,7 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiConversationIdKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.ChannelNameKey);
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.ChannelLinkKey);
-            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.CallerIdKey);
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.UserIdKey);
         }
 
         [TestMethod]
@@ -67,7 +67,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentNameKey).WhoseValue.Should().Be("AgentThree");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentDescriptionKey).WhoseValue.Should().Be("Description");
             attrs.Should().ContainKey(OpenTelemetryConstants.AgentAUIDKey).WhoseValue.Should().Be("auid");
-            attrs.Should().ContainKey(OpenTelemetryConstants.AgentUPNKey).WhoseValue.Should().Be("upn@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.AgentEmailKey).WhoseValue.Should().Be("upn@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.AgentBlueprintIdKey).WhoseValue.Should().Be("bp-1");
             attrs.Should().ContainKey(OpenTelemetryConstants.AgentPlatformIdKey).WhoseValue.Should().Be("platform-1");
 
@@ -131,7 +131,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var tenant = new TenantDetails(Guid.NewGuid());
             var response = new Response(new[] { "Hello", "World" });
             var conversationId = "conv-output-all";
-            var source = new SourceMetadata(id: "src-id", name: "ChannelOutput", role: Role.Human, description: "https://channel/output");
+            var source = new Channel(name: "ChannelOutput", link: "https://channel/output");
             var callerDetails = new CallerDetails("caller-output-123", "Output Caller Name", "calleroutput@example.com", System.Net.IPAddress.Parse("192.168.1.50"), "caller-tenant-output");
             var start = DateTimeOffset.UtcNow.AddSeconds(-5);
             var end = DateTimeOffset.UtcNow;
@@ -144,7 +144,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 tenant,
                 response,
                 conversationId: conversationId,
-                sourceMetadata: source,
+                channel: source,
                 callerDetails: callerDetails,
                 startTime: start,
                 endTime: end,
@@ -156,9 +156,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be("conv-output-all");
             attrs.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelOutput");
             attrs.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey).WhoseValue.Should().Be("https://channel/output");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-output-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Output Caller Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("calleroutput@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserIdKey).WhoseValue.Should().Be("caller-output-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserNameKey).WhoseValue.Should().Be("Output Caller Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserEmailKey).WhoseValue.Should().Be("calleroutput@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue.Should().Be("Hello,World");
             data.StartTime.Should().Be(start);

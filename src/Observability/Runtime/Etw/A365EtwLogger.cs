@@ -45,7 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata,
+            Channel? channel,
             CallerDetails? callerDetails,
             string? traceId)
         {
@@ -60,7 +60,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata,
+                channel,
                 callerDetails: callerDetails,
                 traceId: traceId);
 
@@ -124,7 +124,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata,
+            Channel? channel,
             CallerDetails? callerDetails,
             string? traceId)
         {
@@ -138,7 +138,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata,
+                channel,
                 callerDetails: callerDetails,
                 traceId: traceId);
 
@@ -157,7 +157,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             TenantDetails tenantDetails,
             Response response,
             string? conversationId = null,
-            SourceMetadata? sourceMetadata = null,
+            Channel? channel = null,
             CallerDetails? callerDetails = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
@@ -170,7 +170,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 tenantDetails,
                 response,
                 conversationId,
-                sourceMetadata,
+                channel,
                 callerDetails,
                 startTime,
                 endTime,

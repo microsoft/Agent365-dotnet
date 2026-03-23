@@ -53,7 +53,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
 
             var callerDetails = DeriveCallerDetails(turnContext);
             var conversationId = turnContext.Activity?.Conversation?.Id;
-            var sourceMetadata = DeriveSourceMetadata(turnContext);
+            var channel = DeriveChannel(turnContext);
 
             turnContext.OnSendActivities(CreateSendHandler(
                 turnContext,
@@ -61,7 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 tenantDetails,
                 callerDetails,
                 conversationId,
-                sourceMetadata));
+                channel));
 
             await next(cancellationToken).ConfigureAwait(false);
         }
@@ -116,7 +116,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 tenantId: from.TenantId);
         }
 
-        private static SourceMetadata? DeriveSourceMetadata(ITurnContext turnContext)
+        private static Channel? DeriveChannel(ITurnContext turnContext)
         {
             var channelId = turnContext.Activity?.ChannelId;
             if (channelId == null)
@@ -124,9 +124,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 return null;
             }
 
-            return new SourceMetadata(
+            return new Channel(
                 name: channelId.Channel,
-                description: channelId.SubChannel);
+                link: channelId.SubChannel);
         }
 
         private static SendActivitiesHandler CreateSendHandler(
@@ -135,7 +135,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
             TenantDetails tenantDetails,
             CallerDetails? callerDetails,
             string? conversationId,
-            SourceMetadata? sourceMetadata)
+            Channel? channel)
         {
             return async (ctx, activities, nextSend) =>
             {
@@ -171,7 +171,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     tenantDetails: tenantDetails,
                     response: new Response(messages),
                     conversationId: conversationId,
-                    sourceMetadata: sourceMetadata,
+                    channel: channel,
                     callerDetails: callerDetails,
                     parentContext: parentContext);
 

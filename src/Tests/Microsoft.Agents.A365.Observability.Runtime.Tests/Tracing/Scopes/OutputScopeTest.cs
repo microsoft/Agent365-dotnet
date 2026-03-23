@@ -142,11 +142,11 @@ public sealed class OutputScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void Start_SetsConversationIdSourceMetadataAndCallerDetails_WhenProvided()
+    public void Start_SetsConversationIdChannelAndCallerDetails_WhenProvided()
     {
         // Arrange
         var conversationId = "conv-output-123";
-        var metadata = new SourceMetadata(id: "src-id", name: "ChannelOutput", role: Role.Human, description: "https://channel/output");
+        var metadata = new Channel(name: "ChannelOutput", link: "https://channel/output");
         var callerDetails = new CallerDetails(
             callerId: "caller-output-123",
             callerName: "Output Caller",
@@ -166,7 +166,7 @@ public sealed class OutputScopeTest : ActivityTest
                 response,
                 parentContext: null,
                 conversationId: conversationId,
-                sourceMetadata: metadata,
+                channel: metadata,
                 callerDetails: callerDetails);
         });
 
@@ -175,12 +175,12 @@ public sealed class OutputScopeTest : ActivityTest
 
         // Assert - source metadata
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
-        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Description!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Link!);
 
         // Assert - caller details
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
         activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
     }
 

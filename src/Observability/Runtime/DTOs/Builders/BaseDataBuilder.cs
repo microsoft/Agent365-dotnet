@@ -21,7 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
             OpenTelemetryConstants.AgentAUIDKey,
-            OpenTelemetryConstants.AgentUPNKey,
+            OpenTelemetryConstants.AgentEmailKey,
             OpenTelemetryConstants.AgentBlueprintIdKey,
             OpenTelemetryConstants.AgentPlatformIdKey,
             OpenTelemetryConstants.TenantIdKey,
@@ -29,14 +29,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.ServerPortKey,
             OpenTelemetryConstants.ChannelNameKey,
             OpenTelemetryConstants.ChannelLinkKey,
-            OpenTelemetryConstants.CallerIdKey,
-            OpenTelemetryConstants.CallerUpnKey,
-            OpenTelemetryConstants.CallerNameKey,
+            OpenTelemetryConstants.UserIdKey,
+            OpenTelemetryConstants.UserEmailKey,
+            OpenTelemetryConstants.UserNameKey,
             OpenTelemetryConstants.CallerAgentNameKey,
             OpenTelemetryConstants.CallerAgentIdKey,
             OpenTelemetryConstants.CallerAgentBlueprintIdKey,
             OpenTelemetryConstants.CallerAgentAUIDKey,
-            OpenTelemetryConstants.CallerAgentUPNKey,
+            OpenTelemetryConstants.CallerAgentEmailKey,
             OpenTelemetryConstants.CallerClientIpKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.SessionIdKey,
@@ -88,7 +88,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentDescriptionKey, agentDetails.AgentDescription);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentAUIDKey, agentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.AgentUPNKey, agentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentEmailKey, agentDetails.AgentUPN);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentPlatformIdKey, agentDetails.AgentPlatformId);
         }
@@ -126,7 +126,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (request == null) return;
 
-            AddSourceMetadataAttributes(attributes, request.SourceMetadata);
+            AddChannelAttributes(attributes, request.Channel);
         }
 
         /// <summary>
@@ -136,9 +136,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (callerDetails == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerIdKey, callerDetails.CallerId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerUpnKey, callerDetails.CallerUpn);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerNameKey, callerDetails.CallerName);
+            AddIfNotNull(attributes, OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
+            AddIfNotNull(attributes, OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
         }
 
@@ -153,19 +153,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentUPNKey, callerAgentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgentUPN);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
         }
 
         /// <summary>
-        /// Adds source metadata attributes to the attributes dictionary.
+        /// Adds channel attributes to the attributes dictionary.
         /// </summary>
-        protected static void AddSourceMetadataAttributes(IDictionary<string, object?> attributes, SourceMetadata? sourceMetadata)
+        protected static void AddChannelAttributes(IDictionary<string, object?> attributes, Channel? channel)
         {
-            if (sourceMetadata == null) return;
+            if (channel == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelNameKey, sourceMetadata.Name);
-            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelLinkKey, sourceMetadata.Description);
+            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelNameKey, channel.Name);
+            AddIfNotNull(attributes, OpenTelemetryConstants.ChannelLinkKey, channel.Link);
         }
 
         /// <summary>

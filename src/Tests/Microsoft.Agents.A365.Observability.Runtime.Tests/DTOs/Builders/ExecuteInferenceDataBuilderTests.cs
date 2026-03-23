@@ -28,17 +28,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
-        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        public void Build_WithChannel_IncludesChannelAttributes()
         {
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-src");
             var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-src-inf";
-            var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
+            var source = new Channel(name: "ChannelInf", link: "https://channel/inf");
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, sourceMetadata: source);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, channel: source);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelInf");
@@ -198,9 +198,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentThoughtProcessKey).WhoseValue.Should().Be(thoughtProcess);
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-inf-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Caller Inf Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("callerinf@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserIdKey).WhoseValue.Should().Be("caller-inf-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserNameKey).WhoseValue.Should().Be("Caller Inf Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserEmailKey).WhoseValue.Should().Be("callerinf@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.100");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);

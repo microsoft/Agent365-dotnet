@@ -70,7 +70,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 startTime: startTime,
                 endTime: endTime,
                 parentContext: parentContext,                conversationId: conversationId,
-                sourceMetadata: request?.SourceMetadata,
+                channel: request?.Channel,
                 callerDetails: callerDetails)
         {
             var (endpoint, _, sessionId) = invokeAgentDetails;
@@ -92,7 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
                 SetTagMaybe(OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
                 SetTagMaybe(OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentUPNKey, callerAgentDetails.AgentUPN);
+                SetTagMaybe(OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgentUPN);
                 SetTagMaybe(OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
             }
 
