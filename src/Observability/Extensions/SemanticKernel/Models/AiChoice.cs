@@ -29,6 +29,12 @@ public sealed class AiChoiceMessage
     public string? Role { get; set; }
 
     /// <summary>
+    /// Gets or sets the direct content of the AI message.
+    /// </summary>
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+
+    /// <summary>
     /// Gets or sets the collection of tool calls associated with the AI message.
     /// </summary>
     [JsonPropertyName("tool_calls")]
