@@ -15,6 +15,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
     [TestClass]
     public class Agent365ExporterAsyncE2ETests
     {
+        private HttpClient? _httpClient;
         private TestHttpMessageHandler? _handler;
         private ServiceProvider? _provider;
         private bool _receivedRequest;
@@ -410,8 +411,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 req.Headers.Authorization.Should().NotBeNull();
                 return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
             });
-            var httpClient = new HttpClient(this._handler);
-            this._provider = this.CreateTestServiceProvider(httpClient);
+            this._httpClient = new HttpClient(this._handler);
+            this._provider = this.CreateTestServiceProvider(this._httpClient);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            this._httpClient?.Dispose();
+            this._httpClient = null;
         }
     }
 }
