@@ -19,8 +19,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// </summary>
         /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken);
+        Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the list of MCP Servers that are configured for the agent.
@@ -28,8 +29,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <param name="toolOptions">Tool options for listing servers.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
-        Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions);
+        Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the MCP Client Tools from the specified MCP server.

@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
@@ -17,6 +18,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <summary>
         /// Returns an observability token (cached inside the credential) or null on failure/not registered.
         /// </summary>
-        Task<string?> GetObservabilityToken(string agentId, string tenantId);
+        Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken = default);
     }
 }

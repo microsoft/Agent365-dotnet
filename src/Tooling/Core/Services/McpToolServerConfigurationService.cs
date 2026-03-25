@@ -11,6 +11,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Reflection;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Handlers;
@@ -49,15 +50,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, CancellationToken cancellationToken = default)
         {
-            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions());
+            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions(), cancellationToken);
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions, cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -158,7 +159,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
-            string agentInstanceId, string authToken, ToolOptions toolOptions)
+            string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, this._configuration);
 
@@ -174,7 +175,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
 
-                var response = await httpClient.GetStringAsync(configEndpoint);
+                var response = await httpClient.GetStringAsync(configEndpoint, cancellationToken);
 
                 var options = new JsonSerializerOptions
                 {

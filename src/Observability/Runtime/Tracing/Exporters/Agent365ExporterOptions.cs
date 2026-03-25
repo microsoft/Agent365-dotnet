@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
@@ -10,7 +11,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// Must be fast and non-blocking (use internal caching elsewhere).
     /// Return null/empty to omit the Authorization header.
     /// </summary>
-    public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
+    public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Delegate used by the exporter to resolve the endpoint host or URL for a given tenant id.

@@ -83,7 +83,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests
                     builder.Services.AddSingleton<Agent365ExporterOptions>(sp => new Agent365ExporterOptions
                     {
                         UseS2SEndpoint = false,
-                        TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+                        TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
                     });
                 });
             webHostBuilder.UseStartup<MinimalStartup>();
@@ -160,7 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Tests
                         builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
                         {
                             UseS2SEndpoint = false,
-                            TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+                            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
                         });
                     });
 

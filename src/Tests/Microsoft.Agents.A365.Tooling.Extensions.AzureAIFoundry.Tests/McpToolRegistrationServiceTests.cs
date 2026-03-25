@@ -94,11 +94,12 @@ public class McpToolRegistrationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()));
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, ITurnContext, ToolOptions, CancellationToken>((_, _, _, options, _) => captureToolOptions(options));
         }
 
         setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
@@ -114,7 +115,8 @@ public class McpToolRegistrationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((servers, toolsByServer));
     }
 
@@ -197,7 +199,8 @@ public class McpToolRegistrationServiceTests
                 TestAgentInstanceId,
                 TestAuthToken,
                 _mockTurnContext.Object,
-                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance)),
+                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

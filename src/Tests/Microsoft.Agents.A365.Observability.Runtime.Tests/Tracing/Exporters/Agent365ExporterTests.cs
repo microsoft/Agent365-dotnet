@@ -99,7 +99,7 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token")
         };
 
         var resource = ResourceBuilder.CreateEmpty()
@@ -118,7 +118,7 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token")
         };
         Action act = () => _ = new Agent365Exporter(Agent365ExporterTests._agent365ExporterCore, null!, options, resource: null);
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");
@@ -196,7 +196,7 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token")
         };
 
         // Assert
@@ -212,7 +212,7 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token"),
             MaxQueueSize = 4096,
             ScheduledDelayMilliseconds = 10000,
             ExporterTimeoutMilliseconds = 60000,
@@ -232,7 +232,7 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token")
         };
 
         // Assert
@@ -245,7 +245,7 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token"),
             UseS2SEndpoint = true
         };
 
@@ -259,7 +259,7 @@ public sealed class Agent365ExporterTests
         // Arrange & Act
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("token"),
             UseS2SEndpoint = false
         };
 
@@ -275,7 +275,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -297,7 +297,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -328,7 +328,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -345,7 +345,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -362,7 +362,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -396,7 +396,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -433,7 +433,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (agentId, tenantId) =>
+            TokenResolver = (agentId, tenantId, _) =>
             {
                 capturedAgentId = agentId;
                 capturedTenantId = tenantId;
@@ -472,7 +472,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (agentId, tenantId) =>
+            TokenResolver = (agentId, tenantId, _) =>
             {
                 capturedAgentId = agentId;
                 capturedTenantId = tenantId;
@@ -508,7 +508,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>(null), // Return null token
+            TokenResolver = (_, _, _) => Task.FromResult<string?>(null), // Return null token
             UseS2SEndpoint = true
         };
 
@@ -538,7 +538,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>(string.Empty), // Return empty token
+            TokenResolver = (_, _, _) => Task.FromResult<string?>(string.Empty), // Return empty token
             UseS2SEndpoint = true
         };
 
@@ -568,7 +568,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
+            TokenResolver = (_, _, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
             UseS2SEndpoint = true
         };
 
@@ -598,7 +598,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
+            TokenResolver = (_, _, _) => Task.FromException<string?>(new InvalidOperationException("Token resolver failed")),
             UseS2SEndpoint = false
         };
 
@@ -628,7 +628,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -660,7 +660,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -692,7 +692,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -722,7 +722,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -752,7 +752,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -782,7 +782,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -812,7 +812,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -846,7 +846,7 @@ public sealed class Agent365ExporterTests
         // Arrange
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -889,7 +889,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = true
         };
 
@@ -924,7 +924,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
@@ -954,7 +954,7 @@ public sealed class Agent365ExporterTests
             var options = new Agent365ExporterOptions
             {
                 ClusterCategory = category,
-                TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+                TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
                 UseS2SEndpoint = true
             };
 
@@ -989,7 +989,7 @@ public sealed class Agent365ExporterTests
             var options = new Agent365ExporterOptions
             {
                 ClusterCategory = category,
-                TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+                TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
                 UseS2SEndpoint = false
             };
 
@@ -1036,7 +1036,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false,
             DomainResolver = tenantId => resolverDomain
         };
@@ -1086,7 +1086,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false,
         };
 
@@ -1136,7 +1136,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false,
             DomainResolver = tenantId => resolverDomain
         };
@@ -1184,7 +1184,7 @@ public sealed class Agent365ExporterTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 

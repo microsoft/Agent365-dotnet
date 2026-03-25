@@ -72,7 +72,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     groups: groups,
                     resource: _resource,
                     options: _options,
-                    tokenResolver: (agentId, tenantId) => _options.TokenResolver!(agentId, tenantId),
+                    tokenResolver: (agentId, tenantId, ct) => _options.TokenResolver!(agentId, tenantId, ct),
                     sendAsync: request => _httpClient.SendAsync(request)
                 ).GetAwaiter().GetResult();
             }

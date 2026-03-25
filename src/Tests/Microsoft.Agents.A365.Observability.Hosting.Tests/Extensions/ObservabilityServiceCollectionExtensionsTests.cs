@@ -121,7 +121,7 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
 
         // Act
-        var token = options.TokenResolver!("test-agent", "test-tenant");
+        var token = options.TokenResolver!("test-agent", "test-tenant", default);
 
         // Assert
         // Token resolver should not throw (actual token retrieval logic is in the cache)
@@ -139,8 +139,7 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
 
         // Act
-        var token = options.TokenResolver!("test-agent", "test-tenant");
-
+        var token = options.TokenResolver!("test-agent", "test-tenant", default);
         // Assert
         // Token resolver should not throw (actual token retrieval logic is in the cache)
         // This just verifies the resolver is wired up

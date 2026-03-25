@@ -54,7 +54,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         // Arrange
         var toolOptions = new ToolOptions();
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Network error"));
 
         // Act
@@ -75,7 +75,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         // Arrange
         var toolOptions = new ToolOptions();
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MCPServerConfig>());
 
         // Act
@@ -102,7 +102,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         };
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -139,7 +139,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         };
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -178,7 +178,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         var tools2 = new List<McpClientTool>();
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -228,7 +228,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         var workingTools = new List<McpClientTool>();
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -281,7 +281,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         var tcs3 = new TaskCompletionSource<IList<McpClientTool>>();
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -382,7 +382,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         var tools2 = new List<McpClientTool>();
 
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers);
 
         _mockService
@@ -421,7 +421,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
         // Arrange
         var toolOptions = new ToolOptions();
         _mockService
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MCPServerConfig>());
 
         // Act

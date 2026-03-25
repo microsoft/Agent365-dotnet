@@ -33,7 +33,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 servers = await ListToolServersAsync(
                     agentInstanceId,
                     authToken,
-                    toolOptions).ConfigureAwait(false);
+                    toolOptions,
+                    cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

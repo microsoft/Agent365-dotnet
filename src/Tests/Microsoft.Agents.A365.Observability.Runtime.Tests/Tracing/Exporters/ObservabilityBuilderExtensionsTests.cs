@@ -19,7 +19,7 @@ public sealed class ObservabilityBuilderExtensionsTests
         // Configure custom batching parameters
         services.AddSingleton(new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token"),
             MaxQueueSize = 4096,
             ScheduledDelayMilliseconds = 10000,
             ExporterTimeoutMilliseconds = 60000,
@@ -55,7 +55,7 @@ public sealed class ObservabilityBuilderExtensionsTests
         // Configure with default batching parameters
         services.AddSingleton(new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+            TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
         });
 
         var tracerProviderBuilder = services.AddOpenTelemetry().WithTracing(builder =>

@@ -392,7 +392,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 return new Agent365ExporterOptions
                 {
                     UseS2SEndpoint = false,
-                    TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
+                    TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
                 };
             });
             

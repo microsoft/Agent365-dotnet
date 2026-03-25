@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
@@ -127,13 +128,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// <param name="options"></param>
         /// <param name="tokenResolver"></param>
         /// <param name="sendAsync"></param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns></returns>
         public async Task<ExportResult> ExportBatchCoreAsync(
             IEnumerable<(string TenantId, string AgentId, List<Activity> Activities)> groups,
             Resource resource,
             Agent365ExporterOptions options,
-            Func<string, string, Task<string?>> tokenResolver,
-            Func<HttpRequestMessage, Task<HttpResponseMessage>> sendAsync)
+            Func<string, string, CancellationToken, Task<string?>> tokenResolver,
+            Func<HttpRequestMessage, Task<HttpResponseMessage>> sendAsync,
+            CancellationToken cancellationToken = default)
         {
             foreach (var g in groups)
             {
@@ -157,7 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 string? token = null;
                 try
                 {
-                    token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
+                    token = await tokenResolver(agentId, tenantId, cancellationToken).ConfigureAwait(false);
                     this._logger?.LogDebug("Agent365ExporterCore: Obtained token for agent {AgentId} tenant {TenantId}.", agentId, tenantId);
                 }
                 catch (Exception ex)

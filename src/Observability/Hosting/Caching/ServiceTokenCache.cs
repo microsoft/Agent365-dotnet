@@ -121,16 +121,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </summary>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>The observability token if valid; otherwise, null.</returns>
-        public async Task<string?> GetObservabilityToken(string agentId, string tenantId)
+        public Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(agentId) || string.IsNullOrWhiteSpace(tenantId))
-                return null;
+                return Task.FromResult<string?>(null);
 
             var key = GetKey(agentId, tenantId);
 
             if (!_map.TryGetValue(key, out var entry))
-                return null;
+                return Task.FromResult<string?>(null);
 
             // Check if token has expired
             if (DateTimeOffset.UtcNow >= entry.ExpiresAt)
@@ -140,10 +141,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 {
                     removedEntry.ClearToken();
                 }
-                return null;
+                return Task.FromResult<string?>(null);
             }
 
-            return await Task.FromResult(entry.Token).ConfigureAwait(false);
+            return Task.FromResult(entry.Token);
         }
 
         /// <summary>
