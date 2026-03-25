@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://microsoft.com/agents/a365/observability/schemas/input-messages",
+  "title": "A365 Input Messages",
+  "description": "A365 Observability input message schema for the gen_ai.input.messages span attribute. Profiles the OTel GenAI semantic conventions input messages format.",
+  "a365_schema_version": "1.0.0",
+  "otel_semconv_baseline": "v1.40.0",
+  "otel_semconv_commit": "30003a9937eb7bcde6984877149055278405e03c",
+
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/ChatMessage"
+  },
+
+  "$defs": {
+    "Role": {
+      "description": "Role of the entity that created the message.",
+      "enum": ["system", "user", "assistant", "tool"],
+      "type": "string"
+    },
+
+    "Modality": {
+      "description": "The general modality of media content.",
+      "enum": ["image", "video", "audio"],
+      "type": "string"
+    },
+
+    "ChatMessage": {
+      "description": "Represents a single message in the chat history sent to the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["role", "parts"],
+      "properties": {
+        "role": {
+          "anyOf": [{ "$ref": "#/$defs/Role" }, { "type": "string" }],
+          "description": "Role of the entity that created the message."
+        },
+        "parts": {
+          "description": "List of message parts that make up the message content.",
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "$ref": "#/$defs/TextPart" },
+              { "$ref": "#/$defs/ToolCallRequestPart" },
+              { "$ref": "#/$defs/ToolCallResponsePart" },
+              { "$ref": "#/$defs/ServerToolCallPart" },
+              { "$ref": "#/$defs/ServerToolCallResponsePart" },
+              { "$ref": "#/$defs/BlobPart" },
+              { "$ref": "#/$defs/FilePart" },
+              { "$ref": "#/$defs/UriPart" },
+              { "$ref": "#/$defs/ReasoningPart" },
+              { "$ref": "#/$defs/GenericPart" }
+            ]
+          }
+        },
+        "name": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "description": "The name of the participant."
+        }
+      }
+    },
+
+    "TextPart": {
+      "description": "Represents text content sent to the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "text" },
+        "content": { "type": "string", "description": "Text content sent to the model." }
+      }
+    },
+
+    "ToolCallRequestPart": {
+      "description": "Represents a tool call requested by the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "const": "tool_call" },
+        "id": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null, "description": "Unique identifier for the tool call." },
+        "name": { "type": "string", "description": "Name of the tool." },
+        "arguments": { "default": null, "description": "Arguments for the tool call." }
+      }
+    },
+
+    "ToolCallResponsePart": {
+      "description": "Represents a tool call result sent to the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "response"],
+      "properties": {
+        "type": { "const": "tool_call_response" },
+        "id": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null, "description": "Unique tool call identifier." },
+        "response": { "description": "Tool call response." }
+      }
+    },
+
+    "ServerToolCallPart": {
+      "description": "Represents a server-side tool call invocation (e.g., code_interpreter, web_search).",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "name", "server_tool_call"],
+      "properties": {
+        "type": { "const": "server_tool_call" },
+        "id": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null },
+        "name": { "type": "string", "description": "Name of the server tool." },
+        "server_tool_call": { "description": "Server tool call details.", "type": "object", "additionalProperties": true, "required": ["type"], "properties": { "type": { "type": "string" } } }
+      }
+    },
+
+    "ServerToolCallResponsePart": {
+      "description": "Represents a server-side tool call response.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "server_tool_call_response"],
+      "properties": {
+        "type": { "const": "server_tool_call_response" },
+        "id": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null },
+        "server_tool_call_response": { "description": "Server tool call response details.", "type": "object", "additionalProperties": true, "required": ["type"], "properties": { "type": { "type": "string" } } }
+      }
+    },
+
+    "BlobPart": {
+      "description": "Represents blob binary data sent inline to the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "modality", "content"],
+      "properties": {
+        "type": { "const": "blob" },
+        "mime_type": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null, "description": "IANA MIME type." },
+        "modality": { "anyOf": [{ "$ref": "#/$defs/Modality" }, { "type": "string" }], "description": "General modality of the data." },
+        "content": { "type": "string", "format": "binary", "description": "Base64-encoded binary data." }
+      }
+    },
+
+    "FilePart": {
+      "description": "Represents an external file sent to the model by file ID.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "modality", "file_id"],
+      "properties": {
+        "type": { "const": "file" },
+        "mime_type": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null },
+        "modality": { "anyOf": [{ "$ref": "#/$defs/Modality" }, { "type": "string" }] },
+        "file_id": { "type": "string", "description": "Identifier referencing a pre-uploaded file." }
+      }
+    },
+
+    "UriPart": {
+      "description": "Represents an external file sent to the model by URI.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "modality", "uri"],
+      "properties": {
+        "type": { "const": "uri" },
+        "mime_type": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null },
+        "modality": { "anyOf": [{ "$ref": "#/$defs/Modality" }, { "type": "string" }] },
+        "uri": { "type": "string", "description": "URI referencing attached data." }
+      }
+    },
+
+    "ReasoningPart": {
+      "description": "Represents reasoning/thinking content from the model.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "reasoning" },
+        "content": { "type": "string", "description": "Reasoning/thinking content." }
+      }
+    },
+
+    "GenericPart": {
+      "description": "Represents an arbitrary message part for extensibility with custom types.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "description": "Custom part type identifier." }
+      }
+    }
+  }
+}
