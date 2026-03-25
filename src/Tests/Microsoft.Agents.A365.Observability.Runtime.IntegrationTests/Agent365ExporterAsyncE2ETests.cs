@@ -336,12 +336,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     .GetProperty("spans")
                     .EnumerateArray();
 
-                foreach (var span in spans)
-                {
-                    var opName = this.GetAttribute(span.GetProperty("attributes"), "gen_ai.operation.name");
-                    if (opName != null)
-                        allOperationNames.Add(opName);
-                }
+                allOperationNames.AddRange(
+                    spans
+                        .Select(span => this.GetAttribute(span.GetProperty("attributes"), "gen_ai.operation.name"))
+                        .Where(opName => opName != null)!);
             }
             allOperationNames.Should().Contain(new[] { "invoke_agent", "execute_tool", InferenceOperationType.Chat.ToString() }, "All three nested scopes should be exported, even if batched in fewer requests.");
         }
