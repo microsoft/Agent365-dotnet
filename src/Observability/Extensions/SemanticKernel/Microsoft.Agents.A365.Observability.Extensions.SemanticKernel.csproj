@@ -12,6 +12,9 @@
     <PackageTags>Microsoft;A365Observability;SemanticKernel;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extension.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.SemanticKernel" />
     <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" />
     <!-- Source Link Support -->

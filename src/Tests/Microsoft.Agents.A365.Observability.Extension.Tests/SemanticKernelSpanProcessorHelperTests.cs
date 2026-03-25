@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -136,11 +137,11 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiUserMessageEventName, tags: new ActivityTagsCollection
         {
-            { "gen_ai.event.content", JsonSerializer.Serialize(userMsg) }
+            { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(userMsg) }
         }));
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiChoiceEventName, tags: new ActivityTagsCollection
         {
-            { "gen_ai.event.content", JsonSerializer.Serialize(choiceMsg) }
+            { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(choiceMsg) }
         }));
 
             var result = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
@@ -267,7 +268,7 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiChoiceEventName, tags: new ActivityTagsCollection
             {
-                { "gen_ai.event.content", JsonSerializer.Serialize(choiceMsg) }
+                { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(choiceMsg) }
             }));
 
             var result = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
