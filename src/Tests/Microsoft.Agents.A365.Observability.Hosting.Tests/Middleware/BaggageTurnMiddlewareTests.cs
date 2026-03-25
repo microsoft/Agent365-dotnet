@@ -36,7 +36,7 @@ public class BaggageTurnMiddlewareTests
 
         // Assert
         capturedTenantId.Should().Be("tenant-123");
-        capturedCallerId.Should().Be("caller-id");
+        capturedCallerId.Should().Be("caller-aad");
     }
 
     [TestMethod]
