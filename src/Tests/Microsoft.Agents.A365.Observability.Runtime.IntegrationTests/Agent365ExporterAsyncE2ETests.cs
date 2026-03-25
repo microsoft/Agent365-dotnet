@@ -145,9 +145,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             }
 
             this._receivedRequest.Should().BeTrue("Exporter should make the expected HTTP request.");
-            this._receivedContent.Should().NotBeNull("Exporter should send a request body.");
+            var receivedContent = this._receivedContent.Should().NotBeNull("Exporter should send a request body.").Subject;
 
-            using var doc = JsonDocument.Parse(this._receivedContent!);
+            using var doc = JsonDocument.Parse(receivedContent);
             var root = doc.RootElement;
 
             var attributes = root
