@@ -25,9 +25,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
         /// <param name="turnContext"></param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>Returns a new object of the kernel</returns>
         /// <exception cref="ArgumentNullException"></exception>
-        Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null);
+        Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sends chat history to the MCP platform for real-time threat protection.

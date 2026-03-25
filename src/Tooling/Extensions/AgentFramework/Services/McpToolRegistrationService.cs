@@ -53,7 +53,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null)
+        string? authToken = null,
+        CancellationToken cancellationToken = default)
     {
         if (chatClient == null)
         {
@@ -83,7 +84,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentUserId,
                 authToken,
                 turnContext,
-                toolOptions).ConfigureAwait(false);
+                toolOptions,
+                cancellationToken).ConfigureAwait(false);
 
             // Add all MCP tools from all servers
             foreach (var serverEntry in toolsByServer)
@@ -116,7 +118,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null)
+        string? authToken = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
@@ -135,7 +138,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentUserId,
                 authToken,
                 turnContext,
-                toolOptions).ConfigureAwait(false);
+                toolOptions,
+                cancellationToken).ConfigureAwait(false);
 
             // Convert to AITool list
             var a365ToolList = mcpTools.Cast<AITool>().ToList();

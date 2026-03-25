@@ -9,6 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using ModelContextProtocol.Client;
     using System;
     using System.Collections.Generic;
+    using System.Threading;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -21,7 +22,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
-            ToolOptions toolOptions)
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken = default)
         {
             var toolsByServer = new Dictionary<string, IList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
 
@@ -68,7 +70,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                         turnContext,
                         server,
                         authToken,
-                        toolOptions).ConfigureAwait(false);
+                        toolOptions,
+                        cancellationToken).ConfigureAwait(false);
 
                     _logger.LogInformation(
                         "Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
@@ -111,13 +114,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
-            ToolOptions toolOptions)
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken = default)
         {
             var (_, toolsByServer) = await EnumerateToolsFromServersAsync(
                 agentInstanceId,
                 authToken,
                 turnContext,
-                toolOptions).ConfigureAwait(false);
+                toolOptions,
+                cancellationToken).ConfigureAwait(false);
 
             var allTools = new List<McpClientTool>();
             foreach (var tools in toolsByServer.Values)

@@ -26,12 +26,14 @@ public interface IMcpToolRegistrationService
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null);
+        string? authToken = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get MCP tool definitions and resources asynchronously.
@@ -39,11 +41,13 @@ public interface IMcpToolRegistrationService
     /// <param name="agentInstanceId">Agent Instance Id for the agent.</param>
     /// <param name="authToken">Auth token to access the MCP servers.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>A tuple containing the list of MCP tool definitions and tool resources.</returns>
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,
-        ITurnContext turnContext);
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends chat history to the MCP platform for real-time threat protection.

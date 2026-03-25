@@ -48,7 +48,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         }
 
         /// <inheritdoc />
-        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null, CancellationToken cancellationToken = default)
         {
             if (kernel == null)
             {
@@ -68,7 +68,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)
             {

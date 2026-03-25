@@ -78,11 +78,12 @@ public abstract class McpToolRegistrationServiceTestBase
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()));
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, ITurnContext, ToolOptions, CancellationToken>((_, _, _, options, _) => captureToolOptions(options));
         }
 
         setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
@@ -102,11 +103,12 @@ public abstract class McpToolRegistrationServiceTestBase
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()));
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, ITurnContext, ToolOptions, CancellationToken>((_, _, _, options, _) => captureToolOptions(options));
         }
 
         setup.ReturnsAsync(new List<McpClientTool>());

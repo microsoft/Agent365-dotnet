@@ -97,7 +97,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null)
+        string? authToken = null,
+        CancellationToken cancellationToken = default)
     {
         if (agentClient == null)
         {
@@ -113,8 +114,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
         try
         {
-            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            var (toolDefinitions, toolResources) = await GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, authToken ?? string.Empty, turnContext, cancellationToken).ConfigureAwait(false);
 
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
@@ -136,7 +136,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,
-        ITurnContext turnContext)
+        ITurnContext turnContext,
+        CancellationToken cancellationToken = default)
     {
         // TODO: Make this method private
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
@@ -153,7 +154,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             agentInstanceId,
             authToken,
             turnContext,
-            toolOptions).ConfigureAwait(false);
+            toolOptions,
+            cancellationToken).ConfigureAwait(false);
 
         if (servers.Count == 0)
         {

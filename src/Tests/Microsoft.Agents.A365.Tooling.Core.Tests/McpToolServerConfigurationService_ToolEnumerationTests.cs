@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
 using Moq;
 using System.Net.Http;
+using System.Threading;
 using Xunit;
 
 namespace Microsoft.Agents.A365.Tooling.Core.Tests;
@@ -109,7 +110,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "valid-server"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
@@ -145,7 +147,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "valid-server"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
@@ -183,7 +186,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server1"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(tools1);
 
         _mockService
@@ -191,7 +195,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server2"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(tools2);
 
         // Act
@@ -231,7 +236,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "failing-server"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Server connection failed"));
 
         _mockService
@@ -239,7 +245,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "working-server"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(workingTools);
 
         // Act
@@ -282,7 +289,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server1"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .Returns(async () =>
             {
                 lock (callOrder) callOrder.Add("server1-start");
@@ -296,7 +304,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server2"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .Returns(async () =>
             {
                 lock (callOrder) callOrder.Add("server2-start");
@@ -310,7 +319,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server3"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .Returns(async () =>
             {
                 lock (callOrder) callOrder.Add("server3-start");
@@ -380,7 +390,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server1"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(tools1);
 
         _mockService
@@ -388,7 +399,8 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "server2"),
                 It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(tools2);
 
         // Act

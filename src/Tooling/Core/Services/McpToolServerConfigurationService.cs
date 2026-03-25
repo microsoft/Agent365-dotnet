@@ -65,7 +65,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
             ITurnContext turnContext,
             MCPServerConfig mCPServerConfig,
             string authToken,
-            ToolOptions toolOptions)
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken = default)
         {
             try
             {
@@ -78,8 +79,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
-                var tools = await mcpClient.ListToolsAsync();
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions, cancellationToken);
+                var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
 
@@ -459,7 +460,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -507,7 +508,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory, cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {

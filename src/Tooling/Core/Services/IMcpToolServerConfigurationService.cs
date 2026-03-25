@@ -5,6 +5,7 @@ using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.Builder;
 using ModelContextProtocol.Client;
+using System.Threading;
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
@@ -37,9 +38,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="mCPServerConfig">The MCP server configuration.</param>
         /// <param name="authToken">The authentication token.</param>
         /// <param name="toolOptions">Tool options for listing servers.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>MCP Client Tools</returns>
         /// <exception cref="InvalidOperationException"></exception>
-        Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken, ToolOptions toolOptions);
+        Task<IList<McpClientTool>> GetMcpClientToolsAsync(ITurnContext turnContext, MCPServerConfig mCPServerConfig, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sends chat history to the MCP platform for real-time threat protection.
@@ -81,8 +83,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="authToken">Authentication token for MCP server access.</param>
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
-        Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions);
+        Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Enumerates all MCP tools from configured servers, returning a flat list of all tools.
@@ -91,7 +94,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="authToken">Authentication token for MCP server access.</param>
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
+        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>A flat list of all MCP tools from all configured servers.</returns>
-        Task<IList<McpClientTool>> EnumerateAllToolsAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions);
+        Task<IList<McpClientTool>> EnumerateAllToolsAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions, CancellationToken cancellationToken = default);
     }
 }
