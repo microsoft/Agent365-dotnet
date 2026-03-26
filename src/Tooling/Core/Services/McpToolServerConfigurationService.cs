@@ -50,16 +50,32 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, CancellationToken cancellationToken = default)
+        public virtual Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
+            => ListToolServersAsync(agentInstanceId, authToken, CancellationToken.None);
+
+        /// <inheritdoc/>
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, CancellationToken cancellationToken)
         {
             return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions(), cancellationToken);
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
+        public virtual Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+            => ListToolServersAsync(agentInstanceId, authToken, toolOptions, CancellationToken.None);
+
+        /// <inheritdoc/>
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken)
         {
             return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions, cancellationToken);
         }
+
+        /// <inheritdoc/>
+        public virtual Task<IList<McpClientTool>> GetMcpClientToolsAsync(
+            ITurnContext turnContext,
+            MCPServerConfig mCPServerConfig,
+            string authToken,
+            ToolOptions toolOptions)
+            => GetMcpClientToolsAsync(turnContext, mCPServerConfig, authToken, toolOptions, CancellationToken.None);
 
         /// <inheritdoc/>
         public virtual async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
@@ -67,7 +83,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             MCPServerConfig mCPServerConfig,
             string authToken,
             ToolOptions toolOptions,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             try
             {

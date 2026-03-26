@@ -92,13 +92,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
+    public Task AddToolServersToAgentAsync(
+        PersistentAgentsClient agentClient,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null)
+        => AddToolServersToAgentAsync(agentClient, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
     public async Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null,
-        CancellationToken cancellationToken = default)
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         if (agentClient == null)
         {
@@ -133,11 +142,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <summary>
     /// Get MCP tool definitions and resources.
     /// </summary>
+    public Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+        string agentInstanceId,
+        string authToken,
+        ITurnContext turnContext)
+        => GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken, turnContext, CancellationToken.None);
+
+    /// <inheritdoc />
     public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,
         ITurnContext turnContext,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         // TODO: Make this method private
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.

@@ -45,6 +45,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
+    public Task<AIAgent> AddToolServersToAgent(
+        IChatClient chatClient,
+        string agentInstructions,
+        IList<AITool> initialTools,
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null)
+        => AddToolServersToAgent(chatClient, agentInstructions, initialTools, agentUserId, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
     public async Task<AIAgent> AddToolServersToAgent(
         IChatClient chatClient,
         string agentInstructions,
@@ -53,8 +65,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null,
-        CancellationToken cancellationToken = default)
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         if (chatClient == null)
         {
@@ -113,13 +125,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
+    public Task<IList<AITool>> GetMcpToolsAsync(
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null)
+        => GetMcpToolsAsync(agentUserId, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
     public async Task<IList<AITool>> GetMcpToolsAsync(
         string agentUserId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
-        string? authToken = null,
-        CancellationToken cancellationToken = default)
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         try
         {

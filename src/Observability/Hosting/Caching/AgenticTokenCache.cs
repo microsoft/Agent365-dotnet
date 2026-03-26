@@ -93,11 +93,14 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </summary>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="tenantId">The tenant identifier.</param>
-        /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
         /// <returns>
         /// The observability token if available; otherwise, <c>null</c>.
         /// </returns>
-        public async Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken = default)
+        public Task<string?> GetObservabilityToken(string agentId, string tenantId)
+            => GetObservabilityToken(agentId, tenantId, CancellationToken.None);
+
+        /// <inheritdoc/>
+        public async Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken)
         {
             if (!_map.TryGetValue($"{agentId}:{tenantId}", out var entry))
                 return null;

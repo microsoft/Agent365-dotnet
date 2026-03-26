@@ -18,12 +18,20 @@ namespace Microsoft.Agents.A365.Tooling.Services
     public partial class McpToolServerConfigurationService
     {
         /// <inheritdoc/>
+        public virtual Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
+            string agentInstanceId,
+            string authToken,
+            ITurnContext turnContext,
+            ToolOptions toolOptions)
+            => EnumerateToolsFromServersAsync(agentInstanceId, authToken, turnContext, toolOptions, CancellationToken.None);
+
+        /// <inheritdoc/>
         public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
             ToolOptions toolOptions,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             var toolsByServer = new Dictionary<string, IList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
 
@@ -111,12 +119,20 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
+        public virtual Task<IList<McpClientTool>> EnumerateAllToolsAsync(
+            string agentInstanceId,
+            string authToken,
+            ITurnContext turnContext,
+            ToolOptions toolOptions)
+            => EnumerateAllToolsAsync(agentInstanceId, authToken, turnContext, toolOptions, CancellationToken.None);
+
+        /// <inheritdoc/>
         public virtual async Task<IList<McpClientTool>> EnumerateAllToolsAsync(
             string agentInstanceId,
             string authToken,
             ITurnContext turnContext,
             ToolOptions toolOptions,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             var (_, toolsByServer) = await EnumerateToolsFromServersAsync(
                 agentInstanceId,

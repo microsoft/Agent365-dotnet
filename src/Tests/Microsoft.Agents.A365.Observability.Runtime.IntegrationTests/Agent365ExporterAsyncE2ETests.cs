@@ -416,6 +416,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         [TestCleanup]
         public void Cleanup()
         {
+            (this._provider as IDisposable)?.Dispose();
+            this._provider = null;
             this._httpClient?.Dispose();
             this._httpClient = null;
         }

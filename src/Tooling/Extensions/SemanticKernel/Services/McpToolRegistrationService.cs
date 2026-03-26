@@ -48,7 +48,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         }
 
         /// <inheritdoc />
-        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null, CancellationToken cancellationToken = default)
+        public Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+            => AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+        /// <inheritdoc />
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken, CancellationToken cancellationToken)
         {
             if (kernel == null)
             {
