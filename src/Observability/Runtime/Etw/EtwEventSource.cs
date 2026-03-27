@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
     /// ETW Event Source for Observability.
     /// Call <see cref="Initialize"/> once at startup to configure the singleton,
     /// then access it via <see cref="Log"/>. If <see cref="Log"/> is accessed
-    /// before <see cref="Initialize"/>, a default instance (no throw on errors) is created.
+    /// before <see cref="Initialize"/>, a default instance (with throw on errors) is created.
     /// </summary>
     [EventSource(Name = "A365-O11y-EventSource")]
     public class EtwEventSource : EventSource
@@ -17,10 +17,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         private static EtwEventSource? _instance;
 
         /// <summary>
-        /// Gets the singleton instance. Creates a default instance if
+        /// Gets the singleton instance. Creates a default instance (with
+        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>) if
         /// <see cref="Initialize"/> has not been called.
         /// </summary>
-        public static EtwEventSource Log => _instance ??= new EtwEventSource();
+        public static EtwEventSource Log => _instance ??= new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
 
         private EtwEventSource() : base() { }
 
@@ -30,14 +31,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// Initializes the singleton with the specified settings.
         /// Must be called before the first access of <see cref="Log"/>.
         /// </summary>
-        /// <param name="throwOnEventWriteErrors">
-        /// When <see langword="true"/>, the underlying <see cref="EventSource"/> will be created with
-        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>.
+        /// <param name="suppressThrowOnEventWriteErrors">
+        /// When <see langword="true"/>, the underlying <see cref="EventSource"/> will be created without
+        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>. By default, throw on errors is enabled.
         /// </param>
         /// <exception cref="InvalidOperationException">
         /// Thrown if the singleton has already been created.
         /// </exception>
-        public static void Initialize(bool throwOnEventWriteErrors = false)
+        public static void Initialize(bool suppressThrowOnEventWriteErrors = false)
         {
             if (_instance != null)
             {
@@ -45,15 +46,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                     "EtwEventSource has already been initialized. Initialize() must be called before the first access of Log.");
             }
 
-            _instance = throwOnEventWriteErrors
-                ? new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors)
-                : new EtwEventSource();
+            _instance = suppressThrowOnEventWriteErrors
+                ? new EtwEventSource()
+                : new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
         }
 
         /// <summary>
         /// Resets the singleton so tests can exercise <see cref="Initialize"/> on a fresh instance.
         /// </summary>
-        public static void ResetForTesting()
+        internal static void ResetForTesting()
         {
             _instance?.Dispose();
             _instance = null;

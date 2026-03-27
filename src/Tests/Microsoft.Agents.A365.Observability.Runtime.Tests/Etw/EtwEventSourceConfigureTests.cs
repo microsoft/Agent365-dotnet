@@ -22,10 +22,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Initialize_WithTrue_CreatesInstanceWithThrowOnErrors()
+        public void Initialize_Default_CreatesInstanceWithThrowOnErrors()
         {
             // Arrange & Act
-            EtwEventSource.Initialize(throwOnEventWriteErrors: true);
+            EtwEventSource.Initialize();
             var log = EtwEventSource.Log;
 
             // Assert
@@ -33,10 +33,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Initialize_WithFalse_CreatesInstanceWithoutThrowOnErrors()
+        public void Initialize_WithSuppressTrue_CreatesInstanceWithoutThrowOnErrors()
         {
             // Arrange & Act
-            EtwEventSource.Initialize(throwOnEventWriteErrors: false);
+            EtwEventSource.Initialize(suppressThrowOnEventWriteErrors: true);
             var log = EtwEventSource.Log;
 
             // Assert
@@ -44,13 +44,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Log_WithoutInitialize_CreatesDefaultInstance()
+        public void Log_WithoutInitialize_CreatesDefaultInstanceWithThrowOnErrors()
         {
             // Act
             var log = EtwEventSource.Log;
 
             // Assert
-            Assert.IsFalse(log.Settings.HasFlag(EventSourceSettings.ThrowOnEventWriteErrors));
+            Assert.IsTrue(log.Settings.HasFlag(EventSourceSettings.ThrowOnEventWriteErrors));
         }
 
         [TestMethod]
@@ -61,7 +61,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
 
             // Act & Assert
             var ex = Assert.ThrowsException<InvalidOperationException>(() =>
-                EtwEventSource.Initialize(throwOnEventWriteErrors: true));
+                EtwEventSource.Initialize());
 
             StringAssert.Contains(ex.Message, "Initialize()");
             StringAssert.Contains(ex.Message, "before the first access");
@@ -71,11 +71,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         public void Initialize_CalledTwice_ThrowsInvalidOperationException()
         {
             // Arrange
-            EtwEventSource.Initialize(throwOnEventWriteErrors: false);
+            EtwEventSource.Initialize();
 
             // Act & Assert
             var ex = Assert.ThrowsException<InvalidOperationException>(() =>
-                EtwEventSource.Initialize(throwOnEventWriteErrors: true));
+                EtwEventSource.Initialize());
 
             StringAssert.Contains(ex.Message, "already been initialized");
         }
