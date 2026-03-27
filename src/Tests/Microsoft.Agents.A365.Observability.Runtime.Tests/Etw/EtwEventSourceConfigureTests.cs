@@ -22,10 +22,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Configure_WithTrue_BeforeLogAccess_CreatesInstanceWithThrowOnErrors()
+        public void Initialize_WithTrue_CreatesInstanceWithThrowOnErrors()
         {
             // Arrange & Act
-            EtwEventSource.Configure(throwOnEventWriteErrors: true);
+            EtwEventSource.Initialize(throwOnEventWriteErrors: true);
             var log = EtwEventSource.Log;
 
             // Assert
@@ -33,10 +33,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Configure_WithFalse_BeforeLogAccess_CreatesInstanceWithoutThrowOnErrors()
+        public void Initialize_WithFalse_CreatesInstanceWithoutThrowOnErrors()
         {
             // Arrange & Act
-            EtwEventSource.Configure(throwOnEventWriteErrors: false);
+            EtwEventSource.Initialize(throwOnEventWriteErrors: false);
             var log = EtwEventSource.Log;
 
             // Assert
@@ -44,7 +44,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Log_WithoutConfigure_CreatesInstanceWithoutThrowOnErrors()
+        public void Log_WithoutInitialize_CreatesDefaultInstance()
         {
             // Act
             var log = EtwEventSource.Log;
@@ -54,17 +54,30 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
         }
 
         [TestMethod]
-        public void Configure_AfterLogAccess_ThrowsInvalidOperationException()
+        public void Initialize_AfterLogAccess_ThrowsInvalidOperationException()
         {
             // Arrange - force singleton creation
             _ = EtwEventSource.Log;
 
             // Act & Assert
             var ex = Assert.ThrowsException<InvalidOperationException>(() =>
-                EtwEventSource.Configure(throwOnEventWriteErrors: true));
+                EtwEventSource.Initialize(throwOnEventWriteErrors: true));
 
-            StringAssert.Contains(ex.Message, "Configure()");
+            StringAssert.Contains(ex.Message, "Initialize()");
             StringAssert.Contains(ex.Message, "before the first access");
+        }
+
+        [TestMethod]
+        public void Initialize_CalledTwice_ThrowsInvalidOperationException()
+        {
+            // Arrange
+            EtwEventSource.Initialize(throwOnEventWriteErrors: false);
+
+            // Act & Assert
+            var ex = Assert.ThrowsException<InvalidOperationException>(() =>
+                EtwEventSource.Initialize(throwOnEventWriteErrors: true));
+
+            StringAssert.Contains(ex.Message, "already been initialized");
         }
     }
 }
