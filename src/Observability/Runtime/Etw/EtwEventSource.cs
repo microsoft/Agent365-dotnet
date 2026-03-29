@@ -1,64 +1,21 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-using System;
 using System.Diagnostics.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
     /// <summary>
     /// ETW Event Source for Observability.
-    /// Call <see cref="Initialize"/> once at startup to configure the singleton,
-    /// then access it via <see cref="Log"/>. If <see cref="Log"/> is accessed
-    /// before <see cref="Initialize"/>, a default instance (with throw on errors) is created.
     /// </summary>
     [EventSource(Name = "A365-O11y-EventSource")]
     public class EtwEventSource : EventSource
     {
-        private static EtwEventSource? _instance;
-
         /// <summary>
-        /// Gets the singleton instance. Creates a default instance (with
-        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>) if
-        /// <see cref="Initialize"/> has not been called.
+        /// Singleton instance of the EtwEventSource.
         /// </summary>
-        public static EtwEventSource Log => _instance ??= new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
-
-        private EtwEventSource() : base() { }
+        public static readonly EtwEventSource Log = new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
 
         private EtwEventSource(EventSourceSettings settings) : base(settings) { }
-
-        /// <summary>
-        /// Initializes the singleton with the specified settings.
-        /// Must be called before the first access of <see cref="Log"/>.
-        /// </summary>
-        /// <param name="suppressThrowOnEventWriteErrors">
-        /// When <see langword="true"/>, the underlying <see cref="EventSource"/> will be created without
-        /// <see cref="EventSourceSettings.ThrowOnEventWriteErrors"/>. By default, throw on errors is enabled.
-        /// </param>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown if the singleton has already been created.
-        /// </exception>
-        public static void Initialize(bool suppressThrowOnEventWriteErrors = false)
-        {
-            if (_instance != null)
-            {
-                throw new InvalidOperationException(
-                    "EtwEventSource has already been initialized. Initialize() must be called before the first access of Log.");
-            }
-
-            _instance = suppressThrowOnEventWriteErrors
-                ? new EtwEventSource()
-                : new EtwEventSource(EventSourceSettings.ThrowOnEventWriteErrors);
-        }
-
-        /// <summary>
-        /// Resets the singleton so tests can exercise <see cref="Initialize"/> on a fresh instance.
-        /// </summary>
-        internal static void ResetForTesting()
-        {
-            _instance?.Dispose();
-            _instance = null;
-        }
 
         /// <summary>
         /// Handler for stopping a span.
