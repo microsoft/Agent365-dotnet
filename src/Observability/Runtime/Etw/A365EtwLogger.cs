@@ -37,7 +37,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string[]? inputMessages, 
             string[]? outputMessages, 
@@ -52,7 +51,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             var data = ExecuteInferenceDataBuilder.Build(
                 inferenceCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 inputMessages,
                 outputMessages,
@@ -75,11 +73,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogInvokeAgent(
-            InvokeAgentDetails invokeAgentDetails, 
-            TenantDetails tenantDetails, 
+            InvokeAgentScopeDetails invokeAgentScopeDetails, 
+            AgentDetails agentDetails, 
             string conversationId, 
             Request? request, 
-            AgentDetails? callerAgentDetails, 
             CallerDetails? callerDetails, 
             string[]? inputMessages, 
             string[]? outputMessages, 
@@ -90,11 +87,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? traceId)
         {
             var data = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                invokeAgentScopeDetails,
+                agentDetails,
                 conversationId,
                 request,
-                callerAgentDetails,
                 callerDetails,
                 inputMessages,
                 outputMessages,
@@ -117,7 +113,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogToolCall(
             ToolCallDetails toolCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string? responseContent, 
             DateTimeOffset? startTime, 
@@ -131,7 +126,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             var data = ExecuteToolDataBuilder.Build(
                 toolCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 responseContent,
                 startTime,
@@ -154,7 +148,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <inheritdoc/>
         public void LogOutput(
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             Response response,
             string? conversationId = null,
             Channel? channel = null,
@@ -167,7 +160,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         {
             var data = OutputDataBuilder.Build(
                 agentDetails,
-                tenantDetails,
                 response,
                 conversationId,
                 channel,

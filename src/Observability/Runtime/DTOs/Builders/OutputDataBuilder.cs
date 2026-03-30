@@ -18,12 +18,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <summary>
         /// Builds complete data for an output_messages operation.
         /// </summary>
-        /// <param name="agentDetails">The details of the agent.</param>
-        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="response">The response containing output messages.</param>
         /// <param name="conversationId">Optional conversation ID for the output operation.</param>
         /// <param name="channel">Optional channel information for the output operation.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
+        /// <param name="callerDetails">Optional details about the caller.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation.</param>
@@ -33,7 +32,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <returns>An OutputData object containing all telemetry data.</returns>
         public static OutputData Build(
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             Response response,
             string? conversationId = null,
             Channel? channel = null,
@@ -45,14 +43,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?>? extraAttributes = null,
             string? traceId = null)
         {
-            var attributes = BuildAttributes(agentDetails, tenantDetails, response, conversationId, channel, callerDetails, extraAttributes);
+            var attributes = BuildAttributes(agentDetails, response, conversationId, channel, callerDetails, extraAttributes);
 
             return new OutputData(attributes, startTime, endTime, spanId, parentSpanId, traceId);
         }
 
         private static Dictionary<string, object?> BuildAttributes(
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             Response response,
             string? conversationId,
             Channel? channel,
@@ -63,10 +60,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
             // Operation name
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOperationNameKey, OutputMessagesOperationName);
-
-            // Agent & tenant
+            
             AddAgentDetails(attributes, agentDetails);
-            AddTenantDetails(attributes, tenantDetails);
 
             // Output messages from response
             if (response.Messages.Count > 0)

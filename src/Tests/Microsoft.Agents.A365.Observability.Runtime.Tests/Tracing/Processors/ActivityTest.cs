@@ -1,4 +1,7 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing;
 
 using System.Diagnostics;
 using FluentAssertions;
@@ -12,9 +15,10 @@ public abstract class ActivityTest
 {
     protected const string AgentId = "agentId";
     
-    protected readonly InvokeAgentDetails Details = new(
-        endpoint: new Uri("https://microsoft.com"),
-        details: new AgentDetails(AgentId));
+    protected readonly InvokeAgentScopeDetails ScopeDetails = new(
+        endpoint: new Uri("https://microsoft.com"));
+
+    protected readonly AgentDetails TestAgentDetails = new(AgentId);
     
     protected ActivityTest()
     {

@@ -19,16 +19,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
+        /// <param name="request">Request details for the inference.</param>
         /// <param name="details">Details of the inference call (operation name, model, provider, token usage, finish reasons, response ID).</param>
         /// <param name="agentDetails">Information about the agent executing the inference (service, version, identifiers).</param>
-        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
-        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
-        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
-        /// <param name="conversationId">Optional conversation or session correlation ID for the inference.</param>
-        /// <param name="channel">Optional channel information for observability.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        /// <param name="startTime">Optional explicit start time. Useful when recording an inference call after execution has already completed.</param>
-        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
+        /// <param name="userDetails">Optional human user details.</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing).</param>
         /// <returns>A new InferenceScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -36,28 +31,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <list type="bullet">
         ///   <item><paramref name="details"/></item>
         ///   <item><paramref name="agentDetails"/></item>
-        ///   <item><paramref name="tenantDetails"/></item>
         /// </list>
         /// </para>
         /// <para>
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new InferenceScope(details, agentDetails, tenantDetails, parentContext, conversationId, channel, callerDetails, startTime, endTime);
+        public static InferenceScope Start(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails = null, SpanDetails? spanDetails = null) => new InferenceScope(request, details, agentDetails, userDetails, spanDetails);
 
-        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
+        private InferenceScope(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                kind: ActivityKind.Client,
-                agentDetails: agentDetails,
-                tenantDetails: tenantDetails,
                 operationName: details.OperationName.ToString(),
                 activityName: $"{details.OperationName} {details.Model}",
-                startTime: startTime,
-                endTime: endTime,
-                parentContext: parentContext,
-                conversationId: conversationId,
-                channel: channel,
-                callerDetails: callerDetails)
+                agentDetails: agentDetails,
+                spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
+                userDetails: userDetails)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
@@ -65,6 +53,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
             SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
+            SetTagMaybe(GenAiConversationIdKey, request?.ConversationId);
+
+            if (request?.Content != null)
+            {
+                SetTagMaybe(GenAiInputMessagesKey, request.Content);
+            }
+
+            if (request?.Channel != null)
+            {
+                SetTagMaybe(ChannelNameKey, request.Channel.Name);
+                SetTagMaybe(ChannelLinkKey, request.Channel.Link);
+            }
         }
 
         /// <summary>

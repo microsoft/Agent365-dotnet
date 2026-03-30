@@ -18,8 +18,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
 public sealed class TestScope : OpenTelemetryScope
 {
-    public TestScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
-        : base(kind, agentDetails, tenantDetails, operationName, activityName) { }
+    public TestScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null)
+        : base(operationName, activityName, agentDetails, spanDetails) { }
 }
 
 [TestClass]
@@ -201,7 +201,7 @@ public partial class ExportFormatterTests : ActivityTest
         var parentSpanId = manualParentActivity.SpanId.ToString();
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentContext);
+            using var toolScope = ExecuteToolScope.Start(new Request(), new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         var resource = ResourceBuilder.CreateDefault().Build();

@@ -30,12 +30,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     ///   <item><see cref="AgentId"/></item>
     ///   <item><see cref="AgentName"/></item>
     ///   <item><see cref="AgentDescription"/></item>
-    ///   <item><see cref="AgentAuid"/></item>
-    ///   <item><see cref="AgentUpn"/></item>
+    ///   <item><see cref="AgenticUserId"/></item>
+    ///   <item><see cref="AgenticUserEmail"/></item>
     ///   <item><see cref="AgentBlueprintId"/></item>
-    ///   <item><see cref="CallerId"/></item>
-    ///   <item><see cref="CallerUpn"/></item>
-    ///   <item><see cref="CallerName"/></item>
+    ///   <item><see cref="UserId"/></item>
+    ///   <item><see cref="UserEmail"/></item>
+    ///   <item><see cref="UserName"/></item>
     /// </list>
     /// </para>
     /// <para>
@@ -108,24 +108,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the agent AUID baggage value
+        /// Sets the agentic user ID baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder AgentAuid(string? v)
+        public BaggageBuilder AgenticUserId(string? v)
         { 
             Set(OpenTelemetryConstants.AgentAUIDKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the agent UPN baggage value.
+        /// Sets the agentic user email baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder AgentUpn(string? v)
+        public BaggageBuilder AgenticUserEmail(string? v)
         { 
             Set(OpenTelemetryConstants.AgentEmailKey, v);
             return this;
@@ -153,45 +153,45 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the caller ID baggage value.
+        /// Sets the user ID baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder CallerId(string? v)
+        public BaggageBuilder UserId(string? v)
         { 
             Set(OpenTelemetryConstants.UserIdKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller UPN baggage value.
+        /// Sets the user email baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder CallerUpn(string? v)
+        public BaggageBuilder UserEmail(string? v)
         {
             Set(OpenTelemetryConstants.UserEmailKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller name baggage value.
+        /// Sets the user name baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder CallerName(string? v)
+        public BaggageBuilder UserName(string? v)
         {
             Set(OpenTelemetryConstants.UserNameKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller client IP baggage value.
+        /// Sets the user client IP baggage value.
         /// </summary>
-        public BaggageBuilder CallerClientIp(IPAddress v)
+        public BaggageBuilder UserClientIp(IPAddress v)
         {
             Set(OpenTelemetryConstants.CallerClientIpKey, v.ToString());
             return this;

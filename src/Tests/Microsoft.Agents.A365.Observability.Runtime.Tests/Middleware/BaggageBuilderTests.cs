@@ -38,7 +38,7 @@ public sealed class BaggageBuilderTest
             .AgentId(agent)
             .SessionId(session)
             .SessionDescription(sessionDescription)
-            .CallerClientIp(callerClientIp)
+            .UserClientIp(callerClientIp)
             .AgentPlatformId(platformId)
             .Build())
         {
