@@ -66,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     ? OperationName
                     : $"invoke_agent {agentDetails!.AgentName}",
                 agentDetails: agentDetails!,
-                spanDetails: spanDetails?.SpanKind != null ? spanDetails : new SpanDetails(ActivityKind.Client, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime),
+                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Client, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime),
                 userDetails: callerDetails?.UserDetails)
         {
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, request?.SessionId);
