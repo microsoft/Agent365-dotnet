@@ -23,35 +23,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for output tracing.
         /// </summary>
-        /// <param name="agentDetails">Information about the agent producing the output.</param>
-        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
+        /// <param name="request">Request details for the output operation.</param>
         /// <param name="response">Response containing output messages.</param>
-        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
-        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
-        /// <param name="conversationId">Optional conversation or session correlation ID for the output operation.</param>
-        /// <param name="channel">Optional channel information for observability.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        /// <param name="startTime">Optional explicit start time. Useful when recording an output operation after execution has already completed.</param>
-        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
+        /// <param name="agentDetails">Information about the agent producing the output.</param>
+        /// <param name="userDetails">Optional human user details.</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing).</param>
         /// <returns>A new OutputScope instance.</returns>
-        public static OutputScope Start(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
-            => new OutputScope(agentDetails, tenantDetails, response, parentContext, conversationId, channel, callerDetails, startTime, endTime);
+        public static OutputScope Start(Request request, Response response, AgentDetails agentDetails, UserDetails? userDetails = null, SpanDetails? spanDetails = null)
+            => new OutputScope(request, response, agentDetails, userDetails, spanDetails);
 
-        private OutputScope(AgentDetails agentDetails, TenantDetails tenantDetails, Response response, ActivityContext? parentContext, string? conversationId, Channel? channel, CallerDetails? callerDetails, DateTimeOffset? startTime, DateTimeOffset? endTime)
+        private OutputScope(Request request, Response response, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                kind: ActivityKind.Client,
-                agentDetails: agentDetails,
-                tenantDetails: tenantDetails,
                 operationName: OperationName,
-                activityName: $"{OperationName} {agentDetails?.AgentId}",
-                startTime: startTime,
-                endTime: endTime,
-                parentContext: parentContext,
-                conversationId: conversationId,
-                channel: channel,
-                callerDetails: callerDetails)
+                activityName: $"{OperationName} {agentDetails.AgentId}",
+                agentDetails: agentDetails,
+                spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
+                userDetails: userDetails)
         {
-            if (response.Messages.Count > 0)
+            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, request?.ConversationId);
+
+            if (request?.Channel != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, request.Channel.Name);
+                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, request.Channel.Link);
+            }
+
+            if (response?.Messages != null && response.Messages.Count > 0)
             {
                 foreach (var message in response.Messages)
                 {

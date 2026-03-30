@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -25,6 +26,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.AgentBlueprintIdKey,
             OpenTelemetryConstants.AgentPlatformIdKey,
             OpenTelemetryConstants.TenantIdKey,
+            OpenTelemetryConstants.GenAiProviderNameKey,
             OpenTelemetryConstants.ServerAddressKey,
             OpenTelemetryConstants.ServerPortKey,
             OpenTelemetryConstants.ChannelNameKey,
@@ -48,7 +50,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiToolCallResultKey,
             OpenTelemetryConstants.GenAiOperationNameKey,
             OpenTelemetryConstants.GenAiRequestModelKey,
-            OpenTelemetryConstants.GenAiProviderNameKey,
             OpenTelemetryConstants.GenAiUsageInputTokensKey,
             OpenTelemetryConstants.GenAiUsageOutputTokensKey,
             OpenTelemetryConstants.GenAiResponseFinishReasonsKey,
@@ -78,7 +79,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         }
 
         /// <summary>
-        /// Adds agent details to the attributes dictionary.
+        /// Adds agent details to the attributes dictionary, including tenant ID.
         /// </summary>
         protected static void AddAgentDetails(IDictionary<string, object?> attributes, AgentDetails agentDetails)
         {
@@ -87,20 +88,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentDescriptionKey, agentDetails.AgentDescription);
-            AddIfNotNull(attributes, OpenTelemetryConstants.AgentAUIDKey, agentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.AgentEmailKey, agentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentAUIDKey, agentDetails.AgenticUserId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.AgentEmailKey, agentDetails.AgenticUserEmail);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentPlatformIdKey, agentDetails.AgentPlatformId);
-        }
-
-        /// <summary>
-        /// Adds tenant details to the attributes dictionary.
-        /// </summary>
-        protected static void AddTenantDetails(IDictionary<string, object?> attributes, TenantDetails tenantDetails)
-        {
-            if (tenantDetails == null) return;
-
-            AddIfNotNull(attributes, OpenTelemetryConstants.TenantIdKey, tenantDetails.TenantId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.TenantIdKey, agentDetails.TenantId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiProviderNameKey, agentDetails.ProviderName);
         }
 
         /// <summary>
@@ -131,15 +124,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
 
         /// <summary>
         /// Adds caller details to the attributes dictionary.
+        /// Extracts user details and caller agent details from the composite CallerDetails.
         /// </summary>
         protected static void AddCallerDetails(IDictionary<string, object?> attributes, CallerDetails? callerDetails)
         {
             if (callerDetails == null) return;
 
-            AddIfNotNull(attributes, OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
-            AddIfNotNull(attributes, OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
+            var userDetails = callerDetails.UserDetails;
+            if (userDetails != null)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.UserIdKey, userDetails.UserId);
+                AddIfNotNull(attributes, OpenTelemetryConstants.UserEmailKey, userDetails.UserEmail);
+                AddIfNotNull(attributes, OpenTelemetryConstants.UserNameKey, userDetails.UserName);
+                AddIfNotNull(attributes, OpenTelemetryConstants.CallerClientIpKey, userDetails.UserClientIP?.ToString());
+            }
+
+            AddCallerAgentDetails(attributes, callerDetails.CallerAgentDetails);
         }
 
         /// <summary>
@@ -152,8 +152,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentNameKey, callerAgentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgentUPN);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgenticUserId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgenticUserEmail);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
         }
 

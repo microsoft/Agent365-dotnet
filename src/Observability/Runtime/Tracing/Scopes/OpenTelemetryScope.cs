@@ -37,21 +37,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Initializes a new instance of the OpenTelemetryScope class.
         /// </summary>
-        /// <param name="kind">The kind of activity (Client, Server, Internal, etc.).</param>
-        /// <param name="agentDetails">Agent details</param>
-        /// <param name="tenantDetails"></param>
         /// <param name="operationName">The name of the operation being traced.</param>
         /// <param name="activityName">The name of the activity for display purposes.</param>
-        /// <param name="startTime">Optional custom start time for the scope. If not provided, the current time is used.</param>
-        /// <param name="endTime">Optional custom end time for the scope. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
-        /// <param name="parentContext">Optional parent <see cref="ActivityContext"/> used to link this span to an upstream
-        /// operation. Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an
-        /// <see cref="ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
-        /// <param name="conversationId">Optional conversation id.</param>
-        /// <param name="channel">Optional channel information.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        protected OpenTelemetryScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, CallerDetails? callerDetails = null)
+        /// <param name="agentDetails">Optional agent details. Tenant ID is read from <see cref="AgentDetails.TenantId"/>.</param>
+        /// <param name="spanDetails">Optional span configuration including parent context, start/end times,
+        /// and span kind. Subclasses may override <see cref="SpanDetails.SpanKind"/> before calling this constructor;
+        /// defaults to <see cref="ActivityKind.Client"/>.</param>
+        /// <param name="userDetails">Optional human caller identity details (id, email, name, client IP).</param>
+        protected OpenTelemetryScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null, UserDetails? userDetails = null)
         {
+            var kind = spanDetails?.SpanKind ?? ActivityKind.Client;
+            var parentContext = spanDetails?.ParentContext;
+            var startTime = spanDetails?.StartTime;
+            var endTime = spanDetails?.EndTime;
+
             customStartTime = startTime;
             customEndTime = endTime;
             activity = parentContext.HasValue && parentContext.Value.TraceId != default
@@ -78,40 +77,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiAgentIdKey, agentDetails.AgentId);
                 SetTagMaybe(GenAiAgentNameKey, agentDetails.AgentName);
                 SetTagMaybe(GenAiAgentDescriptionKey, agentDetails.AgentDescription);
-                SetTagMaybe(AgentAUIDKey, agentDetails.AgentAUID);
-                SetTagMaybe(AgentEmailKey, agentDetails.AgentUPN);
+                SetTagMaybe(AgentAUIDKey, agentDetails.AgenticUserId);
+                SetTagMaybe(AgentEmailKey, agentDetails.AgenticUserEmail);
                 SetTagMaybe(AgentBlueprintIdKey, agentDetails.AgentBlueprintId);
                 SetTagMaybe(AgentPlatformIdKey, agentDetails.AgentPlatformId);
+                SetTagMaybe(TenantIdKey, agentDetails.TenantId);
             }
 
-            if (tenantDetails != null)
+            if (userDetails != null)
             {
-                SetTagMaybe(TenantIdKey, tenantDetails.TenantId);
+                SetTagMaybe(UserIdKey, userDetails.UserId);
+                SetTagMaybe(UserEmailKey, userDetails.UserEmail);
+                SetTagMaybe(UserNameKey, userDetails.UserName);
+                SetTagMaybe(CallerClientIpKey, userDetails.UserClientIP?.ToString());
             }
 
             // Only start the stopwatch if no custom start time is provided
             if (!customStartTime.HasValue)
             {
                 duration = Stopwatch.StartNew();
-            }
-
-            if (!string.IsNullOrEmpty(conversationId))
-            {
-                SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
-            }
-
-            if (channel != null)
-            {
-                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, channel.Name);
-                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, channel.Link);
-            }
-
-            if (callerDetails != null)
-            {
-                SetTagMaybe(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
-                SetTagMaybe(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
-                SetTagMaybe(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
-                SetTagMaybe(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP?.ToString());
             }
 
             activity?.Start();

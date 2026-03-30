@@ -20,8 +20,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// Builds complete data for an execute_tool operation.
         /// </summary>
         /// <param name="toolCallDetails">The details of the tool call.</param>
-        /// <param name="agentDetails">The details of the agent.</param>
-        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="conversationId">The conversation id.</param>
         /// <param name="responseContent">Optional response content from the tool.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
@@ -29,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="channel">Optional channel information for the operation.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
+        /// <param name="callerDetails">Optional details about the caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
@@ -37,7 +36,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         public static ExecuteToolData Build(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string? responseContent = null,
             DateTimeOffset? startTime = null,
@@ -50,7 +48,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanKind = null,
             string? traceId = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, channel, callerDetails, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, conversationId, responseContent, channel, callerDetails, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId);
         }
@@ -58,7 +56,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         private static Dictionary<string, object?> BuildAttributes(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string? responseContent,
             Channel? channel,
@@ -70,9 +67,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Operation name
             AddIfNotNull(attributes, GenAiOperationNameKey, ExecuteToolDataBuilder.ExecuteToolOperationName);
 
-            // Agent & tenant
             AddAgentDetails(attributes, agentDetails);
-            AddTenantDetails(attributes, tenantDetails);
 
             // Tool details
             AddToolDetails(attributes, toolCallDetails);
