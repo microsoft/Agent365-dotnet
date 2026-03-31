@@ -38,7 +38,7 @@
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-preview.251016.1" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="9.9.0-preview.1.25458.4" />
+    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="10.0.0-preview.1.25559.3" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.0.1-preview.1.25571.5" />
     <!-- Json packages -->
     <PackageVersion Include="System.Text.Json" Version="10.0.2" />
@@ -63,15 +63,15 @@
     <!-- Microsoft Extensions packages - using highest versions to avoid conflicts -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.2" />
     <!-- Security packages -->
     <!-- Microsoft Agents packages (using latest available versions) -->
     <PackageVersion Include="Microsoft.Agents.Builder" Version="1.3.163-beta" />
