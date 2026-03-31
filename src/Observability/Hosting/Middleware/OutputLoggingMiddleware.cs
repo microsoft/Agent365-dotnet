@@ -43,23 +43,21 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
         public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next, CancellationToken cancellationToken = default)
         {
             var agentDetails = DeriveAgentDetails(turnContext);
-            var tenantDetails = DeriveTenantDetails(turnContext);
 
-            if (agentDetails == null || tenantDetails == null)
+            if (agentDetails == null)
             {
                 await next(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            var callerDetails = DeriveCallerDetails(turnContext);
+            var userDetails = DeriveUserDetails(turnContext);
             var conversationId = turnContext.Activity?.Conversation?.Id;
             var channel = DeriveChannel(turnContext);
 
             turnContext.OnSendActivities(CreateSendHandler(
                 turnContext,
                 agentDetails,
-                tenantDetails,
-                callerDetails,
+                userDetails,
                 conversationId,
                 channel));
 
@@ -84,24 +82,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
             return new AgentDetails(
                 agentId: agentId,
                 agentName: recipient.Name,
-                agentAUID: recipient.AadObjectId,
-                agentUPN: recipient.AgenticUserId,
+                agenticUserId: recipient.AadObjectId,
+                agenticUserEmail: recipient.AgenticUserId,
                 agentDescription: recipient.Role,
                 tenantId: recipient.TenantId);
         }
 
-        private static TenantDetails? DeriveTenantDetails(ITurnContext turnContext)
-        {
-            var tenantId = turnContext.Activity?.Recipient?.TenantId;
-            if (string.IsNullOrWhiteSpace(tenantId) || !Guid.TryParse(tenantId, out var tenantGuid))
-            {
-                return null;
-            }
-
-            return new TenantDetails(tenantGuid);
-        }
-
-        private static CallerDetails? DeriveCallerDetails(ITurnContext turnContext)
+        private static UserDetails? DeriveUserDetails(ITurnContext turnContext)
         {
             var from = turnContext.Activity?.From;
             if (from == null)
@@ -109,11 +96,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 return null;
             }
 
-            return new CallerDetails(
-                callerId: from.Id ?? string.Empty,
-                callerName: from.Name ?? string.Empty,
-                callerUpn: from.AgenticUserId ?? string.Empty,
-                tenantId: from.TenantId);
+            return new UserDetails(
+                userId: from.Id ?? string.Empty,
+                userName: from.Name ?? string.Empty,
+                userEmail: from.AgenticUserId ?? string.Empty);
         }
 
         private static Channel? DeriveChannel(ITurnContext turnContext)
@@ -132,8 +118,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
         private static SendActivitiesHandler CreateSendHandler(
             ITurnContext turnContext,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
-            CallerDetails? callerDetails,
+            UserDetails? userDetails,
             string? conversationId,
             Channel? channel)
         {
@@ -166,14 +151,20 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     }
                 }
 
-                var outputScope = OutputScope.Start(
-                    agentDetails: agentDetails,
-                    tenantDetails: tenantDetails,
-                    response: new Response(messages),
+                var request = new Request(
                     conversationId: conversationId,
-                    channel: channel,
-                    callerDetails: callerDetails,
-                    parentContext: parentContext);
+                    channel: channel);
+
+                SpanDetails? spanDetails = parentContext.HasValue
+                    ? new SpanDetails(parentContext: parentContext)
+                    : null;
+
+                var outputScope = OutputScope.Start(
+                    request: request,
+                    response: new Response(messages),
+                    agentDetails: agentDetails,
+                    userDetails: userDetails,
+                    spanDetails: spanDetails);
 
                 try
                 {

@@ -17,8 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// Builds complete data for an inference operation.
         /// </summary>
         /// <param name="inferenceCallDetails">The details of the inference call.</param>
-        /// <param name="agentDetails">The details of the agent.</param>
-        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="conversationId">The conversation id.</param>
         /// <param name="inputMessages">Optional input messages for the inference.</param>
         /// <param name="outputMessages">Optional output messages from the inference.</param>
@@ -28,14 +27,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="channel">Optional channel information for the inference call.</param>
         /// <param name="thoughtProcess">Optional agent thought process for the inference.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
+        /// <param name="callerDetails">Optional details about the caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An ExecuteInferenceData object containing all telemetry data.</returns>
         public static ExecuteInferenceData Build(
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
@@ -52,7 +50,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             var attributes = BuildAttributes(
                 inferenceCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 inputMessages,
                 outputMessages,
@@ -67,7 +64,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         private static Dictionary<string, object?> BuildAttributes(
             InferenceCallDetails inferenceCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string[]? inputMessages,
             string[]? outputMessages,
@@ -78,9 +74,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var attributes = new Dictionary<string, object?>();
 
-            // Agent & tenant
+            // Agent details (includes tenant ID)
             AddAgentDetails(attributes, agentDetails);
-            AddTenantDetails(attributes, tenantDetails);
 
             // Inference call details
             AddInferenceCallDetails(attributes, inferenceCallDetails);
