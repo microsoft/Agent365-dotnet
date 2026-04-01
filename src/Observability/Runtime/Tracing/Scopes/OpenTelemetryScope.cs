@@ -41,7 +41,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="activityName">The name of the activity for display purposes.</param>
         /// <param name="agentDetails">Optional agent details. Tenant ID is read from <see cref="AgentDetails.TenantId"/>.</param>
         /// <param name="spanDetails">Optional span configuration including parent context, start/end times,
-        /// and span kind. Subclasses may override <see cref="SpanDetails.SpanKind"/> before calling this constructor;
+        /// span kind, and span links. Subclasses may override <see cref="SpanDetails.SpanKind"/> before calling this constructor;
         /// defaults to <see cref="ActivityKind.Client"/>.</param>
         /// <param name="userDetails">Optional human caller identity details (id, email, name, client IP).</param>
         protected OpenTelemetryScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null, UserDetails? userDetails = null)
@@ -50,12 +50,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             var parentContext = spanDetails?.ParentContext;
             var startTime = spanDetails?.StartTime;
             var endTime = spanDetails?.EndTime;
+            var spanLinks = spanDetails?.SpanLinks;
 
             customStartTime = startTime;
             customEndTime = endTime;
             activity = parentContext.HasValue && parentContext.Value.TraceId != default
-                ? ActivitySource.CreateActivity(activityName, kind, parentContext.Value)
-                : ActivitySource.CreateActivity(activityName, kind, default(ActivityContext));
+                ? ActivitySource.CreateActivity(activityName, kind, parentContext.Value, links: spanLinks)
+                : ActivitySource.CreateActivity(activityName, kind, default(ActivityContext), links: spanLinks);
 
             if (startTime != null) 
             {

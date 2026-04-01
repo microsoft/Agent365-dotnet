@@ -23,7 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="details">Details of the inference call (operation name, model, provider, token usage, finish reasons, response ID).</param>
         /// <param name="agentDetails">Information about the agent executing the inference (service, version, identifiers).</param>
         /// <param name="userDetails">Optional human user details.</param>
-        /// <param name="spanDetails">Optional span configuration (parent context, timing).</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, span links).</param>
         /// <returns>A new InferenceScope instance.</returns>
         /// <remarks>
         /// <para>

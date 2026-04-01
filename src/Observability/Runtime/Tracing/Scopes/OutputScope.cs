@@ -27,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="response">Response containing output messages.</param>
         /// <param name="agentDetails">Information about the agent producing the output.</param>
         /// <param name="userDetails">Optional human user details.</param>
-        /// <param name="spanDetails">Optional span configuration (parent context, timing).</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, span links).</param>
         /// <returns>A new OutputScope instance.</returns>
         public static OutputScope Start(Request request, Response response, AgentDetails agentDetails, UserDetails? userDetails = null, SpanDetails? spanDetails = null)
             => new OutputScope(request, response, agentDetails, userDetails, spanDetails);
