@@ -21,6 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.GenAiAgentIdKey,
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
+            OpenTelemetryConstants.GenAiAgentVersionKey,
             OpenTelemetryConstants.AgentAUIDKey,
             OpenTelemetryConstants.AgentEmailKey,
             OpenTelemetryConstants.AgentBlueprintIdKey,
@@ -39,6 +40,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             OpenTelemetryConstants.CallerAgentBlueprintIdKey,
             OpenTelemetryConstants.CallerAgentAUIDKey,
             OpenTelemetryConstants.CallerAgentEmailKey,
+            OpenTelemetryConstants.CallerAgentPlatformIdKey,
+            OpenTelemetryConstants.CallerAgentVersionKey,
             OpenTelemetryConstants.CallerClientIpKey,
             OpenTelemetryConstants.GenAiConversationIdKey,
             OpenTelemetryConstants.SessionIdKey,
@@ -94,6 +97,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentPlatformIdKey, agentDetails.AgentPlatformId);
             AddIfNotNull(attributes, OpenTelemetryConstants.TenantIdKey, agentDetails.TenantId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiProviderNameKey, agentDetails.ProviderName);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentVersionKey, agentDetails.AgentVersion);
         }
 
         /// <summary>
@@ -155,6 +159,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgenticUserId);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgenticUserEmail);
             AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.CallerAgentVersionKey, callerAgentDetails.AgentVersion);
         }
 
         /// <summary>
