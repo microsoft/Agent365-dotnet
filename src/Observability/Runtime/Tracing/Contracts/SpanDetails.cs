@@ -28,7 +28,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             ActivityContext? parentContext = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
-            IEnumerable<ActivityLink>? spanLinks = null)
+            ActivityLink[]? spanLinks = null)
         {
             SpanKind = spanKind;
             ParentContext = parentContext;
@@ -60,6 +60,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// Gets the optional span links to associate with this span.
         /// </summary>
-        public IEnumerable<ActivityLink>? SpanLinks { get; }
+        public ActivityLink[]? SpanLinks { get; }
     }
 }
