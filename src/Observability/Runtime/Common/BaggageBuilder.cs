@@ -108,6 +108,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
+        /// Sets the agent version baggage value.
+        /// </summary>
+        public BaggageBuilder AgentVersion(string? v)
+        {
+            Set(OpenTelemetryConstants.GenAiAgentVersionKey, v);
+            return this;
+        }
+
+        /// <summary>
         /// Sets the agentic user ID baggage value.
         /// </summary>
         /// <remarks>

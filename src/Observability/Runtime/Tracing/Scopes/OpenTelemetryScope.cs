@@ -77,6 +77,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(GenAiAgentIdKey, agentDetails.AgentId);
                 SetTagMaybe(GenAiAgentNameKey, agentDetails.AgentName);
                 SetTagMaybe(GenAiAgentDescriptionKey, agentDetails.AgentDescription);
+                SetTagMaybe(GenAiAgentVersionKey, agentDetails.AgentVersion);
                 SetTagMaybe(AgentAUIDKey, agentDetails.AgenticUserId);
                 SetTagMaybe(AgentEmailKey, agentDetails.AgenticUserEmail);
                 SetTagMaybe(AgentBlueprintIdKey, agentDetails.AgentBlueprintId);

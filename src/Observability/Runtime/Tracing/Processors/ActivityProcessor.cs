@@ -17,6 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
             OpenTelemetryConstants.GenAiAgentIdKey,
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
+            OpenTelemetryConstants.GenAiAgentVersionKey,
             OpenTelemetryConstants.AgentEmailKey,
             OpenTelemetryConstants.AgentBlueprintIdKey,
             OpenTelemetryConstants.AgentAUIDKey,
