@@ -54,7 +54,7 @@ namespace AgentNotification
             {
                 // Wrap the activity in an AgentNotificationActivity
                 var agentNotificationActivity = new AgentNotificationActivity(turnContext.Activity);
-                // for now, we will required the handler to return the proper result.. we will change this later to return a structured result and handle the response back. 
+                // For now, we will require the handler to return the proper result. We will change this later to return a structured result and handle the response back.
                 await handler(turnContext, turnState, agentNotificationActivity, cancellationToken);
             };
             AddRoute(_app, routeSelector, routeHandler, isAgenticOnly: true, rank: rank, autoSignInHandlers: autoSignInHandlers);

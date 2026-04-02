@@ -54,7 +54,7 @@ public class AgentNotificationRoutingTests
             RouteRank.Last,
             isAgenticOnly: true);
 
-        var turnContext = CreateAgenticNotificationTurnContext(SubChannels.AgentsEmailSubChannel);
+        using var turnContext = CreateAgenticNotificationTurnContext(SubChannels.AgentsEmailSubChannel);
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -94,7 +94,7 @@ public class AgentNotificationRoutingTests
             RouteRank.Last,
             isAgenticOnly: true);
 
-        var turnContext = CreateAgenticNotificationTurnContext(SubChannels.AgentsWordSubChannel);
+        using var turnContext = CreateAgenticNotificationTurnContext(SubChannels.AgentsWordSubChannel);
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -131,7 +131,7 @@ public class AgentNotificationRoutingTests
             RouteRank.Last,
             isAgenticOnly: true);
 
-        var turnContext = CreateAgenticLifecycleNotificationTurnContext(Events.AgenticUserIdentityCreated);
+        using var turnContext = CreateAgenticLifecycleNotificationTurnContext(Events.AgenticUserIdentityCreated);
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -179,7 +179,7 @@ public class AgentNotificationRoutingTests
             isAgenticOnly: false);
 
         // Create a normal (non-agentic) message — no agents channel, no agenticUser role
-        var turnContext = CreateNonAgenticMessageTurnContext();
+        using var turnContext = CreateNonAgenticMessageTurnContext();
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -222,12 +222,12 @@ public class AgentNotificationRoutingTests
         {
             Type = ActivityTypes.Message,
             Text = "Hello from Teams",
-            ChannelId = "msteams",
+            ChannelId = new ChannelId("msteams"),
             Recipient = new ChannelAccount { Id = "bot1", Role = RoleTypes.AgenticUser },
             From = new ChannelAccount { Id = "user1" },
             Conversation = new ConversationAccount { Id = "conv1" },
         };
-        var turnContext = new TurnContext(new StubAdapter(), activity);
+        using var turnContext = new TurnContext(new StubAdapter(), activity);
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -299,7 +299,7 @@ public class AgentNotificationRoutingTests
             RouteRank.Last,
             isAgenticOnly: true);
 
-        var turnContext = CreateAgenticNotificationTurnContext(subChannel);
+        using var turnContext = CreateAgenticNotificationTurnContext(subChannel);
 
         // Act
         await app.OnTurnAsync(turnContext, CancellationToken.None);
@@ -356,7 +356,7 @@ public class AgentNotificationRoutingTests
         {
             Type = ActivityTypes.Message,
             Text = "Hello",
-            ChannelId = "directline",
+            ChannelId = new ChannelId("directline"),
             Recipient = new ChannelAccount { Id = "bot1" },
             From = new ChannelAccount { Id = "user1" },
             Conversation = new ConversationAccount { Id = "conv1" },
