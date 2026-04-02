@@ -25,6 +25,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         /// <param name="agentPlatformId">Optional platform ID for the agent.</param>
         /// <param name="providerName">Optional provider name (e.g., openai, anthropic).</param>
+        /// <param name="agentVersion">Optional version of the agent (e.g., "1.0.0", "2025-05-01").</param>
         /// <remarks>
         /// <para>
         /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements, and these values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
@@ -55,7 +56,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             AgentType? agentType = null,
             IPAddress? agentClientIP = null,
             string? agentPlatformId = null,
-            string? providerName = null)
+            string? providerName = null,
+            string? agentVersion = null)
         {
             AgentId = agentId;
             AgentName = agentName;
@@ -68,6 +70,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             AgentClientIP = agentClientIP;
             AgentPlatformId = agentPlatformId;
             ProviderName = providerName;
+            AgentVersion = agentVersion;
         }
 
         /// <summary>
@@ -126,6 +129,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? ProviderName { get; }
 
         /// <summary>
+        /// Optional version of the agent (e.g., "1.0.0", "2025-05-01").
+        /// </summary>
+        public string? AgentVersion { get; }
+
+        /// <summary>
         /// Deconstructs the current instance into discrete values.
         /// </summary>
         /// <param name="agentId">Receives the agent identifier.</param>
@@ -138,6 +146,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="tenantId">Receives the tenant identifier.</param>
         /// <param name="agentClientIP">Receives the client IP address.</param>
         /// <param name="agentPlatformId">Receives the platform ID.</param>
+        /// <param name="agentVersion">Receives the agent version.</param>
         public void Deconstruct(
             out string? agentId,
             out string? agentName,
@@ -148,7 +157,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             out AgentType? agentType,
             out string? tenantId,
             out IPAddress? agentClientIP,
-            out string? agentPlatformId)
+            out string? agentPlatformId,
+            out string? agentVersion)
         {
             agentId = AgentId;
             agentName = AgentName;
@@ -160,6 +170,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             tenantId = TenantId;
             agentClientIP = AgentClientIP;
             agentPlatformId = AgentPlatformId;
+            agentVersion = AgentVersion;
         }
 
         /// <inheritdoc/>
@@ -179,7 +190,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                    AgentType == other.AgentType &&
                    string.Equals(TenantId, other.TenantId, StringComparison.Ordinal) &&
                    Equals(AgentClientIP, other.AgentClientIP) &&
-                   string.Equals(AgentPlatformId, other.AgentPlatformId, StringComparison.Ordinal);
+                   string.Equals(AgentPlatformId, other.AgentPlatformId, StringComparison.Ordinal) &&
+                   string.Equals(AgentVersion, other.AgentVersion, StringComparison.Ordinal);
         }
 
         /// <inheritdoc/>
@@ -204,6 +216,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (TenantId != null ? StringComparer.Ordinal.GetHashCode(TenantId) : 0);
                 hash = (hash * 31) + (AgentClientIP?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (AgentPlatformId != null ? StringComparer.Ordinal.GetHashCode(AgentPlatformId) : 0);
+                hash = (hash * 31) + (AgentVersion != null ? StringComparer.Ordinal.GetHashCode(AgentVersion) : 0);
                 return hash;
             }
         }

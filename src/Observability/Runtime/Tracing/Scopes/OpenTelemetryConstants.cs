@@ -60,6 +60,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiAgentIdKey = "gen_ai.agent.id";
         public const string GenAiAgentNameKey = "gen_ai.agent.name";
         public const string GenAiAgentDescriptionKey = "gen_ai.agent.description";
+        public const string GenAiAgentVersionKey = "gen_ai.agent.version";
         public const string AgentAUIDKey = "microsoft.agent.user.id";
         public const string AgentEmailKey = "microsoft.agent.user.email";
         public const string AgentBlueprintIdKey = "microsoft.a365.agent.blueprint.id";
@@ -78,6 +79,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string CallerAgentAUIDKey = "microsoft.a365.caller.agent.user.id";
         public const string CallerAgentEmailKey = "microsoft.a365.caller.agent.user.email";
         public const string CallerAgentPlatformIdKey = "microsoft.a365.caller.agent.platform.id";
+        public const string CallerAgentVersionKey = "microsoft.a365.caller.agent.version";
 
         // Service attributes
         public const string ServiceNameKey = "service.name";

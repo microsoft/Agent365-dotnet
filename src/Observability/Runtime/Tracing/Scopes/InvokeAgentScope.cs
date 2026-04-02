@@ -107,6 +107,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     SetTagMaybe(OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgenticUserId);
                     SetTagMaybe(OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgenticUserEmail);
                     SetTagMaybe(OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentVersionKey, callerAgentDetails.AgentVersion);
                 }
             }
         }
