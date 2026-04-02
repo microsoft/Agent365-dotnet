@@ -27,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="details">Details of the tool call (name, args, type, call ID, description, endpoint).</param>
         /// <param name="agentDetails">Information about the agent executing the tool (service, version, identifiers).</param>
         /// <param name="userDetails">Optional human user details.</param>
-        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind).</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind, span links).</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <returns>A new ExecuteToolScope instance.</returns>
         /// <remarks>
@@ -49,7 +49,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 operationName: OperationName,
                 activityName: $"{OperationName} {details.ToolName}",
                 agentDetails: agentDetails,
-                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Internal, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime),
+                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Internal, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime, spanDetails?.SpanLinks),
                 userDetails: userDetails)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = details;

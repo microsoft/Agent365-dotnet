@@ -29,7 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="scopeDetails">Scope-level configuration (endpoint).</param>
         /// <param name="agentDetails">The details of the agent being invoked.</param>
         /// <param name="callerDetails">Optional composite caller details (human user and/or calling agent for A2A scenarios).</param>
-        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind).</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind, span links).</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
@@ -66,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     ? OperationName
                     : $"invoke_agent {agentDetails!.AgentName}",
                 agentDetails: agentDetails!,
-                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Client, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime),
+                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Client, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime, spanDetails?.SpanLinks),
                 userDetails: callerDetails?.UserDetails)
         {
             SetTagMaybe(OpenTelemetryConstants.SessionIdKey, request?.SessionId);

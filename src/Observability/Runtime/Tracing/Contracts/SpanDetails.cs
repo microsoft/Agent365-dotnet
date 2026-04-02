@@ -20,16 +20,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// to obtain an <see cref="ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
         /// <param name="startTime">Optional explicit start time as a <see cref="DateTimeOffset"/>.</param>
         /// <param name="endTime">Optional explicit end time as a <see cref="DateTimeOffset"/>.</param>
+        /// <param name="spanLinks">Optional span links to associate with this span, establishing causal
+        /// relationships to other spans (e.g. linking a batch operation to individual trigger spans).</param>
         public SpanDetails(
             ActivityKind? spanKind = null,
             ActivityContext? parentContext = null,
             DateTimeOffset? startTime = null,
-            DateTimeOffset? endTime = null)
+            DateTimeOffset? endTime = null,
+            ActivityLink[]? spanLinks = null)
         {
             SpanKind = spanKind;
             ParentContext = parentContext;
             StartTime = startTime;
             EndTime = endTime;
+            SpanLinks = spanLinks;
         }
 
         /// <summary>
@@ -51,5 +55,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// Gets the optional explicit end time.
         /// </summary>
         public DateTimeOffset? EndTime { get; }
+
+        /// <summary>
+        /// Gets the optional span links to associate with this span.
+        /// </summary>
+        public ActivityLink[]? SpanLinks { get; }
     }
 }
