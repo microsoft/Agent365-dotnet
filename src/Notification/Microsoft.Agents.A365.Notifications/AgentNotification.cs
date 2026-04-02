@@ -57,7 +57,7 @@ namespace AgentNotification
                 // for now, we will required the handler to return the proper result.. we will change this later to return a structured result and handle the response back. 
                 await handler(turnContext, turnState, agentNotificationActivity, cancellationToken);
             };
-            AddRoute(_app, routeSelector, routeHandler, false, rank, autoSignInHandlers);
+            AddRoute(_app, routeSelector, routeHandler, isAgenticOnly: true, rank: rank, autoSignInHandlers: autoSignInHandlers);
             return this;
         }
 
@@ -83,7 +83,7 @@ namespace AgentNotification
                 var agentNotificationActivity = new AgentNotificationActivity(turnContext.Activity);
                 await handler(turnContext, turnState, agentNotificationActivity, cancellationToken);
             };
-            AddRoute(_app, routeSelector, routeHandler, false, rank, autoSignInHandlers);
+            AddRoute(_app, routeSelector, routeHandler, isAgenticOnly: true, rank: rank, autoSignInHandlers: autoSignInHandlers);
             return this;
         }
 
