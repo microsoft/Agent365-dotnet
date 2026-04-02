@@ -4,8 +4,6 @@
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
     using Microsoft.Extensions.Configuration;
-    using System.Transactions;
-    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
     /// Provides utility methods for the Tooling components.
