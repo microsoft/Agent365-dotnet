@@ -9,6 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
+    using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
@@ -68,7 +69,15 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
+            var tokenProvider = new AgenticMcpTokenProvider(
+                userAuthorization, authHandlerName, turnContext, _configuration,
+                _logger);
+
+            var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
+            var (_, toolsByServer) = concreteService is not null
+                ? await concreteService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false)
+                : await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)
             {

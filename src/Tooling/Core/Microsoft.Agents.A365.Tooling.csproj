@@ -14,6 +14,10 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Core.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.AgentFramework" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

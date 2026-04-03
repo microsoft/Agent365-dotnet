@@ -3,7 +3,9 @@
 
 namespace Microsoft.Agents.A365.Tooling.Utils
 {
+    using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Extensions.Configuration;
+    using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
     /// Provides utility methods for the Tooling components.
@@ -20,7 +22,7 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// <returns>The tooling gateway URL for the digital worker.</returns>
         public static string GetToolingGatewayForDigitalWorker(string agentInstanceId, IConfiguration configuration)
         {
-            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/{agentInstanceId}/mcpServers";
+            return $"{GetMcpPlatformBaseUrl(configuration)}/agents/v2/{agentInstanceId}/mcpServers";
         }
 
         /// <summary>
@@ -57,6 +59,41 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         {
             var baseUrl = GetMcpBaseUrl(configuration);
             return $"{baseUrl}/{serverName}";
+        }
+
+        /// <summary>
+        /// Resolves the OAuth scope to request when acquiring a token for the given MCP server.
+        /// </summary>
+        /// <remarks>
+        /// Scope resolution priority:
+        /// <list type="number">
+        ///   <item>If <c>server.scope</c> is set, use it verbatim (explicit caller override).</item>
+        ///   <item>If <c>server.audience</c> is a non-ATG GUID, construct a V2 per-audience scope:
+        ///       <c>api://&lt;audience&gt;/.default</c>.</item>
+        ///   <item>Otherwise (V1 — no audience, or audience equals ATG App ID), fall back to the
+        ///       shared ATG scope from configuration, which respects the
+        ///       <c>MCP_PLATFORM_AUTHENTICATION_SCOPE</c> environment override.</item>
+        /// </list>
+        /// </remarks>
+        /// <param name="server">The MCP server configuration.</param>
+        /// <param name="configuration">Application configuration used to resolve the V1 fallback scope.</param>
+        /// <returns>The OAuth scope string to pass to <c>ExchangeTurnTokenAsync</c>.</returns>
+        public static string ResolveTokenScopeForServer(MCPServerConfig server, IConfiguration configuration)
+        {
+            // V2: server carries its own audience different from the shared ATG App ID.
+            // The gateway returns scope as a bare permission name (e.g. "Tools.ListInvoke.All"),
+            // so we construct the full OAuth scope as "{audience}/{scope}" or "{audience}/.default".
+            if (!string.IsNullOrWhiteSpace(server.audience) &&
+                !string.Equals(server.audience, Constants.Authentication.AtgAppId, StringComparison.OrdinalIgnoreCase))
+            {
+                return !string.IsNullOrWhiteSpace(server.scope)
+                    ? $"{server.audience}/{server.scope}"
+                    : $"{server.audience}/.default";
+            }
+
+            // V1 fallback: use the ATG scope, honouring any environment override.
+            // The scope field is ignored for V1 — callers pass a pre-acquired ATG token.
+            return RuntimeUtility.GetMcpPlatformAuthenticationScope(configuration);
         }
 
         /// <summary>

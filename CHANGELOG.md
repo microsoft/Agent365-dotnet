@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
+  - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
+  - `IMcpTokenProvider` interface for pluggable OAuth token acquisition
+  - `AgenticMcpTokenProvider` — acquires per-audience tokens via the agentic OBO flow, with request-scoped token caching to avoid redundant exchanges
+  - `McpToolServerConfigurationService.ListToolServersWithTokensAsync` — attaches per-server `Authorization` headers before tool connections are established; deduplicates token exchanges by scope across servers
+  - `Utility.ResolveTokenScopeForServer` — resolves the correct OAuth scope for each server: explicit `scope` field wins, then V2 per-audience scope (`{audience}/.default`), then V1 ATG shared scope fallback
+  - `Constants.Authentication.AtgAppId` — shared ATG Application ID constant for V1 scope resolution
+  - All three framework extensions (Semantic Kernel, Agent Framework, Azure AI Foundry) updated to use per-audience token provider, so V2 servers receive their own audience-scoped tokens
+
+### Changed
+- **Microsoft.Agents.A365.Tooling** — Tooling gateway endpoint updated to `/agents/v2/{id}/mcpServers`
+
+### Added
 - **Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel** - Comprehensive Roslyn analyzer package for enforcing Agent365 governance patterns
   - 6 diagnostic analyzers (A365SK0001-A365SK0006) for multi-tenant governance enforcement
   - `KernelDirectAccessAnalyzer` - Prevents direct Kernel injection, enforces IKernelProvider pattern

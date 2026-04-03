@@ -16,6 +16,100 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// </summary>
     public partial class McpToolServerConfigurationService
     {
+        /// <summary>
+        /// Enumerates tools from all configured MCP servers, acquiring per-audience tokens
+        /// for each server via <paramref name="tokenProvider"/> before connecting.
+        /// </summary>
+        internal virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
+            string agentInstanceId,
+            string authToken,
+            IMcpTokenProvider tokenProvider,
+            ITurnContext turnContext,
+            ToolOptions toolOptions)
+        {
+            var toolsByServer = new Dictionary<string, IList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
+
+            List<MCPServerConfig> servers;
+            try
+            {
+                servers = await ListToolServersWithTokensAsync(
+                    agentInstanceId,
+                    authToken,
+                    tokenProvider,
+                    toolOptions).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
+                return (new List<MCPServerConfig>(), toolsByServer);
+            }
+
+            if (servers.Count == 0)
+            {
+                _logger.LogInformation("No MCP servers configured for agentInstanceId={AgentInstanceId}", agentInstanceId);
+                return (servers, toolsByServer);
+            }
+
+            var validServers = servers.Where(server =>
+            {
+                if (string.IsNullOrWhiteSpace(server.mcpServerName) || string.IsNullOrWhiteSpace(server.url))
+                {
+                    _logger.LogWarning(
+                        "Skipping invalid MCP server config: Name='{Name}', Url='{Url}'",
+                        server.mcpServerName,
+                        server.url);
+                    return false;
+                }
+                return true;
+            }).ToList();
+
+            var tasks = validServers.Select(async server =>
+            {
+                try
+                {
+                    // Per-server token is already in server.Headers; GetMcpClientToolsAsync
+                    // extracts it via ResolveEffectiveToken, falling back to authToken for V1.
+                    var mcpTools = await GetMcpClientToolsAsync(
+                        turnContext,
+                        server,
+                        authToken,
+                        toolOptions).ConfigureAwait(false);
+
+                    _logger.LogInformation(
+                        "Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
+                        mcpTools.Count,
+                        server.mcpServerName);
+
+                    return (ServerName: server.mcpServerName, Tools: mcpTools, Success: true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "Failed to load tools from MCP server '{ServerName}' at '{Url}': {Error}",
+                        server.mcpServerName,
+                        server.url,
+                        ex.Message);
+
+                    return (ServerName: server.mcpServerName, Tools: (IList<McpClientTool>)Array.Empty<McpClientTool>(), Success: false);
+                }
+            });
+
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            foreach (var result in results.Where(r => r.Success))
+            {
+                toolsByServer[result.ServerName] = result.Tools;
+            }
+
+            _logger.LogInformation(
+                "MCP server discovery completed: Total servers={ServerCount}, Servers with tools={SuccessCount}",
+                servers.Count,
+                toolsByServer.Count);
+
+            return (servers, toolsByServer);
+        }
+
         /// <inheritdoc/>
         public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,

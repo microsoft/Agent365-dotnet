@@ -12,6 +12,7 @@ using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
+using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
@@ -78,12 +79,14 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use the shared enumeration service to get tools from all servers
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentUserId,
-                authToken,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
+            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
+            var tokenProvider = new AgenticMcpTokenProvider(
+                userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
+            var (_, toolsByServer) = concreteService is not null
+                ? await concreteService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false)
+                : await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, turnContext, toolOptions).ConfigureAwait(false);
 
             // Add all MCP tools from all servers
             foreach (var serverEntry in toolsByServer)
@@ -130,12 +133,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use the shared enumeration service to get all tools
-            var mcpTools = await _mcpServerConfigurationService.EnumerateAllToolsAsync(
-                agentUserId,
-                authToken,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
+            var tokenProvider = new AgenticMcpTokenProvider(
+                userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
+            IList<ModelContextProtocol.Client.McpClientTool> mcpTools;
+            if (concreteService is not null)
+            {
+                var (_, toolsByServer) = await concreteService.EnumerateToolsFromServersAsync(
+                    agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+                mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
+            }
+            else
+            {
+                mcpTools = await _mcpServerConfigurationService.EnumerateAllToolsAsync(
+                    agentUserId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            }
 
             // Convert to AITool list
             var a365ToolList = mcpTools.Cast<AITool>().ToList();
