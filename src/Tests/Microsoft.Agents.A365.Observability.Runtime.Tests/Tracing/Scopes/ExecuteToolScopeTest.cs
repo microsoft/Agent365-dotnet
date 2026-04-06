@@ -22,7 +22,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolArgumentsKey, expected);
     }
-    
+
     [TestMethod]
     public void RecordResponse_Response_Set()
     {

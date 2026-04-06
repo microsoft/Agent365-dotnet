@@ -40,14 +40,50 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ToolCallDetails"/> class with structured arguments.
+        /// Per OTEL spec, tool arguments are expected to be an object and SHOULD be recorded in structured form.
+        /// The dictionary is serialized to JSON when setting the span attribute.
+        /// </summary>
+        /// <param name="toolName">Name of the tool being invoked.</param>
+        /// <param name="argumentsObject">Structured arguments passed to the tool, serialized to JSON.</param>
+        /// <param name="toolCallId">Optional identifier for the tool invocation.</param>
+        /// <param name="description">Optional description of the tool call.</param>
+        /// <param name="toolType">Optional type classification for the tool.</param>
+        /// <param name="endpoint">Optional endpoint for remote tool execution.</param>
+        /// <param name="toolServerName">Optional server name for the tool.</param>
+        public ToolCallDetails(
+            string toolName,
+            IDictionary<string, object> argumentsObject,
+            string? toolCallId = null,
+            string? description = null,
+            string? toolType = null,
+            Uri? endpoint = null,
+            string? toolServerName = null)
+        {
+            ToolName = toolName;
+            ArgumentsObject = argumentsObject ?? throw new ArgumentNullException(nameof(argumentsObject));
+            ToolCallId = toolCallId;
+            Description = description;
+            ToolType = toolType;
+            Endpoint = endpoint;
+            ToolServerName = toolServerName;
+        }
+
+        /// <summary>
         /// Gets the tool name.
         /// </summary>
         public string ToolName { get; }
 
         /// <summary>
-        /// Gets the serialized arguments supplied to the tool, when any.
+        /// Gets the serialized JSON arguments supplied to the tool, when any.
         /// </summary>
         public string? Arguments { get; }
+
+        /// <summary>
+        /// Gets the structured arguments supplied to the tool, when any.
+        /// Takes precedence over <see cref="Arguments"/> for telemetry recording.
+        /// </summary>
+        public IDictionary<string, object>? ArgumentsObject { get; }
 
         /// <summary>
         /// Gets the identifier for the tool call, when provided.

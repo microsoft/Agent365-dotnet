@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 {
@@ -97,9 +98,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="Request"/> class with structured input content.
+        /// </summary>
+        /// <param name="inputContent">The structured input messages for the agent.</param>
+        /// <param name="sessionId">Optional session identifier.</param>
+        /// <param name="channel">Optional channel information describing request origin.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID.</param>
+        /// <param name="operationSource">Optional source of the operation (e.g., SDK, Gateway, MCPServer).</param>
+        public Request(InputMessages inputContent, string? sessionId = null, Channel? channel = null, string? conversationId = null, string? operationSource = null)
+        {
+            InputContent = inputContent ?? throw new ArgumentNullException(nameof(inputContent));
+            SessionId = sessionId;
+            Channel = channel;
+            ConversationId = conversationId;
+            OperationSource = operationSource;
+        }
+
+        /// <summary>
         /// Gets the textual content of the request.
         /// </summary>
         public string? Content { get; }
+
+        /// <summary>
+        /// Gets the structured input messages, when supplied.
+        /// Takes precedence over <see cref="Content"/> for telemetry recording.
+        /// </summary>
+        public InputMessages? InputContent { get; }
 
         /// <summary>
         /// Gets the session identifier, when supplied.

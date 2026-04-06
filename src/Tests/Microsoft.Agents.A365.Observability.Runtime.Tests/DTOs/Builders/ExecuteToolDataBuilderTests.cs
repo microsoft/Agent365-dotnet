@@ -35,7 +35,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithChannel_IncludesChannelAttributes()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolSource", null);
+            var toolDetails = new ToolCallDetails("toolSource", (string?)null);
             var agent = new AgentDetails("agent-src");
             var conversationId = "conv-src-tool";
             var source = new Channel(name: "ChannelTool", link: "https://channel/tool");
@@ -78,7 +78,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithNonStandardPort_IncludesPort()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolC", null, endpoint: new Uri("https://example.com:8081"));
+            var toolDetails = new ToolCallDetails("toolC", (string?)null, endpoint: new Uri("https://example.com:8081"));
             var agent = new AgentDetails("agent-3");
             var conversationId = "conv-port";
 
@@ -93,7 +93,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithStandardPort443_ExcludesPort()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolD", null, endpoint: new Uri("https://example.com:443"));
+            var toolDetails = new ToolCallDetails("toolD", (string?)null, endpoint: new Uri("https://example.com:443"));
             var agent = new AgentDetails("agent-4");
             var conversationId = "conv-443";
 
@@ -109,7 +109,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithResponseContent_IncludesEventContent()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolE", null);
+            var toolDetails = new ToolCallDetails("toolE", (string?)null);
             var agent = new AgentDetails("agent-5");
             var conversationId = "conv-content";
 
@@ -124,7 +124,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithConversationId_IncludesConversationId()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolF", null);
+            var toolDetails = new ToolCallDetails("toolF", (string?)null);
             var agent = new AgentDetails("agent-6");
             var conversationId = "conv-123";
 
@@ -139,7 +139,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithNullOptionalParameters_OmitsThoseAttributes()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolG", null); // no optional fields, no endpoint
+            var toolDetails = new ToolCallDetails("toolG", (string?)null); // no optional fields, no endpoint
             var agent = new AgentDetails("agent-7");
             var conversationId = "conv-null";
 
@@ -159,7 +159,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_SetsTimingInformation_WhenProvided()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolH", null);
+            var toolDetails = new ToolCallDetails("toolH", (string?)null);
             var agent = new AgentDetails("agent-8");
             var start = DateTimeOffset.UtcNow.AddMinutes(-3);
             var end = DateTimeOffset.UtcNow;
@@ -178,7 +178,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_SetsSpanIds_WhenProvided()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolI", null);
+            var toolDetails = new ToolCallDetails("toolI", (string?)null);
             var agent = new AgentDetails("agent-9");
             var spanId = "span-tool";
             var parentSpanId = "parent-tool";
@@ -242,7 +242,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithOnlyStartTime_DurationZero()
         {
             // Arrange
-            var toolDetails = new ToolCallDetails("toolK", null);
+            var toolDetails = new ToolCallDetails("toolK", (string?)null);
             var agent = new AgentDetails("agent-11");
             var start = DateTimeOffset.UtcNow;
             var conversationId = "conv-zero";
@@ -260,7 +260,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_AddsExtraAttributes_WhenNotReserved()
         {
             // Arrange
-            var tool = new ToolCallDetails("tool-extra", null);
+            var tool = new ToolCallDetails("tool-extra", (string?)null);
             var agent = new AgentDetails("agent-extra", "ExtraToolAgent");
             var conversationId = "conv-extra-tool";
             var extras = new Dictionary<string, object?>
@@ -281,7 +281,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_DoesNotOverrideReservedKeys_WithExtraAttributes()
         {
             // Arrange
-            var tool = new ToolCallDetails("tool-resv", null);
+            var tool = new ToolCallDetails("tool-resv", (string?)null);
             var agent = new AgentDetails("agent-resv", "ReservedToolAgent");
             var conversationId = "conv-resv-tool";
             var extras = new Dictionary<string, object?>
@@ -304,7 +304,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_IgnoresNullValues_InExtraAttributes()
         {
             // Arrange
-            var tool = new ToolCallDetails("tool-null", null);
+            var tool = new ToolCallDetails("tool-null", (string?)null);
             var agent = new AgentDetails("agent-null", "NullToolAgent");
             var conversationId = "conv-null-tool";
             var extras = new Dictionary<string, object?>
@@ -325,7 +325,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_SpanKind_DefaultsToNull()
         {
             // Arrange
-            var tool = new ToolCallDetails("toolSK", null);
+            var tool = new ToolCallDetails("toolSK", (string?)null);
             var agent = new AgentDetails("agent-sk");
             var conversationId = "conv-sk-default";
 
@@ -340,7 +340,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_SpanKind_PassesThroughProvidedValue()
         {
             // Arrange
-            var tool = new ToolCallDetails("toolSK", null);
+            var tool = new ToolCallDetails("toolSK", (string?)null);
             var agent = new AgentDetails("agent-sk");
             var conversationId = "conv-sk-client";
 
