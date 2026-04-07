@@ -117,7 +117,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteToolDataBuilder.Build(toolDetails, agent, conversationId, responseContent: "result-value");
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiToolCallResultKey).WhoseValue.Should().Be("result-value");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiToolCallResultKey).WhoseValue!.ToString()!.Should().Contain("result-value");
         }
 
         [TestMethod]

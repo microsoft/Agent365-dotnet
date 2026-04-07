@@ -57,14 +57,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
 
             // Per OTEL spec: arguments SHOULD be recorded in structured form.
-            // Prefer ArgumentsObject (dict → JSON); fall back to string as-is.
+            // Prefer ArgumentsObject (dict → JSON); fall back to string with JSON check.
             if (details.ArgumentsObject != null)
             {
                 SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, MessageUtils.Serialize(details.ArgumentsObject));
             }
             else if (arguments != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                if (MessageUtils.IsJson(arguments))
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                }
+                else
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
+                }
             }
 
             SetTagMaybe(OpenTelemetryConstants.GenAiToolTypeKey, toolType);

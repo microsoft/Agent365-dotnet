@@ -20,7 +20,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), new ToolCallDetails("TestTool", expected), Util.GetAgentDetails());
         });
         
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolArgumentsKey, expected);
+        activity.ShouldHaveTagContaining(OpenTelemetryConstants.GenAiToolArgumentsKey, expected);
     }
 
     [TestMethod]
