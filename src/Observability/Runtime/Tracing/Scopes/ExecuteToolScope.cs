@@ -92,12 +92,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         /// <summary>
         /// Records response information for telemetry tracking.
-        /// Per OTEL spec, the result is expected to be an object. A string is recorded as-is
-        /// (assumed to be a JSON string).
+        /// Per OTEL spec, the result SHOULD be recorded in structured form.
+        /// If the string is already valid JSON, it is recorded as-is.
+        /// Otherwise, it is wrapped as <c>{"result":"..."}</c>.
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            if (MessageUtils.IsJson(response))
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            }
+            else
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey,
+                    MessageUtils.Serialize(new Dictionary<string, object> { { "result", response ?? string.Empty } }));
+            }
         }
 
         /// <summary>

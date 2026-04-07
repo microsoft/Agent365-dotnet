@@ -33,7 +33,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             scope.RecordResponse(expected);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolCallResultKey, expected);
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiToolCallResultKey).Value;
+        tagValue.Should().Contain("\"result\"");
+        tagValue.Should().Contain(expected);
     }
 
     [TestMethod]

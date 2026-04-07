@@ -97,6 +97,34 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         // -------------------------------------------------------------------
 
         /// <summary>
+        /// Returns <c>true</c> if the string is valid JSON (object or array).
+        /// Uses a fast char check followed by JSON parse validation.
+        /// </summary>
+        public static bool IsJson(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value!.Length < 2)
+            {
+                return false;
+            }
+
+            char first = value[0];
+            if (first != '{' && first != '[')
+            {
+                return false;
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(value);
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Serializes an object to a JSON string using the shared snake_case options.
         /// Non-throwing; falls back to a diagnostic payload on error.
         /// </summary>
