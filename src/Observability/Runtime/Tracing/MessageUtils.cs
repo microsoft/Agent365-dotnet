@@ -58,6 +58,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
             var chatMessages = new List<ChatMessage>();
             foreach (var msg in messages)
             {
+                if (msg == null) continue;
                 chatMessages.Add(new ChatMessage(
                     MessageRole.User,
                     new IMessagePart[] { new TextPart(msg) }));
@@ -84,6 +85,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
             var outputMsgs = new List<OutputMessage>();
             foreach (var msg in messages)
             {
+                if (msg == null) continue;
                 outputMsgs.Add(new OutputMessage(
                     MessageRole.Assistant,
                     new IMessagePart[] { new TextPart(msg) }));
@@ -98,24 +100,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
 
         /// <summary>
         /// Returns <c>true</c> if the string is valid JSON (object or array).
-        /// Uses a fast char check followed by JSON parse validation.
         /// </summary>
         public static bool IsJson(string? value)
         {
-            if (string.IsNullOrWhiteSpace(value) || value!.Length < 2)
-            {
-                return false;
-            }
-
-            char first = value[0];
-            if (first != '{' && first != '[')
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return false;
             }
 
             try
             {
-                using var doc = JsonDocument.Parse(value);
+                using var doc = JsonDocument.Parse(value!);
                 return true;
             }
             catch (JsonException)
