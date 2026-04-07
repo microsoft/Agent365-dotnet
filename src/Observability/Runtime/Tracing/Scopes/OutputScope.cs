@@ -54,7 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
             if (response?.ToolResultObject != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeToJson(response.ToolResultObject));
+                SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(response.ToolResultObject));
             }
             else if (response?.OutputContent != null)
             {
@@ -110,18 +110,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 return;
             }
 
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeToJson(toolResult));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(toolResult));
         }
 
         private void SetOutput(OutputMessages messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeMessages(messages));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         private void SetOutput(IEnumerable<string> messages)
         {
             var normalized = MessageUtils.NormalizeOutputMessages(messages);
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeMessages(normalized));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(normalized));
         }
     }
 }

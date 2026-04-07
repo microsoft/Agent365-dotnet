@@ -38,7 +38,7 @@ public sealed class MessageUtilsTest
         {
             new ChatMessage(MessageRole.User, new IMessagePart[] { new TextPart("Hello") })
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("version").GetString().Should().Be("0.1.0");
         var messages = doc.RootElement.GetProperty("messages");
@@ -55,7 +55,7 @@ public sealed class MessageUtilsTest
         {
             new OutputMessage(MessageRole.Assistant, new IMessagePart[] { new TextPart("Answer") }, finishReason: "stop")
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("messages")[0].GetProperty("finish_reason").GetString().Should().Be("stop");
     }
@@ -67,7 +67,7 @@ public sealed class MessageUtilsTest
         {
             new ChatMessage(MessageRole.User, new IMessagePart[] { new TextPart("Hi") })
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         json.Should().NotContain("\"name\"");
     }
 
@@ -78,7 +78,7 @@ public sealed class MessageUtilsTest
         {
             new ChatMessage(MessageRole.User, new IMessagePart[] { new TextPart("test") })
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         json.Should().Contain("\"role\":\"user\"");
     }
 
@@ -90,7 +90,7 @@ public sealed class MessageUtilsTest
         {
             new ChatMessage(MessageRole.User, new IMessagePart[] { new TextPart(content) })
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("messages")[0].GetProperty("parts")[0]
             .GetProperty("content").GetString().Should().Be(content);
@@ -100,7 +100,7 @@ public sealed class MessageUtilsTest
     public void SerializeMessages_EmptyMessages_ProducesValidJson()
     {
         var wrapper = new InputMessages(Array.Empty<ChatMessage>());
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("version").GetString().Should().Be("0.1.0");
         doc.RootElement.GetProperty("messages").GetArrayLength().Should().Be(0);
@@ -114,7 +114,7 @@ public sealed class MessageUtilsTest
             new ChatMessage(MessageRole.System, new IMessagePart[] { new TextPart("You are helpful.") }),
             new ChatMessage(MessageRole.User, new IMessagePart[] { new TextPart("Question?") })
         });
-        var json = MessageUtils.SerializeMessages(wrapper);
+        var json = MessageUtils.Serialize(wrapper);
         var doc = JsonDocument.Parse(json);
         doc.RootElement.GetProperty("messages").GetArrayLength().Should().Be(2);
         doc.RootElement.GetProperty("messages")[0].GetProperty("role").GetString().Should().Be("system");

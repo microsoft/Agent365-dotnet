@@ -17,17 +17,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
     /// </summary>
     internal static class MessageUtils
     {
+        private static readonly SnakeCaseLowerNamingPolicy NamingPolicy = new SnakeCaseLowerNamingPolicy();
         private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
+
+        private static readonly string DiagnosticFallback =
+            "{\"version\":\"" + MessageConstants.SchemaVersion + "\",\"messages\":[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"[serialization failed]\"}]}]}";
 
         private static JsonSerializerOptions CreateSerializerOptions()
         {
             var options = new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new SnakeCaseLowerNamingPolicy(),
+                PropertyNamingPolicy = NamingPolicy,
                 WriteIndented = false,
             };
-            options.Converters.Add(new JsonStringEnumConverter(new SnakeCaseLowerNamingPolicy()));
+            options.Converters.Add(new JsonStringEnumConverter(NamingPolicy));
             options.Converters.Add(new MessagePartConverter());
             return options;
         }
@@ -94,9 +98,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
 
         /// <summary>
         /// Serializes an object to a JSON string using the shared snake_case options.
-        /// Non-throwing; returns <see cref="object.ToString"/> on error.
+        /// Non-throwing; falls back to a diagnostic payload on error.
         /// </summary>
-        public static string SerializeToJson(object value)
+        public static string Serialize(object value)
         {
             try
             {
@@ -104,37 +108,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
             }
             catch (Exception)
             {
-                return value?.ToString() ?? string.Empty;
-            }
-        }
-
-        /// <summary>
-        /// Serializes a versioned <see cref="InputMessages"/> wrapper to JSON.
-        /// Non-throwing; falls back to a diagnostic payload on error.
-        /// </summary>
-        public static string SerializeMessages(InputMessages wrapper)
-        {
-            return SerializeMessagesCore(wrapper);
-        }
-
-        /// <summary>
-        /// Serializes a versioned <see cref="OutputMessages"/> wrapper to JSON.
-        /// Non-throwing; falls back to a diagnostic payload on error.
-        /// </summary>
-        public static string SerializeMessages(OutputMessages wrapper)
-        {
-            return SerializeMessagesCore(wrapper);
-        }
-
-        private static string SerializeMessagesCore(object wrapper)
-        {
-            try
-            {
-                return JsonSerializer.Serialize(wrapper, wrapper.GetType(), SerializerOptions);
-            }
-            catch (Exception)
-            {
-                return "{\"version\":\"" + MessageConstants.SchemaVersion + "\",\"messages\":[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"[serialization failed]\"}]}]}";
+                return DiagnosticFallback;
             }
         }
 

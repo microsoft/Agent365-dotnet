@@ -132,7 +132,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public void RecordInputMessages(string[] messages)
         {
             var wrapper = MessageUtils.NormalizeInputMessages(messages);
-            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.SerializeMessages(wrapper));
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(wrapper));
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="messages">The versioned input messages wrapper.</param>
         public void RecordInputMessages(InputMessages messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.SerializeMessages(messages));
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
@@ -151,7 +151,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public void RecordOutputMessages(string[] messages)
         {
             var wrapper = MessageUtils.NormalizeOutputMessages(messages);
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeMessages(wrapper));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <param name="messages">The versioned output messages wrapper.</param>
         public void RecordOutputMessages(OutputMessages messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.SerializeMessages(messages));
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
