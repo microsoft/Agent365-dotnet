@@ -171,7 +171,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             return string.Equals(Content, other.Content, StringComparison.Ordinal) &&
                    string.Equals(SessionId, other.SessionId, StringComparison.Ordinal) &&
                    EqualityComparer<Channel?>.Default.Equals(Channel, other.Channel) &&
-                   string.Equals(ConversationId, other.ConversationId, StringComparison.Ordinal);
+                   string.Equals(ConversationId, other.ConversationId, StringComparison.Ordinal) &&
+                   string.Equals(OperationSource, other.OperationSource, StringComparison.Ordinal) &&
+                   ReferenceEquals(InputContent, other.InputContent);
         }
 
         /// <inheritdoc/>
@@ -190,6 +192,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (SessionId != null ? StringComparer.Ordinal.GetHashCode(SessionId) : 0);
                 hash = (hash * 31) + EqualityComparer<Channel?>.Default.GetHashCode(Channel);
                 hash = (hash * 31) + (ConversationId != null ? StringComparer.Ordinal.GetHashCode(ConversationId) : 0);
+                hash = (hash * 31) + (OperationSource != null ? StringComparer.Ordinal.GetHashCode(OperationSource) : 0);
+                hash = (hash * 31) + (InputContent != null ? InputContent.GetHashCode() : 0);
                 return hash;
             }
         }

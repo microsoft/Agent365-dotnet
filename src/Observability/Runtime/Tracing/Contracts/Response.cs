@@ -68,6 +68,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 return false;
             }
 
+            if (!ReferenceEquals(OutputContent, other.OutputContent))
+            {
+                return false;
+            }
+
+            if (!ReferenceEquals(ToolResultObject, other.ToolResultObject))
+            {
+                return false;
+            }
+
             if (Messages.Count != other.Messages.Count)
             {
                 return false;
@@ -96,6 +106,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             unchecked
             {
                 int hash = 17;
+                hash = (hash * 31) + (OutputContent != null ? OutputContent.GetHashCode() : 0);
+                hash = (hash * 31) + (ToolResultObject != null ? ToolResultObject.GetHashCode() : 0);
                 foreach (var message in Messages)
                 {
                     hash = (hash * 31) + (message != null ? StringComparer.Ordinal.GetHashCode(message) : 0);

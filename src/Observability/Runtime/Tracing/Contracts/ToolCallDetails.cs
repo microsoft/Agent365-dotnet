@@ -141,6 +141,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 
             return string.Equals(ToolName, other.ToolName, StringComparison.Ordinal) &&
                    string.Equals(Arguments, other.Arguments, StringComparison.Ordinal) &&
+                   ReferenceEquals(ArgumentsObject, other.ArgumentsObject) &&
                    string.Equals(ToolCallId, other.ToolCallId, StringComparison.Ordinal) &&
                    string.Equals(Description, other.Description, StringComparison.Ordinal) &&
                    string.Equals(ToolType, other.ToolType, StringComparison.Ordinal) &&
@@ -162,6 +163,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 int hash = 17;
                 hash = (hash * 31) + (ToolName != null ? StringComparer.Ordinal.GetHashCode(ToolName) : 0);
                 hash = (hash * 31) + (Arguments != null ? StringComparer.Ordinal.GetHashCode(Arguments) : 0);
+                hash = (hash * 31) + (ArgumentsObject != null ? System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(ArgumentsObject) : 0);
                 hash = (hash * 31) + (ToolCallId != null ? StringComparer.Ordinal.GetHashCode(ToolCallId) : 0);
                 hash = (hash * 31) + (Description != null ? StringComparer.Ordinal.GetHashCode(Description) : 0);
                 hash = (hash * 31) + (ToolType != null ? StringComparer.Ordinal.GetHashCode(ToolType) : 0);
