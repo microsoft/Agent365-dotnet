@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -66,7 +67,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (messages != null && messages.Length > 0)
             {
-                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
+                var wrapper = MessageUtils.NormalizeInputMessages(messages);
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(wrapper));
             }
         }
 
@@ -77,7 +79,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             if (messages != null && messages.Length > 0)
             {
-                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+                var wrapper = MessageUtils.NormalizeOutputMessages(messages);
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
             }
         }
 

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 {
@@ -97,9 +98,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="Request"/> class with structured input content.
+        /// </summary>
+        /// <param name="inputContent">The structured input messages for the agent.</param>
+        /// <param name="sessionId">Optional session identifier.</param>
+        /// <param name="channel">Optional channel information describing request origin.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID.</param>
+        /// <param name="operationSource">Optional source of the operation (e.g., SDK, Gateway, MCPServer).</param>
+        public Request(InputMessages inputContent, string? sessionId = null, Channel? channel = null, string? conversationId = null, string? operationSource = null)
+        {
+            InputContent = inputContent ?? throw new ArgumentNullException(nameof(inputContent));
+            SessionId = sessionId;
+            Channel = channel;
+            ConversationId = conversationId;
+            OperationSource = operationSource;
+        }
+
+        /// <summary>
         /// Gets the textual content of the request.
         /// </summary>
         public string? Content { get; }
+
+        /// <summary>
+        /// Gets the structured input messages, when supplied.
+        /// Takes precedence over <see cref="Content"/> for telemetry recording.
+        /// </summary>
+        public InputMessages? InputContent { get; }
 
         /// <summary>
         /// Gets the session identifier, when supplied.
@@ -147,7 +171,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             return string.Equals(Content, other.Content, StringComparison.Ordinal) &&
                    string.Equals(SessionId, other.SessionId, StringComparison.Ordinal) &&
                    EqualityComparer<Channel?>.Default.Equals(Channel, other.Channel) &&
-                   string.Equals(ConversationId, other.ConversationId, StringComparison.Ordinal);
+                   string.Equals(ConversationId, other.ConversationId, StringComparison.Ordinal) &&
+                   string.Equals(OperationSource, other.OperationSource, StringComparison.Ordinal) &&
+                   ReferenceEquals(InputContent, other.InputContent);
         }
 
         /// <inheritdoc/>
@@ -166,6 +192,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (SessionId != null ? StringComparer.Ordinal.GetHashCode(SessionId) : 0);
                 hash = (hash * 31) + EqualityComparer<Channel?>.Default.GetHashCode(Channel);
                 hash = (hash * 31) + (ConversationId != null ? StringComparer.Ordinal.GetHashCode(ConversationId) : 0);
+                hash = (hash * 31) + (OperationSource != null ? StringComparer.Ordinal.GetHashCode(OperationSource) : 0);
+                hash = (hash * 31) + (InputContent != null ? InputContent.GetHashCode() : 0);
                 return hash;
             }
         }

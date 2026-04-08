@@ -20,9 +20,11 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Hosting" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extensions.SemanticKernel" />
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Runtime.Tests" />
   </ItemGroup>
 </Project>
