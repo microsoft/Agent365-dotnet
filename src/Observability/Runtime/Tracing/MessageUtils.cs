@@ -97,7 +97,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         // -------------------------------------------------------------------
 
         /// <summary>
-        /// Returns <c>true</c> if the string is valid JSON (object or array).
+        /// Returns <c>true</c> if the string is a valid JSON object or array.
+        /// Primitives (strings, numbers, booleans, null) return <c>false</c>.
         /// </summary>
         public static bool IsJson(string? value)
         {
@@ -109,7 +110,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
             try
             {
                 using var doc = JsonDocument.Parse(value!);
-                return true;
+                var kind = doc.RootElement.ValueKind;
+                return kind == JsonValueKind.Object || kind == JsonValueKind.Array;
             }
             catch (JsonException)
             {

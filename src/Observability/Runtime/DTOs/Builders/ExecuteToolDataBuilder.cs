@@ -123,7 +123,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 else
                 {
                     AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey,
-                        MessageUtils.Serialize(new Dictionary<string, object> { { "raw", arguments } }));
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
                 }
             }
 

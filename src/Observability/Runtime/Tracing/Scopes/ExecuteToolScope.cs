@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
+
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
     /// <summary>
