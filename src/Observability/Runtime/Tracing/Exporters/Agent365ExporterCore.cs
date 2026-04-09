@@ -89,8 +89,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var encodedAgentId = Uri.EscapeDataString(agentId);
 
             return useS2SEndpoint
-                ? $"/observabilityService/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces"
-                : $"/observability/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces";
+                ? $"/observabilityService/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces"
+                : $"/observability/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces";
         }
 
         /// <summary>

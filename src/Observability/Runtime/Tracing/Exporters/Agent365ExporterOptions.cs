@@ -57,8 +57,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
-        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/agents/{agentId}/traces
-        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/agents/{agentId}/traces
+        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces
+        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/otlp/agents/{agentId}/traces
         /// Default is false.
         /// </summary>
         public bool UseS2SEndpoint { get; set; } = false;
