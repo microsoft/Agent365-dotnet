@@ -10,6 +10,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
     using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
+    using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
+    using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
@@ -70,9 +72,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             };
 
             // Use per-audience token provider so V2 servers receive audience-scoped tokens.
-            var tokenProvider = new AgenticMcpTokenProvider(
-                userAuthorization, authHandlerName, turnContext, _configuration,
-                _logger);
+            // In dev scenarios tokens come from environment variables; in production from OBO flow.
+            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
+                ? new DevMcpTokenProvider(_configuration, _logger)
+                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
             var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
             var (_, toolsByServer) = concreteService is not null

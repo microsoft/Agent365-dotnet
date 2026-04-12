@@ -591,14 +591,6 @@ namespace Microsoft.Agents.A365.Tooling.Services
             return fallbackToken;
         }
 
-        private bool IsDevScenario()
-        {
-            // Determine environment from configuration (environment variables, appsettings.json, etc.), default to 'Development' if not set
-            var environment = this._configuration["ASPNETCORE_ENVIRONMENT"] ??
-                             this._configuration["DOTNET_ENVIRONMENT"] ??
-                             "Development";
-
-            return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
-        }
+        private bool IsDevScenario() => Utility.IsDevScenario(_configuration);
     }
 }

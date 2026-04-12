@@ -97,6 +97,19 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
+        /// Determines whether the application is running in a local development scenario.
+        /// </summary>
+        /// <param name="configuration">Application configuration used to read environment name.</param>
+        /// <returns><c>true</c> when the environment is <c>Development</c> (default when not set).</returns>
+        internal static bool IsDevScenario(IConfiguration configuration)
+        {
+            var environment = configuration["ASPNETCORE_ENVIRONMENT"] ??
+                              configuration["DOTNET_ENVIRONMENT"] ??
+                              "Development";
+            return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Gets the URL of the chat history endpoint used by the real-time threat protection service.
         /// </summary>
         /// <param name="configuration">Configuration Collection used to resolve the MCP platform base URL.</param>
