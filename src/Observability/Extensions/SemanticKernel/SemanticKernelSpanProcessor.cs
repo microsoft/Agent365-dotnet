@@ -10,7 +10,6 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
 using System.Diagnostics;
-using System.Linq;
 
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 {
@@ -34,8 +33,8 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
     {
         if (activity.Source.Name.StartsWith(TargetSourceName))
         {
-            var tags = activity.Tags.ToDictionary(kv => kv.Key, kv => kv.Value);
-            if (tags.TryGetValue(OpenTelemetryConstants.GenAiOperationNameKey, out var operationName))
+            var operationName = activity.GetTagItem(OpenTelemetryConstants.GenAiOperationNameKey) as string;
+            if (operationName != null)
             {
                 switch (operationName)
                 {

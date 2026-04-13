@@ -8,7 +8,6 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 
 /// <summary>
@@ -285,8 +284,16 @@ internal static class SemanticKernelMessageMapper
 
     private static string? GetEventContentTag(ActivityEvent activityEvent)
     {
-        return activityEvent.Tags?
-            .FirstOrDefault(tag => tag.Key == SemanticKernelTelemetryConstants.EventContentTag).Value as string;
+        if (activityEvent.Tags == null)
+            return null;
+
+        foreach (var tag in activityEvent.Tags)
+        {
+            if (tag.Key == SemanticKernelTelemetryConstants.EventContentTag)
+                return tag.Value as string;
+        }
+
+        return null;
     }
 
     private static string? GetStringProperty(JsonElement element, string propertyName)
