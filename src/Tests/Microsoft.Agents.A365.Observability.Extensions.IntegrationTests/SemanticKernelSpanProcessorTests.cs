@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.ClientModel;
 using System.Diagnostics;
 using System.Text.Json;
-using Azure.AI.OpenAI;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -73,7 +71,7 @@ public class SemanticKernelSpanProcessorTests
         history.AddSystemMessage("You are a helpful assistant. Reply in one sentence.");
         history.AddUserMessage("What is the capital of France?");
 
-        var response = await chatService.GetChatMessageContentAsync(history);
+        _ = await chatService.GetChatMessageContentAsync(history);
 
         _tracerProvider!.ForceFlush();
 
@@ -153,7 +151,7 @@ public class SemanticKernelSpanProcessorTests
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        var response = await chatService.GetChatMessageContentAsync(history, settings, kernel);
+        _ = await chatService.GetChatMessageContentAsync(history, settings, kernel);
 
         _tracerProvider!.ForceFlush();
 
@@ -220,7 +218,7 @@ public class SemanticKernelSpanProcessorTests
         var history = new ChatHistory();
         history.AddUserMessage("Say hello");
 
-        var response = await chatService.GetChatMessageContentAsync(history);
+        _ = await chatService.GetChatMessageContentAsync(history);
 
         _tracerProvider!.ForceFlush();
 
