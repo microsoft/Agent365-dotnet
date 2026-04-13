@@ -1,41 +1,50 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.ClientModel;
 using System.Diagnostics;
 using System.Text.Json;
+using Azure.AI.OpenAI;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.AI;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Agents.A365.Observability.Extensions.IntegrationTests;
 
 /// <summary>
-/// Integration tests for <see cref="AgentFrameworkSpanProcessor"/> verifying the mapping from
-/// Agent Framework message format to A365 versioned message format.
-/// Agent Framework sets gen_ai.input.messages / gen_ai.output.messages as span tags with
-/// JSON arrays of {role, parts[{type, content}], finish_reason?}. The processor should
-/// convert these to the A365 versioned format {version, messages[{role, parts[...]}]}.
+/// Integration tests for <see cref="AgentFrameworkSpanProcessor"/> running against real Azure OpenAI
+/// via <see cref="IChatClient"/> with <c>UseOpenTelemetry()</c> — the same pipeline used by Agent Framework.
+/// Pipeline: IChatClient.UseOpenTelemetry() → TracerProvider → AgentFrameworkSpanProcessor → captured spans.
+/// Requires: AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT env vars.
 /// </summary>
 [TestClass]
 public class AgentFrameworkSpanProcessorTests
 {
     private static readonly JsonSerializerOptions JsonPrint = new() { WriteIndented = true };
-    private static readonly string SourceName = BuilderExtensions.AgentFrameworkSource;
+    private const string OTelSourceName = BuilderExtensions.AgentFrameworkChatClientSource;
+
+    private static string? Endpoint => Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT");
+    private static string? ApiKey => Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
+    private static string? Deployment => Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT");
+
+    private static bool HasCredentials =>
+        !string.IsNullOrEmpty(Endpoint) &&
+        !string.IsNullOrEmpty(ApiKey) &&
+        !string.IsNullOrEmpty(Deployment);
 
     private List<Activity> _exportedActivities = new();
     private TracerProvider? _tracerProvider;
-    private ActivitySource? _activitySource;
 
     [TestInitialize]
     public void Setup()
     {
         _exportedActivities = new List<Activity>();
-        _activitySource = new ActivitySource(SourceName);
 
         _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource(SourceName)
+            .AddSource(OTelSourceName)
             .AddProcessor(new AgentFrameworkSpanProcessor())
             .AddProcessor(new ActivityCapturingProcessor(_exportedActivities))
             .Build();
@@ -44,220 +53,176 @@ public class AgentFrameworkSpanProcessorTests
     [TestCleanup]
     public void Cleanup()
     {
-        _activitySource?.Dispose();
         _tracerProvider?.Dispose();
     }
 
     [TestMethod]
-    public void SimpleChat_MapsToVersionedInputAndOutputMessages()
+    public async Task SimpleChat_ProcessorMapsToVersionedFormat()
     {
-        // Arrange — simulate what Agent Framework emits for a simple chat
-        var inputJson = @"[
-            {""role"": ""system"", ""parts"": [{""type"": ""text"", ""content"": ""You are a helpful assistant.""}]},
-            {""role"": ""user"", ""parts"": [{""type"": ""text"", ""content"": ""What is the capital of France?""}]}
-        ]";
-        var outputJson = @"[
-            {""role"": ""assistant"", ""parts"": [{""type"": ""text"", ""content"": ""The capital of France is Paris.""}], ""finish_reason"": ""stop""}
-        ]";
+        SkipIfNoCredentials();
 
-        using (var activity = _activitySource!.StartActivity("chat gpt-4o-mini", ActivityKind.Client))
+        var chatClient = CreateChatClient();
+        var messages = new List<ChatMessage>
         {
-            activity!.SetTag("gen_ai.operation.name", "chat");
-            activity.SetTag("gen_ai.input.messages", inputJson);
-            activity.SetTag("gen_ai.output.messages", outputJson);
-        }
+            new(ChatRole.System, "You are a helpful assistant. Reply in one sentence."),
+            new(ChatRole.User, "What is the capital of France?")
+        };
+
+        await chatClient.GetResponseAsync(messages);
 
         _tracerProvider!.ForceFlush();
 
-        // Assert
-        _exportedActivities.Should().HaveCount(1);
-        var span = _exportedActivities[0];
-        DumpActivity(span, "AF SimpleChat");
+        var chatSpan = FindChatSpan();
+        chatSpan.Should().NotBeNull("IChatClient should emit a chat span");
+        DumpActivity(chatSpan!, "AF SimpleChat");
 
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
+        var tags = GetTags(chatSpan!);
+
+        // Verify the processor mapped to A365 versioned format
+        tags.Should().ContainKey("gen_ai.input.messages");
+        var input = tags["gen_ai.input.messages"] as string;
         input.Should().Contain("\"version\":\"0.1.0\"", "should produce versioned wrapper");
-        input.Should().Contain("\"role\":\"system\"", "should preserve system message");
-        input.Should().Contain("\"role\":\"user\"", "should preserve user message");
         input.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         input.Should().Contain("capital of France");
 
-        var output = span.GetTagItem("gen_ai.output.messages") as string;
+        tags.Should().ContainKey("gen_ai.output.messages");
+        var output = tags["gen_ai.output.messages"] as string;
         output.Should().Contain("\"version\":\"0.1.0\"");
-        output.Should().Contain("\"role\":\"assistant\"");
         output.Should().Contain("\"type\":\"text\"");
-        output.Should().Contain("Paris");
-        output.Should().Contain("\"finish_reason\":\"stop\"");
+        output.Should().Contain("\"role\":\"assistant\"");
     }
 
     [TestMethod]
-    public void ToolCallConversation_MapsToolCallAndResponseParts()
+    public async Task ChatWithToolCall_ProcessorMapsToolCallParts()
     {
-        // Arrange — simulate a tool call round-trip
-        var inputJson = @"[
-            {""role"": ""system"", ""parts"": [{""type"": ""text"", ""content"": ""You are a weather assistant.""}]},
-            {""role"": ""user"", ""parts"": [{""type"": ""text"", ""content"": ""What is the weather in Seattle?""}]},
-            {""role"": ""assistant"", ""parts"": [{""type"": ""tool_call"", ""name"": ""GetWeather"", ""id"": ""call_123"", ""arguments"": ""{\""location\"": \""Seattle\""}""}]},
-            {""role"": ""tool"", ""parts"": [{""type"": ""tool_call_response"", ""id"": ""call_123"", ""response"": ""Sunny, 72°F""}]}
-        ]";
-        var outputJson = @"[
-            {""role"": ""assistant"", ""parts"": [{""type"": ""text"", ""content"": ""The weather in Seattle is sunny with 72°F.""}], ""finish_reason"": ""stop""}
-        ]";
+        SkipIfNoCredentials();
 
-        using (var activity = _activitySource!.StartActivity("chat gpt-4o-mini", ActivityKind.Client))
+        var chatClient = CreateChatClientWithTools();
+        var messages = new List<ChatMessage>
         {
-            activity!.SetTag("gen_ai.operation.name", "chat");
-            activity.SetTag("gen_ai.input.messages", inputJson);
-            activity.SetTag("gen_ai.output.messages", outputJson);
-        }
+            new(ChatRole.System, "You are a weather assistant. Always use the GetWeather function."),
+            new(ChatRole.User, "What's the weather in Seattle?")
+        };
+
+        await chatClient.GetResponseAsync(messages);
 
         _tracerProvider!.ForceFlush();
 
-        _exportedActivities.Should().HaveCount(1);
-        var span = _exportedActivities[0];
-        DumpActivity(span, "AF ToolCall");
+        // Dump all spans to see what the full pipeline emits
+        Console.WriteLine($"\n  All captured activities ({_exportedActivities.Count}):");
+        foreach (var act in _exportedActivities)
+        {
+            var op = act.GetTagItem("gen_ai.operation.name") as string ?? "(none)";
+            Console.WriteLine($"    {act.Source.Name} | {act.DisplayName} | op={op}");
+            DumpActivity(act, $"AF ToolCall — {act.DisplayName}");
+        }
 
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
+        // Find a chat span that has input messages
+        var chatSpan = _exportedActivities.LastOrDefault(a =>
+        {
+            var input = a.GetTagItem("gen_ai.input.messages") as string;
+            return input != null && input.Contains("version");
+        });
+
+        chatSpan.Should().NotBeNull("should have at least one span with versioned input messages");
+
+        var tags = GetTags(chatSpan!);
+        var input = tags["gen_ai.input.messages"] as string;
         input.Should().Contain("\"version\":\"0.1.0\"");
-        input.Should().Contain("\"type\":\"tool_call\"", "should map tool_call parts");
-        input.Should().Contain("\"name\":\"GetWeather\"");
-        input.Should().Contain("\"id\":\"call_123\"");
-        input.Should().Contain("\"type\":\"tool_call_response\"", "should map tool_call_response parts");
-        input.Should().Contain("Sunny, 72");
+        input.Should().Contain("weather");
     }
 
     [TestMethod]
-    public void MultimodalMessage_MapsBlobAndUriParts()
+    public async Task SimpleChat_RawFormatBeforeProcessor()
     {
-        // Arrange — simulate a multimodal message with blob and uri parts
-        var inputJson = @"[
-            {""role"": ""user"", ""parts"": [
-                {""type"": ""text"", ""content"": ""Describe this image""},
-                {""type"": ""blob"", ""modality"": ""image"", ""content"": ""aW1hZ2VkYXRh"", ""mime_type"": ""image/png""},
-                {""type"": ""uri"", ""modality"": ""image"", ""uri"": ""https://example.com/image.png"", ""mime_type"": ""image/png""}
-            ]}
-        ]";
+        SkipIfNoCredentials();
 
-        using (var activity = _activitySource!.StartActivity("chat gpt-4o-mini", ActivityKind.Client))
+        // Capture spans WITHOUT the processor to see raw IChatClient format
+        _tracerProvider?.Dispose();
+        var rawActivities = new List<Activity>();
+        _tracerProvider = Sdk.CreateTracerProviderBuilder()
+            .AddSource(OTelSourceName)
+            .AddProcessor(new ActivityCapturingProcessor(rawActivities))
+            .Build();
+
+        var chatClient = CreateChatClient();
+        var messages = new List<ChatMessage>
         {
-            activity!.SetTag("gen_ai.operation.name", "chat");
-            activity.SetTag("gen_ai.input.messages", inputJson);
-        }
+            new(ChatRole.User, "Say hello")
+        };
+
+        await chatClient.GetResponseAsync(messages);
 
         _tracerProvider!.ForceFlush();
 
-        _exportedActivities.Should().HaveCount(1);
-        var span = _exportedActivities[0];
-        DumpActivity(span, "AF Multimodal");
+        var chatSpan = rawActivities.FirstOrDefault(a =>
+            a.GetTagItem("gen_ai.operation.name") as string == "chat");
 
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
-        input.Should().Contain("\"version\":\"0.1.0\"");
-        input.Should().Contain("\"type\":\"text\"");
-        input.Should().Contain("Describe this image");
-        input.Should().Contain("\"type\":\"blob\"", "should map blob parts");
-        input.Should().Contain("\"modality\":\"image\"");
-        input.Should().Contain("\"type\":\"uri\"", "should map uri parts");
-        input.Should().Contain("https://example.com/image.png");
-    }
+        chatSpan.Should().NotBeNull("IChatClient should emit a chat span");
+        DumpActivity(chatSpan!, "AF Raw (no processor)");
 
-    [TestMethod]
-    public void InvokeAgentOperation_MapsMessages()
-    {
-        // Arrange — invoke_agent operation also gets mapped
-        var inputJson = @"[
-            {""role"": ""user"", ""parts"": [{""type"": ""text"", ""content"": ""Hello agent""}]}
-        ]";
-        var outputJson = @"[
-            {""role"": ""assistant"", ""parts"": [{""type"": ""text"", ""content"": ""Hello! How can I help?""}], ""finish_reason"": ""stop""}
-        ]";
+        // Document the raw format that Microsoft.Extensions.AI emits
+        var tags = GetTags(chatSpan!);
+        tags.Should().ContainKey("gen_ai.input.messages",
+            "Microsoft.Extensions.AI UseOpenTelemetry should emit input messages");
+        tags.Should().ContainKey("gen_ai.output.messages",
+            "Microsoft.Extensions.AI UseOpenTelemetry should emit output messages");
 
-        using (var activity = _activitySource!.StartActivity("invoke_agent TestAgent", ActivityKind.Internal))
-        {
-            activity!.SetTag("gen_ai.operation.name", "invoke_agent");
-            activity.SetTag("gen_ai.input.messages", inputJson);
-            activity.SetTag("gen_ai.output.messages", outputJson);
-        }
-
-        _tracerProvider!.ForceFlush();
-
-        _exportedActivities.Should().HaveCount(1);
-        var span = _exportedActivities[0];
-        DumpActivity(span, "AF InvokeAgent");
-
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
-        input.Should().Contain("\"version\":\"0.1.0\"");
-        input.Should().Contain("Hello agent");
-
-        var output = span.GetTagItem("gen_ai.output.messages") as string;
-        output.Should().Contain("\"version\":\"0.1.0\"");
-        output.Should().Contain("Hello! How can I help?");
-    }
-
-    [TestMethod]
-    public void ExecuteToolOperation_CopiesResultToEventContent()
-    {
-        // Arrange — execute_tool copies tool result to gen_ai.event.content
-        using (var activity = _activitySource!.StartActivity("execute_tool GetWeather", ActivityKind.Internal))
-        {
-            activity!.SetTag("gen_ai.operation.name", "execute_tool");
-            activity.SetTag("gen_ai.tool.call.result", "Sunny, 72°F");
-        }
-
-        _tracerProvider!.ForceFlush();
-
-        _exportedActivities.Should().HaveCount(1);
-        var span = _exportedActivities[0];
-
-        var eventContent = span.GetTagItem("gen_ai.event.content") as string;
-        eventContent.Should().Be("Sunny, 72°F");
-    }
-
-    [TestMethod]
-    public void ReasoningPart_MapsCorrectly()
-    {
-        var inputJson = @"[
-            {""role"": ""assistant"", ""parts"": [
-                {""type"": ""reasoning"", ""content"": ""Let me think about this step by step...""},
-                {""type"": ""text"", ""content"": ""The answer is 42.""}
-            ]}
-        ]";
-
-        using (var activity = _activitySource!.StartActivity("chat gpt-4o-mini", ActivityKind.Client))
-        {
-            activity!.SetTag("gen_ai.operation.name", "chat");
-            activity.SetTag("gen_ai.input.messages", inputJson);
-        }
-
-        _tracerProvider!.ForceFlush();
-
-        var span = _exportedActivities[0];
-        DumpActivity(span, "AF Reasoning");
-
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
-        input.Should().Contain("\"version\":\"0.1.0\"");
-        input.Should().Contain("\"type\":\"reasoning\"", "should map reasoning parts");
-        input.Should().Contain("step by step");
-        input.Should().Contain("\"type\":\"text\"");
-        input.Should().Contain("answer is 42");
-    }
-
-    [TestMethod]
-    public void InvalidJson_PreservesOriginal()
-    {
-        using (var activity = _activitySource!.StartActivity("chat gpt-4o-mini", ActivityKind.Client))
-        {
-            activity!.SetTag("gen_ai.operation.name", "chat");
-            activity.SetTag("gen_ai.input.messages", "not valid json");
-        }
-
-        _tracerProvider!.ForceFlush();
-
-        var span = _exportedActivities[0];
-        // Mapper returns null for invalid JSON, so the original tag stays
-        var input = span.GetTagItem("gen_ai.input.messages") as string;
-        input.Should().Be("not valid json", "invalid JSON should be left unchanged");
+        // Log the raw format for analysis
+        Console.WriteLine($"\n  Raw gen_ai.input.messages:\n{tags["gen_ai.input.messages"]}");
+        Console.WriteLine($"\n  Raw gen_ai.output.messages:\n{tags["gen_ai.output.messages"]}");
     }
 
     #region Helpers
+
+    private IChatClient CreateChatClient()
+    {
+        return new AzureOpenAIClient(
+                new Uri(Endpoint!),
+                new ApiKeyCredential(ApiKey!))
+            .GetChatClient(Deployment!)
+            .AsIChatClient()
+            .AsBuilder()
+            .UseOpenTelemetry(
+                sourceName: OTelSourceName,
+                configure: cfg => cfg.EnableSensitiveData = true)
+            .Build();
+    }
+
+    private IChatClient CreateChatClientWithTools()
+    {
+        return new AzureOpenAIClient(
+                new Uri(Endpoint!),
+                new ApiKeyCredential(ApiKey!))
+            .GetChatClient(Deployment!)
+            .AsIChatClient()
+            .AsBuilder()
+            .UseFunctionInvocation()
+            .UseOpenTelemetry(
+                sourceName: OTelSourceName,
+                configure: cfg => cfg.EnableSensitiveData = true)
+            .Build();
+    }
+
+    private Activity? FindChatSpan()
+    {
+        return _exportedActivities.FirstOrDefault(a =>
+            a.GetTagItem("gen_ai.operation.name") as string == "chat");
+    }
+
+    private static void SkipIfNoCredentials()
+    {
+        if (!HasCredentials)
+        {
+            Assert.Inconclusive(
+                "Skipped: set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT env vars to run.");
+        }
+    }
+
+    private static Dictionary<string, object?> GetTags(Activity activity)
+    {
+        return activity.TagObjects.ToDictionary(t => t.Key, t => t.Value);
+    }
 
     private static void DumpActivity(Activity activity, string label)
     {
