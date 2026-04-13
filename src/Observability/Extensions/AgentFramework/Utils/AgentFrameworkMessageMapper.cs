@@ -20,11 +20,6 @@ using System.Text.Json;
 /// </summary>
 internal static class AgentFrameworkMessageMapper
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
 
     /// <summary>
     /// Maps the <c>gen_ai.input.messages</c> tag value to a serialized A365 <see cref="InputMessages"/> JSON string.
