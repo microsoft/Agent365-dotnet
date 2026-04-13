@@ -12,6 +12,9 @@
     <PackageTags>Microsoft;Agents;A365;Observability;OpenAI;OpenTelemetry;AI;Agents;Tracing;Monitoring</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extensions.IntegrationTests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
