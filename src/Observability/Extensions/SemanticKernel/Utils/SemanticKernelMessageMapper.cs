@@ -34,7 +34,6 @@ internal static class SemanticKernelMessageMapper
             return null;
 
         var chatMessages = new List<ChatMessage>();
-        string? lastAssistantToolCallId = null;
 
         foreach (var ev in activity.Events)
         {
@@ -54,12 +53,11 @@ internal static class SemanticKernelMessageMapper
                     break;
 
                 case "gen_ai.assistant.message":
-                    lastAssistantToolCallId = MapAssistantMessage(content, chatMessages);
+                    MapAssistantMessage(content, chatMessages);
                     break;
 
                 case "gen_ai.tool.message":
-                    MapToolMessage(content, chatMessages, lastAssistantToolCallId);
-                    lastAssistantToolCallId = null;
+                    MapToolMessage(content, chatMessages);
                     break;
             }
         }
@@ -135,16 +133,15 @@ internal static class SemanticKernelMessageMapper
     }
 
     /// <summary>
-    /// Maps an assistant message. Returns the first tool call ID if present (for correlating tool responses).
+    /// Maps an assistant message with optional tool calls.
     /// </summary>
-    private static string? MapAssistantMessage(string json, List<ChatMessage> messages)
+    private static void MapAssistantMessage(string json, List<ChatMessage> messages)
     {
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var parts = new List<IMessagePart>();
-            string? firstToolCallId = null;
 
             var textContent = GetStringProperty(root, "content");
             if (!string.IsNullOrEmpty(textContent))
@@ -158,9 +155,6 @@ internal static class SemanticKernelMessageMapper
                 foreach (var tc in toolCallsElement.EnumerateArray())
                 {
                     var toolCallId = GetStringProperty(tc, "id");
-                    if (firstToolCallId == null)
-                        firstToolCallId = toolCallId;
-
                     string? functionName = null;
                     object? arguments = null;
 
@@ -189,16 +183,11 @@ internal static class SemanticKernelMessageMapper
                     parts,
                     GetStringProperty(root, "name")));
             }
-
-            return firstToolCallId;
         }
-        catch (JsonException)
-        {
-            return null;
-        }
+        catch (JsonException) { }
     }
 
-    private static void MapToolMessage(string json, List<ChatMessage> messages, string? toolCallId)
+    private static void MapToolMessage(string json, List<ChatMessage> messages)
     {
         try
         {
@@ -208,9 +197,12 @@ internal static class SemanticKernelMessageMapper
             if (string.IsNullOrEmpty(textContent))
                 return;
 
+            // Only set ID if explicitly present in the tool message JSON
+            var id = GetStringProperty(root, "id") ?? GetStringProperty(root, "tool_call_id");
+
             messages.Add(new ChatMessage(
                 MessageRole.Tool,
-                new IMessagePart[] { new ToolCallResponsePart(toolCallId, textContent) }));
+                new IMessagePart[] { new ToolCallResponsePart(id, textContent) }));
         }
         catch (JsonException) { }
     }

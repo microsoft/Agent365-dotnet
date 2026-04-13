@@ -9,7 +9,6 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text.Json;
 
 /// <summary>
@@ -290,9 +289,7 @@ internal static class AgentFrameworkMessageMapper
 
     private static string? GetTagValue(Activity activity, string key)
     {
-        return activity.TagObjects
-            .OfType<KeyValuePair<string, object>>()
-            .FirstOrDefault(k => k.Key == key).Value as string;
+        return activity.GetTagItem(key) as string;
     }
 
     private static string? GetStringProperty(JsonElement element, string propertyName)
