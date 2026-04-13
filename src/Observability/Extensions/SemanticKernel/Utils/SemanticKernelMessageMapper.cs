@@ -18,12 +18,6 @@ using System.Text.Json;
 /// </summary>
 internal static class SemanticKernelMessageMapper
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false
-    };
-
     /// <summary>
     /// Maps all input-related span events to a serialized A365 <see cref="InputMessages"/> JSON string.
     /// Input events: gen_ai.system.message, gen_ai.user.message, gen_ai.assistant.message, gen_ai.tool.message.
