@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extension.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Extensions.IntegrationTests" />
   </ItemGroup>
     
   <ItemGroup>

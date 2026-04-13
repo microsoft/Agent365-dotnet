@@ -56,18 +56,17 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                             .Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString())
                             .Replace(SemanticKernelTelemetryConstants.ChatOperation, InferenceOperationType.Chat.ToString());
 
-                        var userAndChoiceMessages = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
-                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiUserMessageEventName, out var userObj) &&
-                            userObj is List<string> userMessages && userMessages.Count > 0)
+                        var inputMessages = SemanticKernelMessageMapper.MapInputMessages(activity);
+                        if (inputMessages != null)
                         {
-                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(", ", userMessages));
+                            activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, inputMessages);
                         }
-                        if (userAndChoiceMessages.TryGetValue(OpenTelemetryConstants.GenAiChoiceEventName, out var choiceObj) &&
-                            choiceObj is List<string> choiceMessages && choiceMessages.Count > 0)
+
+                        var outputMessages = SemanticKernelMessageMapper.MapOutputMessages(activity);
+                        if (outputMessages != null)
                         {
-                            activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(", ", choiceMessages));
+                            activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, outputMessages);
                         }
-                        // Other tags set by SK SDK follow Microsoft Agent 365 schema.
                         break;
                 }
             }
