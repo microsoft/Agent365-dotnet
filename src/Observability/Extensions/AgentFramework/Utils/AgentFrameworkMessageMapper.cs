@@ -40,7 +40,7 @@ internal static class AgentFrameworkMessageMapper
             foreach (var msgElement in doc.RootElement.EnumerateArray())
             {
                 var role = GetStringProperty(msgElement, "role");
-                var mappedRole = MapRole(role);
+                var mappedRole = MapRole(role, MessageRole.User);
                 var parts = MapParts(msgElement);
                 var name = GetStringProperty(msgElement, "name");
 
@@ -80,7 +80,7 @@ internal static class AgentFrameworkMessageMapper
 
             foreach (var msgElement in doc.RootElement.EnumerateArray())
             {
-                var role = MapRole(GetStringProperty(msgElement, "role"));
+                var role = MapRole(GetStringProperty(msgElement, "role"), MessageRole.Assistant);
                 var parts = MapParts(msgElement);
                 var finishReason = GetStringProperty(msgElement, "finish_reason");
 
@@ -274,17 +274,17 @@ internal static class AgentFrameworkMessageMapper
         return new GenericPart(type, data);
     }
 
-    private static MessageRole MapRole(string? role)
+    private static MessageRole MapRole(string? role, MessageRole defaultRole)
     {
         if (string.IsNullOrEmpty(role))
-            return MessageRole.User;
+            return defaultRole;
 
         if (role.Equals("system", StringComparison.OrdinalIgnoreCase)) return MessageRole.System;
         if (role.Equals("user", StringComparison.OrdinalIgnoreCase)) return MessageRole.User;
         if (role.Equals("assistant", StringComparison.OrdinalIgnoreCase)) return MessageRole.Assistant;
         if (role.Equals("tool", StringComparison.OrdinalIgnoreCase)) return MessageRole.Tool;
 
-        return MessageRole.User;
+        return defaultRole;
     }
 
     private static string? GetTagValue(Activity activity, string key)

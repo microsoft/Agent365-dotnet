@@ -248,7 +248,7 @@ internal static class SemanticKernelMessageMapper
             if (parts.Count == 0)
                 return;
 
-            var role = MapRole(GetStringProperty(msgElement, "role"));
+            var role = MapRole(GetStringProperty(msgElement, "role"), MessageRole.Assistant);
             var finishReason = MapFinishReason(GetStringProperty(root, "finish_reason"));
 
             messages.Add(new OutputMessage(role, parts, finishReason: finishReason));
@@ -256,17 +256,17 @@ internal static class SemanticKernelMessageMapper
         catch (JsonException) { }
     }
 
-    private static MessageRole MapRole(string? role)
+    private static MessageRole MapRole(string? role, MessageRole defaultRole)
     {
         if (string.IsNullOrEmpty(role))
-            return MessageRole.Assistant;
+            return defaultRole;
 
         if (role.Equals("system", System.StringComparison.OrdinalIgnoreCase)) return MessageRole.System;
         if (role.Equals("user", System.StringComparison.OrdinalIgnoreCase)) return MessageRole.User;
         if (role.Equals("assistant", System.StringComparison.OrdinalIgnoreCase)) return MessageRole.Assistant;
         if (role.Equals("tool", System.StringComparison.OrdinalIgnoreCase)) return MessageRole.Tool;
 
-        return MessageRole.Assistant;
+        return defaultRole;
     }
 
     private static string? MapFinishReason(string? skFinishReason)
