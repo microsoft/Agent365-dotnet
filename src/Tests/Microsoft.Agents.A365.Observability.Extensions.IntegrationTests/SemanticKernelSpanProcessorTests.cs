@@ -6,6 +6,8 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
@@ -35,28 +37,36 @@ public class SemanticKernelSpanProcessorTests
         !string.IsNullOrEmpty(Deployment);
 
     private List<Activity> _exportedActivities = new();
-    private TracerProvider? _tracerProvider;
+    private ServiceProvider? _serviceProvider;
 
     [TestInitialize]
     public void Setup()
     {
-        // Enable SK sensitive content telemetry (emits gen_ai.user.message / gen_ai.choice events)
-        AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
-
         _exportedActivities = new List<Activity>();
 
-        // Wire up: SK source → SemanticKernelSpanProcessor → capture
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource("Microsoft.SemanticKernel*")
-            .AddProcessor(new SemanticKernelSpanProcessor())
-            .AddProcessor(new ActivityCapturingProcessor(_exportedActivities))
+        // Use the real A365 SDK initialization path: Builder → WithSemanticKernel → Build
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        new Runtime.Builder(services, configuration: null, useOpenTelemetryBuilder: true)
+            .WithSemanticKernel()
             .Build();
+
+        // Add a capturing exporter — runs after all processors, at export time
+        services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddProcessor(new SimpleActivityExportProcessor(new ActivityCapturingExporter(_exportedActivities))));
+
+        _serviceProvider = services.BuildServiceProvider();
+
+        // Force the TracerProvider to be created by resolving it
+        _serviceProvider.GetService<TracerProvider>();
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        _tracerProvider?.Dispose();
+        _serviceProvider?.Dispose();
     }
 
     [TestMethod]
@@ -73,7 +83,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Find the chat completion span (SK may emit multiple spans)
         var chatSpan = _exportedActivities.FirstOrDefault(a =>
@@ -153,7 +163,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history, settings, kernel);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Dump all spans
         Console.WriteLine($"\n  All captured activities ({_exportedActivities.Count}):");
@@ -220,7 +230,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Find chat span and examine raw events before processor
         var chatSpan = _exportedActivities.FirstOrDefault(a =>
@@ -252,6 +262,12 @@ public class SemanticKernelSpanProcessorTests
     }
 
     #region Helpers
+
+    private void ForceFlush()
+    {
+        var tracerProvider = _serviceProvider?.GetService<TracerProvider>();
+        tracerProvider?.ForceFlush();
+    }
 
     private Kernel CreateKernel()
     {

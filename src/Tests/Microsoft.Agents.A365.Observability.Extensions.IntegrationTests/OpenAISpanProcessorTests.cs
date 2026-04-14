@@ -47,7 +47,7 @@ public class OpenAISpanProcessorTests
         _tracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddSource("OpenAI.*")
             .AddProcessor(new OpenAISpanProcessor())
-            .AddProcessor(new ActivityCapturingProcessor(_exportedActivities))
+            .AddProcessor(new SimpleActivityExportProcessor(new ActivityCapturingExporter(_exportedActivities)))
             .Build();
     }
 
@@ -285,20 +285,4 @@ public class OpenAISpanProcessorTests
     }
 
     #endregion
-}
-
-/// <summary>
-/// Processor that captures activities after all prior processors have run.
-/// Placed last in the processor chain to see the final enriched span.
-/// </summary>
-internal sealed class ActivityCapturingProcessor : BaseProcessor<Activity>
-{
-    private readonly List<Activity> _activities;
-
-    public ActivityCapturingProcessor(List<Activity> activities) => _activities = activities;
-
-    public override void OnEnd(Activity data)
-    {
-        _activities.Add(data);
-    }
 }
