@@ -1214,6 +1214,51 @@ public sealed class Agent365ExporterTests
         observedUri!.Should().Contain("api-version=1");
     }
 
+    [TestMethod]
+    public void Export_RequestUri_S2SEndpoint_ContainsOtlpSegment()
+    {
+        // Arrange
+        Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
+
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = true
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        var tenantId = "tenant-s2s";
+        using var activity = CreateActivity(tenantId: tenantId, agentId: "agent-xyz");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().NotBeNull();
+        observedUri!.Should().Contain($"/observabilityService/tenants/{tenantId}/otlp/agents/agent-xyz/traces");
+        observedUri!.Should().Contain("api-version=1");
+    }
+
     #endregion
 
     #region BuildRequestUri Tests
