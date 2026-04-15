@@ -9,6 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using ModelContextProtocol.Client;
     using System;
     using System.Collections.Generic;
+    using System.Net.Http;
     using System.Threading.Tasks;
 
     /// <summary>
@@ -38,7 +39,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     tokenProvider,
                     toolOptions).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
+                return (new List<MCPServerConfig>(), toolsByServer);
+            }
+            catch (TaskCanceledException ex)
             {
                 _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
                 return (new List<MCPServerConfig>(), toolsByServer);
