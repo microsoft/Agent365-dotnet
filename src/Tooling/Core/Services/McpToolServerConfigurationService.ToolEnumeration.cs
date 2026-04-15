@@ -82,7 +82,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
                     return (ServerName: server.mcpServerName, Tools: mcpTools, Success: true);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (
+                    ex is InvalidOperationException ||
+                    ex is System.Net.Http.HttpRequestException ||
+                    ex is TaskCanceledException ||
+                    ex is TimeoutException)
                 {
                     _logger.LogError(
                         ex,
