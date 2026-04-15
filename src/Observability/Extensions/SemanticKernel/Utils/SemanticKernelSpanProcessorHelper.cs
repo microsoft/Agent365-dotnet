@@ -4,6 +4,8 @@
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System.Diagnostics;
 using System.Linq;
@@ -37,13 +39,15 @@ public static class SemanticKernelSpanProcessorHelper
         {
             RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
             RemoveTagIfExists(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
-            return;
+        }
+        else
+        {
+            MapToStructuredFormat(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey, OpenTelemetryConstants.GenAiInputMessagesKey, isOutput: false);
+            MapToStructuredFormat(activity, OpenTelemetryConstants.GenAiInputMessagesKey, OpenTelemetryConstants.GenAiInputMessagesKey, isOutput: false);
         }
 
-        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiAgentInvocationInputKey);
-        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiInputMessagesKey);
-        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey);
-        TryFilterInvocationMessage(activity, OpenTelemetryConstants.GenAiOutputMessagesKey);
+        MapToStructuredFormat(activity, OpenTelemetryConstants.GenAiAgentInvocationOutputKey, OpenTelemetryConstants.GenAiOutputMessagesKey, isOutput: true);
+        MapToStructuredFormat(activity, OpenTelemetryConstants.GenAiOutputMessagesKey, OpenTelemetryConstants.GenAiOutputMessagesKey, isOutput: true);
     }
 
     /// <summary>
@@ -102,65 +106,97 @@ public static class SemanticKernelSpanProcessorHelper
         return quoted;
     }
 
-    private static void TryFilterInvocationMessage(Activity activity, string tagName)
-    {
-        var jsonString = GetTagValue(activity, tagName);
-        if (jsonString != null)
-        {
-            TryFilterInvocationMessage(activity, jsonString, tagName);
-        }
-    }
-
     /// <summary>
-    /// Attempts to parse and filter the invocation input JSON string, removing system messages and encoding the result.
-    /// </summary>
-    /// <param name="activity">The activity to update with the filtered tag.</param>
-    /// <param name="jsonString">The JSON string to parse and filter.</param>
-    /// <param name="tagName">The name of the tag to update.</param>
-    private static void TryFilterInvocationMessage(Activity activity, string jsonString, string tagName)
-    {
-        try
+        /// Maps invocation message tags to the A365 structured message format.
+        /// Reads from <paramref name="sourceTagName"/>, writes structured result to <paramref name="targetTagName"/>,
+        /// and removes the source tag when they differ.
+        /// </summary>
+        private static void MapToStructuredFormat(Activity activity, string sourceTagName, string targetTagName, bool isOutput)
         {
-            List<MessageContent>? inputArray = null;
+            var jsonString = GetTagValue(activity, sourceTagName);
+            if (string.IsNullOrEmpty(jsonString))
+                return;
 
-            // First, try to deserialize as a list of MessageContent objects directly
             try
             {
-                inputArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
+                List<MessageContent>? messageArray = null;
+
+                try
+                {
+                    messageArray = JsonSerializer.Deserialize<List<MessageContent>>(jsonString, JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
+                    if (strList != null)
+                    {
+                        messageArray = new List<MessageContent>();
+                        foreach (var s in strList)
+                        {
+                            if (s == null) continue;
+                            var mc = TryDeserializeMessageContent(s);
+                            messageArray.Add(mc ?? new MessageContent
+                            {
+                                Role = isOutput ? "assistant" : "user",
+                                Content = s
+                            });
+                        }
+                    }
+                }
+
+                if (messageArray == null || messageArray.Count == 0)
+                    return;
+
+                string? serialized = null;
+
+                if (isOutput)
+                {
+                    var outputMessages = new List<OutputMessage>();
+                    foreach (var msg in messageArray)
+                    {
+                        FilterMessageContent(msg);
+                        if (string.IsNullOrEmpty(msg.Content)) continue;
+                        var role = SemanticKernelMessageMapper.MapRole(msg.Role, MessageRole.Assistant);
+                        outputMessages.Add(new OutputMessage(role, new IMessagePart[] { new TextPart(msg.Content) }));
+                    }
+
+                    if (outputMessages.Count > 0)
+                    {
+                        serialized = MessageUtils.Serialize(new OutputMessages(outputMessages));
+                    }
+                }
+                else
+                {
+                    var chatMessages = new List<ChatMessage>();
+                    foreach (var msg in messageArray)
+                    {
+                        FilterMessageContent(msg);
+                        if (string.IsNullOrEmpty(msg.Content)) continue;
+                        var role = SemanticKernelMessageMapper.MapRole(msg.Role, MessageRole.User);
+                        chatMessages.Add(new ChatMessage(role, new IMessagePart[] { new TextPart(msg.Content) }, msg.Name));
+                    }
+
+                    if (chatMessages.Count > 0)
+                    {
+                        serialized = MessageUtils.Serialize(new InputMessages(chatMessages));
+                    }
+                }
+
+                if (serialized != null)
+                {
+                    activity.SetTag(targetTagName, serialized);
+                }
+
+                if (sourceTagName != targetTagName)
+                {
+                    activity.SetTag(sourceTagName, null);
+                }
             }
             catch (JsonException)
             {
-                // If that fails, try to deserialize as a list of strings and then parse each string
-                var strList = JsonSerializer.Deserialize<List<string>>(jsonString, JsonOptions);
-                if (strList != null)
-                {
-                    inputArray = strList
-                        .Select(TryDeserializeMessageContent)
-                        .Where(mc => mc != null)
-                        .ToList()!;
-                }
-            }
-
-            if (inputArray != null)
-            {
-                var filtered = inputArray
-                    .Where(e => !string.Equals(e.Role, "system", StringComparison.OrdinalIgnoreCase))
-                    .Select(e =>
-                    {
-                        FilterMessageContent(e);
-                        return e.Content;
-                    })
-                    .ToList();
-
-                var filteredString = JsonSerializer.Serialize(filtered, JsonOptions);
-                activity.SetTag(tagName, filteredString);
+                // Leave original tag value
             }
         }
-        catch (JsonException)
-        {
-            // Swallow exception and leave the original tag value
-        }
-    }
 
     /// <summary>
     /// Attempts to deserialize a string into a MessageContent object.
@@ -246,104 +282,4 @@ public static class SemanticKernelSpanProcessorHelper
         }
     }
 
-    /// <summary>
-    /// Extracts user messages and choice messages from activity events.
-    /// </summary>
-    /// <param name="activity">The activity containing the events to process.</param>
-    /// <returns>A dictionary containing lists of user messages and choice messages.</returns>
-    public static Dictionary<string, List<string>> GetGenAiUserAndChoiceMessageContent(Activity activity)
-    {
-        var result = new Dictionary<string, List<string>>
-        {
-            { OpenTelemetryConstants.GenAiUserMessageEventName, new List<string>() },
-            { OpenTelemetryConstants.GenAiChoiceEventName, new List<string>() }
-        };
-
-        if (activity.Events == null)
-            return result;
-
-        foreach (var activityEvent in activity.Events)
-        {
-            var content = GetEventContentTag(activityEvent);
-            if (string.IsNullOrEmpty(content))
-                continue;
-
-            if (activityEvent.Name == OpenTelemetryConstants.GenAiUserMessageEventName)
-            {
-                try
-                {
-                    var userMsg = JsonSerializer.Deserialize<MessageContent>(content, JsonOptions);
-                    if (userMsg != null && userMsg.Role == "user" && !string.IsNullOrEmpty(userMsg.Content))
-                    {
-                        FilterMessageContent(userMsg);
-                        result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(userMsg.Content);
-                    }
-                }
-                catch (JsonException)
-                {
-                    result[OpenTelemetryConstants.GenAiUserMessageEventName].Add(content);
-                }
-            }
-            else if (activityEvent.Name == OpenTelemetryConstants.GenAiChoiceEventName)
-            {
-                FilterAiChoiceMessageContent(content, result[OpenTelemetryConstants.GenAiChoiceEventName]);
-            }
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Gets the content tag value from an activity event.
-    /// </summary>
-    /// <param name="activityEvent">The activity event to extract the tag from.</param>
-    /// <returns>The content tag value as a string, or null if not found.</returns>
-    private static string? GetEventContentTag(ActivityEvent activityEvent)
-    {
-        return activityEvent.Tags?
-            .FirstOrDefault(tag => tag.Key == SemanticKernelTelemetryConstants.EventContentTag).Value as string;
-    }
-
-    /// <summary>
-    /// Filters AI choice message content and adds it to the provided list.
-    /// </summary>
-    /// <param name="content">The content to filter.</param>
-    /// <param name="choiceMessages">The list to add filtered messages to.</param>
-    private static void FilterAiChoiceMessageContent(string content, List<string> choiceMessages)
-    {
-        try
-        {
-            var aiChoice = JsonSerializer.Deserialize<AiChoice>(content, JsonOptions);
-            if (aiChoice?.Message != null &&
-                aiChoice.Message.Role?.Equals("Assistant", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                // Extract direct content from assistant message
-                if (!string.IsNullOrEmpty(aiChoice.Message.Content))
-                {
-                    var msg = new MessageContent { Content = aiChoice.Message.Content };
-                    TryExtractNestedContent(msg);
-                    choiceMessages.Add(msg.Content!);
-                }
-
-                // Extract content from tool calls
-                if (aiChoice.Message.ToolCalls != null)
-                {
-                    foreach (var toolCall in aiChoice.Message.ToolCalls)
-                    {
-                        if (toolCall.Function?.Arguments?.MessageBody != null)
-                        {
-                            var messageBody = toolCall.Function.Arguments.MessageBody;
-                            if (!string.IsNullOrEmpty(messageBody))
-                            {
-                                choiceMessages.Add(messageBody);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (JsonException)
-        {
-            choiceMessages.Add(content);
-        }
-    }
 }
