@@ -40,14 +40,50 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ToolCallDetails"/> class with structured arguments.
+        /// Per OTEL spec, tool arguments are expected to be an object and SHOULD be recorded in structured form.
+        /// The dictionary is serialized to JSON when setting the span attribute.
+        /// </summary>
+        /// <param name="toolName">Name of the tool being invoked.</param>
+        /// <param name="argumentsObject">Structured arguments passed to the tool, serialized to JSON.</param>
+        /// <param name="toolCallId">Optional identifier for the tool invocation.</param>
+        /// <param name="description">Optional description of the tool call.</param>
+        /// <param name="toolType">Optional type classification for the tool.</param>
+        /// <param name="endpoint">Optional endpoint for remote tool execution.</param>
+        /// <param name="toolServerName">Optional server name for the tool.</param>
+        public ToolCallDetails(
+            string toolName,
+            IDictionary<string, object> argumentsObject,
+            string? toolCallId = null,
+            string? description = null,
+            string? toolType = null,
+            Uri? endpoint = null,
+            string? toolServerName = null)
+        {
+            ToolName = toolName;
+            ArgumentsObject = argumentsObject ?? throw new ArgumentNullException(nameof(argumentsObject));
+            ToolCallId = toolCallId;
+            Description = description;
+            ToolType = toolType;
+            Endpoint = endpoint;
+            ToolServerName = toolServerName;
+        }
+
+        /// <summary>
         /// Gets the tool name.
         /// </summary>
         public string ToolName { get; }
 
         /// <summary>
-        /// Gets the serialized arguments supplied to the tool, when any.
+        /// Gets the serialized JSON arguments supplied to the tool, when any.
         /// </summary>
         public string? Arguments { get; }
+
+        /// <summary>
+        /// Gets the structured arguments supplied to the tool, when any.
+        /// Takes precedence over <see cref="Arguments"/> for telemetry recording.
+        /// </summary>
+        public IDictionary<string, object>? ArgumentsObject { get; }
 
         /// <summary>
         /// Gets the identifier for the tool call, when provided.
@@ -105,6 +141,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 
             return string.Equals(ToolName, other.ToolName, StringComparison.Ordinal) &&
                    string.Equals(Arguments, other.Arguments, StringComparison.Ordinal) &&
+                   ReferenceEquals(ArgumentsObject, other.ArgumentsObject) &&
                    string.Equals(ToolCallId, other.ToolCallId, StringComparison.Ordinal) &&
                    string.Equals(Description, other.Description, StringComparison.Ordinal) &&
                    string.Equals(ToolType, other.ToolType, StringComparison.Ordinal) &&
@@ -126,6 +163,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 int hash = 17;
                 hash = (hash * 31) + (ToolName != null ? StringComparer.Ordinal.GetHashCode(ToolName) : 0);
                 hash = (hash * 31) + (Arguments != null ? StringComparer.Ordinal.GetHashCode(Arguments) : 0);
+                hash = (hash * 31) + (ArgumentsObject != null ? System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(ArgumentsObject) : 0);
                 hash = (hash * 31) + (ToolCallId != null ? StringComparer.Ordinal.GetHashCode(ToolCallId) : 0);
                 hash = (hash * 31) + (Description != null ? StringComparer.Ordinal.GetHashCode(Description) : 0);
                 hash = (hash * 31) + (ToolType != null ? StringComparer.Ordinal.GetHashCode(ToolType) : 0);

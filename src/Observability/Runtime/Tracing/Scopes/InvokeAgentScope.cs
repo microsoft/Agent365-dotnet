@@ -4,6 +4,9 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -90,9 +93,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, request.Channel.Link);
             }
 
-            if (request?.Content != null)
+            if (request?.InputContent != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, request.Content);
+                RecordInputMessages(request.InputContent);
+            }
+            else if (request?.Content != null)
+            {
+                RecordInputMessages(new[] { request.Content });
             }
 
             // Set caller details tags
@@ -122,18 +129,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         /// <summary>
         /// Records the input messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL ChatMessage with role "user".
         /// </summary>
         public void RecordInputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeInputMessages(messages);
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured input messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned input messages wrapper.</param>
+        public void RecordInputMessages(InputMessages messages)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
         /// Records the output messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL OutputMessage with role "assistant".
         /// </summary>
         public void RecordOutputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeOutputMessages(messages);
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured output messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned output messages wrapper.</param>
+        public void RecordOutputMessages(OutputMessages messages)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>

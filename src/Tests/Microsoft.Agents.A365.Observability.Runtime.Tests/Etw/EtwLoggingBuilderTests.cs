@@ -104,8 +104,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("chat", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             Assert.AreEqual("model-x", attrsElement.GetProperty(OpenTelemetryConstants.GenAiRequestModelKey).GetString());
             Assert.AreEqual("provider-y", attrsElement.GetProperty(OpenTelemetryConstants.GenAiProviderNameKey).GetString());
-            Assert.AreEqual("hello", attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString());
-            Assert.AreEqual("world", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            Assert.IsTrue(attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString()!.Contains("hello"));
+            Assert.IsTrue(attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString()!.Contains("world"));
             Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelNameKey).GetString());
             Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelLinkKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
@@ -196,7 +196,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("agent-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentIdKey).GetString());
             Assert.AreEqual("agent-name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentNameKey).GetString());
             Assert.AreEqual("output_messages", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
-            Assert.AreEqual("Hello,World", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            var outputValue = attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString()!;
+            Assert.IsTrue(outputValue.Contains("Hello") && outputValue.Contains("World") && outputValue.Contains("\"version\":\"0.1.0\""));
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
             Assert.AreEqual(agentDetails.TenantId, tenantIdString);
         }

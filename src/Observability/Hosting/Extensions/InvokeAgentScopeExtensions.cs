@@ -81,11 +81,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         }
 
         /// <summary>
-        /// Sets the input message tag from the TurnContext.
+        /// Sets the input message tag from the TurnContext using the structured OTEL message format.
         /// </summary>
         public static InvokeAgentScope SetInputMessageTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
-            invokeAgentScope.SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, turnContext?.Activity?.Text);
+            var text = turnContext?.Activity?.Text;
+            if (text != null)
+            {
+                invokeAgentScope.RecordInputMessages(new[] { text });
+            }
+
             return invokeAgentScope;
         }
     }

@@ -2,8 +2,11 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -54,7 +57,26 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
-            SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+
+            // Per OTEL spec: arguments SHOULD be recorded in structured form.
+            // Prefer ArgumentsObject (dict → JSON); fall back to string with JSON check.
+            if (details.ArgumentsObject != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, MessageUtils.Serialize(details.ArgumentsObject));
+            }
+            else if (arguments != null)
+            {
+                if (MessageUtils.IsJson(arguments))
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                }
+                else
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
+                }
+            }
+
             SetTagMaybe(OpenTelemetryConstants.GenAiToolTypeKey, toolType);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolCallIdKey, toolCallId);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolDescriptionKey, description);
@@ -77,13 +99,35 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, request.Channel.Link);
             }
         }
-        
+
         /// <summary>
         /// Records response information for telemetry tracking.
+        /// Per OTEL spec, the result SHOULD be recorded in structured form.
+        /// If the string is already valid JSON, it is recorded as-is.
+        /// Otherwise, it is wrapped as <c>{"result":"..."}</c>.
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            if (MessageUtils.IsJson(response))
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            }
+            else
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey,
+                    MessageUtils.Serialize(new Dictionary<string, object> { { "result", response ?? string.Empty } }));
+            }
+        }
+
+        /// <summary>
+        /// Records a structured tool call result for telemetry tracking.
+        /// Per OTEL spec, the result SHOULD be recorded in structured form.
+        /// The dictionary is serialized to JSON.
+        /// </summary>
+        /// <param name="result">Tool call result as a structured dictionary.</param>
+        public void RecordResponse(IDictionary<string, object> result)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, MessageUtils.Serialize(result));
         }
 
         /// <summary>

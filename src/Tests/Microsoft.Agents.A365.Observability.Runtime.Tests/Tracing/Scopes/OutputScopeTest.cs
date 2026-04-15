@@ -36,12 +36,16 @@ public sealed class OutputScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName!);
 
-        // Assert - output messages
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", initialMessages));
+        // Assert - output messages (structured JSON format)
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Hello");
+        tagValue.Should().Contain("World");
     }
 
     [TestMethod]
-    public void RecordOutputMessages_AppendsMessages()
+    public void RecordOutputMessages_OverwritesMessages()
     {
         // Arrange
         var initialMessages = new[] { "Hello", "World" };
@@ -56,9 +60,12 @@ public sealed class OutputScopeTest : ActivityTest
             scope.RecordOutputMessages(additionalMessages);
         });
 
-        // Assert - output messages are appended (initial + additional)
-        var expectedMessages = string.Join(",", initialMessages) + "," + string.Join(",", additionalMessages);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, expectedMessages);
+        // Assert - output messages are overwritten (set-once), only additional messages remain
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Goodbye");
+        tagValue.Should().Contain("Moon");
     }
 
     [TestMethod]
@@ -89,7 +96,7 @@ public sealed class OutputScopeTest : ActivityTest
         // Assert - child activity should have the parent set
         childActivity.ParentSpanId.ToString().Should().NotBeNullOrEmpty();
         childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, OutputScope.OperationName);
-        childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
+        childActivity.ShouldHaveTagContaining(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
     }
 
     [TestMethod]

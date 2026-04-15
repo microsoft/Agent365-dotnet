@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -63,10 +64,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             
             AddAgentDetails(attributes, agentDetails);
 
-            // Output messages from response
-            if (response.Messages.Count > 0)
+            // Output messages from response — prefer structured content
+            if (response.ToolResultObject != null)
             {
-                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", response.Messages));
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(response.ToolResultObject));
+            }
+            else if (response.OutputContent != null)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(response.OutputContent));
+            }
+            else if (response.Messages.Count > 0)
+            {
+                var wrapper = MessageUtils.NormalizeOutputMessages(response.Messages);
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
             }
 
             // Conversation ID

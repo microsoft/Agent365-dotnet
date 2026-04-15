@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -75,8 +76,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Conversation
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
-            // Response content if supplied
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
+            // Response content — ensure JSON object per OTEL spec
+            if (responseContent != null)
+            {
+                if (MessageUtils.IsJson(responseContent))
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
+                }
+                else
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "result", responseContent } }));
+                }
+            }
 
             // Channel
             AddChannelAttributes(attributes, channel);
@@ -96,7 +108,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = toolCallDetails;
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolNameKey, toolName);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+
+            // Arguments — prefer structured dict, then ensure JSON string per OTEL spec
+            if (toolCallDetails.ArgumentsObject != null)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, MessageUtils.Serialize(toolCallDetails.ArgumentsObject));
+            }
+            else if (arguments != null)
+            {
+                if (MessageUtils.IsJson(arguments))
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                }
+                else
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
+                }
+            }
+
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallIdKey, toolCallId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolDescriptionKey, description);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolTypeKey, toolType);
