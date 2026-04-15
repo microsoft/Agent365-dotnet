@@ -2,19 +2,21 @@
 // Licensed under the MIT License.
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
     /// <summary>
     /// Caches observability tokens per (agentId, tenantId) with expiration and invalidation support.
+    /// Includes automatic periodic cleanup of expired tokens for improved memory management.
     /// </summary>
-    public class ServiceTokenCache : IExporterTokenCache<string>
+    public class ServiceTokenCache : IExporterTokenCache<string>, IDisposable
     {
         private sealed class Entry
         {
-            public string Token { get; }
+            public string? Token { get; set; }
             public string[] Scopes { get; }
             public DateTimeOffset ExpiresAt { get; }
 
@@ -24,21 +26,48 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 Scopes = scopes;
                 ExpiresAt = expiresAt;
             }
+
+            /// <summary>
+            /// Clears the cached token value for security purposes.
+            /// </summary>
+            public void ClearToken()
+            {
+                Token = null;
+            }
         }
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly TimeSpan _defaultExpiration;
+        private readonly Timer? _cleanupTimer;
+        private int _disposed; // Using int for Interlocked operations
+
+        /// <summary>
+        /// Default interval for automatic cleanup of expired tokens (5 minutes).
+        /// </summary>
+        public static readonly TimeSpan DefaultCleanupInterval = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceTokenCache"/> class.
         /// </summary>
         /// <param name="defaultExpiration">The default expiration time for tokens. Defaults to 1 hour if not specified.</param>
-        public ServiceTokenCache(TimeSpan? defaultExpiration = null)
+        /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to TimeSpan.Zero to disable automatic cleanup.</param>
+        public ServiceTokenCache(TimeSpan? defaultExpiration = null, TimeSpan? cleanupInterval = null)
         {
             _defaultExpiration = defaultExpiration ?? TimeSpan.FromHours(1);
 
             if (_defaultExpiration <= TimeSpan.Zero)
                 throw new ArgumentException("Default expiration must be greater than zero.", nameof(defaultExpiration));
+
+            var interval = cleanupInterval ?? DefaultCleanupInterval;
+            if (interval > TimeSpan.Zero)
+            {
+                _cleanupTimer = new Timer(
+                    _ => RemoveExpiredTokens(),
+                    null,
+                    interval,
+                    interval);
+            }
+            // When interval <= TimeSpan.Zero, _cleanupTimer remains null (no automatic cleanup)
         }
 
         /// <summary>
@@ -106,8 +135,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             // Check if token has expired
             if (DateTimeOffset.UtcNow >= entry.ExpiresAt)
             {
-                // Remove expired token
-                _map.TryRemove(key, out _);
+                // Clear token before removal for security
+                if (_map.TryRemove(key, out var removedEntry))
+                {
+                    removedEntry.ClearToken();
+                }
                 return null;
             }
 
@@ -126,7 +158,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 return false;
 
             var key = GetKey(agentId, tenantId);
-            return _map.TryRemove(key, out _);
+            if (_map.TryRemove(key, out var entry))
+            {
+                // Clear the token value for security
+                entry.ClearToken();
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -134,6 +172,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </summary>
         public void InvalidateAll()
         {
+            // Clear all token values before removing entries
+            foreach (var kvp in _map)
+            {
+                kvp.Value.ClearToken();
+            }
             _map.Clear();
         }
 
@@ -144,18 +187,61 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         public int RemoveExpiredTokens()
         {
             var now = DateTimeOffset.UtcNow;
-            var expiredKeys = _map.Where(kvp => now >= kvp.Value.ExpiresAt)
-                                  .Select(kvp => kvp.Key)
-                                  .ToList();
+            var expiredKeys = new List<string>();
+
+            // Find expired keys without using LINQ
+            foreach (var kvp in _map)
+            {
+                if (now >= kvp.Value.ExpiresAt)
+                {
+                    expiredKeys.Add(kvp.Key);
+                }
+            }
 
             int removedCount = 0;
             foreach (var key in expiredKeys)
             {
-                if (_map.TryRemove(key, out _))
+                if (_map.TryRemove(key, out var entry))
+                {
+                    // Clear the token value for security
+                    entry.ClearToken();
                     removedCount++;
+                }
             }
 
             return removedCount;
+        }
+
+        /// <summary>
+        /// Gets the current number of tokens in the cache.
+        /// </summary>
+        /// <returns>The number of tokens currently cached.</returns>
+        public int Count => _map.Count;
+
+        /// <summary>
+        /// Disposes the cache and stops the automatic cleanup timer.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Disposes the cache resources.
+        /// </summary>
+        /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            // Thread-safe disposal check using Interlocked
+            if (Interlocked.Exchange(ref _disposed, 1) == 1)
+                return;
+
+            if (disposing)
+            {
+                _cleanupTimer?.Dispose();
+                InvalidateAll();
+            }
         }
 
         private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";

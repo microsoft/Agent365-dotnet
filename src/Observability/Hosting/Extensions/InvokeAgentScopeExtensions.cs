@@ -24,10 +24,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
 
             invokeAgentScope
                 .SetCallerTags(turnContext)
-                .SetExecutionTypeTags(turnContext)
                 .SetTargetAgentTags(turnContext)
                 .SetTenantIdTags(turnContext)
-                .SetSourceMetadataTags(turnContext)
+                .SetChannelTags(turnContext)
                 .SetConversationIdTags(turnContext);
 
             return invokeAgentScope;
@@ -42,15 +41,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         public static InvokeAgentScope SetCallerTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
             invokeAgentScope.RecordAttributes(turnContext.GetCallerBaggagePairs());
-            return invokeAgentScope;
-        }
-
-        /// <summary>
-        /// Sets the execution type tag based on caller and recipient agentic status.
-        /// </summary>
-        public static InvokeAgentScope SetExecutionTypeTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
-        {
-            invokeAgentScope.RecordAttributes(turnContext.GetExecutionTypePair());
             return invokeAgentScope;
         }
 
@@ -73,11 +63,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         }
 
         /// <summary>
-        /// Sets the source metadata tags from the TurnContext.
+        /// Sets the channel tags from the TurnContext.
         /// </summary>
-        public static InvokeAgentScope SetSourceMetadataTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
+        public static InvokeAgentScope SetChannelTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
-            invokeAgentScope.RecordAttributes(turnContext.GetSourceMetadataBaggagePairs());
+            invokeAgentScope.RecordAttributes(turnContext.GetChannelBaggagePairs());
             return invokeAgentScope;
         }
 
@@ -91,11 +81,16 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         }
 
         /// <summary>
-        /// Sets the input message tag from the TurnContext.
+        /// Sets the input message tag from the TurnContext using the structured OTEL message format.
         /// </summary>
         public static InvokeAgentScope SetInputMessageTags(this InvokeAgentScope invokeAgentScope, ITurnContext turnContext)
         {
-            invokeAgentScope.SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, turnContext?.Activity?.Text);
+            var text = turnContext?.Activity?.Text;
+            if (text != null)
+            {
+                invokeAgentScope.RecordInputMessages(new[] { text });
+            }
+
             return invokeAgentScope;
         }
     }

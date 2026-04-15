@@ -18,8 +18,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
 public sealed class TestScope : OpenTelemetryScope
 {
-    public TestScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
-        : base(kind, agentDetails, tenantDetails, operationName, activityName) { }
+    public TestScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null)
+        : base(operationName, activityName, agentDetails, spanDetails) { }
 }
 
 [TestClass]
@@ -193,15 +193,15 @@ public partial class ExportFormatterTests : ActivityTest
     }
 
     [TestMethod]
-    public void Format_ManuallySetParentId_IsReflectedInExport()
+    public void Format_ManuallySetParentContext_IsReflectedInExport()
     {
         // Arrange
         var manualParentActivity = CreateActivity();
-        var parentId = manualParentActivity.Id ?? string.Empty;
+        var parentContext = manualParentActivity.Context;
         var parentSpanId = manualParentActivity.SpanId.ToString();
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentId);
+            using var toolScope = ExecuteToolScope.Start(new Request(), new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         var resource = ResourceBuilder.CreateDefault().Build();
@@ -439,7 +439,8 @@ public partial class ExportFormatterTests : ActivityTest
             start,
             end,
             spanId,
-            parentSpanId);
+            parentSpanId,
+            spanKind: SpanKindConstants.Client);
         var formatter = CreateFormatter();
 
         // Act
@@ -453,6 +454,7 @@ public partial class ExportFormatterTests : ActivityTest
         root.GetProperty("Name").GetString().Should().Be("InvokeAgent");
         root.GetProperty("SpanId").GetString().Should().Be(spanId);
         root.GetProperty("ParentSpanId").GetString().Should().Be(parentSpanId);
+        root.GetProperty("Kind").GetString().Should().Be(SpanKindConstants.Client);
 
         var attrs = root.GetProperty("Attributes");
         attrs.GetProperty("attr1").GetString().Should().Be("value1");
@@ -496,6 +498,9 @@ public partial class ExportFormatterTests : ActivityTest
 
         // ParentSpanId should be omitted due to null (ignore when writing null)
         root.TryGetProperty("ParentSpanId", out _).Should().BeFalse();
+
+        // Kind defaults to Client when SpanKind is null
+        root.GetProperty("Kind").GetString().Should().Be(SpanKindConstants.Client);
 
         var attrs = root.GetProperty("Attributes");
         attrs.GetProperty("key").GetString().Should().Be("val");
@@ -566,7 +571,7 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
     activity.SetTag("gen_ai.tool.arguments", new string('c', 200 * 1024));
-    activity.SetTag("gen_ai.event.content", new string('d', 100 * 1024));
+    activity.SetTag("gen_ai.tool.call.result", new string('d', 100 * 1024));
     var resource = ResourceBuilder.CreateEmpty().Build();
     var logs = new List<string>();
     var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
@@ -583,7 +588,7 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
     attr.GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
     logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = "));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = "));
 }
 
 [TestMethod]
@@ -592,7 +597,7 @@ public void FormatMany_LogsAllKeySizes()
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
     activity.SetTag("gen_ai.tool.arguments", new string('x', 100 * 1024));
-    activity.SetTag("gen_ai.event.content", new string('y', 125 * 1024));
+    activity.SetTag("gen_ai.tool.call.result", new string('y', 125 * 1024));
     activity.SetTag("gen_ai.input.messages", new string('z', 75 * 1024));
     activity.SetTag("gen_ai.agent.invocation_input", new string('z', 0));
     activity.SetTag("gen_ai.agent.invocation_output", new string('z', 0));
@@ -606,7 +611,7 @@ public void FormatMany_LogsAllKeySizes()
 
     // Assert
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = 100"));
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.event.content' size = 125"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = 125"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.input.messages' size = 75"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_input' size = 0"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_output' size = 0"));

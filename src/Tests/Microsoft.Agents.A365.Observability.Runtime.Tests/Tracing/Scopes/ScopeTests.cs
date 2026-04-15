@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System.Diagnostics;
@@ -11,8 +14,8 @@ public sealed class ScopeTests : ActivityTest
 {
     private class TestScope : OpenTelemetryScope
     {
-        public TestScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
-            : base(kind, agentDetails, tenantDetails, operationName, activityName) { }
+        public TestScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null)
+            : base(operationName, activityName, agentDetails, spanDetails) { }
     }
 
     [TestMethod]
@@ -24,8 +27,8 @@ public sealed class ScopeTests : ActivityTest
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var invokeAgentScope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails());
+            using var invokeAgentScope = InvokeAgentScope.Start(new Request(), ScopeDetails, Util.GetAgentDetails());
+            using var toolScope = ExecuteToolScope.Start(new Request(), new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails());
         });
 
         // Assert
@@ -51,7 +54,7 @@ public sealed class ScopeTests : ActivityTest
         };
         ActivitySource.AddActivityListener(listener);
         
-        using var scope = new TestScope(ActivityKind.Internal, Util.GetAgentDetails(), Util.GetTenantDetails(), "TestOperation", "TestActivity");
+        using var scope = new TestScope("TestOperation", "TestActivity", Util.GetAgentDetails(), new SpanDetails(ActivityKind.Internal));
         
         // Act
         var expectedId = scope.Id;
@@ -61,17 +64,17 @@ public sealed class ScopeTests : ActivityTest
     }
 
     [TestMethod]
-    public void SetParentId_SetsActivityParentId()
+    public void SetParentContext_SetsActivityParentId()
     {
         // Arrange
         var manualParentActivity = CreateActivity();
-        var parentId = manualParentActivity.Id;
+        var parentContext = manualParentActivity.Context;
         var parentSpanId = manualParentActivity.SpanId.ToString() ?? string.Empty;
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentId);
+            using var toolScope = ExecuteToolScope.Start(new Request(), new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), spanDetails: new SpanDetails(parentContext: parentContext));
         });
         
         // Assert

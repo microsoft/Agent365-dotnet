@@ -17,14 +17,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="agentId">The unique identifier for the agent.</param>
         /// <param name="agentName">Optional display name for the agent.</param>
         /// <param name="agentDescription">Optional description of the agent's purpose.</param>
-        /// <param name="iconUri">Optional URI pointing to the agent icon.</param>
-        /// <param name="agentAUID">Optional Azure User ID (AUID) for the agent.</param>
-        /// <param name="agentUPN">Optional User Principal Name (UPN) for the agent.</param>
+        /// <param name="agenticUserId">Optional agentic user ID for the agent.</param>
+        /// <param name="agenticUserEmail">Optional email address for the agentic user.</param>
         /// <param name="agentBlueprintId">Optional Blueprint/Application ID for the agent.</param>
         /// <param name="tenantId">Optional Tenant ID for the agent.</param>
         /// <param name="agentType">Optional agent type.</param>
         /// <param name="agentClientIP">Optional client IP address of the agent.</param>
         /// <param name="agentPlatformId">Optional platform ID for the agent.</param>
+        /// <param name="providerName">Optional provider name (e.g., openai, anthropic).</param>
+        /// <param name="agentVersion">Optional version of the agent (e.g., "1.0.0", "2025-05-01").</param>
         /// <remarks>
         /// <para>
         /// <b>Certification Requirements:</b> The following parameters must be set for the agent to pass certification requirements, and these values override any of the same values specified in the <see cref="Microsoft.Agents.A365.Observability.Runtime.Common.BaggageBuilder"/> class:
@@ -32,8 +33,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         ///   <item><paramref name="agentId"/></item>
         ///   <item><paramref name="agentName"/></item>
         ///   <item><paramref name="agentDescription"/></item>
-        ///   <item><paramref name="agentAUID"/></item>
-        ///   <item><paramref name="agentUPN"/></item>
+        ///   <item><paramref name="agenticUserId"/></item>
+        ///   <item><paramref name="agenticUserEmail"/></item>
         ///   <item><paramref name="agentBlueprintId"/></item>
         /// </list>
         /// </para>
@@ -48,25 +49,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             string? agentId = null,
             string? agentName = null,
             string? agentDescription = null,
-            string? iconUri = null,
-            string? agentAUID = null,
-            string? agentUPN = null,
+            string? agenticUserId = null,
+            string? agenticUserEmail = null,
             string? agentBlueprintId = null,
             string? tenantId = null,
             AgentType? agentType = null,
             IPAddress? agentClientIP = null,
-            string? agentPlatformId = null)
+            string? agentPlatformId = null,
+            string? providerName = null,
+            string? agentVersion = null)
         {
             AgentId = agentId;
             AgentName = agentName;
             AgentDescription = agentDescription;
-            AgentAUID = agentAUID;
-            AgentUPN = agentUPN;
+            AgenticUserId = agenticUserId;
+            AgenticUserEmail = agenticUserEmail;
             AgentBlueprintId = agentBlueprintId;
             TenantId = tenantId;
             AgentType = agentType;
             AgentClientIP = agentClientIP;
             AgentPlatformId = agentPlatformId;
+            ProviderName = providerName;
+            AgentVersion = agentVersion;
         }
 
         /// <summary>
@@ -80,14 +84,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? AgentName { get; }
 
         /// <summary>
-        /// Optional Agent User ID for the agent.
+        /// Optional agentic user ID for the agent.
         /// </summary>
-        public string? AgentAUID { get; }
+        public string? AgenticUserId { get; }
 
         /// <summary>
-        /// Optional User Principal Name (UPN) for the agent.
+        /// Optional email address for the agentic user.
         /// </summary>
-        public string? AgentUPN { get; }
+        public string? AgenticUserEmail { get; }
 
         /// <summary>
         /// Optional Blueprint/Application ID for the agent.
@@ -120,40 +124,53 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? TenantId { get; }
 
         /// <summary>
+        /// Optional provider name (e.g., openai, anthropic).
+        /// </summary>
+        public string? ProviderName { get; }
+
+        /// <summary>
+        /// Optional version of the agent (e.g., "1.0.0", "2025-05-01").
+        /// </summary>
+        public string? AgentVersion { get; }
+
+        /// <summary>
         /// Deconstructs the current instance into discrete values.
         /// </summary>
         /// <param name="agentId">Receives the agent identifier.</param>
         /// <param name="agentName">Receives the human-readable agent name.</param>
         /// <param name="agentDescription">Receives the agent description.</param>
-        /// <param name="agentAUID">Receives the agent Azure User ID (AUID).</param>
-        /// <param name="agentUPN">Receives the agent User Principal Name (UPN).</param>
+        /// <param name="agenticUserId">Receives the agentic user ID.</param>
+        /// <param name="agenticUserEmail">Receives the agentic user email.</param>
         /// <param name="agentBlueprintId">Receives the agent Blueprint/Application ID.</param>
         /// <param name="agentType">Receives the agent type.</param>
         /// <param name="tenantId">Receives the tenant identifier.</param>
         /// <param name="agentClientIP">Receives the client IP address.</param>
         /// <param name="agentPlatformId">Receives the platform ID.</param>
+        /// <param name="agentVersion">Receives the agent version.</param>
         public void Deconstruct(
             out string? agentId,
             out string? agentName,
             out string? agentDescription,
-            out string? agentAUID,
-            out string? agentUPN,
+            out string? agenticUserId,
+            out string? agenticUserEmail,
             out string? agentBlueprintId,
             out AgentType? agentType,
             out string? tenantId,
             out IPAddress? agentClientIP,
-            out string? agentPlatformId)
+            out string? agentPlatformId,
+            out string? agentVersion)
         {
             agentId = AgentId;
             agentName = AgentName;
             agentDescription = AgentDescription;
-            agentAUID = AgentAUID;
-            agentUPN = AgentUPN;
+            agenticUserId = AgenticUserId;
+            agenticUserEmail = AgenticUserEmail;
             agentBlueprintId = AgentBlueprintId;
             agentType = AgentType;
             tenantId = TenantId;
             agentClientIP = AgentClientIP;
             agentPlatformId = AgentPlatformId;
+            agentVersion = AgentVersion;
         }
 
         /// <inheritdoc/>
@@ -167,13 +184,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             return string.Equals(AgentId, other.AgentId, StringComparison.Ordinal) &&
                    string.Equals(AgentName, other.AgentName, StringComparison.Ordinal) &&
                    string.Equals(AgentDescription, other.AgentDescription, StringComparison.Ordinal) &&
-                   string.Equals(AgentAUID, other.AgentAUID, StringComparison.Ordinal) &&
-                   string.Equals(AgentUPN, other.AgentUPN, StringComparison.Ordinal) &&
+                   string.Equals(AgenticUserId, other.AgenticUserId, StringComparison.Ordinal) &&
+                   string.Equals(AgenticUserEmail, other.AgenticUserEmail, StringComparison.Ordinal) &&
                    string.Equals(AgentBlueprintId, other.AgentBlueprintId, StringComparison.Ordinal) &&
                    AgentType == other.AgentType &&
                    string.Equals(TenantId, other.TenantId, StringComparison.Ordinal) &&
                    Equals(AgentClientIP, other.AgentClientIP) &&
-                   string.Equals(AgentPlatformId, other.AgentPlatformId, StringComparison.Ordinal);
+                   string.Equals(AgentPlatformId, other.AgentPlatformId, StringComparison.Ordinal) &&
+                   string.Equals(AgentVersion, other.AgentVersion, StringComparison.Ordinal);
         }
 
         /// <inheritdoc/>
@@ -191,13 +209,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (AgentId != null ? StringComparer.Ordinal.GetHashCode(AgentId) : 0);
                 hash = (hash * 31) + (AgentName != null ? StringComparer.Ordinal.GetHashCode(AgentName) : 0);
                 hash = (hash * 31) + (AgentDescription != null ? StringComparer.Ordinal.GetHashCode(AgentDescription) : 0);
-                hash = (hash * 31) + (AgentAUID != null ? StringComparer.Ordinal.GetHashCode(AgentAUID) : 0);
-                hash = (hash * 31) + (AgentUPN != null ? StringComparer.Ordinal.GetHashCode(AgentUPN) : 0);
+                hash = (hash * 31) + (AgenticUserId != null ? StringComparer.Ordinal.GetHashCode(AgenticUserId) : 0);
+                hash = (hash * 31) + (AgenticUserEmail != null ? StringComparer.Ordinal.GetHashCode(AgenticUserEmail) : 0);
                 hash = (hash * 31) + (AgentBlueprintId != null ? StringComparer.Ordinal.GetHashCode(AgentBlueprintId) : 0);
                 hash = (hash * 31) + (AgentType?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (TenantId != null ? StringComparer.Ordinal.GetHashCode(TenantId) : 0);
                 hash = (hash * 31) + (AgentClientIP?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (AgentPlatformId != null ? StringComparer.Ordinal.GetHashCode(AgentPlatformId) : 0);
+                hash = (hash * 31) + (AgentVersion != null ? StringComparer.Ordinal.GetHashCode(AgentVersion) : 0);
                 return hash;
             }
         }

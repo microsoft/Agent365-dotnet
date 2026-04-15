@@ -4,7 +4,10 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 using static Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes.OpenTelemetryConstants;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -19,15 +22,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for inference tracing.
         /// </summary>
+        /// <param name="request">Request details for the inference.</param>
         /// <param name="details">Details of the inference call (operation name, model, provider, token usage, finish reasons, response ID).</param>
         /// <param name="agentDetails">Information about the agent executing the inference (service, version, identifiers).</param>
-        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
-        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
-        /// <param name="conversationId">Optional conversation or session correlation ID for the inference.</param>
-        /// <param name="sourceMetadata">Optional metadata describing the source of the call (e.g., component, file, line) for observability.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        /// <param name="startTime">Optional explicit start time. Useful when recording an inference call after execution has already completed.</param>
-        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
+        /// <param name="userDetails">Optional human user details.</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, span links).</param>
         /// <returns>A new InferenceScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -35,28 +34,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <list type="bullet">
         ///   <item><paramref name="details"/></item>
         ///   <item><paramref name="agentDetails"/></item>
-        ///   <item><paramref name="tenantDetails"/></item>
         /// </list>
         /// </para>
         /// <para>
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static InferenceScope Start(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null) => new InferenceScope(details, agentDetails, tenantDetails, parentId, conversationId, sourceMetadata, callerDetails, startTime, endTime);
+        public static InferenceScope Start(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails = null, SpanDetails? spanDetails = null) => new InferenceScope(request, details, agentDetails, userDetails, spanDetails);
 
-        private InferenceScope(InferenceCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, string? parentId = null, string? conversationId = null, SourceMetadata? sourceMetadata = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null)
+        private InferenceScope(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                kind: ActivityKind.Client,
-                agentDetails: agentDetails,
-                tenantDetails: tenantDetails,
                 operationName: details.OperationName.ToString(),
                 activityName: $"{details.OperationName} {details.Model}",
-                startTime: startTime,
-                endTime: endTime,
-                parentId: parentId,
-                conversationId: conversationId,
-                sourceMetadata: sourceMetadata,
-                callerDetails: callerDetails)
+                agentDetails: agentDetails,
+                spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
+                userDetails: userDetails)
         {
             SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
@@ -64,23 +56,60 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
             SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
             SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
-            SetTagMaybe(GenAiResponseIdKey, details.ResponseId);
+            SetTagMaybe(GenAiConversationIdKey, request?.ConversationId);
+
+            if (request?.InputContent != null)
+            {
+                RecordInputMessages(request.InputContent);
+            }
+            else if (request?.Content != null)
+            {
+                RecordInputMessages(new[] { request.Content });
+            }
+
+            if (request?.Channel != null)
+            {
+                SetTagMaybe(ChannelNameKey, request.Channel.Name);
+                SetTagMaybe(ChannelLinkKey, request.Channel.Link);
+            }
         }
 
         /// <summary>
         /// Records the input messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL ChatMessage with role "user".
         /// </summary>
         public void RecordInputMessages(string[] messages)
         {
-            SetTagMaybe(GenAiInputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeInputMessages(messages);
+            SetTagMaybe(GenAiInputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured input messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned input messages wrapper.</param>
+        public void RecordInputMessages(InputMessages messages)
+        {
+            SetTagMaybe(GenAiInputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
         /// Records the output messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL OutputMessage with role "assistant".
         /// </summary>
         public void RecordOutputMessages(string[] messages)
         {
-            SetTagMaybe(GenAiOutputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeOutputMessages(messages);
+            SetTagMaybe(GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured output messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned output messages wrapper.</param>
+        public void RecordOutputMessages(OutputMessages messages)
+        {
+            SetTagMaybe(GenAiOutputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
@@ -97,17 +126,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public void RecordOutputTokens(int outputTokens)
         {
             SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens.ToString());
-        }
-
-        /// <summary>
-        /// Records the response id for telemetry tracking.
-        /// </summary>
-        public void RecordResponseId(string responseId)
-        {
-            if (!string.IsNullOrEmpty(responseId))
-            {
-                SetTagMaybe(GenAiResponseIdKey, responseId);
-            }
         }
 
         /// <summary>

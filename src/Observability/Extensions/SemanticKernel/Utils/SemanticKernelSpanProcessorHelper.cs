@@ -300,7 +300,7 @@ public static class SemanticKernelSpanProcessorHelper
     private static string? GetEventContentTag(ActivityEvent activityEvent)
     {
         return activityEvent.Tags?
-            .FirstOrDefault(tag => tag.Key == OpenTelemetryConstants.GenAiEventContent).Value as string;
+            .FirstOrDefault(tag => tag.Key == SemanticKernelTelemetryConstants.EventContentTag).Value as string;
     }
 
     /// <summary>
@@ -314,17 +314,28 @@ public static class SemanticKernelSpanProcessorHelper
         {
             var aiChoice = JsonSerializer.Deserialize<AiChoice>(content, JsonOptions);
             if (aiChoice?.Message != null &&
-                aiChoice.Message.Role?.Equals("Assistant", StringComparison.OrdinalIgnoreCase) == true &&
-                aiChoice.Message.ToolCalls != null)
+                aiChoice.Message.Role?.Equals("Assistant", StringComparison.OrdinalIgnoreCase) == true)
             {
-                foreach (var toolCall in aiChoice.Message.ToolCalls)
+                // Extract direct content from assistant message
+                if (!string.IsNullOrEmpty(aiChoice.Message.Content))
                 {
-                    if (toolCall.Function?.Arguments?.MessageBody != null)
+                    var msg = new MessageContent { Content = aiChoice.Message.Content };
+                    TryExtractNestedContent(msg);
+                    choiceMessages.Add(msg.Content!);
+                }
+
+                // Extract content from tool calls
+                if (aiChoice.Message.ToolCalls != null)
+                {
+                    foreach (var toolCall in aiChoice.Message.ToolCalls)
                     {
-                        var messageBody = toolCall.Function.Arguments.MessageBody;
-                        if (!string.IsNullOrEmpty(messageBody))
+                        if (toolCall.Function?.Arguments?.MessageBody != null)
                         {
-                            choiceMessages.Add(messageBody);
+                            var messageBody = toolCall.Function.Arguments.MessageBody;
+                            if (!string.IsNullOrEmpty(messageBody))
+                            {
+                                choiceMessages.Add(messageBody);
+                            }
                         }
                     }
                 }

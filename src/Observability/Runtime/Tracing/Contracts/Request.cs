@@ -3,136 +3,63 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
 {
     /// <summary>
-    /// Represents different types of agent invocations in the system.
+    /// Represents channel information for agent execution context.
     /// </summary>
-    public enum ExecutionType
+    public sealed class Channel : IEquatable<Channel>
     {
         /// <summary>
-        /// Direct human-to-agent invocation (e.g., through UI, API call).
+        /// Initializes a new instance of the <see cref="Channel"/> class.
         /// </summary>
-        HumanToAgent,
-        
-        /// <summary>
-        /// Agent-to-agent invocation (e.g., one agent calling another).
-        /// </summary>
-        Agent2Agent,
-        
-        /// <summary>
-        /// Event-driven agent invocation (e.g., scheduled, webhook, message queue).
-        /// </summary>
-        EventToAgent,
-
-        /// <summary>
-        /// Unknown or unspecified invocation type.
-        /// </summary>
-        Unknown
-    }
-
-    /// <summary>
-    /// Represents different roles that can invoke an agent.
-    /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum Role
-    {
-        /// <summary>
-        /// Human user invoking the agent.
-        /// </summary>
-        Human,
-        
-        /// <summary>
-        /// Another agent invoking this agent.
-        /// </summary>
-        Agent,
-        
-        /// <summary>
-        /// Event-driven invocation (e.g., scheduled, webhook, message queue).
-        /// </summary>
-        Event,
-
-        /// <summary>
-        /// Unknown or unspecified role.
-        /// </summary>
-        Unknown
-    }
-
-    /// <summary>
-    /// Represents metadata about the source (i.e. channel) of an invocation.
-    /// </summary>
-    public sealed class SourceMetadata : IEquatable<SourceMetadata>
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SourceMetadata"/> class.
-        /// </summary>
-        /// <param name="id">Unique identifier for the source.</param>
-        /// <param name="name">Human-readable name of the source.</param>
-        /// <param name="role">Optional role describing the source.</param>
-        /// <param name="description">Optional description of the source.</param>
-        public SourceMetadata(string? name, Role? role = null, string? description = null, string? id = null)
+        /// <param name="name">Human-readable name of the channel.</param>
+        /// <param name="link">Optional link for the channel.</param>
+        public Channel(string? name, string? link = null)
         {
-            Id = id;
             Name = name;
-            Role = role ?? Contracts.Role.Unknown;
-            Description = description;
+            Link = link;
         }
 
         /// <summary>
-        /// Gets the unique identifier for the source.
-        /// </summary>
-        public string? Id { get; }
-
-        /// <summary>
-        /// Gets the human-readable name for the source.
+        /// Gets the human-readable name for the channel.
         /// </summary>
         public string? Name { get; }
 
         /// <summary>
-        /// Gets the role associated with the source.
+        /// Gets an optional link for the channel.
         /// </summary>
-        public Role? Role { get; }
-
-        /// <summary>
-        /// Gets an optional description for the source.
-        /// </summary>
-        public string? Description { get; }
+        public string? Link { get; }
 
         /// <summary>
         /// Deconstructs this instance for tuple deconstruction support.
         /// </summary>
-        /// <param name="id">Receives the source identifier.</param>
-        /// <param name="name">Receives the source name.</param>
-        /// <param name="role">Receives the role value.</param>
-        /// <param name="description">Receives the description.</param>
-        public void Deconstruct(out string? id, out string? name, out Role? role, out string? description)
+        /// <param name="name">Receives the channel name.</param>
+        /// <param name="link">Receives the link.</param>
+        public void Deconstruct(out string? name, out string? link)
         {
-            id = Id;
             name = Name;
-            role = Role;
-            description = Description;
+            link = Link;
         }
 
         /// <inheritdoc/>
-        public bool Equals(SourceMetadata? other)
+        public bool Equals(Channel? other)
         {
             if (other is null)
             {
                 return false;
             }
 
-            return string.Equals(Id, other.Id, StringComparison.Ordinal) &&
-                   string.Equals(Name, other.Name, StringComparison.Ordinal) &&
-                   Role == other.Role &&
-                   string.Equals(Description, other.Description, StringComparison.Ordinal);
+            return string.Equals(Name, other.Name, StringComparison.Ordinal) &&
+                   string.Equals(Link, other.Link, StringComparison.Ordinal);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object? obj)
         {
-            return Equals(obj as SourceMetadata);
+            return Equals(obj as Channel);
         }
 
         /// <inheritdoc/>
@@ -141,10 +68,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             unchecked
             {
                 int hash = 17;
-                hash = (hash * 31) + (Id != null ? StringComparer.Ordinal.GetHashCode(Id) : 0);
                 hash = (hash * 31) + (Name != null ? StringComparer.Ordinal.GetHashCode(Name) : 0);
-                hash = (hash * 31) + (Role?.GetHashCode() ?? 0);
-                hash = (hash * 31) + (Description != null ? StringComparer.Ordinal.GetHashCode(Description) : 0);
+                hash = (hash * 31) + (Link != null ? StringComparer.Ordinal.GetHashCode(Link) : 0);
                 return hash;
             }
         }
@@ -159,26 +84,46 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// Initializes a new instance of the <see cref="Request"/> class.
         /// </summary>
         /// <param name="content">The payload content supplied to the agent.</param>
-        /// <param name="executionType">Optional execution type describing the request.</param>
         /// <param name="sessionId">Optional session identifier.</param>
-        /// <param name="sourceMetadata">Optional metadata describing request origin.</param>
-        public Request(string content, ExecutionType? executionType = null, string? sessionId = null, SourceMetadata? sourceMetadata = null)
+        /// <param name="channel">Optional channel information describing request origin.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID.</param>
+        /// <param name="operationSource">Optional source of the operation (e.g., SDK, Gateway, MCPServer).</param>
+        public Request(string? content = null, string? sessionId = null, Channel? channel = null, string? conversationId = null, string? operationSource = null)
         {
             Content = content;
-            ExecutionType = executionType ?? Contracts.ExecutionType.Unknown;
             SessionId = sessionId;
-            SourceMetadata = sourceMetadata;
+            Channel = channel;
+            ConversationId = conversationId;
+            OperationSource = operationSource;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Request"/> class with structured input content.
+        /// </summary>
+        /// <param name="inputContent">The structured input messages for the agent.</param>
+        /// <param name="sessionId">Optional session identifier.</param>
+        /// <param name="channel">Optional channel information describing request origin.</param>
+        /// <param name="conversationId">Optional conversation or session correlation ID.</param>
+        /// <param name="operationSource">Optional source of the operation (e.g., SDK, Gateway, MCPServer).</param>
+        public Request(InputMessages inputContent, string? sessionId = null, Channel? channel = null, string? conversationId = null, string? operationSource = null)
+        {
+            InputContent = inputContent ?? throw new ArgumentNullException(nameof(inputContent));
+            SessionId = sessionId;
+            Channel = channel;
+            ConversationId = conversationId;
+            OperationSource = operationSource;
         }
 
         /// <summary>
         /// Gets the textual content of the request.
         /// </summary>
-        public string Content { get; }
+        public string? Content { get; }
 
         /// <summary>
-        /// Gets the execution type associated with the request, if provided.
+        /// Gets the structured input messages, when supplied.
+        /// Takes precedence over <see cref="Content"/> for telemetry recording.
         /// </summary>
-        public ExecutionType? ExecutionType { get; }
+        public InputMessages? InputContent { get; }
 
         /// <summary>
         /// Gets the session identifier, when supplied.
@@ -186,23 +131,33 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? SessionId { get; }
 
         /// <summary>
-        /// Gets metadata describing the origin (i.e. channel) of the request.
+        /// Gets channel information describing the origin of the request.
         /// </summary>
-        public SourceMetadata? SourceMetadata { get; }
+        public Channel? Channel { get; }
+
+        /// <summary>
+        /// Gets the conversation or session correlation ID.
+        /// </summary>
+        public string? ConversationId { get; }
+
+        /// <summary>
+        /// Gets the source of the operation, when supplied.
+        /// </summary>
+        public string? OperationSource { get; }
 
         /// <summary>
         /// Deconstructs the request for tuple deconstruction support.
         /// </summary>
         /// <param name="content">Receives the request content.</param>
-        /// <param name="executionType">Receives the execution type.</param>
         /// <param name="sessionId">Receives the session identifier.</param>
-        /// <param name="sourceMetadata">Receives the source metadata.</param>
-        public void Deconstruct(out string content, out ExecutionType? executionType, out string? sessionId, out SourceMetadata? sourceMetadata)
+        /// <param name="channel">Receives the channel information.</param>
+        /// <param name="conversationId">Receives the conversation ID.</param>
+        public void Deconstruct(out string? content, out string? sessionId, out Channel? channel, out string? conversationId)
         {
             content = Content;
-            executionType = ExecutionType;
             sessionId = SessionId;
-            sourceMetadata = SourceMetadata;
+            channel = Channel;
+            conversationId = ConversationId;
         }
 
         /// <inheritdoc/>
@@ -214,9 +169,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             }
 
             return string.Equals(Content, other.Content, StringComparison.Ordinal) &&
-                   ExecutionType == other.ExecutionType &&
                    string.Equals(SessionId, other.SessionId, StringComparison.Ordinal) &&
-                   EqualityComparer<SourceMetadata?>.Default.Equals(SourceMetadata, other.SourceMetadata);
+                   EqualityComparer<Channel?>.Default.Equals(Channel, other.Channel) &&
+                   string.Equals(ConversationId, other.ConversationId, StringComparison.Ordinal) &&
+                   string.Equals(OperationSource, other.OperationSource, StringComparison.Ordinal) &&
+                   ReferenceEquals(InputContent, other.InputContent);
         }
 
         /// <inheritdoc/>
@@ -232,9 +189,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             {
                 int hash = 17;
                 hash = (hash * 31) + (Content != null ? StringComparer.Ordinal.GetHashCode(Content) : 0);
-                hash = (hash * 31) + (ExecutionType?.GetHashCode() ?? 0);
                 hash = (hash * 31) + (SessionId != null ? StringComparer.Ordinal.GetHashCode(SessionId) : 0);
-                hash = (hash * 31) + EqualityComparer<SourceMetadata?>.Default.GetHashCode(SourceMetadata);
+                hash = (hash * 31) + EqualityComparer<Channel?>.Default.GetHashCode(Channel);
+                hash = (hash * 31) + (ConversationId != null ? StringComparer.Ordinal.GetHashCode(ConversationId) : 0);
+                hash = (hash * 31) + (OperationSource != null ? StringComparer.Ordinal.GetHashCode(OperationSource) : 0);
+                hash = (hash * 31) + (InputContent != null ? InputContent.GetHashCode() : 0);
                 return hash;
             }
         }

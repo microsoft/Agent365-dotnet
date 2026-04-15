@@ -27,7 +27,7 @@ public class BaggageTurnMiddlewareTests
         NextDelegate next = (ct) =>
         {
             capturedTenantId = Baggage.Current.GetBaggage(OpenTelemetryConstants.TenantIdKey);
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.GenAiCallerIdKey);
+            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 
@@ -36,7 +36,7 @@ public class BaggageTurnMiddlewareTests
 
         // Assert
         capturedTenantId.Should().Be("tenant-123");
-        capturedCallerId.Should().Be("caller-id");
+        capturedCallerId.Should().Be("caller-aad");
     }
 
     [TestMethod]
@@ -54,7 +54,7 @@ public class BaggageTurnMiddlewareTests
         NextDelegate next = (ct) =>
         {
             logicCalled = true;
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.GenAiCallerIdKey);
+            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 

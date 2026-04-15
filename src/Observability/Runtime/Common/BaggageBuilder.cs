@@ -19,7 +19,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// <para>
     /// <b>Certification Requirements:</b> To ensure the agent passes certification, the following properties must be set using their respective methods:
     /// <list type="bullet">
-    ///   <item><see cref="OperationSource"/></item>
     ///   <item><see cref="TenantId"/></item>
     ///   <item><see cref="ConversationId"/></item>
     ///   <item><see cref="ChannelName"/></item>
@@ -31,12 +30,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     ///   <item><see cref="AgentId"/></item>
     ///   <item><see cref="AgentName"/></item>
     ///   <item><see cref="AgentDescription"/></item>
-    ///   <item><see cref="AgentAuid"/></item>
-    ///   <item><see cref="AgentUpn"/></item>
+    ///   <item><see cref="AgenticUserId"/></item>
+    ///   <item><see cref="AgenticUserEmail"/></item>
     ///   <item><see cref="AgentBlueprintId"/></item>
-    ///   <item><see cref="CallerId"/></item>
-    ///   <item><see cref="CallerUpn"/></item>
-    ///   <item><see cref="CallerName"/></item>
+    ///   <item><see cref="UserId"/></item>
+    ///   <item><see cref="UserEmail"/></item>
+    ///   <item><see cref="UserName"/></item>
     /// </list>
     /// </para>
     /// <para>
@@ -59,18 +58,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         private readonly Dictionary<string, string?> _pairs = new Dictionary<string, string?>();
-
-        /// <summary>
-        /// Sets the operation source baggage value.
-        /// </summary>
-        /// <remarks>
-        /// This property must be set for the agent to pass certification requirements.
-        /// </remarks>
-        public BaggageBuilder OperationSource(OperationSource source)
-        {
-            Set(OpenTelemetryConstants.OperationSourceKey, source.ToString());
-            return this;
-        }
 
         /// <summary>
         /// Sets the tenant ID baggage value.
@@ -121,26 +108,35 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the agent AUID baggage value
+        /// Sets the agent version baggage value.
         /// </summary>
-        /// <remarks>
-        /// This property should be set to pass certification, but is typically set at individual scopes.
-        /// </remarks>
-        public BaggageBuilder AgentAuid(string? v)
-        { 
-            Set(OpenTelemetryConstants.GenAiAgentAUIDKey, v);
+        public BaggageBuilder AgentVersion(string? v)
+        {
+            Set(OpenTelemetryConstants.GenAiAgentVersionKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the agent UPN baggage value.
+        /// Sets the agentic user ID baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder AgentUpn(string? v)
+        public BaggageBuilder AgenticUserId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentUPNKey, v);
+            Set(OpenTelemetryConstants.AgentAUIDKey, v);
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the agentic user email baggage value.
+        /// </summary>
+        /// <remarks>
+        /// This property should be set to pass certification, but is typically set at individual scopes.
+        /// </remarks>
+        public BaggageBuilder AgenticUserEmail(string? v)
+        { 
+            Set(OpenTelemetryConstants.AgentEmailKey, v);
             return this;
         }
 
@@ -152,16 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder AgentBlueprintId(string? v)
         { 
-            Set(OpenTelemetryConstants.GenAiAgentBlueprintIdKey, v);
-            return this;
-        }
-
-        /// <summary>
-        /// Sets the agent type baggage value.
-        /// </summary>
-        public BaggageBuilder AgentType(AgentType? v)
-        { 
-            Set(OpenTelemetryConstants.GenAiAgentTypeKey, v?.ToString());
+            Set(OpenTelemetryConstants.AgentBlueprintIdKey, v);
             return this;
         }
 
@@ -170,61 +157,68 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder AgentPlatformId(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiAgentPlatformIdKey, v);
+            Set(OpenTelemetryConstants.AgentPlatformIdKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the correlation ID baggage value.
+        /// Sets the user ID baggage value.
         /// </summary>
-        public BaggageBuilder CorrelationId(string? v)
+        /// <remarks>
+        /// This property should be set to pass certification, but is typically set at individual scopes.
+        /// </remarks>
+        public BaggageBuilder UserId(string? v)
         { 
-            Set(OpenTelemetryConstants.CorrelationIdKey, v);
+            Set(OpenTelemetryConstants.UserIdKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller ID baggage value.
+        /// Sets the user email baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder CallerId(string? v)
-        { 
-            Set(OpenTelemetryConstants.GenAiCallerIdKey, v);
+        public BaggageBuilder UserEmail(string? v)
+        {
+            Set(OpenTelemetryConstants.UserEmailKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller UPN baggage value.
+        /// Sets the user name baggage value.
         /// </summary>
         /// <remarks>
         /// This property should be set to pass certification, but is typically set at individual scopes.
         /// </remarks>
-        public BaggageBuilder CallerUpn(string? v)
+        public BaggageBuilder UserName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerUpnKey, v);
+            Set(OpenTelemetryConstants.UserNameKey, v);
             return this;
         }
 
         /// <summary>
-        /// Sets the caller name baggage value.
+        /// Sets the user client IP baggage value.
         /// </summary>
-        /// <remarks>
-        /// This property should be set to pass certification, but is typically set at individual scopes.
-        /// </remarks>
-        public BaggageBuilder CallerName(string? v)
+        public BaggageBuilder UserClientIp(IPAddress v)
         {
-            Set(OpenTelemetryConstants.GenAiCallerNameKey, v);
+            Set(OpenTelemetryConstants.CallerClientIpKey, v.ToString());
             return this;
         }
 
         /// <summary>
-        /// Sets the caller client IP baggage value.
+        /// Sets the invoke agent server address and port baggage values.
         /// </summary>
-        public BaggageBuilder CallerClientIp(IPAddress v)
+        /// <param name="address">The server address (hostname) of the target agent service.</param>
+        /// <param name="port">Optional server port. Only recorded when different from 443.</param>
+        /// <returns>The current builder instance for method chaining.</returns>
+        public BaggageBuilder InvokeAgentServer(string? address, int? port = null)
         {
-            Set(OpenTelemetryConstants.GenAiCallerClientIpKey, v.ToString());
+            Set(OpenTelemetryConstants.ServerAddressKey, address);
+            if (port.HasValue && port.Value != 443)
+            {
+                Set(OpenTelemetryConstants.ServerPortKey, port.Value.ToString());
+            }
             return this;
         }
 
@@ -257,7 +251,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </remarks>
         public BaggageBuilder ChannelName(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelNameKey, v);
+            Set(OpenTelemetryConstants.ChannelNameKey, v);
             return this;
         }
 
@@ -266,7 +260,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         /// </summary>
         public BaggageBuilder ChannelLink(string? v)
         {
-            Set(OpenTelemetryConstants.GenAiChannelLinkKey, v);
+            Set(OpenTelemetryConstants.ChannelLinkKey, v);
             return this;
         }
 
@@ -289,11 +283,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// Sets the hiring manager ID baggage value.
+        /// Sets the operation source baggage value. 
+        /// To be used with server spans to identify the source of the operation e.g(ACF, ATG)
         /// </summary>
-        public BaggageBuilder HiringManagerId(string? v)
+        /// <remarks>
+        /// This property must be set for the agent to pass certification requirements.
+        /// </remarks>        
+        /// <param name="source">The operation source identifying where the operation originated.</param>
+        /// <returns>The current builder instance for method chaining.</returns>
+        public BaggageBuilder OperationSource(string source)
         {
-            Set(OpenTelemetryConstants.HiringManagerIdKey, v);
+            Set(OpenTelemetryConstants.ServiceNameKey, source);
             return this;
         }
 
@@ -313,16 +313,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             }
             return new Scope(previous);
         }
-
-        /// <summary>
-        /// Convenience: begin a request baggage scope with common fields.
-        /// </summary>
-        public static IDisposable SetRequestContext(string? tenantId, string? agentId, string? correlationId = null)
-            => new BaggageBuilder()
-                .TenantId(tenantId)
-                .AgentId(agentId)
-                .CorrelationId(correlationId)
-                .Build();
 
         /// <summary>
         /// Adds a baggage key/value if the value is not null or whitespace.

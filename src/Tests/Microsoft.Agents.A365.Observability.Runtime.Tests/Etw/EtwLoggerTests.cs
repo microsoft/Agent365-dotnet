@@ -28,13 +28,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentPlatformId: "platform-123");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: new Uri("https://example.com/agent"));
             string conversationId = "conv-123";
 
             // Act
-            etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
+            etwLogger.LogInvokeAgent(invokeAgentScopeDetails, agentDetails, conversationId, request: new Request(sessionId: "session-1"));
 
             // Assert
             var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
@@ -53,13 +52,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             string conversationId = "conv-inf-1";
 
             // Act
-            etwLogger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
+            etwLogger.LogInferenceCall(inferenceDetails, agentDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
 
             // Assert
             var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
@@ -78,14 +76,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
             string conversationId = "conv-tool-1";
             string responseContent = @"{ ""value"": ""result"" }";
 
             // Act
-            etwLogger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent);
+            etwLogger.LogToolCall(toolDetails, agentDetails, conversationId, responseContent: responseContent);
 
             // Assert
             var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
@@ -104,15 +101,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
             var response = new Response(new[] { "Hello", "World" });
             var conversationId = "conv-output-etw";
-            var sourceMetadata = new SourceMetadata(name: "EtwChannel", description: "https://channel/etw");
-            var callerDetails = new CallerDetails("caller-etw-123", "Etw Caller", "etw-caller@example.com");
+            var sourceMetadata = new Channel(name: "EtwChannel", link: "https://channel/etw");
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "caller-etw-123", userName: "Etw Caller", userEmail: "etw-caller@example.com"));
 
             // Act
-            etwLogger.LogOutput(agentDetails, tenantDetails, response, conversationId: conversationId, sourceMetadata: sourceMetadata, callerDetails: callerDetails);
+            etwLogger.LogOutput(agentDetails, response, conversationId: conversationId, channel: sourceMetadata, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);

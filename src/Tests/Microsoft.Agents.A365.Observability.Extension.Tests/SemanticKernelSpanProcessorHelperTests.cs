@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Models;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -136,11 +137,11 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiUserMessageEventName, tags: new ActivityTagsCollection
         {
-            { OpenTelemetryConstants.GenAiEventContent, JsonSerializer.Serialize(userMsg) }
+            { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(userMsg) }
         }));
             activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiChoiceEventName, tags: new ActivityTagsCollection
         {
-            { OpenTelemetryConstants.GenAiEventContent, JsonSerializer.Serialize(choiceMsg) }
+            { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(choiceMsg) }
         }));
 
             var result = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
@@ -175,6 +176,105 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             Assert.AreEqual(1, choiceMessages.Count);
             Assert.AreEqual("not a json", choiceMessages[0]);
+        }
+
+        [TestMethod]
+        public void FilterAiChoiceMessageContent_ExtractsDirectContentFromAssistantMessage()
+        {
+            var choiceMessages = new List<string>();
+            var choiceJson = JsonSerializer.Serialize(new AiChoice
+            {
+                Message = new AiChoiceMessage
+                {
+                    Role = "Assistant",
+                    Content = "The answer is 42."
+                }
+            });
+
+            typeof(SemanticKernelSpanProcessorHelper)
+                .GetMethod("FilterAiChoiceMessageContent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?.Invoke(null, new object[] { choiceJson, choiceMessages });
+
+            Assert.AreEqual(1, choiceMessages.Count);
+            Assert.AreEqual("The answer is 42.", choiceMessages[0]);
+        }
+
+        [TestMethod]
+        public void FilterAiChoiceMessageContent_UnwrapsNestedContentFromAssistantMessage()
+        {
+            var nestedContent = @"{""contentType"":""Text"",""content"":""3 modulus 29 is 3.""}";
+            var choiceJson = JsonSerializer.Serialize(new AiChoice
+            {
+                Message = new AiChoiceMessage
+                {
+                    Role = "Assistant",
+                    Content = nestedContent
+                }
+            });
+
+            var choiceMessages = new List<string>();
+            typeof(SemanticKernelSpanProcessorHelper)
+                .GetMethod("FilterAiChoiceMessageContent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?.Invoke(null, new object[] { choiceJson, choiceMessages });
+
+            Assert.AreEqual(1, choiceMessages.Count);
+            Assert.AreEqual("3 modulus 29 is 3.", choiceMessages[0]);
+        }
+
+        [TestMethod]
+        public void FilterAiChoiceMessageContent_ExtractsBothDirectContentAndToolCalls()
+        {
+            var choiceJson = JsonSerializer.Serialize(new AiChoice
+            {
+                Message = new AiChoiceMessage
+                {
+                    Role = "Assistant",
+                    Content = "Here is the result.",
+                    ToolCalls = new List<AiChoiceToolCall>
+                    {
+                        new AiChoiceToolCall
+                        {
+                            Function = new AiChoiceFunction
+                            {
+                                Arguments = new AiChoiceArguments { MessageBody = "Tool output" }
+                            }
+                        }
+                    }
+                }
+            });
+
+            var choiceMessages = new List<string>();
+            typeof(SemanticKernelSpanProcessorHelper)
+                .GetMethod("FilterAiChoiceMessageContent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                ?.Invoke(null, new object[] { choiceJson, choiceMessages });
+
+            Assert.AreEqual(2, choiceMessages.Count);
+            Assert.AreEqual("Here is the result.", choiceMessages[0]);
+            Assert.AreEqual("Tool output", choiceMessages[1]);
+        }
+
+        [TestMethod]
+        public void GetGenAiUserAndChoiceMessageContent_ExtractsDirectContentFromChoiceEvent()
+        {
+            var activity = new Activity("test");
+            var choiceMsg = new AiChoice
+            {
+                Message = new AiChoiceMessage
+                {
+                    Role = "Assistant",
+                    Content = @"{""contentType"":""Text"",""content"":""Hello from the assistant.""}"
+                }
+            };
+
+            activity.AddEvent(new ActivityEvent(OpenTelemetryConstants.GenAiChoiceEventName, tags: new ActivityTagsCollection
+            {
+                { SemanticKernelTelemetryConstants.EventContentTag, JsonSerializer.Serialize(choiceMsg) }
+            }));
+
+            var result = SemanticKernelSpanProcessorHelper.GetGenAiUserAndChoiceMessageContent(activity);
+
+            Assert.AreEqual(1, result[OpenTelemetryConstants.GenAiChoiceEventName].Count);
+            Assert.AreEqual("Hello from the assistant.", result[OpenTelemetryConstants.GenAiChoiceEventName][0]);
         }
 
         [TestMethod]

@@ -369,4 +369,57 @@ public sealed class ServiceTokenCacheTests
             (await cache.GetObservabilityToken(agentId, tenantId)).Should().Be(expectedToken);
         }
     }
+
+    [TestMethod]
+    public void Constructor_WithCustomCleanupInterval_ShouldSucceed()
+    {
+        using var cache = new ServiceTokenCache(TimeSpan.FromHours(1), TimeSpan.FromMinutes(10));
+        cache.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void Constructor_WithDisabledCleanupInterval_ShouldSucceed()
+    {
+        using var cache = new ServiceTokenCache(TimeSpan.FromHours(1), TimeSpan.Zero);
+        cache.Should().NotBeNull();
+    }
+
+    [TestMethod]
+    public void Count_ShouldReturnCorrectNumber()
+    {
+        using var cache = new ServiceTokenCache();
+        cache.RegisterObservability("agent1", "tenant1", "token1", TestScopes);
+        cache.RegisterObservability("agent2", "tenant2", "token2", TestScopes);
+        
+        cache.Count.Should().Be(2);
+    }
+
+    [TestMethod]
+    public void Dispose_ShouldClearAllTokens()
+    {
+        var cache = new ServiceTokenCache();
+        cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
+        
+        cache.Dispose();
+        
+        cache.Count.Should().Be(0);
+    }
+
+    [TestMethod]
+    public void Dispose_CalledMultipleTimes_ShouldNotThrow()
+    {
+        var cache = new ServiceTokenCache();
+        cache.RegisterObservability(TestAgentId, TestTenantId, TestToken, TestScopes);
+        
+        cache.Dispose();
+        cache.Dispose(); // Second dispose should not throw
+        
+        cache.Count.Should().Be(0);
+    }
+
+    [TestMethod]
+    public void DefaultCleanupInterval_ShouldBeFiveMinutes()
+    {
+        ServiceTokenCache.DefaultCleanupInterval.Should().Be(TimeSpan.FromMinutes(5));
+    }
 }
