@@ -256,7 +256,7 @@ internal static class SemanticKernelMessageMapper
         catch (JsonException) { }
     }
 
-    private static MessageRole MapRole(string? role, MessageRole defaultRole)
+    internal static MessageRole MapRole(string? role, MessageRole defaultRole)
     {
         if (string.IsNullOrEmpty(role))
             return defaultRole;
