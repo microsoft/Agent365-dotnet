@@ -101,7 +101,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 updatedTools.Count, agentUserId);
 
             // Create agent with updated tools (since AIAgent is immutable)
-            var agentWithTools = chatClient.CreateAIAgent(
+            var agentWithTools = chatClient.AsAIAgent(
                 instructions: agentInstructions,
                 tools: [.. updatedTools]);
 
@@ -223,48 +223,4 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
     }
 
-    /// <inheritdoc />
-    public async Task<OperationResult> SendChatHistoryAsync(
-        ChatMessageStore chatMessageStore,
-        ITurnContext turnContext,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
-        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        return await SendChatHistoryAsync(chatMessageStore, turnContext, new ToolOptions
-        {
-            UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
-        }, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    public async Task<OperationResult> SendChatHistoryAsync(
-        ChatMessageStore chatMessageStore,
-        ITurnContext turnContext,
-        ToolOptions toolOptions,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
-        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
-        ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));
-
-        try
-        {
-            // Retrieve messages from the store asynchronously
-            var messages = await chatMessageStore.GetMessagesAsync(cancellationToken).ConfigureAwait(false);
-
-            // Delegate to the IEnumerable overload
-            return await SendChatHistoryAsync(messages, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve and send chat history from ChatMessageStore");
-            return OperationResult.Failed(new OperationError(ex));
-        }
-    }
 }
