@@ -210,10 +210,13 @@ public class IsDevScenarioTests
     }
 
     [Fact]
-    public void IsDevScenario_NoEnvironmentSet_DefaultsToDevelopmentAndReturnsTrue()
+    public void IsDevScenario_NoEnvironmentSet_ReturnsFalse()
     {
+        // Unset environment must NOT default to Development so that hosts without an
+        // explicit ASPNETCORE_ENVIRONMENT / DOTNET_ENVIRONMENT are not silently treated
+        // as dev (which would enable manifest discovery, DevMcpTokenProvider, and relaxed TLS).
         var config = Config(); // nothing set
-        Utility.IsDevScenario(config).Should().BeTrue();
+        Utility.IsDevScenario(config).Should().BeFalse();
     }
 
     [Theory]

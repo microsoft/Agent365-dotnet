@@ -271,6 +271,38 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Utils
         }
 
         [Fact]
+        public void ResolveTokenScopeForServer_ApiPrefixedAtgAudience_ReturnsAtgScope()
+        {
+            // Regression: if the gateway returns the ATG App ID with an "api://" prefix the server
+            // must still be routed down the V1 path, not treated as a V2 server with a wrong scope.
+            var config = new ConfigurationBuilder().Build();
+            var server = new Microsoft.Agents.A365.Tooling.Models.MCPServerConfig
+            {
+                mcpServerName = "server1", id = "id1", url = "http://s1",
+                audience = $"api://ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+            };
+
+            // Act
+            var scope = Utility.ResolveTokenScopeForServer(server, config);
+
+            // Assert — "api://<AtgAppId>" is equivalent to the bare GUID; V1 fallback applies
+            scope.Should().Be("ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default");
+        }
+
+        [Fact]
+        public void ResolveTokenScopeForServer_ApiPrefixedAtgAudience_CaseInsensitive_ReturnsAtgScope()
+        {
+            var config = new ConfigurationBuilder().Build();
+            var server = new Microsoft.Agents.A365.Tooling.Models.MCPServerConfig
+            {
+                mcpServerName = "server1", id = "id1", url = "http://s1",
+                audience = "API://EA9FFC3E-8A23-4A7D-836D-234D7C7565C1"
+            };
+            Utility.ResolveTokenScopeForServer(server, config)
+                .Should().Be("ea9ffc3e-8a23-4a7d-836d-234d7c7565c1/.default");
+        }
+
+        [Fact]
         public void ResolveTokenScopeForServer_ApiPrefixedAudience_ReturnsPerAudienceScope()
         {
             // Arrange — V2 servers may send audience already in "api://<guid>" form.

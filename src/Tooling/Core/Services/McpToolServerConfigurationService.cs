@@ -577,7 +577,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// (set by <see cref="AttachPerAudienceTokensAsync"/>), the token from that header
         /// is used. Otherwise the caller-supplied <paramref name="fallbackToken"/> is returned.
         /// </summary>
-        private static string ResolveEffectiveToken(MCPServerConfig serverConfig, string fallbackToken)
+        internal static string ResolveEffectiveToken(MCPServerConfig serverConfig, string fallbackToken)
         {
             if (serverConfig.Headers is not null &&
                 serverConfig.Headers.TryGetValue(Constants.Headers.Authorization, out var headerValue) &&

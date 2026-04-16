@@ -141,54 +141,88 @@ public class McpToolServerConfigurationService_V2TokenTests
         trackingProvider.CallCount.Should().Be(1);
     }
 
-    // ─── ResolveEffectiveToken (via GetMcpClientToolsAsync routing) ───────────
+    // ─── ResolveEffectiveToken ────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetMcpClientToolsAsync_ServerWithHeadersSet_UsesPerServerToken()
+    public void ResolveEffectiveToken_ServerWithBearerHeader_ReturnsStrippedToken()
     {
-        // Arrange — simulate what AttachPerAudienceTokensAsync sets on the server
+        // Arrange — server carries an Authorization header set by AttachPerAudienceTokensAsync
         var server = V2Server();
         server.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Authorization"] = "Bearer per-server-token"
         };
 
-        // Capture the token passed into CreateMcpClientWithAuthHandlers by observing
-        // what the mock receives — we verify the effective token is NOT the fallback.
-        string? capturedToken = null;
-        _service
-            .Setup(x => x.GetMcpClientToolsAsync(
-                It.IsAny<ITurnContext>(), It.IsAny<MCPServerConfig>(),
-                It.IsAny<string>(), It.IsAny<ToolOptions>()))
-            .CallBase();
+        // Act
+        var token = McpToolServerConfigurationService.ResolveEffectiveToken(server, "fallback");
 
-        // Since CreateMcpClientWithAuthHandlers makes a real network call we can't test
-        // that path here — instead, test ResolveEffectiveToken logic directly through
-        // the token-provider overload where we can intercept GetMcpClientToolsAsync.
-        // We re-mock GetMcpClientToolsAsync to capture what token arrives.
-        _service
-            .Setup(x => x.GetMcpClientToolsAsync(
-                It.IsAny<ITurnContext>(),
-                It.Is<MCPServerConfig>(s => s.mcpServerName == "v2"),
-                It.IsAny<string>(),
-                It.IsAny<ToolOptions>()))
-            .Callback<ITurnContext, MCPServerConfig, string, ToolOptions>((_, _, t, _) => capturedToken = t)
-            .ReturnsAsync(new List<McpClientTool>());
+        // Assert — "Bearer " prefix is stripped; the per-server credential is used
+        token.Should().Be("per-server-token");
+    }
 
-        SetupListServers([server]);
-        var v2Scope = $"{V2AudienceId}/.default";
-        var provider = TokenProvider((v2Scope, "per-server-token"));
+    [Fact]
+    public void ResolveEffectiveToken_ServerWithRawTokenHeader_ReturnsHeaderValueAsIs()
+    {
+        // Arrange — header value has no "Bearer " prefix (raw token string)
+        var server = V1Server();
+        server.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Authorization"] = "raw-token-no-prefix"
+        };
 
         // Act
-        await _service.Object.EnumerateToolsFromServersAsync(
-            "agent-id", "fallback-token", provider, _turnContext.Object, new ToolOptions());
+        var token = McpToolServerConfigurationService.ResolveEffectiveToken(server, "fallback");
 
-        // Assert — the per-server token (extracted from Headers) was passed, not the fallback
-        capturedToken.Should().Be("fallback-token");
-        // Note: capturedToken here is the authToken parameter passed to GetMcpClientToolsAsync.
-        // ResolveEffectiveToken runs INSIDE GetMcpClientToolsAsync, which we mocked entirely.
-        // The real assertion is that the headers were set correctly on the server config.
-        server.Headers["Authorization"].Should().Be("Bearer per-server-token");
+        // Assert — returned verbatim; fallback is not used
+        token.Should().Be("raw-token-no-prefix");
+    }
+
+    [Fact]
+    public void ResolveEffectiveToken_ServerWithNullHeaders_ReturnsFallback()
+    {
+        // Arrange — V1 server: no headers attached (AttachPerAudienceTokensAsync was not called)
+        var server = V1Server();
+        server.Headers = null;
+
+        // Act
+        var token = McpToolServerConfigurationService.ResolveEffectiveToken(server, "fallback-token");
+
+        // Assert
+        token.Should().Be("fallback-token");
+    }
+
+    [Fact]
+    public void ResolveEffectiveToken_ServerWithNoAuthorizationKey_ReturnsFallback()
+    {
+        // Arrange — headers dict exists but has no Authorization entry
+        var server = V1Server();
+        server.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["User-Agent"] = "some-agent"
+        };
+
+        // Act
+        var token = McpToolServerConfigurationService.ResolveEffectiveToken(server, "fallback-token");
+
+        // Assert
+        token.Should().Be("fallback-token");
+    }
+
+    [Fact]
+    public void ResolveEffectiveToken_ServerWithEmptyAuthorizationHeader_ReturnsFallback()
+    {
+        // Arrange — header key present but value is whitespace
+        var server = V1Server();
+        server.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Authorization"] = "   "
+        };
+
+        // Act
+        var token = McpToolServerConfigurationService.ResolveEffectiveToken(server, "fallback-token");
+
+        // Assert — empty/whitespace value treated as absent; fallback applies
+        token.Should().Be("fallback-token");
     }
 
     // ─── EnumerateToolsFromServersAsync with token provider ─────────────────
@@ -284,6 +318,69 @@ public class McpToolServerConfigurationService_V2TokenTests
         // Assert
         toolsByServer.Should().ContainKey("valid");
         toolsByServer.Should().HaveCount(1);
+    }
+
+    // ─── Legacy overload V2 guard ────────────────────────────────────────────
+
+    [Fact]
+    public async Task EnumerateToolsFromServersAsync_LegacyPath_V2Server_ThrowsWithMigrationHint()
+    {
+        // The no-tokenProvider overload cannot perform per-audience OBO; it must throw instead of
+        // silently attaching the wrong shared ATG token to a V2 server.
+        var productionConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ASPNETCORE_ENVIRONMENT"] = "Production" })
+            .Build();
+        var service = new Mock<McpToolServerConfigurationService>(
+            MockBehavior.Default,
+            _logger.Object,
+            productionConfig,
+            new Mock<IServiceProvider>().Object,
+            new Mock<IHttpClientFactory>().Object) { CallBase = true };
+
+        service.Setup(x => x.ListToolServersAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ReturnsAsync(new List<MCPServerConfig> { V2Server("mail") });
+
+        var act = () => service.Object.EnumerateToolsFromServersAsync(
+            "agent-id", SharedAuthToken, _turnContext.Object, new ToolOptions());
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*'mail'*require per-audience tokens*");
+    }
+
+    [Fact]
+    public async Task EnumerateToolsFromServersAsync_LegacyPath_ApiPrefixedAtgAudience_DoesNotThrow()
+    {
+        // Regression: a gateway that returns the ATG app ID in "api://<guid>" form must still be
+        // treated as V1 — the guard should NOT fire and tool enumeration should proceed normally.
+        var productionConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ASPNETCORE_ENVIRONMENT"] = "Production" })
+            .Build();
+        var service = new Mock<McpToolServerConfigurationService>(
+            MockBehavior.Default,
+            _logger.Object,
+            productionConfig,
+            new Mock<IServiceProvider>().Object,
+            new Mock<IHttpClientFactory>().Object) { CallBase = true };
+
+        var v1WithApiAudience = new MCPServerConfig
+        {
+            mcpServerName = "v1server", id = "id1", url = "http://v1",
+            audience = $"api://{AtgAppId}"  // equivalent ATG audience form
+        };
+        service.Setup(x => x.ListToolServersAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ReturnsAsync(new List<MCPServerConfig> { v1WithApiAudience });
+        service.Setup(x => x.GetMcpClientToolsAsync(
+                It.IsAny<ITurnContext>(), It.IsAny<MCPServerConfig>(),
+                It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ReturnsAsync(new List<McpClientTool>());
+
+        // Act — should NOT throw; api://<AtgAppId> is a V1 server
+        var act = () => service.Object.EnumerateToolsFromServersAsync(
+            "agent-id", SharedAuthToken, _turnContext.Object, new ToolOptions());
+
+        await act.Should().NotThrowAsync();
     }
 
     // ─── MCPServerConfig.Headers model ───────────────────────────────────────

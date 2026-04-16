@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// Acquires OAuth tokens for MCP servers, routing V1 servers to the shared ATG token
     /// and V2 servers to per-audience tokens.
     /// </summary>
-    internal interface IMcpTokenProvider
+    public interface IMcpTokenProvider
     {
         /// <summary>
         /// Returns a Bearer token for the specified MCP server.

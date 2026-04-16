@@ -64,10 +64,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (authToken is null)
+        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
+        authToken ??= string.Empty;
 
         try
         {
@@ -88,10 +89,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 ? new DevMcpTokenProvider(_configuration, _logger)
                 : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
-            var (_, toolsByServer) = concreteService is not null
-                ? await concreteService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false)
-                : await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
             // Add all MCP tools from all servers
             foreach (var serverEntry in toolsByServer)
@@ -128,10 +126,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            if (authToken is null)
+            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
+            authToken ??= string.Empty;
 
             var toolOptions = new ToolOptions
             {
@@ -142,19 +141,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 ? new DevMcpTokenProvider(_configuration, _logger)
                 : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
-            IList<ModelContextProtocol.Client.McpClientTool> mcpTools;
-            if (concreteService is not null)
-            {
-                var (_, toolsByServer) = await concreteService.EnumerateToolsFromServersAsync(
-                    agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
-                mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
-            }
-            else
-            {
-                mcpTools = await _mcpServerConfigurationService.EnumerateAllToolsAsync(
-                    agentUserId, authToken, turnContext, toolOptions).ConfigureAwait(false);
-            }
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+                agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            IList<ModelContextProtocol.Client.McpClientTool> mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
 
             // Convert to AITool list
             var a365ToolList = mcpTools.Cast<AITool>().ToList();

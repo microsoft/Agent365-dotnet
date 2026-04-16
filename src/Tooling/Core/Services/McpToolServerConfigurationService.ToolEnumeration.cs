@@ -4,11 +4,13 @@
 namespace Microsoft.Agents.A365.Tooling.Services
 {
     using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Agents.Builder;
     using Microsoft.Extensions.Logging;
     using ModelContextProtocol.Client;
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Net.Http;
     using System.Threading.Tasks;
 
@@ -17,11 +19,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// </summary>
     public partial class McpToolServerConfigurationService
     {
-        /// <summary>
-        /// Enumerates tools from all configured MCP servers, acquiring per-audience tokens
-        /// for each server via <paramref name="tokenProvider"/> before connecting.
-        /// </summary>
-        internal virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
+        /// <inheritdoc/>
+        public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,
             string authToken,
             IMcpTokenProvider tokenProvider,
@@ -39,12 +38,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     tokenProvider,
                     toolOptions).ConfigureAwait(false);
             }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
-                return (new List<MCPServerConfig>(), toolsByServer);
-            }
-            catch (TaskCanceledException ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
                 return (new List<MCPServerConfig>(), toolsByServer);
@@ -147,6 +141,29 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 _logger.LogInformation("No MCP servers configured for agentInstanceId={AgentInstanceId}", agentInstanceId);
                 return (servers, toolsByServer);
+            }
+
+            // Guard: this overload cannot perform per-audience OBO exchange because it has no
+            // token provider.  In production, V2 servers (distinct audience GUID) would silently
+            // receive the wrong shared ATG token, causing 401s at the server.  Fail fast instead
+            // of silently sending the wrong credential.  Dev mode is exempt because the manifest
+            // normally contains only V1 servers and tokens come from environment variables.
+            if (!IsDevScenario())
+            {
+                var v2ServerNames = servers
+                    .Where(s => !string.IsNullOrWhiteSpace(s.audience) && !Utility.IsAtgAudience(s.audience))
+                    .Select(s => s.mcpServerName)
+                    .ToList();
+
+                if (v2ServerNames.Count > 0)
+                {
+                    var names = string.Join(", ", v2ServerNames.Select(n => $"'{n}'"));
+                    throw new InvalidOperationException(
+                        $"MCP server(s) {names} require per-audience tokens (V2) that cannot be " +
+                        $"acquired without a token provider. Migrate to the overload that accepts " +
+                        $"IMcpTokenProvider, or use AddToolServersToAgent / GetMcpToolsAsync in the " +
+                        $"extension service, which handle per-audience token acquisition automatically.");
+                }
             }
 
             // Filter valid servers first

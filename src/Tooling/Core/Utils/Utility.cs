@@ -65,15 +65,30 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         /// Resolves the OAuth scope to request when acquiring a token for the given MCP server.
         /// </summary>
         /// <remarks>
-        /// Scope resolution priority:
-        /// <list type="number">
-        ///   <item>If <c>server.scope</c> is set, use it verbatim (explicit caller override).</item>
-        ///   <item>If <c>server.audience</c> is a non-ATG GUID, construct a V2 per-audience scope:
-        ///       <c>api://&lt;audience&gt;/.default</c>.</item>
-        ///   <item>Otherwise (V1 — no audience, or audience equals ATG App ID), fall back to the
-        ///       shared ATG scope from configuration, which respects the
-        ///       <c>MCP_PLATFORM_AUTHENTICATION_SCOPE</c> environment override.</item>
+        /// <para>
+        /// A server is classified as <b>V1</b> (shared ATG token) when <c>server.audience</c> is
+        /// absent, blank, or equal to the ATG App ID in either its bare-GUID form
+        /// (<c>ea9ffc3e-8a23-4a7d-836d-234d7c7565c1</c>) or its <c>api://&lt;AtgAppId&gt;</c>
+        /// URI form.  For V1 servers the method returns the ATG scope from configuration,
+        /// honouring the <c>MCP_PLATFORM_AUTHENTICATION_SCOPE</c> environment override.
+        /// <c>server.scope</c> is ignored for V1 servers.
+        /// </para>
+        /// <para>
+        /// A server is classified as <b>V2</b> (per-audience token) when <c>server.audience</c>
+        /// is present and identifies an application other than ATG.  The scope is built verbatim
+        /// from the audience string exactly as returned by the gateway — no <c>api://</c>
+        /// prefix is added or removed:
+        /// <list type="bullet">
+        ///   <item>bare-GUID audience with <c>server.scope</c> set →
+        ///       <c>&lt;guid&gt;/&lt;scope&gt;</c></item>
+        ///   <item>bare-GUID audience without <c>server.scope</c> →
+        ///       <c>&lt;guid&gt;/.default</c></item>
+        ///   <item><c>api://&lt;guid&gt;</c> audience with <c>server.scope</c> set →
+        ///       <c>api://&lt;guid&gt;/&lt;scope&gt;</c></item>
+        ///   <item><c>api://&lt;guid&gt;</c> audience without <c>server.scope</c> →
+        ///       <c>api://&lt;guid&gt;/.default</c></item>
         /// </list>
+        /// </para>
         /// </remarks>
         /// <param name="server">The MCP server configuration.</param>
         /// <param name="configuration">Application configuration used to resolve the V1 fallback scope.</param>
@@ -81,11 +96,12 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         public static string ResolveTokenScopeForServer(MCPServerConfig server, IConfiguration configuration)
         {
             // V2: server carries its own audience different from the shared ATG App ID.
-            // The gateway returns scope as a bare permission name (e.g. "Tools.ListInvoke.All"),
-            // so we construct the full OAuth scope as "{audience}/{scope}" or "{audience}/.default".
-            if (!string.IsNullOrWhiteSpace(server.audience) &&
-                !string.Equals(server.audience, Constants.Authentication.AtgAppId, StringComparison.OrdinalIgnoreCase))
+            // IsAtgAudience accepts both "ea9ffc3e-..." and "api://ea9ffc3e-..." so that a gateway
+            // returning either form is correctly identified as V1, not silently routed to V2.
+            if (!string.IsNullOrWhiteSpace(server.audience) && !IsAtgAudience(server.audience))
             {
+                // Build the scope from the audience exactly as the gateway returned it,
+                // so "guid" and "api://guid" each produce a scope consistent with their own form.
                 return !string.IsNullOrWhiteSpace(server.scope)
                     ? $"{server.audience}/{server.scope}"
                     : $"{server.audience}/.default";
@@ -97,16 +113,46 @@ namespace Microsoft.Agents.A365.Tooling.Utils
         }
 
         /// <summary>
+        /// Returns <c>true</c> when <paramref name="audience"/> identifies the shared ATG application,
+        /// accepting both the bare GUID form (<c>{AtgAppId}</c>) and the equivalent
+        /// <c>api://{AtgAppId}</c> URI form that the tooling gateway may return.
+        /// </summary>
+        /// <param name="audience">The audience value from an MCP server configuration.</param>
+        internal static bool IsAtgAudience(string audience) =>
+            string.Equals(audience, Constants.Authentication.AtgAppId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(audience, $"api://{Constants.Authentication.AtgAppId}", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Returns the dev-mode Bearer token for the given MCP server name.
+        /// Resolution order:
+        /// <list type="number">
+        ///   <item>Per-server variable: <c>BEARER_TOKEN_{SERVERNAME_UPPER}</c> (hyphens replaced with underscores).</item>
+        ///   <item>Shared fallback variable: <c>BEARER_TOKEN</c>.</item>
+        /// </list>
+        /// Returns <c>null</c> when neither variable is set.
+        /// </summary>
+        /// <param name="serverName">The MCP server name used to derive the per-server env-var key.</param>
+        /// <param name="configuration">Application configuration to read env vars from.</param>
+        internal static string? GetDevBearerToken(string serverName, IConfiguration configuration)
+        {
+            var normalizedName = serverName.ToUpperInvariant().Replace('-', '_');
+            var perServerValue = configuration[$"BEARER_TOKEN_{normalizedName}"];
+            return !string.IsNullOrWhiteSpace(perServerValue) ? perServerValue : configuration["BEARER_TOKEN"];
+        }
+
+        /// <summary>
         /// Determines whether the application is running in a local development scenario.
         /// </summary>
         /// <param name="configuration">Application configuration used to read environment name.</param>
-        /// <returns><c>true</c> when the environment is <c>Development</c> (default when not set).</returns>
+        /// <returns>
+        /// <c>true</c> when <c>ASPNETCORE_ENVIRONMENT</c> or <c>DOTNET_ENVIRONMENT</c> is set to
+        /// <c>Development</c>; <c>false</c> when neither variable is set or either holds a different value.
+        /// </returns>
         internal static bool IsDevScenario(IConfiguration configuration)
         {
             var environment = configuration["ASPNETCORE_ENVIRONMENT"] ??
-                              configuration["DOTNET_ENVIRONMENT"] ??
-                              "Development";
-            return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+                              configuration["DOTNET_ENVIRONMENT"];
+            return environment != null && environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

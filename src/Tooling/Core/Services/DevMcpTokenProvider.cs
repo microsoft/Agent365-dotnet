@@ -4,6 +4,7 @@
 namespace Microsoft.Agents.A365.Tooling.Services
 {
     using Microsoft.Agents.A365.Tooling.Models;
+    using Microsoft.Agents.A365.Tooling.Utils;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using System;
@@ -50,10 +51,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             var normalizedName = server.mcpServerName.ToUpperInvariant().Replace('-', '_');
             var perServerKey = $"BEARER_TOKEN_{normalizedName}";
 
-            var perServerValue = _configuration[perServerKey];
-            var token = !string.IsNullOrWhiteSpace(perServerValue)
-                ? perServerValue
-                : _configuration["BEARER_TOKEN"];
+            var token = Utility.GetDevBearerToken(server.mcpServerName, _configuration);
 
             if (string.IsNullOrWhiteSpace(token))
             {
@@ -62,10 +60,25 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     $"Set environment variable '{perServerKey}' or 'BEARER_TOKEN'.");
             }
 
+            // Warn when a V2 server (distinct audience) falls back to the shared BEARER_TOKEN.
+            // The ATG-scoped shared token will cause a 401 at the V2 server; the developer should
+            // set BEARER_TOKEN_<SERVERNAME> to a token scoped for the server's own audience.
+            bool usingSharedFallback = string.IsNullOrWhiteSpace(_configuration[perServerKey]);
+            if (usingSharedFallback &&
+                !string.IsNullOrWhiteSpace(server.audience) &&
+                !Utility.IsAtgAudience(server.audience))
+            {
+                _logger.LogWarning(
+                    "Dev token for V2 MCP server '{ServerName}' (audience: '{Audience}') is using " +
+                    "the shared BEARER_TOKEN fallback. This token is ATG-scoped and may cause a 401. " +
+                    "Set '{PerServerKey}' to a token scoped for this server's audience.",
+                    server.mcpServerName, server.audience, perServerKey);
+            }
+
             _logger.LogDebug(
                 "Using dev token for MCP server '{ServerName}' (key: '{EnvKey}')",
                 server.mcpServerName,
-                !string.IsNullOrWhiteSpace(perServerValue) ? perServerKey : "BEARER_TOKEN");
+                usingSharedFallback ? "BEARER_TOKEN" : perServerKey);
 
             return Task.FromResult(token);
         }

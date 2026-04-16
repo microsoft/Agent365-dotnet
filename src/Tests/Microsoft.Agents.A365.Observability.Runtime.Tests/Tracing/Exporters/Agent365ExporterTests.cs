@@ -1,4 +1,7 @@
-﻿using FluentAssertions;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;

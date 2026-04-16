@@ -108,10 +108,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken is null)
+        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
+        authToken ??= string.Empty;
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
 
@@ -174,14 +175,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         //   Dev scenario  → DevMcpTokenProvider reads per-server env vars (no OBO flow needed).
         //   Production    → AgenticMcpTokenProvider performs OBO when auth objects are supplied;
         //                   falls back to the V1 shared-token path when they are absent.
-        var concreteService = _mcpServerConfigurationService as McpToolServerConfigurationService;
-
         if (ToolingUtility.IsDevScenario(_configuration))
         {
             IMcpTokenProvider tokenProvider = new DevMcpTokenProvider(_configuration, _logger);
-            (servers, toolsByServer) = concreteService is not null
-                ? await concreteService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false)
-                : await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
         }
         else if (userAuthorization is not null && authHandlerName is not null)
         {
@@ -189,9 +186,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             IMcpTokenProvider tokenProvider = new AgenticMcpTokenProvider(
                 userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            (servers, toolsByServer) = concreteService is not null
-                ? await concreteService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false)
-                : await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, turnContext, toolOptions).ConfigureAwait(false);
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
         }
         else
         {
