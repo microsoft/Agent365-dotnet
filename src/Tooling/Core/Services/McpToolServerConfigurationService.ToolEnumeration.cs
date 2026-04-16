@@ -38,11 +38,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     tokenProvider,
                     toolOptions).ConfigureAwait(false);
             }
-            catch (Exception ex) when (
-                ex is InvalidOperationException ||
-                ex is HttpRequestException ||
-                ex is TaskCanceledException ||
-                ex is TimeoutException)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
                 return (new List<MCPServerConfig>(), toolsByServer);
