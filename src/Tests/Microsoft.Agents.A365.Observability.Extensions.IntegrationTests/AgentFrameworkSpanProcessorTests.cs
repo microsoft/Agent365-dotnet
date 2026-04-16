@@ -9,6 +9,8 @@ using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Extensions.AgentFramework;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 
@@ -17,7 +19,7 @@ namespace Microsoft.Agents.A365.Observability.Extensions.IntegrationTests;
 /// <summary>
 /// Integration tests for <see cref="AgentFrameworkSpanProcessor"/> running against real Azure OpenAI
 /// via <see cref="IChatClient"/> with <c>UseOpenTelemetry()</c> — the same pipeline used by Agent Framework.
-/// Pipeline: IChatClient.UseOpenTelemetry() → TracerProvider → AgentFrameworkSpanProcessor → captured spans.
+/// Uses the real A365 SDK initialization: Builder → WithAgentFramework → Build.
 /// Requires: AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, AZURE_OPENAI_DEPLOYMENT env vars.
 /// </summary>
 [TestClass]
@@ -36,24 +38,36 @@ public class AgentFrameworkSpanProcessorTests
         !string.IsNullOrEmpty(Deployment);
 
     private List<Activity> _exportedActivities = new();
-    private TracerProvider? _tracerProvider;
+    private ServiceProvider? _serviceProvider;
 
     [TestInitialize]
     public void Setup()
     {
         _exportedActivities = new List<Activity>();
 
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource(OTelSourceName)
-            .AddProcessor(new AgentFrameworkSpanProcessor())
-            .AddProcessor(new ActivityCapturingProcessor(_exportedActivities))
+        // Use the real A365 SDK initialization path: Builder → WithAgentFramework → Build
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        new Runtime.Builder(services, configuration: null, useOpenTelemetryBuilder: true)
+            .WithAgentFramework()
             .Build();
+
+        // Add a capturing exporter — runs after all processors, at export time
+        services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddProcessor(new SimpleActivityExportProcessor(new ActivityCapturingExporter(_exportedActivities))));
+
+        _serviceProvider = services.BuildServiceProvider();
+
+        // Force the TracerProvider to be created by resolving it
+        _serviceProvider.GetService<TracerProvider>();
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        _tracerProvider?.Dispose();
+        _serviceProvider?.Dispose();
     }
 
     [TestMethod]
@@ -70,7 +84,7 @@ public class AgentFrameworkSpanProcessorTests
 
         await chatClient.GetResponseAsync(messages);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         var chatSpan = FindChatSpan();
         chatSpan.Should().NotBeNull("IChatClient should emit a chat span");
@@ -106,7 +120,7 @@ public class AgentFrameworkSpanProcessorTests
 
         await chatClient.GetResponseAsync(messages);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Dump all spans to see what the full pipeline emits
         Console.WriteLine($"\n  All captured activities ({_exportedActivities.Count}):");
@@ -137,13 +151,16 @@ public class AgentFrameworkSpanProcessorTests
     {
         SkipIfNoCredentials();
 
-        // Capture spans WITHOUT the processor to see raw IChatClient format
-        _tracerProvider?.Dispose();
+        // Capture spans WITHOUT the A365 processor — just raw IChatClient format
         var rawActivities = new List<Activity>();
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource(OTelSourceName)
-            .AddProcessor(new ActivityCapturingProcessor(rawActivities))
-            .Build();
+        var rawServices = new ServiceCollection();
+        rawServices.AddLogging();
+        rawServices.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddSource(OTelSourceName)
+                .AddProcessor(new SimpleActivityExportProcessor(new ActivityCapturingExporter(rawActivities))));
+        using var rawProvider = rawServices.BuildServiceProvider();
+        rawProvider.GetService<TracerProvider>();
 
         var chatClient = CreateChatClient();
         var messages = new List<ChatMessage>
@@ -153,7 +170,7 @@ public class AgentFrameworkSpanProcessorTests
 
         await chatClient.GetResponseAsync(messages);
 
-        _tracerProvider!.ForceFlush();
+        rawProvider.GetRequiredService<TracerProvider>().ForceFlush();
 
         var chatSpan = rawActivities.FirstOrDefault(a =>
             a.GetTagItem("gen_ai.operation.name") as string == "chat");
@@ -174,6 +191,12 @@ public class AgentFrameworkSpanProcessorTests
     }
 
     #region Helpers
+
+    private void ForceFlush()
+    {
+        var tracerProvider = _serviceProvider?.GetService<TracerProvider>();
+        tracerProvider?.ForceFlush();
+    }
 
     private IChatClient CreateChatClient()
     {
