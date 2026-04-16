@@ -17,7 +17,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Constants = Utils.Constants;
+using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
+using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
+using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
+using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
+using Constants = Microsoft.Agents.A365.Tooling.Utils.Constants;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Foundry (Persistent Agents) scenarios.
@@ -104,17 +108,19 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken is null)
+        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
+        authToken ??= string.Empty;
 
         var agenticAppId = turnContext.Activity.Recipient.AgenticAppId;
 
         try
         {
-            // Perform the (potentially async) work in a dedicated task to keep this synchronous signature.
-            var (toolDefinitions, toolResources) = GetMcpToolDefinitionsAndResourcesAsync(agenticAppId, authToken ?? string.Empty, turnContext).GetAwaiter().GetResult();
+            // Use V2-aware overload so per-audience tokens are applied to each server.
+            var (toolDefinitions, toolResources) = await GetMcpToolDefinitionsAndResourcesAsync(
+                agenticAppId, authToken ?? string.Empty, turnContext, userAuthorization, authHandlerName).ConfigureAwait(false);
 
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
@@ -130,13 +136,27 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
     }
 
-    /// <summary>
-    /// Get MCP tool definitions and resources.
-    /// </summary>
-    public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+    /// <inheritdoc />
+    public Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,
         ITurnContext turnContext)
+        => GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken, turnContext, userAuthorization: null, authHandlerName: null);
+
+    /// <summary>
+    /// Get MCP tool definitions and resources, optionally using per-audience tokens for V2 servers.
+    /// </summary>
+    /// <param name="agentInstanceId">Agent instance ID.</param>
+    /// <param name="authToken">Shared auth token (V1 fallback).</param>
+    /// <param name="turnContext">Turn context for the request.</param>
+    /// <param name="userAuthorization">When provided together with <paramref name="authHandlerName"/>, enables per-audience token acquisition for V2 servers.</param>
+    /// <param name="authHandlerName">Auth handler name used with <paramref name="userAuthorization"/>.</param>
+    public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+        string agentInstanceId,
+        string authToken,
+        ITurnContext turnContext,
+        UserAuthorization? userAuthorization,
+        string? authHandlerName)
     {
         // TODO: Make this method private
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
@@ -148,12 +168,35 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             UserAgentConfiguration = Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance
         };
 
-        // Use the shared enumeration service to get tools from all servers
-        var (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-            agentInstanceId,
-            authToken,
-            turnContext,
-            toolOptions).ConfigureAwait(false);
+        List<MCPServerConfig> servers;
+        Dictionary<string, IList<McpClientTool>> toolsByServer;
+
+        // Select token provider:
+        //   Dev scenario  → DevMcpTokenProvider reads per-server env vars (no OBO flow needed).
+        //   Production    → AgenticMcpTokenProvider performs OBO when auth objects are supplied;
+        //                   falls back to the V1 shared-token path when they are absent.
+        if (ToolingUtility.IsDevScenario(_configuration))
+        {
+            IMcpTokenProvider tokenProvider = new DevMcpTokenProvider(_configuration, _logger);
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+        }
+        else if (userAuthorization is not null && authHandlerName is not null)
+        {
+            // Production V2-aware path: per-audience OBO tokens.
+            IMcpTokenProvider tokenProvider = new AgenticMcpTokenProvider(
+                userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+        }
+        else
+        {
+            // Production V1 fallback: all servers share the single authToken.
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+                agentInstanceId,
+                authToken,
+                turnContext,
+                toolOptions).ConfigureAwait(false);
+        }
 
         if (servers.Count == 0)
         {
@@ -192,12 +235,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 
             var resource = new MCPToolResource(server_label);
 
-            // Set up authorization header
-            if (!string.IsNullOrWhiteSpace(authToken))
+            // Set up authorization header.
+            // Prefer the per-server token injected by AttachPerAudienceTokensAsync (V2),
+            // fall back to the shared authToken for V1 servers.
+            var rawToken = server.Headers is not null &&
+                           server.Headers.TryGetValue(Constants.Headers.Authorization, out var perServerHeader) &&
+                           !string.IsNullOrWhiteSpace(perServerHeader)
+                ? perServerHeader
+                : authToken;
+
+            if (!string.IsNullOrWhiteSpace(rawToken))
             {
-                // Normalize bearer header (ensure it starts with "Bearer ")
-                var headerValue = authToken.StartsWith($"{Constants.Headers.BearerPrefix} ", StringComparison.OrdinalIgnoreCase) ? authToken : $"{Constants.Headers.BearerPrefix} {authToken}";
-                resource.UpdateHeader("Authorization", headerValue);
+                // Normalize to "Bearer <token>"
+                var headerValue = rawToken.StartsWith($"{Constants.Headers.BearerPrefix} ", StringComparison.OrdinalIgnoreCase)
+                    ? rawToken
+                    : $"{Constants.Headers.BearerPrefix} {rawToken}";
+                resource.UpdateHeader(Constants.Headers.Authorization, headerValue);
             }
 
             // Set up other headers

@@ -12,6 +12,10 @@ using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
+using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
+using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
+using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
+using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
@@ -60,10 +64,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (authToken is null)
+        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
+        authToken ??= string.Empty;
 
         try
         {
@@ -78,12 +83,13 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use the shared enumeration service to get tools from all servers
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentUserId,
-                authToken,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
+            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
+            // In dev scenarios tokens come from environment variables; in production from OBO flow.
+            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
+                ? new DevMcpTokenProvider(_configuration, _logger)
+                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
             // Add all MCP tools from all servers
             foreach (var serverEntry in toolsByServer)
@@ -95,7 +101,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 updatedTools.Count, agentUserId);
 
             // Create agent with updated tools (since AIAgent is immutable)
-            var agentWithTools = chatClient.CreateAIAgent(
+            var agentWithTools = chatClient.AsAIAgent(
                 instructions: agentInstructions,
                 tools: [.. updatedTools]);
 
@@ -120,22 +126,24 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            if (authToken is null)
+            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
+            authToken ??= string.Empty;
 
             var toolOptions = new ToolOptions
             {
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use the shared enumeration service to get all tools
-            var mcpTools = await _mcpServerConfigurationService.EnumerateAllToolsAsync(
-                agentUserId,
-                authToken,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
+            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
+                ? new DevMcpTokenProvider(_configuration, _logger)
+                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+                agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            IList<ModelContextProtocol.Client.McpClientTool> mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
 
             // Convert to AITool list
             var a365ToolList = mcpTools.Cast<AITool>().ToList();
@@ -215,48 +223,4 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         }
     }
 
-    /// <inheritdoc />
-    public async Task<OperationResult> SendChatHistoryAsync(
-        ChatMessageStore chatMessageStore,
-        ITurnContext turnContext,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
-        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        return await SendChatHistoryAsync(chatMessageStore, turnContext, new ToolOptions
-        {
-            UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
-        }, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    public async Task<OperationResult> SendChatHistoryAsync(
-        ChatMessageStore chatMessageStore,
-        ITurnContext turnContext,
-        ToolOptions toolOptions,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        ArgumentNullException.ThrowIfNull(chatMessageStore, nameof(chatMessageStore));
-        ArgumentNullException.ThrowIfNull(turnContext, nameof(turnContext));
-        ArgumentNullException.ThrowIfNull(toolOptions, nameof(toolOptions));
-
-        try
-        {
-            // Retrieve messages from the store asynchronously
-            var messages = await chatMessageStore.GetMessagesAsync(cancellationToken).ConfigureAwait(false);
-
-            // Delegate to the IEnumerable overload
-            return await SendChatHistoryAsync(messages, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve and send chat history from ChatMessageStore");
-            return OperationResult.Failed(new OperationError(ex));
-        }
-    }
 }

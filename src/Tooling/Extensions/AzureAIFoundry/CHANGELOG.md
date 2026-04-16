@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - V2 per-audience token support
+  - `McpToolRegistrationService.AddToolServersToAgentAsync` now instantiates `AgenticMcpTokenProvider` and uses the V2-aware `GetMcpToolDefinitionsAndResourcesAsync` overload; each V2 MCP server's `MCPToolResource` is populated with its audience-scoped Bearer token instead of the shared ATG token
+
 ### Added
 - **Microsoft.Agents.A365.Tooling.AzureFoundry** - Azure Foundry integration tooling for MCP server management
   - `IMcpToolRegistrationService` interface for managing MCP tool server registrations
