@@ -162,6 +162,8 @@ namespace AgentNotification
                 Events.AgenticUserUndeleted => true,
                 Events.AgenticUserIdentityUpdated => true,
                 Events.AgenticUserManagerUpdated => true,
+                Events.AgenticUserEnabled => true,
+                Events.AgenticUserDisabled => true,
                 _ => false,
             };
         }
@@ -327,6 +329,32 @@ namespace AgentNotification
             app.RegisterExtension(new AgentNotification(app), a365 =>
             {
                 a365.OnLifecycleNotification(Events.AgenticUserManagerUpdated, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user enabled notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserEnabledNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserEnabled, routeHandler, rank, autoSignInHandlers);
+            });
+
+        /// <summary>
+        /// Registers a handler for agentic user disabled lifecycle notifications.
+        /// </summary>
+        /// <param name="app">The agent application to extend.</param>
+        /// <param name="routeHandler">The handler to invoke when a notification is received.</param>
+        /// <param name="rank">The route priority rank (default is 32767).</param>
+        /// <param name="autoSignInHandlers">Optional array of auto sign-in handlers.</param>
+        public static void OnAgenticUserDisabledNotification(this AgentApplication app, AgentNotificationHandler routeHandler, ushort rank = 32767, string[] autoSignInHandlers = null!) =>
+            app.RegisterExtension(new AgentNotification(app), a365 =>
+            {
+                a365.OnLifecycleNotification(Events.AgenticUserDisabled, routeHandler, rank, autoSignInHandlers);
             });
 
         /// <summary>
