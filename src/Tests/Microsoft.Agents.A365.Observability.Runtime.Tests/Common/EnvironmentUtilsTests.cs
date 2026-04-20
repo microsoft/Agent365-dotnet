@@ -45,6 +45,6 @@ public class EnvironmentUtilsTests
         // Assert
         Assert.IsNotNull(scopes);
         Assert.AreEqual(1, scopes.Length);
-        Assert.AreEqual("https://api.powerplatform.com/.default", scopes[0]);
+        Assert.AreEqual("api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite", scopes[0]);
     }
 }
