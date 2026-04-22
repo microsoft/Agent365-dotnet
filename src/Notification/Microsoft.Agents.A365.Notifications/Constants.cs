@@ -60,7 +60,7 @@ namespace Microsoft.Agents.A365.Notifications
         public const string AgenticUserDeleted = "agenticUserDeleted";
 
         /// <summary>
-        /// The event name for agentic user undeletion.
+        /// The event name for agentic user undeletion
         /// </summary>
         public const string AgenticUserUndeleted = "agenticUserUndeleted";
 
