@@ -59,6 +59,18 @@ Exceptions:
 ### Legacy References
 - **Never** use the keyword "Kairo" in any code - this is legacy terminology that must be replaced
 
+### Observability Export Configuration — Coordinated Review Required
+
+The following three constants must stay in sync. If a PR changes **any one** of them, the reviewer (human or Copilot) **must** ask the author to confirm the other two are still correct:
+
+| Constant | Location |
+|---|---|
+| `ProdObservabilityScope` | `src/Observability/Runtime/Common/EnvironmentUtils.cs` (accessed via `GetObservabilityAuthenticationScope()`) |
+| `DefaultEndpointHost` | `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterOptions.cs` |
+| Export URL path pattern | `BuildEndpointPath()` in `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterCore.cs` |
+
+Snapshot tests in `src/Tests/Microsoft.Agents.A365.Observability.Runtime.Tests/Tracing/Exporters/ExportConfigConsistencyTests.cs` will fail if any value drifts, but the developer must also verify the values are correct for the target environment — the tests only catch accidental drift, not intentional-but-incomplete updates.
+
 ### Pre-Commit Requirements
 Before committing changes, ensure:
 1. The solution builds: `dotnet build src/Microsoft.Agents.A365.Sdk.sln`

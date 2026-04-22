@@ -89,8 +89,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             var encodedAgentId = Uri.EscapeDataString(agentId);
 
             return useS2SEndpoint
-                ? $"/observabilityService/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces"
-                : $"/observability/tenants/{encodedTenantId}/agents/{encodedAgentId}/traces";
+                ? $"/observabilityService/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces"
+                : $"/observability/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces";
         }
 
         /// <summary>
@@ -158,11 +158,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 try
                 {
                     token = await tokenResolver(agentId, tenantId).ConfigureAwait(false);
-                    this._logger?.LogInformation($"Agent365ExporterCore: Obtained token for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogDebug("Agent365ExporterCore: Obtained token for agent {AgentId} tenant {TenantId}.", agentId, tenantId);
                 }
                 catch (Exception ex)
                 {
-                    this._logger?.LogError(ex, $"Agent365ExporterCore: TokenResolver threw for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, "Agent365ExporterCore: TokenResolver threw for agent {AgentId} tenant {TenantId}.", agentId, tenantId);
                 }
 
                 if (!string.IsNullOrEmpty(token))
@@ -171,23 +171,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 }
                 else
                 {
-                    this._logger?.LogWarning($"Agent365ExporterCore: No token obtained for agent {agentId} tenant {tenantId}. Skipping export for this identity.");
+                    this._logger?.LogWarning("Agent365ExporterCore: No token obtained. Skipping export for this identity.");
                     return ExportResult.Failure;
                 }
                     
                 HttpResponseMessage? resp = null;
                 try
                 {
-                    this._logger?.LogInformation($"Agent365ExporterCore: Sending {activities.Count} spans to {requestUri} for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogDebug("Agent365ExporterCore: Sending {SpanCount} spans to {RequestUri}.", activities.Count, requestUri);
                     resp = await sendAsync(request).ConfigureAwait(false);
                     var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
-                    this._logger?.LogInformation($"Agent365ExporterCore: HTTP {(int)resp.StatusCode} exporting spans for agent {agentId} tenant {tenantId}. '{CorrelationIdHeaderKey}': '{correlationId}'.");
+                    this._logger?.LogDebug("Agent365ExporterCore: HTTP {StatusCode} exporting spans. '{HeaderKey}': '{CorrelationId}'.", (int)resp.StatusCode, CorrelationIdHeaderKey, correlationId);
                     if (!resp.IsSuccessStatusCode)
                         return ExportResult.Failure;
                 }
                 catch (Exception ex)
                 {
-                    this._logger?.LogError(ex, $"Agent365ExporterCore: Exception exporting spans for agent {agentId} tenant {tenantId}.");
+                    this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
                     return ExportResult.Failure;
                 }
                 finally

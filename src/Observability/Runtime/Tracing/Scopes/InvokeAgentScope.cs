@@ -4,6 +4,9 @@
 using System;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -25,81 +28,94 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for agent invocation tracing.
         /// </summary>
-        /// <param name="invokeAgentDetails">The details of the agent invocation including endpoint, agent information, and conversation context.</param>
-        /// <param name="tenantDetails">The tenant details for the agent invocation.</param>
-        /// <param name="request">The request content for the invoked agent.</param>
-        /// <param name="callerAgentDetails">The details of the caller agent. Only used for agent-to-agent invocation.</param>
-        /// <param name="callerDetails">The details of the non-agentic caller.</param>
-        /// <param name="conversationId">The conversation ID for the agent invocation.</param>
+        /// <param name="request">The request details for the invocation.</param>
+        /// <param name="scopeDetails">Scope-level configuration (endpoint).</param>
+        /// <param name="agentDetails">The details of the agent being invoked.</param>
+        /// <param name="callerDetails">Optional composite caller details (human user and/or calling agent for A2A scenarios).</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind, span links).</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
-        /// <param name="startTime">Optional explicit start time. Useful when recording an agent invocation after execution has already completed.</param>
-        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
-        /// <param name="parentId">Optional parent Activity ID used to link this span to an upstream operation.</param>
-        /// <param name="spanKind">Optional span kind override. Defaults to <see cref="ActivityKind.Client"/>. Use <see cref="ActivityKind.Server"/> when the agent is receiving an inbound request.</param>
         /// <returns>A new InvokeAgentScope instance.</returns>
         /// <remarks>
         /// <para>
         /// <b>Certification Requirements:</b> The following parameters must be set (i.e., not <c>null</c>) for the agent to pass certification requirements:
         /// <list type="bullet">
-        ///   <item><paramref name="invokeAgentDetails"/></item>
-        ///   <item><paramref name="tenantDetails"/></item>
         ///   <item><paramref name="request"/></item>
+        ///   <item><paramref name="agentDetails"/></item>
         ///   <item><paramref name="callerDetails"/></item>
         /// </list>
-        /// </para>
-        /// <para>
-        /// <b>Note:</b> While <paramref name="request"/> and <paramref name="callerDetails"/> are optional in the API, they must be provided (not <c>null</c>) to meet certification requirements.
         /// </para>
         /// <para>
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
         public static InvokeAgentScope Start(
-            InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request = null, AgentDetails? callerAgentDetails = null, CallerDetails? callerDetails = null, string? conversationId = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, string? parentId = null, ActivityKind? spanKind = null) => new InvokeAgentScope(invokeAgentDetails, tenantDetails, request, callerAgentDetails, callerDetails, conversationId, threatDiagnosticsSummary, startTime, endTime, parentId, spanKind);
+            Request request,
+            InvokeAgentScopeDetails scopeDetails,
+            AgentDetails agentDetails,
+            CallerDetails? callerDetails = null,
+            SpanDetails? spanDetails = null,
+            ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new InvokeAgentScope(request, scopeDetails, agentDetails, callerDetails, spanDetails, threatDiagnosticsSummary);
 
-        private InvokeAgentScope(InvokeAgentDetails invokeAgentDetails, TenantDetails tenantDetails, Request? request, AgentDetails? callerAgentDetails, CallerDetails? callerDetails, string? conversationId, ThreatDiagnosticsSummary? threatDiagnosticsSummary, DateTimeOffset? startTime, DateTimeOffset? endTime, string? parentId, ActivityKind? spanKind)
+        private InvokeAgentScope(
+            Request request,
+            InvokeAgentScopeDetails scopeDetails,
+            AgentDetails agentDetails,
+            CallerDetails? callerDetails,
+            SpanDetails? spanDetails,
+            ThreatDiagnosticsSummary? threatDiagnosticsSummary)
             : base(
-                kind: spanKind ?? ActivityKind.Client,
-                agentDetails: invokeAgentDetails.Details,
-                tenantDetails: tenantDetails,
                 operationName: OperationName,
-                activityName: string.IsNullOrWhiteSpace(invokeAgentDetails.Details.AgentName)
+                activityName: string.IsNullOrWhiteSpace(agentDetails?.AgentName)
                     ? OperationName
-                    : $"invoke_agent {invokeAgentDetails.Details.AgentName}",
-                startTime: startTime,
-                endTime: endTime,
-                parentId: parentId,
-                conversationId: conversationId,
-                sourceMetadata: request?.SourceMetadata,
-                callerDetails: callerDetails)
+                    : $"invoke_agent {agentDetails!.AgentName}",
+                agentDetails: agentDetails!,
+                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Client, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime, spanDetails?.SpanLinks),
+                userDetails: callerDetails?.UserDetails)
         {
-            var (endpoint, _, sessionId) = invokeAgentDetails;
-
-            SetTagMaybe(OpenTelemetryConstants.SessionIdKey, sessionId);
-            SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint?.Host);
+            SetTagMaybe(OpenTelemetryConstants.SessionIdKey, request?.SessionId);
+            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, request?.ConversationId);
             SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary?.ToJson());
 
-            // Only record port if it is different from 443
-            if (endpoint != null && endpoint.Port != 443)
+            var endpoint = scopeDetails?.Endpoint;
+            if (endpoint != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
+                SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
+                if (endpoint.Port != 443)
+                {
+                    SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
+                }
             }
 
-            // Set caller agent details tags
-            if (callerAgentDetails != null)
+            // Set request metadata
+            if (request?.Channel != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentNameKey, callerAgentDetails.AgentName);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgentAUID);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentUPNKey, callerAgentDetails.AgentUPN);
-                SetTagMaybe(OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
+                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, request.Channel.Name);
+                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, request.Channel.Link);
             }
 
-            // Set input messages 
-            if (request?.Content != null)
+            if (request?.InputContent != null)
             {
-                SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, request.Content);
+                RecordInputMessages(request.InputContent);
+            }
+            else if (request?.Content != null)
+            {
+                RecordInputMessages(new[] { request.Content });
+            }
+
+            // Set caller details tags
+            if (callerDetails != null)
+            {
+                var callerAgentDetails = callerDetails.CallerAgentDetails;
+                if (callerAgentDetails != null)
+                {
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentNameKey, callerAgentDetails.AgentName);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentIdKey, callerAgentDetails.AgentId);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentBlueprintIdKey, callerAgentDetails.AgentBlueprintId);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentAUIDKey, callerAgentDetails.AgenticUserId);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentEmailKey, callerAgentDetails.AgenticUserEmail);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentPlatformIdKey, callerAgentDetails.AgentPlatformId);
+                    SetTagMaybe(OpenTelemetryConstants.CallerAgentVersionKey, callerAgentDetails.AgentVersion);
+                }
             }
         }
 
@@ -113,18 +129,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         /// <summary>
         /// Records the input messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL ChatMessage with role "user".
         /// </summary>
         public void RecordInputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeInputMessages(messages);
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured input messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned input messages wrapper.</param>
+        public void RecordInputMessages(InputMessages messages)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiInputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>
         /// Records the output messages for telemetry tracking.
+        /// Plain strings are auto-wrapped as OTEL OutputMessage with role "assistant".
         /// </summary>
         public void RecordOutputMessages(string[] messages)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", messages));
+            var wrapper = MessageUtils.NormalizeOutputMessages(messages);
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(wrapper));
+        }
+
+        /// <summary>
+        /// Records structured output messages for telemetry tracking.
+        /// </summary>
+        /// <param name="messages">The versioned output messages wrapper.</param>
+        public void RecordOutputMessages(OutputMessages messages)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiOutputMessagesKey, MessageUtils.Serialize(messages));
         }
 
         /// <summary>

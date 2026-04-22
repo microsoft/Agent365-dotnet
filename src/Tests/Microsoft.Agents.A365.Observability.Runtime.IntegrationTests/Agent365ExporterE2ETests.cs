@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using FluentAssertions;
@@ -32,28 +32,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Test Agent",
                 agentDescription: "Agent for testing.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "testagent@ztaittest12.onmicrosoft.com",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "testagent@ztaittest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString(),
                 agentType: expectedAgentType);
             var endpoint = new Uri("https://test-agent-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: expectedAgentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
 
             var expectedRequest = new Request(
                 content: "Test request content",
-                executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata(
+                channel: new Channel(
                     name: "msteams",
-                    description: "https://testchannel.link"));
+                    link: "https://testchannel.link"));
 
             var expectedCallerDetails = new CallerDetails(
-                callerId: "caller-123",
-                callerName: "Test Caller",
-                callerUpn: "caller-123@ztaitest12.onmicrosoft.com",
-                callerClientIP: IPAddress.Parse("203.0.113.42"),
-                tenantId: expectedAgentDetails.TenantId);
+                userDetails: new UserDetails(
+                    userId: "caller-123",
+                    userName: "Test Caller",
+                    userEmail: "caller-123@ztaitest12.onmicrosoft.com",
+                    userClientIP: IPAddress.Parse("203.0.113.42")),
+                callerAgentDetails: null);
 
             var expectedThreatDiagnosticsSummary = new ThreatDiagnosticsSummary(
                 blockAction: true,
@@ -63,9 +62,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             // Act
             using (var scope = InvokeAgentScope.Start(
-                invokeAgentDetails: invokeAgentDetails,
-                tenantDetails: tenantDetails,
                 request: expectedRequest,
+                scopeDetails: invokeAgentScopeDetails,
+                agentDetails: expectedAgentDetails,
                 callerDetails: expectedCallerDetails,
                 threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
@@ -90,23 +89,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 .GetProperty("scopeSpans")[0]
                 .GetProperty("spans")[0]
                 .GetProperty("attributes");
-            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentDetails.Endpoint?.Host);
-            this.GetAttribute(attributes, "microsoft.channel.name").Should().Be(expectedRequest.SourceMetadata?.Name);
-            this.GetAttribute(attributes, "microsoft.channel.link").Should().Be(expectedRequest.SourceMetadata?.Description);
-            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
-            this.GetAttribute(attributes, "microsoft.caller.id").Should().Be(expectedCallerDetails.CallerId);
-            this.GetAttribute(attributes, "microsoft.caller.upn").Should().Be(expectedCallerDetails.CallerUpn);
-            this.GetAttribute(attributes, "microsoft.caller.name").Should().Be(expectedCallerDetails.CallerName);
-            this.GetAttribute(attributes, "client.address").Should().Be(expectedCallerDetails.CallerClientIP?.ToString());
-            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Input message 1,Input message 2");
-            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Output message 1");
+            this.GetAttribute(attributes, "server.address").Should().Be(invokeAgentScopeDetails.Endpoint?.Host);
+            this.GetAttribute(attributes, "microsoft.channel.name").Should().Be(expectedRequest.Channel?.Name);
+            this.GetAttribute(attributes, "microsoft.channel.link").Should().Be(expectedRequest.Channel?.Link);
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
+            this.GetAttribute(attributes, "user.id").Should().Be(expectedCallerDetails.UserDetails?.UserId);
+            this.GetAttribute(attributes, "user.email").Should().Be(expectedCallerDetails.UserDetails?.UserEmail);
+            this.GetAttribute(attributes, "user.name").Should().Be(expectedCallerDetails.UserDetails?.UserName);
+            this.GetAttribute(attributes, "client.address").Should().Be(expectedCallerDetails.UserDetails?.UserClientIP?.ToString());
+            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Input message 1").And.Contain("Input message 2").And.Contain("\"version\":\"0.1.0\"");
+            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Output message 1").And.Contain("\"version\":\"0.1.0\"");
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgenticUserId);
+            this.GetAttribute(attributes, "microsoft.agent.user.email").Should().Be(expectedAgentDetails.AgenticUserEmail);
             this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.operation.name").Should().Be("invoke_agent");
             var threatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
             threatSummaryJson.Should().Contain("\"blockAction\":true");
@@ -128,12 +127,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Tool Agent",
                 agentDescription: "Agent for tool execution.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "toolagent@ztaittest12.onmicrosoft.com",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "toolagent@ztaittest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString(),
                 agentType: expectedAgentType);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://tool-endpoint:8443");
             var toolCallDetails = new ToolCallDetails(
                 toolName: "TestTool",
@@ -150,15 +148,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 reason: "No threats detected during tool execution.",
                 diagnostics: null);
 
-            var expectedToolCallerDetails = new CallerDetails(
-                callerId: "tool-caller-456",
-                callerName: "Tool Caller",
-                callerUpn: "tool-caller@ztaitest12.onmicrosoft.com",
-                callerClientIP: IPAddress.Parse("10.0.0.42"),
-                tenantId: expectedAgentDetails.TenantId);
+            var expectedToolUserDetails = new UserDetails(
+                userId: "tool-caller-456",
+                userName: "Tool Caller",
+                userEmail: "tool-caller@ztaitest12.onmicrosoft.com",
+                userClientIP: IPAddress.Parse("10.0.0.42"));
+
+            var expectedToolRequest = new Request(
+                content: "Tool execution request",
+                channel: new Channel(name: "tool-channel"));
 
             // Act
-            using (var scope = ExecuteToolScope.Start(toolCallDetails, expectedAgentDetails, tenantDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary, callerDetails: expectedToolCallerDetails))
+            using (var scope = ExecuteToolScope.Start(expectedToolRequest, toolCallDetails, expectedAgentDetails, userDetails: expectedToolUserDetails, threatDiagnosticsSummary: expectedThreatDiagnosticsSummary))
             {
                 scope.RecordResponse("Tool response content");
             }
@@ -186,10 +187,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgenticUserId);
+            this.GetAttribute(attributes, "microsoft.agent.user.email").Should().Be(expectedAgentDetails.AgenticUserEmail);
             this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.tool.name").Should().Be(toolCallDetails.ToolName);
             this.GetAttribute(attributes, "gen_ai.tool.arguments").Should().Be(toolCallDetails.Arguments);
             this.GetAttribute(attributes, "gen_ai.tool.call.id").Should().Be(toolCallDetails.ToolCallId);
@@ -198,11 +199,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.tool.server.name").Should().Be(toolCallDetails.ToolServerName);
             this.GetAttribute(attributes, "server.address").Should().Be(endpoint.Host);
             this.GetAttribute(attributes, "server.port").Should().Be(endpoint.Port.ToString());
-            this.GetAttribute(attributes, "gen_ai.tool.call.result").Should().Be("Tool response content");
-            this.GetAttribute(attributes, "microsoft.caller.id").Should().Be(expectedToolCallerDetails.CallerId);
-            this.GetAttribute(attributes, "microsoft.caller.upn").Should().Be(expectedToolCallerDetails.CallerUpn);
-            this.GetAttribute(attributes, "microsoft.caller.name").Should().Be(expectedToolCallerDetails.CallerName);
-            this.GetAttribute(attributes, "client.address").Should().Be(expectedToolCallerDetails.CallerClientIP?.ToString());
+            this.GetAttribute(attributes, "gen_ai.tool.call.result").Should().Contain("Tool response content");
+            this.GetAttribute(attributes, "user.id").Should().Be(expectedToolUserDetails.UserId);
+            this.GetAttribute(attributes, "user.email").Should().Be(expectedToolUserDetails.UserEmail);
+            this.GetAttribute(attributes, "user.name").Should().Be(expectedToolUserDetails.UserName);
+            this.GetAttribute(attributes, "client.address").Should().Be(expectedToolUserDetails.UserClientIP?.ToString());
             var toolThreatSummaryJson = this.GetAttribute(attributes, "threat.diagnostics.summary");
             toolThreatSummaryJson.Should().Contain("\"blockAction\":false");
             toolThreatSummaryJson.Should().Contain("\"reasonCode\":200");
@@ -222,14 +223,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Inference Agent",
                 agentDescription: "Agent for inference testing.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "inferenceagent@ztaittest12.onmicrosoft.com",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "inferenceagent@ztaittest12.onmicrosoft.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString(),
                 agentType: expectedAgentType);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
 
-            var inferenceDetails = new InferenceCallDetails(
+            var inferenceDetails= new InferenceCallDetails(
                 operationName: InferenceOperationType.Chat,
                 model: "gpt-4",
                 providerName: "OpenAI",
@@ -238,15 +238,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 finishReasons: new[] { "stop", "length" },
                 responseId: "response-xyz");
 
-            var expectedInferenceCallerDetails = new CallerDetails(
-                callerId: "inference-caller-789",
-                callerName: "Inference Caller",
-                callerUpn: "inference-caller@ztaitest12.onmicrosoft.com",
-                callerClientIP: IPAddress.Parse("172.16.0.42"),
-                tenantId: expectedAgentDetails.TenantId);
+            var expectedInferenceUserDetails = new UserDetails(
+                userId: "inference-caller-789",
+                userName: "Inference Caller",
+                userEmail: "inference-caller@ztaitest12.onmicrosoft.com",
+                userClientIP: IPAddress.Parse("172.16.0.42"));
+
+            var expectedInferenceRequest = new Request(
+                content: "Inference request",
+                channel: new Channel(name: "inference-channel"));
 
             // Act
-            using (var scope = InferenceScope.Start(inferenceDetails, expectedAgentDetails, tenantDetails, callerDetails: expectedInferenceCallerDetails))
+            using (var scope = InferenceScope.Start(expectedInferenceRequest, inferenceDetails, expectedAgentDetails, userDetails: expectedInferenceUserDetails))
             {
                 scope.RecordInputMessages(new[] { "Hello", "World" });
                 scope.RecordOutputMessages(new[] { "Hi there!" });
@@ -277,21 +280,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
-            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgentAUID);
-            this.GetAttribute(attributes, "microsoft.agent.user.upn").Should().Be(expectedAgentDetails.AgentUPN);
+            this.GetAttribute(attributes, "microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgenticUserId);
+            this.GetAttribute(attributes, "microsoft.agent.user.email").Should().Be(expectedAgentDetails.AgenticUserEmail);
             this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
-            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(tenantDetails.TenantId.ToString());
+            this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.request.model").Should().Be(inferenceDetails.Model);
             this.GetAttribute(attributes, "gen_ai.provider.name").Should().Be(inferenceDetails.ProviderName);
             this.GetAttribute(attributes, "gen_ai.usage.input_tokens").Should().Be("42");
             this.GetAttribute(attributes, "gen_ai.usage.output_tokens").Should().Be("84");
             this.GetAttribute(attributes, "gen_ai.response.finish_reasons").Should().Be("stop,length");
-            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Be("Hello,World");
-            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Be("Hi there!");
-            this.GetAttribute(attributes, "microsoft.caller.id").Should().Be(expectedInferenceCallerDetails.CallerId);
-            this.GetAttribute(attributes, "microsoft.caller.upn").Should().Be(expectedInferenceCallerDetails.CallerUpn);
-            this.GetAttribute(attributes, "microsoft.caller.name").Should().Be(expectedInferenceCallerDetails.CallerName);
-            this.GetAttribute(attributes, "client.address").Should().Be(expectedInferenceCallerDetails.CallerClientIP?.ToString());
+            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Hello").And.Contain("World").And.Contain("\"version\":\"0.1.0\"");
+            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Hi there!").And.Contain("\"version\":\"0.1.0\"");
+            this.GetAttribute(attributes, "user.id").Should().Be(expectedInferenceUserDetails.UserId);
+            this.GetAttribute(attributes, "user.email").Should().Be(expectedInferenceUserDetails.UserEmail);
+            this.GetAttribute(attributes, "user.name").Should().Be(expectedInferenceUserDetails.UserName);
+            this.GetAttribute(attributes, "client.address").Should().Be(expectedInferenceUserDetails.UserClientIP?.ToString());
         }
 
         [TestMethod]
@@ -317,8 +320,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     agentId: Guid.NewGuid().ToString(),
                     agentName: "Nested Agent",
                     agentDescription: "Agent for nested scope testing.",
-                    agentAUID: Guid.NewGuid().ToString(),
-                    agentUPN: "nestedagent@ztaittest12.onmicrosoft.com",
+                    agenticUserId: Guid.NewGuid().ToString(),
+                    agenticUserEmail: "nestedagent@ztaittest12.onmicrosoft.com",
                     agentBlueprintId: Guid.NewGuid().ToString(),
                     tenantId: Guid.NewGuid().ToString(),
                     agentType: agentType)
@@ -326,15 +329,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     agentId: null,
                     agentName: "Nested Agent",
                     agentDescription: "Agent for nested scope testing.",
-                    agentAUID: Guid.NewGuid().ToString(),
-                    agentUPN: "nestedagent@ztaittest12.onmicrosoft.com",
+                    agenticUserId: Guid.NewGuid().ToString(),
+                    agenticUserEmail: "nestedagent@ztaittest12.onmicrosoft.com",
                     agentBlueprintId: Guid.NewGuid().ToString(),
                     tenantId: Guid.NewGuid().ToString(),
                     agentType: agentType,
                     agentClientIP: null,
                     agentPlatformId: Guid.NewGuid().ToString());
 
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://nested-endpoint");
 
             var handler = new TestHttpMessageHandler(req =>
@@ -346,11 +348,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 
             var provider = this.CreateTestServiceProvider(httpClient);
 
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var request = new Request(
                 content: "Nested request",
-                executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata(name: "nested", description: "https://nestedchannel.link"));
+                channel: new Channel(name: "nested", link: "https://nestedchannel.link"));
 
             var toolCallDetails = new ToolCallDetails(
                 toolName: "NestedTool",
@@ -370,16 +371,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 responseId: "response-nested");
 
             // Act
-            using (var agentScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            using (var agentScope = InvokeAgentScope.Start(request, invokeAgentScopeDetails, agentDetails))
             {
                 agentScope.RecordInputMessages(new[] { "Agent input" });
                 agentScope.RecordOutputMessages(new[] { "Agent output" });
 
-                using (var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails))
+                using (var toolScope = ExecuteToolScope.Start(request, toolCallDetails, agentDetails))
                 {
                     toolScope.RecordResponse("Tool response");
 
-                    using (var inferenceScope = InferenceScope.Start(inferenceDetails, agentDetails, tenantDetails))
+                    using (var inferenceScope = InferenceScope.Start(request, inferenceDetails, agentDetails))
                     {
                         inferenceScope.RecordInputMessages(new[] { "Inference input" });
                         inferenceScope.RecordOutputMessages(new[] { "Inference output" });
@@ -435,17 +436,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Test Agent",
                 agentDescription: "Agent for truncation test.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "testagent@contoso.com",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "testagent@contoso.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString());
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://test-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(details: agentDetails, endpoint: endpoint);
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var request = new Request(
                 content: "Test request content",
-                executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata(name: "test", id: "test-id"));
+                channel: new Channel(name: "test"));
 
             var toolCallDetails = new ToolCallDetails(
                 toolName: "LargeFileTool",
@@ -456,11 +455,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 endpoint: endpoint);
 
             // Act: Start nested scopes
-            using (var agentScope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+            using (var agentScope = InvokeAgentScope.Start(request, invokeAgentScopeDetails, agentDetails))
             {
                 agentScope.RecordInputMessages(new[] { "Agent input" });
                 agentScope.RecordOutputMessages(new[] { "Agent output" });
-                using (var toolScope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails))
+                using (var toolScope = ExecuteToolScope.Start(request, toolCallDetails, agentDetails))
                 {
                     toolScope.RecordResponse("Tool response");
                 }
@@ -497,7 +496,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     foundInvokeAgent = true;
                     // Should NOT be truncated
                     var input = this.GetAttribute(attrs, "gen_ai.input.messages");
-                    input.Should().Be("Agent input");
+                    input.Should().Contain("Agent input").And.Contain("\"version\":\"0.1.0\"");
                 }
                 if (opName == "execute_tool")
                 {
@@ -562,19 +561,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 agentId: Guid.NewGuid().ToString(),
                 agentName: "Singleton Test Agent",
                 agentDescription: "Testing singleton exporter behavior.",
-                agentAUID: Guid.NewGuid().ToString(),
-                agentUPN: "singleton@test.com",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "singleton@test.com",
                 agentBlueprintId: Guid.NewGuid().ToString(),
                 tenantId: Guid.NewGuid().ToString());
 
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var endpoint = new Uri("https://singleton-test-endpoint");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var request = new Request(
                 content: "Singleton test request",
-                executionType: ExecutionType.HumanToAgent,
-                sourceMetadata: new SourceMetadata(name: "test", description: "singleton test"));
-            using (var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails, request))
+                channel: new Channel(name: "test", link: "singleton test"));
+            using (var scope = InvokeAgentScope.Start(request, invokeAgentScopeDetails, agentDetails))
             {
                 scope.RecordInputMessages(new[] { "Test input" });
                 scope.RecordOutputMessages(new[] { "Test output" });

@@ -37,7 +37,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string[]? inputMessages, 
             string[]? outputMessages, 
@@ -45,13 +44,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata,
-            CallerDetails? callerDetails)
+            Channel? channel,
+            CallerDetails? callerDetails,
+            string? traceId)
         {
             var data = ExecuteInferenceDataBuilder.Build(
                 inferenceCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 inputMessages,
                 outputMessages,
@@ -59,8 +58,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata,
-                callerDetails: callerDetails);
+                channel,
+                callerDetails: callerDetails,
+                traceId: traceId);
 
             logger.Log(
                 LogLevel.Information,
@@ -73,32 +73,32 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogInvokeAgent(
-            InvokeAgentDetails invokeAgentDetails, 
-            TenantDetails tenantDetails, 
+            InvokeAgentScopeDetails invokeAgentScopeDetails, 
+            AgentDetails agentDetails, 
             string conversationId, 
             Request? request, 
-            AgentDetails? callerAgentDetails, 
             CallerDetails? callerDetails, 
             string[]? inputMessages, 
             string[]? outputMessages, 
             DateTimeOffset? startTime, 
             DateTimeOffset? endTime, 
             string? spanId, 
-            string? parentSpanId)
+            string? parentSpanId,
+            string? traceId)
         {
             var data = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                invokeAgentScopeDetails,
+                agentDetails,
                 conversationId,
                 request,
-                callerAgentDetails,
                 callerDetails,
                 inputMessages,
                 outputMessages,
                 startTime,
                 endTime,
                 spanId,
-                parentSpanId);
+                parentSpanId,
+                traceId: traceId);
 
             logger.Log(
                 LogLevel.Information,
@@ -113,28 +113,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogToolCall(
             ToolCallDetails toolCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string? responseContent, 
             DateTimeOffset? startTime, 
             DateTimeOffset? endTime, 
             string? spanId, 
             string? parentSpanId,
-            SourceMetadata? sourceMetadata,
-            CallerDetails? callerDetails)
+            Channel? channel,
+            CallerDetails? callerDetails,
+            string? traceId)
         {
             var data = ExecuteToolDataBuilder.Build(
                 toolCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 responseContent,
                 startTime,
                 endTime,
                 spanId,
                 parentSpanId,
-                sourceMetadata,
-                callerDetails: callerDetails);
+                channel,
+                callerDetails: callerDetails,
+                traceId: traceId);
 
             logger.Log(
                 LogLevel.Information,
@@ -148,27 +148,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <inheritdoc/>
         public void LogOutput(
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             Response response,
             string? conversationId = null,
-            SourceMetadata? sourceMetadata = null,
+            Channel? channel = null,
             CallerDetails? callerDetails = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
+            string? parentSpanId = null,
+            string? traceId = null)
         {
             var data = OutputDataBuilder.Build(
                 agentDetails,
-                tenantDetails,
                 response,
                 conversationId,
-                sourceMetadata,
+                channel,
                 callerDetails,
                 startTime,
                 endTime,
                 spanId,
-                parentSpanId);
+                parentSpanId,
+                traceId: traceId);
 
             logger.Log(
                 LogLevel.Information,
@@ -181,7 +181,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         private static string LogFormatter(Dictionary<string, object?> data, Exception? ex)
         {
-            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}";
+            return $"Name: {data["Name"]}, SpanId: {data["SpanId"]}, ParentSpanId: {data["ParentSpanId"]}, TraceId: {data["TraceId"]}";
         }
     }
 }

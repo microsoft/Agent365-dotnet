@@ -24,18 +24,30 @@ namespace Microsoft.Agents.A365.Tooling.Models
         public required string url { get; set; }
 
         /// <summary>
-        /// Gets or sets the scope of the MCP server.
+        /// Gets or sets the OAuth scope for this server.
+        /// V2 servers supply their own scope (e.g. "api://&lt;audience&gt;/Tools.ListInvoke.All").
+        /// Null for V1 servers that share the ATG token.
         /// </summary>
-        public required string scope { get; set; }
+        public string? scope { get; set; }
 
         /// <summary>
-        /// Gets or sets the audience of the MCP server.
+        /// Gets or sets the OAuth audience (Application ID) for this server.
+        /// Non-null for V2 servers that require a per-audience token.
+        /// Null or equal to the ATG App ID for V1 servers.
         /// </summary>
-        public required string audience { get; set; }
+        public string? audience { get; set; }
 
         /// <summary>
-        /// Gets or sets the publisher of the MCP server.
+        /// Gets or sets the publisher identifier for this server.
         /// </summary>
-        public required string publisher { get; set; }
+        public string? publisher { get; set; }
+
+        /// <summary>
+        /// Gets or sets per-server HTTP headers, including the Authorization header populated
+        /// by <c>AttachPerAudienceTokensAsync</c> before tool connections are established.
+        /// Null until token attachment has run; callers should treat a missing Authorization
+        /// header as a signal to fall back to the shared ATG token.
+        /// </summary>
+        public Dictionary<string, string>? Headers { get; set; }
     }
 }

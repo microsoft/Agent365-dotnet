@@ -21,14 +21,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="spanKind">Optional span kind override. Defaults to <c>null</c> (unset). Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         public ExecuteToolData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
             string? parentSpanId = null,
-            string? spanKind = null)
-            : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind)
+            string? spanKind = null,
+            string? traceId = null)
+            : base(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId)
         { }
 
         /// <summary>

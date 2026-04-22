@@ -60,15 +60,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiAgentIdKey = "gen_ai.agent.id";
         public const string GenAiAgentNameKey = "gen_ai.agent.name";
         public const string GenAiAgentDescriptionKey = "gen_ai.agent.description";
+        public const string GenAiAgentVersionKey = "gen_ai.agent.version";
         public const string AgentAUIDKey = "microsoft.agent.user.id";
-        public const string AgentUPNKey = "microsoft.agent.user.upn";
+        public const string AgentEmailKey = "microsoft.agent.user.email";
         public const string AgentBlueprintIdKey = "microsoft.a365.agent.blueprint.id";
         public const string AgentPlatformIdKey = "microsoft.a365.agent.platform.id";
 
-        // Caller dimensions (renamed from gen_ai.caller.* to microsoft.caller.*)
-        public const string CallerIdKey = "microsoft.caller.id";
-        public const string CallerUpnKey = "microsoft.caller.upn";
-        public const string CallerNameKey = "microsoft.caller.name";
+        // Human caller dimensions (OTel user.* namespace)
+        public const string UserIdKey = "user.id";
+        public const string UserEmailKey = "user.email";
+        public const string UserNameKey = "user.name";
         public const string CallerClientIpKey = "client.address";
 
         // Caller agent dimensions (renamed from gen_ai.caller.agent.* to microsoft.a365.caller.agent.*)
@@ -76,8 +77,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string CallerAgentIdKey = "microsoft.a365.caller.agent.id";
         public const string CallerAgentBlueprintIdKey = "microsoft.a365.caller.agent.blueprint.id";
         public const string CallerAgentAUIDKey = "microsoft.a365.caller.agent.user.id";
-        public const string CallerAgentUPNKey = "microsoft.a365.caller.agent.user.upn";
+        public const string CallerAgentEmailKey = "microsoft.a365.caller.agent.user.email";
         public const string CallerAgentPlatformIdKey = "microsoft.a365.caller.agent.platform.id";
+        public const string CallerAgentVersionKey = "microsoft.a365.caller.agent.version";
 
         // Service attributes
         public const string ServiceNameKey = "service.name";

@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -18,12 +19,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <summary>
         /// Builds complete data for an invoke_agent operation.
         /// </summary>
-        /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
-        /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="invokeAgentScopeDetails">The scope-level details of the agent invocation.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="conversationId">The required conversation ID for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
-        /// <param name="callerAgentDetails">The details of the caller agent.</param>
-        /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="callerDetails">The details of the caller.</param>
         /// <param name="inputMessages">Optional input messages to include in the telemetry.</param>
         /// <param name="outputMessages">Optional output messages to include in the telemetry.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
@@ -32,13 +32,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Client"/> or <see cref="SpanKindConstants.Server"/> as appropriate.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
-            InvokeAgentDetails invokeAgentDetails,
-            TenantDetails tenantDetails,
+            InvokeAgentScopeDetails invokeAgentScopeDetails,
+            AgentDetails agentDetails,
             string conversationId,
             Request? request = null,
-            AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
@@ -47,14 +47,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null,
-            string? spanKind = null)
+            string? spanKind = null,
+            string? traceId = null)
         {
             var attributes = BuildAttributes(
-                invokeAgentDetails,
-                tenantDetails,
+                invokeAgentScopeDetails,
+                agentDetails,
                 conversationId,
                 request,
-                callerAgentDetails,
                 callerDetails,
                 inputMessages,
                 outputMessages,
@@ -66,28 +66,27 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 endTime,
                 spanId,
                 parentSpanId,
-                spanKind);
+                spanKind,
+                traceId);
         }
 
         /// <summary>
         /// Builds all attributes for an invoke_agent operation.
         /// </summary>
-        /// <param name="invokeAgentDetails">The details of the agent invocation.</param>
-        /// <param name="tenantDetails">The tenant details.</param>
+        /// <param name="invokeAgentScopeDetails">The scope-level details of the agent invocation.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="conversationId">The conversation ID for the agent invocation.</param>
         /// <param name="request">The request content for the invoked agent.</param>
-        /// <param name="callerAgentDetails">The details of the caller agent.</param>
-        /// <param name="callerDetails">The details of the non-agentic caller.</param>
+        /// <param name="callerDetails">The details of the caller.</param>
         /// <param name="inputMessages">Optional input messages to include in the attributes.</param>
         /// <param name="outputMessages">Optional output messages to include in the attributes.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <returns>A dictionary of attribute key-value pairs.</returns>
         private static Dictionary<string, object?> BuildAttributes(
-            InvokeAgentDetails invokeAgentDetails,
-            TenantDetails tenantDetails,
+            InvokeAgentScopeDetails invokeAgentScopeDetails,
+            AgentDetails agentDetails,
             string conversationId,
             Request? request = null,
-            AgentDetails? callerAgentDetails = null,
             CallerDetails? callerDetails = null,
             string[]? inputMessages = null,
             string[]? outputMessages = null,
@@ -98,17 +97,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Operation name
             AddIfNotNull(attributes, GenAiOperationNameKey, InvokeAgentDataBuilder.InvokeAgentOperationName);
 
-            // Add base agent details
-            AddAgentDetails(attributes, invokeAgentDetails.Details);
-
-            // Add tenant details
-            AddTenantDetails(attributes, tenantDetails);
+            // Add agent details (includes tenant ID)
+            AddAgentDetails(attributes, agentDetails);
 
             // Add endpoint details
-            AddEndpointDetails(attributes, invokeAgentDetails.Endpoint);
-
-            // Add session ID
-            AddIfNotNull(attributes, OpenTelemetryConstants.SessionIdKey, invokeAgentDetails.SessionId);
+            AddEndpointDetails(attributes, invokeAgentScopeDetails.Endpoint);
 
             // Add request details
             AddRequestDetails(attributes, request);
@@ -116,11 +109,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Add conversation ID
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
-            // Add caller details
+            // Add caller details (includes user details and caller agent details)
             AddCallerDetails(attributes, callerDetails);
-
-            // Add caller agent details
-            AddCallerAgentDetails(attributes, callerAgentDetails);
 
             // Add input messages
             AddInputMessagesAttributes(attributes, inputMessages);

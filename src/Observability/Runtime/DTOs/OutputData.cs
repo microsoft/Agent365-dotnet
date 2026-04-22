@@ -20,13 +20,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         /// <param name="endTime">Optional custom end time for the operation.</param>
         /// <param name="spanId">Optional span ID for the operation. If not provided one will be created.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         public OutputData(
             IDictionary<string, object?>? attributes = null,
             DateTimeOffset? startTime = null,
             DateTimeOffset? endTime = null,
             string? spanId = null,
-            string? parentSpanId = null)
-            : base(attributes, startTime, endTime, spanId, parentSpanId)
+            string? parentSpanId = null,
+            string? traceId = null)
+            : base(attributes, startTime, endTime, spanId, parentSpanId, traceId: traceId)
         { }
 
         /// <summary>

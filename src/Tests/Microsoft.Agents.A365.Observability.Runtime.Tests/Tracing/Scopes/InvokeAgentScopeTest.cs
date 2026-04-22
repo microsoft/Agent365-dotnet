@@ -1,6 +1,10 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
+using System.Diagnostics;
 using System.Net;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
@@ -17,11 +21,14 @@ public sealed class InvokeAgentScopeTest : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope.RecordResponse(expected);
         });
 
-        activity.ShouldHaveTag("gen_ai.output.messages", expected);
+        var tagValue = activity.Tags.First(t => t.Key == "gen_ai.output.messages").Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain(expected);
     }
 
     [TestMethod]
@@ -30,7 +37,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         const string expected = "Test error";
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope?.RecordError(new Exception(expected));
         });
         
@@ -43,10 +50,15 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var messages = new[] { "Hello", "How are you?" };
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope.RecordInputMessages(messages);
         });
-        activity.ShouldHaveTag("gen_ai.input.messages", string.Join(",", messages));
+
+        var tagValue = activity.Tags.First(t => t.Key == "gen_ai.input.messages").Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"user\"");
+        tagValue.Should().Contain("Hello");
+        tagValue.Should().Contain("How are you?");
     }
 
     [TestMethod]
@@ -55,10 +67,15 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var messages = new[] { "Hi there!", "I'm fine." };
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope.RecordOutputMessages(messages);
         });
-        activity.ShouldHaveTag("gen_ai.output.messages", string.Join(",", messages));
+
+        var tagValue = activity.Tags.First(t => t.Key == "gen_ai.output.messages").Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Hi there!");
+        tagValue.Should().Contain("I\\u0027m fine.");
     }
 
     [TestMethod]
@@ -67,7 +84,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var customStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope.SetStartTime(customStartTime);
         });
 
@@ -80,34 +97,36 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     public void RequestContent_PopulatesInputMessagesAttribute()
     {
         const string requestContent = "This is the input message content";
-        var request = new Request(requestContent);
+        var request = new Request(content: requestContent);
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails(), request);
+            using var scope = InvokeAgentScope.Start(request, ScopeDetails, TestAgentDetails);
         });
 
-        activity.ShouldHaveTag(GenAiInputMessagesKey, requestContent);
+        var tagValue = activity.Tags.First(t => t.Key == GenAiInputMessagesKey).Value;
+        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().Contain("\"role\":\"user\"");
+        tagValue.Should().Contain(requestContent);
     }
 
     [TestMethod]
     public void CallerClientIpTag_IsSetCorrectly()
     {
         var callerIp = IPAddress.Parse("203.0.113.42");
-        var callerDetails = new CallerDetails(
-            callerId: "caller-001",
-            callerName: "Test Caller",
-            callerUpn: "test.caller@contoso.com",
-            tenantId: "tenant-xyz",
-            callerClientIP: callerIp);
+        var userDetails = new UserDetails(
+            userId: "caller-001",
+            userName: "Test Caller",
+            userEmail: "test.caller@contoso.com",
+            userClientIP: callerIp);
+        var callerDetails = new CallerDetails(userDetails: userDetails);
 
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails: Details,
-                tenantDetails: Util.GetTenantDetails(),
-                request: null,
-                callerAgentDetails: null,
+                request: Util.GetDefaultRequest(),
+                scopeDetails: ScopeDetails,
+                agentDetails: TestAgentDetails,
                 callerDetails: callerDetails);
         });
 
@@ -125,15 +144,15 @@ public sealed class InvokeAgentScopeTest : ActivityTest
             agentName: "PlatformAgent",
             agentPlatformId: platformId);
 
-        var invokeAgentDetails = new InvokeAgentDetails(agentDetails, new Uri("https://example.com"));
-        var tenantDetails = Util.GetTenantDetails();
+        var scopeDetails = new InvokeAgentScopeDetails(endpoint: new Uri("https://example.com"));
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails,
-                tenantDetails);
+                Util.GetDefaultRequest(),
+                scopeDetails,
+                agentDetails);
         });
 
         // Assert
@@ -149,19 +168,14 @@ public sealed class InvokeAgentScopeTest : ActivityTest
             reasonCode: 112,
             reason: "The action was blocked because there is a noncompliant email address in the BCC field.",
             diagnostics: "{\"flaggedField\":\"bcc\",\"flaggedValue\":\"hacker@evil.com\"}");
-        var invokeAgentDetails = Details;
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails,
-                tenantDetails,
-                request: null,
-                callerAgentDetails: null,
-                callerDetails: null,
-                conversationId: null,
+                request: Util.GetDefaultRequest(),
+                scopeDetails: ScopeDetails,
+                agentDetails: TestAgentDetails,
                 threatDiagnosticsSummary: threatSummary);
         });
 
@@ -178,20 +192,13 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     [TestMethod]
     public void ThreatDiagnosticsSummary_IsNotSet_WhenNull()
     {
-        // Arrange
-        var invokeAgentDetails = Details;
-        var tenantDetails = Util.GetTenantDetails();
-
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                invokeAgentDetails,
-                tenantDetails,
-                request: null,
-                callerAgentDetails: null,
-                callerDetails: null,
-                conversationId: null,
+                request: Util.GetDefaultRequest(),
+                scopeDetails: ScopeDetails,
+                agentDetails: TestAgentDetails,
                 threatDiagnosticsSummary: null);
         });
 
@@ -208,13 +215,11 @@ public sealed class InvokeAgentScopeTest : ActivityTest
             reasonCode: 200,
             reason: "Blocked due to policy violation.",
             diagnostics: "{\"policy\":\"data-loss-prevention\"}");
-        var invokeAgentDetails = Details;
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(invokeAgentDetails, tenantDetails);
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             scope.RecordThreatDiagnosticsSummary(threatSummary);
         });
 
@@ -227,28 +232,28 @@ public sealed class InvokeAgentScopeTest : ActivityTest
     }
 
     [TestMethod]
-    public void Start_WithParentId_SetsParentOnActivity()
+    public void Start_WithParentContext_SetsParentOnActivity()
     {
         // Arrange
-        var tenantDetails = Util.GetTenantDetails();
-        string? parentId = null;
+        ActivityContext? parentContext = null;
         ListenForActivity(() =>
         {
-            using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
-            parentId = parentScope.Id;
+            using var parentScope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
+            parentContext = parentScope.GetActivityContext();
         });
 
         // Act
         var childActivity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                tenantDetails,
-                parentId: parentId);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         // Assert
-        childActivity.ParentId.Should().Be(parentId);
+        childActivity.ParentSpanId.ToString().Should().NotBeNullOrEmpty();
     }
 
     [TestMethod]
@@ -261,9 +266,10 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                Util.GetTenantDetails(),
-                startTime: customStartTime);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime));
         });
 
         // Assert
@@ -282,10 +288,10 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: customEndTime);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: customEndTime));
         });
 
         // Assert - Start time should be set to custom time
@@ -305,10 +311,10 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: initialEndTime);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: initialEndTime));
             scope.SetEndTime(laterEndTime);
         });
 
@@ -323,7 +329,7 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = InvokeAgentScope.Start(Details, Util.GetTenantDetails());
+            using var scope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
         });
 
         // Assert
@@ -337,12 +343,40 @@ public sealed class InvokeAgentScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                Util.GetTenantDetails(),
-                spanKind: System.Diagnostics.ActivityKind.Server);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(spanKind: System.Diagnostics.ActivityKind.Server));
         });
 
         // Assert
         activity.Kind.Should().Be(System.Diagnostics.ActivityKind.Server);
+    }
+
+    [TestMethod]
+    public void ActivityProcessor_PropagatesServerBaggage_ForInvokeAgentSpan()
+    {
+        // Arrange
+        using var tracerProvider = ConstructTracerProvider();
+        var serverAddress = "myagent.azurewebsites.net";
+        var serverPort = "8443";
+
+        // Act - set server address/port in baggage, then start an invoke_agent span
+        using (new Runtime.Common.BaggageBuilder()
+            .InvokeAgentServer(serverAddress, 8443)
+            .Build())
+        {
+            var activity = ListenForActivity(() =>
+            {
+                using var scope = InvokeAgentScope.Start(
+                    Util.GetDefaultRequest(),
+                    new InvokeAgentScopeDetails(endpoint: null),
+                    new AgentDetails("agent-1"));
+            });
+
+            // Assert - processor should coalesce server baggage onto the span
+            activity.ShouldHaveTag(ServerAddressKey, serverAddress);
+            activity.ShouldHaveTag(ServerPortKey, serverPort);
+        }
     }
 }

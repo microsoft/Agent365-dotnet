@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
@@ -14,11 +17,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-1", "AgentOne");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-min";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOperationNameKey);
@@ -28,17 +30,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
-        public void Build_WithSourceMetadata_IncludesChannelAttributes()
+        public void Build_WithChannel_IncludesChannelAttributes()
         {
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-src");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-src-inf";
-            var source = new SourceMetadata(id: "src-id", name: "ChannelInf", role: Role.Human, description: "https://channel/inf");
+            var source = new Channel(name: "ChannelInf", link: "https://channel/inf");
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, sourceMetadata: source);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, channel: source);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey).WhoseValue.Should().Be("ChannelInf");
@@ -51,11 +52,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 10, 20, new[]{"stop"}, "resp-1");
             var agent = new AgentDetails("agent-2");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-tokens";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be("10");
@@ -70,17 +70,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-3");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var input = new[]{"Hello"};
             var output = new[]{"Hi"};
             var conversationId = "conv-msg";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, inputMessages: input, outputMessages: output);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, inputMessages: input, outputMessages: output);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey).WhoseValue.Should().Be("Hello");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue.Should().Be("Hi");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hi").And.Contain("\"version\":\"0.1.0\"");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
 
@@ -90,11 +89,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-4");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-456";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
 
             // Assert
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be("conv-456");
@@ -106,11 +104,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-5");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-null";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
 
             // Assert
             data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey);
@@ -124,13 +121,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-6");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var start = DateTimeOffset.UtcNow.AddMinutes(-2);
             var end = DateTimeOffset.UtcNow;
             var conversationId = "conv-time";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, startTime: start, endTime: end);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, startTime: start, endTime: end);
 
             // Assert
             data.StartTime.Should().Be(start);
@@ -144,13 +140,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-7");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var spanId = "span-inf";
             var parentSpanId = "parent-inf";
             var conversationId = "conv-span";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, spanId: spanId, parentSpanId: parentSpanId);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, spanId: spanId, parentSpanId: parentSpanId);
 
             // Assert
             data.SpanId.Should().Be(spanId);
@@ -162,8 +157,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         {
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 33, 44, new[]{"length","stop"}, "resp-all");
-            var agent = new AgentDetails("agent-8", "AgentEight", "Desc", agentAUID: "auid8", agentUPN: "upn8@example.com", agentBlueprintId: "bp-8");
-            var tenant = new TenantDetails(Guid.NewGuid());
+            var agent = new AgentDetails("agent-8", "AgentEight", "Desc", agenticUserId: "auid8", agenticUserEmail: "upn8@example.com", agentBlueprintId: "bp-8");
             var conversationId = "conv-all";
             var input = new[]{"Hello"};
             var output = new[]{"World"};
@@ -172,13 +166,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var spanId = "span-all-inf";
             var parentSpanId = "parent-all-inf";
             var thoughtProcess = "First, I analyzed the request. Then, I formulated a response.";
-            var callerDetails = new CallerDetails("caller-inf-123", "Caller Inf Name", "callerinf@example.com", System.Net.IPAddress.Parse("192.168.1.100"), "caller-tenant-inf");
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "caller-inf-123", userName: "Caller Inf Name", userEmail: "callerinf@example.com", userClientIP: System.Net.IPAddress.Parse("192.168.1.100")));
 
             // Act
             var data = ExecuteInferenceDataBuilder.Build(
                 details,
                 agent,
-                tenant,
                 conversationId,
                 inputMessages: input,
                 outputMessages: output,
@@ -198,9 +191,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
             attrs.Should().ContainKey(OpenTelemetryConstants.GenAiAgentThoughtProcessKey).WhoseValue.Should().Be(thoughtProcess);
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerIdKey).WhoseValue.Should().Be("caller-inf-123");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerNameKey).WhoseValue.Should().Be("Caller Inf Name");
-            attrs.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey).WhoseValue.Should().Be("callerinf@example.com");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserIdKey).WhoseValue.Should().Be("caller-inf-123");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserNameKey).WhoseValue.Should().Be("Caller Inf Name");
+            attrs.Should().ContainKey(OpenTelemetryConstants.UserEmailKey).WhoseValue.Should().Be("callerinf@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.100");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
@@ -215,12 +208,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-9");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var start = DateTimeOffset.UtcNow;
             var conversationId = "conv-zero";
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, startTime: start);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, startTime: start);
 
             // Assert
             data.StartTime.Should().Be(start);
@@ -234,7 +226,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-extra", "provider-extra");
             var agent = new AgentDetails("agent-extra", "ExtraInfAgent");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-extra-inf";
             var extras = new Dictionary<string, object?>
             {
@@ -243,7 +234,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             };
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, extraAttributes: extras);
 
             // Assert
             data.Attributes.Should().ContainKey("inf.attr1").WhoseValue.Should().Be("v1");
@@ -256,7 +247,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-resv", "provider-resv");
             var agent = new AgentDetails("agent-resv", "ReservedInfAgent");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-resv-inf";
             var extras = new Dictionary<string, object?>
             {
@@ -266,7 +256,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             };
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, extraAttributes: extras);
 
             // Assert
             data.Attributes[OpenTelemetryConstants.GenAiRequestModelKey].Should().Be("model-resv");
@@ -280,7 +270,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "model-null", "provider-null");
             var agent = new AgentDetails("agent-null", "NullInfAgent");
-            var tenant = new TenantDetails(Guid.NewGuid());
             var conversationId = "conv-null-inf";
             var extras = new Dictionary<string, object?>
             {
@@ -289,7 +278,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             };
 
             // Act
-            var data = ExecuteInferenceDataBuilder.Build(details, agent, tenant, conversationId, extraAttributes: extras);
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, extraAttributes: extras);
 
             // Assert
             data.Attributes.Should().NotContainKey("inf.null");

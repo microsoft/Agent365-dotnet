@@ -38,7 +38,7 @@ public sealed class BaggageBuilderTest
             .AgentId(agent)
             .SessionId(session)
             .SessionDescription(sessionDescription)
-            .CallerClientIp(callerClientIp)
+            .UserClientIp(callerClientIp)
             .AgentPlatformId(platformId)
             .Build())
         {
@@ -58,5 +58,64 @@ public sealed class BaggageBuilderTest
         Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
         Baggage.Current.GetBaggage(CallerClientIpKey).Should().BeNull();
         Baggage.Current.GetBaggage(AgentPlatformIdKey).Should().BeNull();
+    }
+
+    [TestMethod]
+    public void InvokeAgentServer_SetsAddressAndPort()
+    {
+        // Arrange
+        Baggage.Current = default;
+        var address = "app.azurewebsites.net";
+        var port = 8080;
+
+        // Act
+        using (new BaggageBuilder()
+            .InvokeAgentServer(address, port)
+            .Build())
+        {
+            // Assert inside scope
+            Baggage.Current.GetBaggage(ServerAddressKey).Should().Be(address);
+            Baggage.Current.GetBaggage(ServerPortKey).Should().Be(port.ToString());
+        }
+
+        // Assert after dispose
+        Baggage.Current.GetBaggage(ServerAddressKey).Should().BeNull();
+        Baggage.Current.GetBaggage(ServerPortKey).Should().BeNull();
+    }
+
+    [TestMethod]
+    public void InvokeAgentServer_OmitsPort_WhenDefault443()
+    {
+        // Arrange
+        Baggage.Current = default;
+        var address = "app.azurewebsites.net";
+
+        // Act
+        using (new BaggageBuilder()
+            .InvokeAgentServer(address, 443)
+            .Build())
+        {
+            // Assert - address set, port omitted for 443
+            Baggage.Current.GetBaggage(ServerAddressKey).Should().Be(address);
+            Baggage.Current.GetBaggage(ServerPortKey).Should().BeNull();
+        }
+    }
+
+    [TestMethod]
+    public void InvokeAgentServer_SetsAddressOnly_WhenPortNull()
+    {
+        // Arrange
+        Baggage.Current = default;
+        var address = "app.azurewebsites.net";
+
+        // Act
+        using (new BaggageBuilder()
+            .InvokeAgentServer(address)
+            .Build())
+        {
+            // Assert
+            Baggage.Current.GetBaggage(ServerAddressKey).Should().Be(address);
+            Baggage.Current.GetBaggage(ServerPortKey).Should().BeNull();
+        }
     }
 }

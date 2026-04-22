@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Agents.A365.Observability.Hosting.Extensions;
@@ -19,7 +20,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Links to a parent span when <see cref="A365ParentSpanKey"/> is set in
+    /// Links to a parent span when <see cref="A365ParentTraceparentKey"/> is set in
     /// <see cref="ITurnContext.StackState"/>.
     /// </para>
     /// <para>
@@ -31,36 +32,34 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
     {
         /// <summary>
         /// The <see cref="ITurnContext.StackState"/> key used to store the parent
-        /// span reference. Set this value to a W3C traceparent string
+        /// trace context reference. Set this value to a W3C traceparent string
         /// (e.g. <c>"00-{trace_id}-{span_id}-{trace_flags}"</c>) to link
         /// <see cref="OutputScope"/> spans as children of an
         /// <see cref="InvokeAgentScope"/>.
         /// </summary>
-        public const string A365ParentSpanKey = "A365ParentSpanId";
+        public const string A365ParentTraceparentKey = "A365ParentTraceparent";
 
         /// <inheritdoc/>
         public async Task OnTurnAsync(ITurnContext turnContext, NextDelegate next, CancellationToken cancellationToken = default)
         {
             var agentDetails = DeriveAgentDetails(turnContext);
-            var tenantDetails = DeriveTenantDetails(turnContext);
 
-            if (agentDetails == null || tenantDetails == null)
+            if (agentDetails == null)
             {
                 await next(cancellationToken).ConfigureAwait(false);
                 return;
             }
 
-            var callerDetails = DeriveCallerDetails(turnContext);
+            var userDetails = DeriveUserDetails(turnContext);
             var conversationId = turnContext.Activity?.Conversation?.Id;
-            var sourceMetadata = DeriveSourceMetadata(turnContext);
+            var channel = DeriveChannel(turnContext);
 
             turnContext.OnSendActivities(CreateSendHandler(
                 turnContext,
                 agentDetails,
-                tenantDetails,
-                callerDetails,
+                userDetails,
                 conversationId,
-                sourceMetadata));
+                channel));
 
             await next(cancellationToken).ConfigureAwait(false);
         }
@@ -83,24 +82,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
             return new AgentDetails(
                 agentId: agentId,
                 agentName: recipient.Name,
-                agentAUID: recipient.AadObjectId,
-                agentUPN: recipient.AgenticUserId,
+                agenticUserId: recipient.AadObjectId,
+                agenticUserEmail: recipient.AgenticUserId,
                 agentDescription: recipient.Role,
                 tenantId: recipient.TenantId);
         }
 
-        private static TenantDetails? DeriveTenantDetails(ITurnContext turnContext)
-        {
-            var tenantId = turnContext.Activity?.Recipient?.TenantId;
-            if (string.IsNullOrWhiteSpace(tenantId) || !Guid.TryParse(tenantId, out var tenantGuid))
-            {
-                return null;
-            }
-
-            return new TenantDetails(tenantGuid);
-        }
-
-        private static CallerDetails? DeriveCallerDetails(ITurnContext turnContext)
+        private static UserDetails? DeriveUserDetails(ITurnContext turnContext)
         {
             var from = turnContext.Activity?.From;
             if (from == null)
@@ -108,14 +96,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 return null;
             }
 
-            return new CallerDetails(
-                callerId: from.Id ?? string.Empty,
-                callerName: from.Name ?? string.Empty,
-                callerUpn: from.AgenticUserId ?? string.Empty,
-                tenantId: from.TenantId);
+            return new UserDetails(
+                userId: from.Id ?? string.Empty,
+                userName: from.Name ?? string.Empty,
+                userEmail: from.AgenticUserId ?? string.Empty);
         }
 
-        private static SourceMetadata? DeriveSourceMetadata(ITurnContext turnContext)
+        private static Channel? DeriveChannel(ITurnContext turnContext)
         {
             var channelId = turnContext.Activity?.ChannelId;
             if (channelId == null)
@@ -123,18 +110,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                 return null;
             }
 
-            return new SourceMetadata(
+            return new Channel(
                 name: channelId.Channel,
-                description: channelId.SubChannel);
+                link: channelId.SubChannel);
         }
 
         private static SendActivitiesHandler CreateSendHandler(
             ITurnContext turnContext,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
-            CallerDetails? callerDetails,
+            UserDetails? userDetails,
             string? conversationId,
-            SourceMetadata? sourceMetadata)
+            Channel? channel)
         {
             return async (ctx, activities, nextSend) =>
             {
@@ -153,21 +139,32 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Middleware
                     return await nextSend().ConfigureAwait(false);
                 }
 
-                // Read parent span lazily so the agent handler can set it during logic()
-                string? parentId = null;
-                if (turnContext.StackState.TryGetValue(A365ParentSpanKey, out var parentSpanValue) && parentSpanValue != null)
+                // Read parent traceparent lazily so the agent handler can set it during logic()
+                ActivityContext? parentContext = null;
+                if (turnContext.StackState.TryGetValue(A365ParentTraceparentKey, out var traceparentValue) && traceparentValue != null)
                 {
-                    parentId = parentSpanValue.ToString();
+                    var traceparent = traceparentValue.ToString();
+                    if (!string.IsNullOrEmpty(traceparent))
+                    {
+                        parentContext = TraceContextHelper.ExtractContextFromHeaders(
+                            new Dictionary<string, string> { { "traceparent", traceparent } });
+                    }
                 }
 
-                var outputScope = OutputScope.Start(
-                    agentDetails: agentDetails,
-                    tenantDetails: tenantDetails,
-                    response: new Response(messages),
+                var request = new Request(
                     conversationId: conversationId,
-                    sourceMetadata: sourceMetadata,
-                    callerDetails: callerDetails,
-                    parentId: parentId);
+                    channel: channel);
+
+                SpanDetails? spanDetails = parentContext.HasValue
+                    ? new SpanDetails(parentContext: parentContext)
+                    : null;
+
+                var outputScope = OutputScope.Start(
+                    request: request,
+                    response: new Response(messages),
+                    agentDetails: agentDetails,
+                    userDetails: userDetails,
+                    spanDetails: spanDetails);
 
                 try
                 {

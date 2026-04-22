@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs;
 using Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders;
@@ -15,19 +18,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var request = new Request(
                 "test content",
-                ExecutionType.HumanToAgent,
-                "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+                sessionId: "session-456",
+                channel: new Channel(name: "source-name", link: "source-description"));
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 request: request);
 
@@ -35,7 +36,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
             telemetry.Attributes[OpenTelemetryConstants.ChannelNameKey].Should().Be("source-name");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
-                        telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
+            telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
         }
 
         [TestMethod]
@@ -44,14 +45,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-999";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId);
 
             // Assert
@@ -65,23 +65,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "caller-123", userName: "Caller Name", userEmail: "caller@example.com"));
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 callerDetails: callerDetails);
 
             // Assert
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerIdKey].Should().Be("caller-123");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerNameKey].Should().Be("Caller Name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserIdKey].Should().Be("caller-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserNameKey].Should().Be("Caller Name");
         }
 
         [TestMethod]
@@ -90,17 +89,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
-                callerAgentDetails: callerAgentDetails);
+                callerDetails: new CallerDetails(callerAgentDetails: callerAgentDetails));
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerAgentIdKey);
@@ -115,21 +113,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var inputMessages = new[] { "Hello", "How are you?" };
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 inputMessages: inputMessages);
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey].Should().Be("Hello,How are you?");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("How are you?");
         }
 
         [TestMethod]
@@ -138,21 +135,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var outputMessages = new[] { "Hi there!", "I'm fine." };
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 outputMessages: outputMessages);
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey].Should().Be("Hi there!,I'm fine.");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi there!").And.Contain("fine.").And.Contain("\"version\":\"0.1.0\"");
         }
 
         [TestMethod]
@@ -161,25 +157,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var inputMessages = new[] { "Hello" };
             var outputMessages = new[] { "Hi" };
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 inputMessages: inputMessages,
                 outputMessages: outputMessages);
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey].Should().Be("Hello");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey].Should().Be("Hi");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi").And.Contain("\"version\":\"0.1.0\"");
         }
 
         [TestMethod]
@@ -188,15 +183,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var inputMessages = new string[] { };
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 inputMessages: inputMessages);
 
@@ -210,14 +204,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 inputMessages: null,
                 outputMessages: null);
@@ -233,16 +226,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var startTime = DateTimeOffset.UtcNow.AddMinutes(-5);
             var endTime = DateTimeOffset.UtcNow;
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 startTime: startTime,
                 endTime: endTime);
@@ -259,16 +251,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var spanId = "abc123def456";
             var parentSpanId = "parent789ghi012";
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 spanId: spanId,
                 parentSpanId: parentSpanId);
@@ -287,20 +278,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 "agent-123",
                 "TestAgent",
                 "Test Description",
-                iconUri: null,
-                agentAUID: "auid-456",
-                agentUPN: "agent@example.com",
+                agenticUserId: "auid-456",
+                agenticUserEmail: "agent@example.com",
                 agentBlueprintId: "blueprint-789",
                 tenantId: "tenant-999");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails, sessionId: "session-456");
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var request = new Request(
                 "test content",
-                ExecutionType.HumanToAgent,
-                "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
+                sessionId: "session-456",
+                channel: new Channel(name: "source-name", link: "source-description"));
             var callerAgentDetails = new AgentDetails("caller-agent-789", "CallerAgent");
-            var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
+            var fullCallerDetails = new CallerDetails(
+                userDetails: new UserDetails(userId: "caller-123", userName: "Caller Name", userEmail: "caller@example.com"),
+                callerAgentDetails: callerAgentDetails);
             var conversationId = "conv-999";
             var inputMessages = new[] { "Hello" };
             var outputMessages = new[] { "Hi" };
@@ -311,22 +301,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
-                request,
-                callerAgentDetails,
-                callerDetails,
-                inputMessages,
-                outputMessages,
-                startTime,
-                endTime,
-                spanId,
-                parentSpanId);
+                request: request,
+                callerDetails: fullCallerDetails,
+                inputMessages: inputMessages,
+                outputMessages: outputMessages,
+                startTime: startTime,
+                endTime: endTime,
+                spanId: spanId,
+                parentSpanId: parentSpanId);
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelNameKey);
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerAgentIdKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
@@ -343,15 +332,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var startTime = DateTimeOffset.UtcNow;
             var conversationId = "conv-123";
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 startTime: startTime);
 
@@ -367,8 +355,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-extra", "ExtraAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-extra";
             var extras = new Dictionary<string, object?>
             {
@@ -378,8 +365,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 extraAttributes: extras);
 
@@ -394,8 +381,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-resv", "ReservedAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-resv";
             var extras = new Dictionary<string, object?>
             {
@@ -406,8 +392,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 extraAttributes: extras);
 
@@ -423,8 +409,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-null", "NullAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-null-extra";
             var extras = new Dictionary<string, object?>
             {
@@ -434,8 +419,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 extraAttributes: extras);
 
@@ -448,28 +433,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithAgentPlatformId_SetsExpectedAttributes()
         {
             // Arrange
+            var tenantId = Guid.NewGuid().ToString();
             var agentDetails = new AgentDetails(
                 agentPlatformId: "agent-123",
                 agentName: "TestAgent",
-                agentDescription: "Test Description");
-            var invokeAgentDetails = new InvokeAgentDetails(details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+                agentDescription: "Test Description",
+                tenantId: tenantId);
+            var scopeDetails = new InvokeAgentScopeDetails();
             var request = new Request(
                 "test content",
-                ExecutionType.HumanToAgent,
-                "session-456",
-                new SourceMetadata(id: "source-id", name: "source-name", role: Role.Human, description: "source-description"));
-            var callerDetails = new CallerDetails("caller-123", "Caller Name", "caller@example.com");
+                sessionId: "session-456",
+                channel: new Channel(name: "source-name", link: "source-description"));
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "caller-123", userName: "Caller Name", userEmail: "caller@example.com"));
             var conversationId = "conv-999";
             var inputMessages = new[] { "Hello" };
             var startTime = DateTimeOffset.UtcNow.AddMinutes(-1);
 
             // Act
             var telemetry = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
-                request,
+                request: request,
                 callerDetails: callerDetails,
                 inputMessages: inputMessages,
                 startTime: startTime);
@@ -488,16 +473,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes[OpenTelemetryConstants.ChannelNameKey].Should().Be("source-name");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ChannelLinkKey);
             telemetry.Attributes[OpenTelemetryConstants.ChannelLinkKey].Should().Be("source-description");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerIdKey].Should().Be("caller-123");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerNameKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerNameKey].Should().Be("Caller Name");
-            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.CallerUpnKey);
-            telemetry.Attributes[OpenTelemetryConstants.CallerUpnKey].Should().Be("caller@example.com");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserIdKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserIdKey].Should().Be("caller-123");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserNameKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserNameKey].Should().Be("Caller Name");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.UserEmailKey);
+            telemetry.Attributes[OpenTelemetryConstants.UserEmailKey].Should().Be("caller@example.com");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
-            telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantDetails.TenantId);
+            telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantId);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey].Should().Be("Hello");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
         }
 
         [TestMethod]
@@ -506,12 +491,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-sk-default";
 
             // Act
-            var data = InvokeAgentDataBuilder.Build(invokeAgentDetails, tenantDetails, conversationId);
+            var data = InvokeAgentDataBuilder.Build(scopeDetails, agentDetails, conversationId);
 
             // Assert
             data.SpanKind.Should().BeNull();
@@ -523,14 +507,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var endpoint = new Uri("https://example.com");
             var agentDetails = new AgentDetails("agent-123", "TestAgent");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: endpoint, details: agentDetails);
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
             var conversationId = "conv-sk-server";
 
             // Act
             var data = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                scopeDetails,
+                agentDetails,
                 conversationId,
                 spanKind: SpanKindConstants.Server);
 

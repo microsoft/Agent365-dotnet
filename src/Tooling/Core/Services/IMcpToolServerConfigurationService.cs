@@ -85,6 +85,19 @@ namespace Microsoft.Agents.A365.Tooling.Services
         Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions);
 
         /// <summary>
+        /// Enumerates all MCP tools from configured servers, acquiring per-audience tokens for each server.
+        /// V2 servers (distinct audience) receive audience-scoped tokens via <paramref name="tokenProvider"/>;
+        /// V1 servers fall back to <paramref name="authToken"/>.
+        /// </summary>
+        /// <param name="agentInstanceId">The agent instance ID.</param>
+        /// <param name="authToken">Shared authentication token (V1 fallback).</param>
+        /// <param name="tokenProvider">Provides per-server Bearer tokens, routing V2 servers to audience-scoped tokens.</param>
+        /// <param name="turnContext">Turn context for the current request.</param>
+        /// <param name="toolOptions">Tool options including user agent configuration.</param>
+        /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
+        Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, IMcpTokenProvider tokenProvider, ITurnContext turnContext, ToolOptions toolOptions);
+
+        /// <summary>
         /// Enumerates all MCP tools from configured servers, returning a flat list of all tools.
         /// </summary>
         /// <param name="agentInstanceId">The agent instance ID.</param>
