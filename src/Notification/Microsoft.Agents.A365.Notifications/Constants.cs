@@ -79,7 +79,7 @@ namespace Microsoft.Agents.A365.Notifications
         /// </summary>
         public const string AgenticUserEnabled = "agenticUserEnabled";
 
-                /// <summary>
+        /// <summary>
         /// The event name for agentic user disabled
         /// </summary>
         public const string AgenticUserDisabled = "agenticUserDisabled";
