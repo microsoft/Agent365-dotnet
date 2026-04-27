@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,6 +28,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private readonly ExportFormatter _formatter;
         private readonly ILogger<Agent365ExporterCore> _logger;
 
+        private static readonly HashSet<string> GenAiOperationNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            InvokeAgentScope.OperationName,
+            ExecuteToolScope.OperationName,
+            OutputScope.OperationName,
+            "chat",
+            nameof(InferenceOperationType.Chat),
+            nameof(InferenceOperationType.TextCompletion),
+            nameof(InferenceOperationType.GenerateContent),
+        };
+
+        private enum AddResult { Added, NonGenAI, MissingIdentity, Null }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent365ExporterCore"/> class.
         /// </summary>
@@ -40,6 +54,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
+        /// Only genAI activities (those with a known gen_ai.operation.name) are included.
         /// </summary>
         /// <param name="batch">The collection of activities to partition.</param>
         /// <returns>
@@ -48,17 +63,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(IEnumerable<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
+            int nonGenAICount = 0;
+            int missingIdentityCount = 0;
 
             foreach (var activity in batch)
             {
-                Agent365ExporterCore.TryAddActivityToMap(activity, map);
+                var result = Agent365ExporterCore.TryAddActivityToMap(activity, map);
+                if (result == AddResult.NonGenAI) nonGenAICount++;
+                else if (result == AddResult.MissingIdentity) missingIdentityCount++;
             }
 
+            LogPartitionResults(map.Count, nonGenAICount, missingIdentityCount);
             return map.Select(kvp => (kvp.Key.tenant, kvp.Key.agent, kvp.Value)).ToList();
         }
 
         /// <summary>
         /// Partitions a batch of activities by tenant and agent identity.
+        /// Only genAI activities (those with a known gen_ai.operation.name) are included.
         /// </summary>
         /// <param name="batch">The collection of activities to partition.</param>
         /// <returns>
@@ -67,12 +88,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public List<(string TenantId, string AgentId, List<Activity> Activities)> PartitionByIdentity(in Batch<Activity> batch)
         {
             var map = new Dictionary<(string tenant, string agent), List<Activity>>();
+            int nonGenAICount = 0;
+            int missingIdentityCount = 0;
 
             foreach (var activity in batch)
             {
-                Agent365ExporterCore.TryAddActivityToMap(activity, map);
+                var result = Agent365ExporterCore.TryAddActivityToMap(activity, map);
+                if (result == AddResult.NonGenAI) nonGenAICount++;
+                else if (result == AddResult.MissingIdentity) missingIdentityCount++;
             }
 
+            LogPartitionResults(map.Count, nonGenAICount, missingIdentityCount);
             return map.Select(kvp => (kvp.Key.tenant, kvp.Key.agent, kvp.Value)).ToList();
         }
 
@@ -198,15 +224,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             return ExportResult.Success;
         }
 
-        private static void TryAddActivityToMap(Activity activity, Dictionary<(string tenant, string agent), List<Activity>> map)
+        private static AddResult TryAddActivityToMap(Activity activity, Dictionary<(string tenant, string agent), List<Activity>> map)
         {
-            if (activity is null) return;
+            if (activity is null) return AddResult.Null;
+
+            var operationName = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiOperationNameKey);
+            if (string.IsNullOrEmpty(operationName) || !GenAiOperationNames.Contains(operationName!))
+                return AddResult.NonGenAI;
 
             var tenant = activity.GetAttributeOrBaggage(OpenTelemetryConstants.TenantIdKey);
             var agent = activity.GetAttributeOrBaggage(OpenTelemetryConstants.GenAiAgentIdKey) ?? activity.GetAttributeOrBaggage(OpenTelemetryConstants.AgentPlatformIdKey);
 
             if (string.IsNullOrEmpty(tenant) || string.IsNullOrEmpty(agent))
-                return;
+                return AddResult.MissingIdentity;
 
             var key = (tenant!, agent!);
             if (!map.TryGetValue(key, out var list))
@@ -215,6 +245,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                 map[key] = list;
             }
             list.Add(activity);
+            return AddResult.Added;
+        }
+
+        private void LogPartitionResults(int groupCount, int nonGenAICount, int missingIdentityCount)
+        {
+            if (nonGenAICount > 0)
+                _logger?.LogInformation("[Agent365Exporter] {NonGenAICount} non-genAI spans filtered out", nonGenAICount);
+            if (missingIdentityCount > 0)
+                _logger?.LogWarning("[Agent365Exporter] {MissingIdentityCount} spans skipped due to missing tenant or agent ID", missingIdentityCount);
+
+            var skippedCount = nonGenAICount + missingIdentityCount;
+            _logger?.LogInformation("[Agent365Exporter] Partitioned into {GroupCount} identity groups ({SkippedCount} spans skipped)", groupCount, skippedCount);
         }
     }
 }
