@@ -166,8 +166,21 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             foreach (var g in groups)
             {
                 var (tenantId, agentId, activities) = g;
-                var json = _formatter.FormatMany(activities, resource);
-                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                // Split the per-identity batch into byte-size chunks under MaxPayloadBytes.
+                // Per-span truncation already caps individual spans at 250 KB; this provides
+                // batch-level enforcement of the 1 MB server limit.
+                var chunks = PayloadChunking.ChunkBySize(
+                    activities,
+                    PayloadChunking.EstimateActivityBytes,
+                    options.MaxPayloadBytes);
+
+                if (chunks.Count > 1)
+                {
+                    this._logger?.LogInformation(
+                        "Agent365ExporterCore: Split {SpanCount} spans into {ChunkCount} chunks for tenantId {TenantId}, agentId {AgentId}.",
+                        activities.Count, chunks.Count, tenantId, agentId);
+                }
 
                 var endpointOverride = Environment.GetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE");
                 var endpoint = !string.IsNullOrEmpty(endpointOverride)
@@ -176,11 +189,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
                 var endpointPath = BuildEndpointPath(tenantId, agentId, options.UseS2SEndpoint);
                 var requestUri = BuildRequestUri(endpoint, endpointPath);
-
-                using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
-                {
-                    Content = content
-                };
 
                 string? token = null;
                 try
@@ -193,34 +201,53 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     this._logger?.LogError(ex, "Agent365ExporterCore: TokenResolver threw for agent {AgentId} tenant {TenantId}.", agentId, tenantId);
                 }
 
-                if (!string.IsNullOrEmpty(token))
-                {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
-                else
+                if (string.IsNullOrEmpty(token))
                 {
                     this._logger?.LogWarning("Agent365ExporterCore: No token obtained. Skipping export for this identity.");
                     return ExportResult.Failure;
                 }
-                    
-                HttpResponseMessage? resp = null;
-                try
+
+                // Send each chunk; all-or-nothing: fail on first chunk failure so the batch processor retries.
+                for (int i = 0; i < chunks.Count; i++)
                 {
-                    this._logger?.LogDebug("Agent365ExporterCore: Sending {SpanCount} spans to {RequestUri}.", activities.Count, requestUri);
-                    resp = await sendAsync(request).ConfigureAwait(false);
-                    var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
-                    this._logger?.LogDebug("Agent365ExporterCore: HTTP {StatusCode} exporting spans. '{HeaderKey}': '{CorrelationId}'.", (int)resp.StatusCode, CorrelationIdHeaderKey, correlationId);
-                    if (!resp.IsSuccessStatusCode)
+                    var chunk = chunks[i];
+                    var json = _formatter.FormatMany(chunk, resource);
+                    using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                    {
+                        Content = content
+                    };
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                    var bodyBytes = Encoding.UTF8.GetByteCount(json);
+                    this._logger?.LogDebug(
+                        "Agent365ExporterCore: Sending chunk {ChunkIndex} of {ChunkCount} ({SpanCount} spans, {BodyBytes} bytes) to {RequestUri}.",
+                        i + 1, chunks.Count, chunk.Count, bodyBytes, requestUri);
+
+                    HttpResponseMessage? resp = null;
+                    try
+                    {
+                        resp = await sendAsync(request).ConfigureAwait(false);
+                        var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
+                        this._logger?.LogDebug("Agent365ExporterCore: HTTP {StatusCode} exporting spans. '{HeaderKey}': '{CorrelationId}'.", (int)resp.StatusCode, CorrelationIdHeaderKey, correlationId);
+                        if (!resp.IsSuccessStatusCode)
+                        {
+                            this._logger?.LogWarning(
+                                "Agent365ExporterCore: Chunk {ChunkIndex} of {ChunkCount} failed; aborting batch.",
+                                i + 1, chunks.Count);
+                            return ExportResult.Failure;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
                         return ExportResult.Failure;
-                }
-                catch (Exception ex)
-                {
-                    this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
-                    return ExportResult.Failure;
-                }
-                finally
-                {
-                    resp?.Dispose();
+                    }
+                    finally
+                    {
+                        resp?.Dispose();
+                    }
                 }
             }
             return ExportResult.Success;

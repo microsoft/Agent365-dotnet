@@ -86,5 +86,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Default is 512.
         /// </summary>
         public int MaxExportBatchSize { get; set; } = 512;
+
+        /// <summary>
+        /// Upper bound on HTTP request body size in bytes used by per-request payload chunking.
+        /// 100 KB headroom under the 1 MB server limit accounts for estimator error and JSON/envelope
+        /// overhead (for example, resource attributes and scope wrappers).
+        /// Default is 900,000 bytes.
+        /// </summary>
+        public long MaxPayloadBytes { get; set; } = 900_000;
     }
 }
