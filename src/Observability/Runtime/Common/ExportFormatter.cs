@@ -32,16 +32,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             AutoInstrumentationConstants.GenAiInvocationOutputKey
         };
 
-        // Inference operation type names (from InferenceOperationType enum) that the
-        // ingest service expects to be normalized to the canonical "chat" operation name.
-        private const string IngestInferenceOperationName = "chat";
-        private static readonly HashSet<string> InferenceOperationTypeNames = new HashSet<string>(StringComparer.Ordinal)
-        {
-            nameof(Tracing.Contracts.InferenceOperationType.Chat),
-            nameof(Tracing.Contracts.InferenceOperationType.TextCompletion),
-            nameof(Tracing.Contracts.InferenceOperationType.GenerateContent),
-        };
-
         private readonly ILogger<ExportFormatter> _logger;
 
         /// <summary>
@@ -75,9 +65,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                     spans = new List<OtlpSpan>();
                     scopeMap[key] = spans;
                 }
-                var span = BuildOtlpSpanWithTruncation(activity);
-                NormalizeInferenceOperationNameForIngest(span);
-                spans.Add(span);
+                spans.Add(BuildOtlpSpanWithTruncation(activity));
             }
 
             var scopeSpans = new List<ScopeSpans>(scopeMap.Count);
@@ -293,20 +281,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
             }
 
             return dict;
-        }
-
-        // Rewrites gen_ai.operation.name from any InferenceOperationType enum name
-        // (Chat, TextCompletion, GenerateContent) to the canonical "chat" value the
-        // ingest service accepts. Applied only on the FormatMany (ingest) path; the
-        // underlying Activity tag is left untouched.
-        private static void NormalizeInferenceOperationNameForIngest(OtlpSpan span)
-        {
-            if (span?.Attributes == null) return;
-            if (!span.Attributes.TryGetValue(OpenTelemetryConstants.GenAiOperationNameKey, out var value)) return;
-            if (value is string s && InferenceOperationTypeNames.Contains(s))
-            {
-                span.Attributes[OpenTelemetryConstants.GenAiOperationNameKey] = IngestInferenceOperationName;
-            }
         }
 
         private static List<OtlpEvent>? MapEvents(Activity activity)

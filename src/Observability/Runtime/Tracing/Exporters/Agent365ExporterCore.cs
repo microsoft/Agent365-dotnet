@@ -28,6 +28,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private readonly ExportFormatter _formatter;
         private readonly ILogger<Agent365ExporterCore> _logger;
 
+        // The ingest service performs a case-insensitive check for "chat", so we send the
+        // gen_ai.operation.name through unchanged. Both the lowercase canonical value and the
+        // InferenceOperationType.Chat enum name are accepted in this set so that activities
+        // tagged with either form are not filtered out by PartitionByIdentity.
         private static readonly HashSet<string> GenAiOperationNames = new HashSet<string>(StringComparer.Ordinal)
         {
             InvokeAgentScope.OperationName,
@@ -35,8 +39,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             OutputScope.OperationName,
             "chat",
             nameof(InferenceOperationType.Chat),
-            nameof(InferenceOperationType.TextCompletion),
-            nameof(InferenceOperationType.GenerateContent),
         };
 
         private enum AddResult { Added, NonGenAI, MissingIdentity, Null }
