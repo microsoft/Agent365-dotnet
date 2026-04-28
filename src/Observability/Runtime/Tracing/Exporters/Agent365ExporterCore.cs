@@ -253,12 +253,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         private void LogPartitionResults(int groupCount, int nonGenAICount, int missingIdentityCount)
         {
             if (nonGenAICount > 0)
-                _logger?.LogInformation("[Agent365Exporter] {NonGenAICount} non-genAI spans filtered out", nonGenAICount);
+                _logger?.LogDebug("[Agent365Exporter] {NonGenAICount} non-genAI spans filtered out", nonGenAICount);
             if (missingIdentityCount > 0)
-                _logger?.LogWarning("[Agent365Exporter] {MissingIdentityCount} spans skipped due to missing tenant or agent ID", missingIdentityCount);
+                _logger?.LogDebug("[Agent365Exporter] {MissingIdentityCount} spans skipped due to missing tenant or agent ID", missingIdentityCount);
 
             var skippedCount = nonGenAICount + missingIdentityCount;
-            _logger?.LogInformation("[Agent365Exporter] Partitioned into {GroupCount} identity groups ({SkippedCount} spans skipped)", groupCount, skippedCount);
+            if (skippedCount > 0)
+                _logger?.LogDebug("[Agent365Exporter] Partitioned into {GroupCount} identity groups ({SkippedCount} spans skipped)", groupCount, skippedCount);
         }
     }
 }
