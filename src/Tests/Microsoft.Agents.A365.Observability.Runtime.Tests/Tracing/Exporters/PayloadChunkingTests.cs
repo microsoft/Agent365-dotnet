@@ -12,7 +12,7 @@ public sealed class PayloadChunkingTests
 {
     private static Activity CreateActivity(string displayName, IDictionary<string, object?>? tags = null)
     {
-        var listener = new ActivityListener
+        using var listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Agent365Sdk.Test.Chunking",
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
@@ -21,7 +21,7 @@ public sealed class PayloadChunkingTests
         };
         ActivitySource.AddActivityListener(listener);
 
-        var source = new ActivitySource("Agent365Sdk.Test.Chunking");
+        using var source = new ActivitySource("Agent365Sdk.Test.Chunking");
         var activity = source.StartActivity(displayName, ActivityKind.Client)
             ?? throw new InvalidOperationException("Failed to start activity.");
         if (tags != null)

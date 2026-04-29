@@ -225,10 +225,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                         "Agent365ExporterCore: Sending chunk {ChunkIndex} of {ChunkCount} ({SpanCount} spans, {BodyBytes} bytes) to {RequestUri}.",
                         i + 1, chunks.Count, chunk.Count, bodyBytes, requestUri);
 
-                    HttpResponseMessage? resp = null;
                     try
                     {
-                        resp = await sendAsync(request).ConfigureAwait(false);
+                        using var resp = await sendAsync(request).ConfigureAwait(false);
                         var correlationId = resp.Headers.Contains(CorrelationIdHeaderKey) ? resp.Headers.GetValues(CorrelationIdHeaderKey).FirstOrDefault() : null;
                         this._logger?.LogDebug("Agent365ExporterCore: HTTP {StatusCode} exporting spans. '{HeaderKey}': '{CorrelationId}'.", (int)resp.StatusCode, CorrelationIdHeaderKey, correlationId);
                         if (!resp.IsSuccessStatusCode)
@@ -239,14 +238,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                             return ExportResult.Failure;
                         }
                     }
-                    catch (Exception ex)
+                    catch (HttpRequestException ex)
                     {
                         this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
                         return ExportResult.Failure;
                     }
-                    finally
+                    catch (TaskCanceledException ex)
                     {
-                        resp?.Dispose();
+                        this._logger?.LogError(ex, "Agent365ExporterCore: Exception exporting spans.");
+                        return ExportResult.Failure;
                     }
                 }
             }
