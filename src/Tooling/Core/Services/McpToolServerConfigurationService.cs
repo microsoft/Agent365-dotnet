@@ -480,7 +480,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
+        private async Task<McpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -514,8 +514,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 InnerHandler = httpContextHeaderHandler
             };
 
-            // Setup SSE client transport options without manual token management
-            var options = new SseClientTransportOptions
+            // Setup HTTP client transport options without manual token management
+            var options = new HttpClientTransportOptions
             {
                 Endpoint = endpoint,
                 TransportMode = HttpTransportMode.AutoDetect,
@@ -524,11 +524,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
 
-            var clientTransport = new SseClientTransport(options, httpClient);
+            var clientTransport = new HttpClientTransport(options, httpClient);
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
+                return await McpClient.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
             }
             catch (Exception ex)
             {
