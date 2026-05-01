@@ -12,6 +12,8 @@
     <Summary>Microsoft Agent 365 Agent Framework Tooling Integration - Provides a way to add Agent 365 MCP Servers</Summary>
     <Product>Microsoft Agent 365 Agent Framework Tooling SDK</Product>
     <PackageTags>Microsoft;A365AgentFramework;OpenTelemetry;AI;Agents;Tooling</PackageTags>
+    <!-- Suppress NU5104: Azure.AI.OpenAI stable (2.1.0) < beta in use (2.7.0-beta.2); Microsoft.Extensions.AI.AzureAIInference has no stable release yet -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
