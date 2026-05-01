@@ -31,17 +31,17 @@
     <PackageVersion Include="Microsoft.SemanticKernel" Version="1.71.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.71.0" />
     <!-- OpenAI packages -->
-    <PackageVersion Include="OpenAI" Version="2.10.0" />
+    <PackageVersion Include="OpenAI" Version="2.7.0" />
     <!-- Azure Foundry related package -->
     <PackageVersion Include="Azure.AI.Agents.Persistent" Version="1.2.0-beta.4" />
     <!-- Agent Framework packages -->
     <PackageVersion Include="Microsoft.Agents.AI" Version="1.1.0" />
     <PackageVersion Include="Microsoft.Agents.AI.OpenAI" Version="1.1.0" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.2.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="10.0.0-preview.1.25559.3" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.5.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.0.1-preview.1.25571.5" />
     <!-- Json packages -->
-    <PackageVersion Include="System.Text.Json" Version="10.0.6" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.5" />
     <!-- Source Link Support -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <!-- Versioning -->
@@ -61,24 +61,24 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
     <PackageVersion Include="System.Composition" Version="8.0.0" />
     <!-- Microsoft Extensions packages - using highest versions to avoid conflicts -->
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
     <!-- Security packages -->
     <!-- Microsoft Agents packages (using latest available versions) -->
     <PackageVersion Include="Microsoft.Agents.Builder" Version="1.4.83" />
     <PackageVersion Include="Microsoft.Agents.Authentication.Msal" Version="1.4.83" />
     <PackageVersion Include="Microsoft.Agents.Hosting.AspNetCore" Version="1.4.83" />
     <!-- Model Context Protocol packages - use only the core package -->
-    <PackageVersion Include="ModelContextProtocol.Core" Version="1.2.0" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="0.2.0-preview.3" />
     <!-- MSTest Framework packages -->
     <PackageVersion Include="MSTest.TestAdapter" Version="3.8.0" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.8.0" />
