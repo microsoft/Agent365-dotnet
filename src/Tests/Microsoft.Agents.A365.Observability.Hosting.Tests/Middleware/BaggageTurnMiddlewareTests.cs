@@ -108,22 +108,20 @@ public class BaggageTurnMiddlewareTests
     }
 
     [TestMethod]
-    public async Task OnTurnAsync_SetsUserIdAndEmail_WhenEmailChannel()
+    public async Task OnTurnAsync_UserId_FallsBackToFromId_WhenAadObjectIdIsNull()
     {
-        // Arrange — simulates email channel where AadObjectId is null and SubChannel is set
+        // Arrange — simulates email/Word/SPO channel where AadObjectId is null
         var middleware = new BaggageTurnMiddleware();
         var turnContext = CreateTurnContext(
+            channelName: "outlook",
             fromId: "lukemoenning@microsoft.com",
-            fromAadObjectId: null,
-            subChannel: "email");
+            fromAadObjectId: null);
 
-        string? capturedCallerId = null;
-        string? capturedUserEmail = null;
+        string? capturedUserId = null;
 
         NextDelegate next = (ct) =>
         {
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            capturedUserEmail = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserEmailKey);
+            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 
@@ -131,53 +129,24 @@ public class BaggageTurnMiddlewareTests
         await middleware.OnTurnAsync(turnContext, next);
 
         // Assert
-        capturedCallerId.Should().Be("lukemoenning@microsoft.com");
-        capturedUserEmail.Should().Be("lukemoenning@microsoft.com");
+        capturedUserId.Should().Be("lukemoenning@microsoft.com");
     }
 
     [TestMethod]
-    public async Task OnTurnAsync_DoesNotSetUserEmail_WhenTeamsChannel()
+    public async Task OnTurnAsync_UserId_FallsBackToAgenticUserId_WhenAadObjectIdIsNull()
     {
-        // Arrange — simulates Teams channel (no SubChannel)
-        var middleware = new BaggageTurnMiddleware();
-        var turnContext = CreateTurnContext(
-            fromId: "8:orgid:17649762-cd35-4a35-95ab-75eeb3017308");
-
-        string? capturedCallerId = null;
-        string? capturedUserEmail = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            capturedUserEmail = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserEmailKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedCallerId.Should().Be("caller-aad");
-        capturedUserEmail.Should().BeNull();
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_SetsUserEmailFromAgenticUserId_WhenA2AWithEmail()
-    {
-        // Arrange — simulates A2A where the calling agent has an email-based agenticUserId
+        // Arrange — simulates A2A call where AadObjectId is null but AgenticUserId is set
         var middleware = new BaggageTurnMiddleware();
         var turnContext = CreateTurnContext(
             fromId: "29:1sH5NArUwkWAX",
             fromAadObjectId: null,
             fromAgenticUserId: "agent@contoso.onmicrosoft.com");
 
-        string? capturedCallerId = null;
-        string? capturedUserEmail = null;
+        string? capturedUserId = null;
 
         NextDelegate next = (ct) =>
         {
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            capturedUserEmail = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserEmailKey);
+            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 
@@ -185,27 +154,50 @@ public class BaggageTurnMiddlewareTests
         await middleware.OnTurnAsync(turnContext, next);
 
         // Assert
-        capturedCallerId.Should().Be("agent@contoso.onmicrosoft.com");
-        capturedUserEmail.Should().Be("agent@contoso.onmicrosoft.com");
+        capturedUserId.Should().Be("agent@contoso.onmicrosoft.com");
     }
 
     [TestMethod]
-    public async Task OnTurnAsync_DoesNotSetUserEmail_WhenA2AWithGuidAgenticUserId()
+    public async Task OnTurnAsync_UserId_PrefersAadObjectId_WhenBothAadAndAgenticUserIdSet()
     {
-        // Arrange — simulates A2A where agenticUserId is a GUID, not an email
+        // Arrange — both AadObjectId and AgenticUserId are populated; AadObjectId should win
+        var middleware = new BaggageTurnMiddleware();
+        var turnContext = CreateTurnContext(
+            channelName: "msteams",
+            fromId: "8:orgid:17649762-cd35-4a35-95ab-75eeb3017308",
+            fromAadObjectId: "aad-object-id-123",
+            fromAgenticUserId: "agent@contoso.onmicrosoft.com");
+
+        string? capturedUserId = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(turnContext, next);
+
+        // Assert
+        capturedUserId.Should().Be("aad-object-id-123");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_UserId_FallsBackToGuidAgenticUserId()
+    {
+        // Arrange — A2A where AgenticUserId is a GUID, not an email
         var middleware = new BaggageTurnMiddleware();
         var turnContext = CreateTurnContext(
             fromId: "29:1sH5NArUwkWAX",
             fromAadObjectId: null,
             fromAgenticUserId: "bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
 
-        string? capturedCallerId = null;
-        string? capturedUserEmail = null;
+        string? capturedUserId = null;
 
         NextDelegate next = (ct) =>
         {
-            capturedCallerId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            capturedUserEmail = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserEmailKey);
+            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
             return Task.CompletedTask;
         };
 
@@ -213,8 +205,7 @@ public class BaggageTurnMiddlewareTests
         await middleware.OnTurnAsync(turnContext, next);
 
         // Assert
-        capturedCallerId.Should().Be("bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
-        capturedUserEmail.Should().BeNull();
+        capturedUserId.Should().Be("bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
     }
 
     private static ITurnContext CreateTurnContext(
@@ -223,7 +214,7 @@ public class BaggageTurnMiddlewareTests
         string? fromId = "caller-id",
         string? fromAadObjectId = "caller-aad",
         string? fromAgenticUserId = null,
-        string? subChannel = null)
+        string channelName = "msteams")
     {
         var mockActivity = new Mock<IActivity>();
         mockActivity.Setup(a => a.Type).Returns(activityType);
@@ -248,7 +239,7 @@ public class BaggageTurnMiddlewareTests
         });
         mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
         mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("test-channel") { SubChannel = subChannel });
+        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId(channelName));
 
         var mockTurnContext = new Mock<ITurnContext>();
         mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
