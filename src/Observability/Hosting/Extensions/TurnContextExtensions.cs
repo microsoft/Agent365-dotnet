@@ -20,8 +20,21 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetCallerBaggagePairs(this ITurnContext turnContext)
         {
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserIdKey, turnContext.Activity?.From?.AadObjectId);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserNameKey, turnContext.Activity?.From?.Name);
+            var from = turnContext.Activity?.From;
+            var hasSubChannel = !string.IsNullOrEmpty(turnContext.Activity?.ChannelId?.SubChannel);
+            var userEmail = hasSubChannel || IsEmail(from?.Id)
+                ? from?.Id
+                : IsEmail(from?.AgenticUserId) ? from?.AgenticUserId : null;
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserIdKey, from?.AadObjectId ?? from?.AgenticUserId ?? from?.Id);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserNameKey, from?.Name);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserEmailKey, userEmail);
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex EmailPattern = new System.Text.RegularExpressions.Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static bool IsEmail(string? value)
+        {
+            return !string.IsNullOrEmpty(value) && EmailPattern.IsMatch(value!);
         }
 
         /// <summary>
