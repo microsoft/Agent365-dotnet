@@ -8,6 +8,7 @@ using Microsoft.Agents.Builder;
 using Microsoft.Agents.Core.Models;
 using Moq;
 using OpenTelemetry;
+using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Middleware;
 
@@ -206,6 +207,109 @@ public class BaggageTurnMiddlewareTests
 
         // Assert
         capturedUserId.Should().Be("bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_ExtractsProductContextFromChannelData()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        
+        // Create a turn context with productContext in ChannelData
+        var mockActivity = new Mock<IActivity>();
+        mockActivity.Setup(a => a.Type).Returns("message");
+        mockActivity.Setup(a => a.Text).Returns("Hello");
+        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
+        {
+            Id = "caller-id",
+            Name = "Caller",
+            AadObjectId = "caller-aad",
+        });
+        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
+        {
+            Id = "agent-id",
+            Name = "Agent",
+            TenantId = "tenant-123",
+        });
+        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
+        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
+        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
+        
+        // Set up ChannelData with productContext - create a mock that returns JSON from ToString()
+        var channelDataJson = """{"productContext":"COPILOT"}""";
+        var mockChannelData = new Mock<object>();
+        mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
+        mockActivity.Setup(a => a.ChannelData).Returns(mockChannelData.Object);
+
+        var mockTurnContext = new Mock<ITurnContext>();
+        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+
+        // Assert
+        capturedChannelLink.Should().Be("COPILOT");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_SubChannelTakesPrecedenceOverProductContext()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        
+        // Create a turn context with BOTH SubChannel and productContext
+        var mockActivity = new Mock<IActivity>();
+        mockActivity.Setup(a => a.Type).Returns("message");
+        mockActivity.Setup(a => a.Text).Returns("Hello");
+        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
+        {
+            Id = "caller-id",
+            Name = "Caller",
+            AadObjectId = "caller-aad",
+        });
+        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
+        {
+            Id = "agent-id",
+            Name = "Agent",
+            TenantId = "tenant-123",
+        });
+        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
+        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
+        
+        // Set SubChannel explicitly
+        var channelId = new ChannelId("msteams") { SubChannel = "teams-subchannel" };
+        mockActivity.Setup(a => a.ChannelId).Returns(channelId);
+        
+        // Set up ChannelData with productContext (should be ignored)
+        var channelDataJson = """{"productContext":"COPILOT"}""";
+        var mockChannelData = new Mock<object>();
+        mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
+        mockActivity.Setup(a => a.ChannelData).Returns(mockChannelData.Object);
+
+        var mockTurnContext = new Mock<ITurnContext>();
+        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+
+        // Assert - SubChannel should take precedence, productContext should be ignored
+        capturedChannelLink.Should().Be("teams-subchannel");
     }
 
     private static ITurnContext CreateTurnContext(
