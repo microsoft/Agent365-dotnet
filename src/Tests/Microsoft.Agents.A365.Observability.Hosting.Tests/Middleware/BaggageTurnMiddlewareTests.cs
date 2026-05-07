@@ -8,7 +8,6 @@ using Microsoft.Agents.Builder;
 using Microsoft.Agents.Core.Models;
 using Moq;
 using OpenTelemetry;
-using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Middleware;
 
