@@ -89,9 +89,9 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
                         }
                     }
                 }
-                catch (System.Text.Json.JsonException)
+                catch
                 {
-                    // Ignore malformed ChannelData and keep subChannel fallback behavior.
+                    // Ignore ChannelData parsing failures and keep subChannel fallback behavior.
                 }
             }
             
