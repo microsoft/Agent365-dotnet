@@ -8,6 +8,7 @@ using Microsoft.Agents.Builder;
 using Microsoft.Agents.Core.Models;
 using Moq;
 using OpenTelemetry;
+using System.Text.Json;
 
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests.Middleware;
 
@@ -309,6 +310,101 @@ public class BaggageTurnMiddlewareTests
 
         // Assert - SubChannel should take precedence, productContext should be ignored
         capturedChannelLink.Should().Be("teams-subchannel");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_ExtractsProductContextFromJsonStringChannelData()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        
+        // Create a turn context with ChannelData as a JSON string
+        var mockActivity = new Mock<IActivity>();
+        mockActivity.Setup(a => a.Type).Returns("message");
+        mockActivity.Setup(a => a.Text).Returns("Hello");
+        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
+        {
+            Id = "caller-id",
+            Name = "Caller",
+            AadObjectId = "caller-aad",
+        });
+        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
+        {
+            Id = "agent-id",
+            Name = "Agent",
+            TenantId = "tenant-123",
+        });
+        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
+        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
+        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
+        
+        // ChannelData as a JSON string (simulating deserialization from wire format)
+        var channelDataJson = """{"productContext":"COPILOT"}""";
+        mockActivity.Setup(a => a.ChannelData).Returns(channelDataJson);
+
+        var mockTurnContext = new Mock<ITurnContext>();
+        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+
+        // Assert
+        capturedChannelLink.Should().Be("COPILOT");
+    }
+
+    [TestMethod]
+    public async Task OnTurnAsync_HandlesInvalidJsonChannelDataGracefully()
+    {
+        // Arrange
+        var middleware = new BaggageTurnMiddleware();
+        
+        // Create a turn context with ChannelData as an invalid JSON string
+        var mockActivity = new Mock<IActivity>();
+        mockActivity.Setup(a => a.Type).Returns("message");
+        mockActivity.Setup(a => a.Text).Returns("Hello");
+        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
+        {
+            Id = "caller-id",
+            Name = "Caller",
+            AadObjectId = "caller-aad",
+        });
+        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
+        {
+            Id = "agent-id",
+            Name = "Agent",
+            TenantId = "tenant-123",
+        });
+        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
+        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
+        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
+        
+        // ChannelData as a non-JSON string
+        mockActivity.Setup(a => a.ChannelData).Returns("not valid json");
+
+        var mockTurnContext = new Mock<ITurnContext>();
+        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+
+        string? capturedChannelLink = null;
+
+        NextDelegate next = (ct) =>
+        {
+            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
+            return Task.CompletedTask;
+        };
+
+        // Act
+        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+
+        // Assert - Should not set ChannelLink, should fail gracefully
+        capturedChannelLink.Should().BeNull();
     }
 
     private static ITurnContext CreateTurnContext(
