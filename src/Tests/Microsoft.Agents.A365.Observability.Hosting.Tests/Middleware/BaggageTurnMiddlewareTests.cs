@@ -215,34 +215,12 @@ public class BaggageTurnMiddlewareTests
         // Arrange
         var middleware = new BaggageTurnMiddleware();
         
-        // Create a turn context with productContext in ChannelData
-        var mockActivity = new Mock<IActivity>();
-        mockActivity.Setup(a => a.Type).Returns("message");
-        mockActivity.Setup(a => a.Text).Returns("Hello");
-        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
-        {
-            Id = "caller-id",
-            Name = "Caller",
-            AadObjectId = "caller-aad",
-        });
-        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
-        {
-            Id = "agent-id",
-            Name = "Agent",
-            TenantId = "tenant-123",
-        });
-        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
-        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
-        
         // Set up ChannelData with productContext - create a mock that returns JSON from ToString()
         var channelDataJson = """{"productContext":"COPILOT"}""";
         var mockChannelData = new Mock<object>();
         mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
-        mockActivity.Setup(a => a.ChannelData).Returns(mockChannelData.Object);
-
-        var mockTurnContext = new Mock<ITurnContext>();
-        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+        
+        var turnContext = CreateTurnContext(channelData: mockChannelData.Object);
 
         string? capturedChannelLink = null;
 
@@ -253,7 +231,7 @@ public class BaggageTurnMiddlewareTests
         };
 
         // Act
-        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+        await middleware.OnTurnAsync(turnContext, next);
 
         // Assert
         capturedChannelLink.Should().Be("COPILOT");
@@ -265,37 +243,14 @@ public class BaggageTurnMiddlewareTests
         // Arrange
         var middleware = new BaggageTurnMiddleware();
         
-        // Create a turn context with BOTH SubChannel and productContext
-        var mockActivity = new Mock<IActivity>();
-        mockActivity.Setup(a => a.Type).Returns("message");
-        mockActivity.Setup(a => a.Text).Returns("Hello");
-        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
-        {
-            Id = "caller-id",
-            Name = "Caller",
-            AadObjectId = "caller-aad",
-        });
-        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
-        {
-            Id = "agent-id",
-            Name = "Agent",
-            TenantId = "tenant-123",
-        });
-        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
-        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        
-        // Set SubChannel explicitly
-        var channelId = new ChannelId("msteams") { SubChannel = "teams-subchannel" };
-        mockActivity.Setup(a => a.ChannelId).Returns(channelId);
-        
         // Set up ChannelData with productContext (should be ignored)
         var channelDataJson = """{"productContext":"COPILOT"}""";
         var mockChannelData = new Mock<object>();
         mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
-        mockActivity.Setup(a => a.ChannelData).Returns(mockChannelData.Object);
-
-        var mockTurnContext = new Mock<ITurnContext>();
-        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+        
+        var turnContext = CreateTurnContext(
+            subChannel: "teams-subchannel",
+            channelData: mockChannelData.Object);
 
         string? capturedChannelLink = null;
 
@@ -306,7 +261,7 @@ public class BaggageTurnMiddlewareTests
         };
 
         // Act
-        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+        await middleware.OnTurnAsync(turnContext, next);
 
         // Assert - SubChannel should take precedence, productContext should be ignored
         capturedChannelLink.Should().Be("teams-subchannel");
@@ -318,32 +273,10 @@ public class BaggageTurnMiddlewareTests
         // Arrange
         var middleware = new BaggageTurnMiddleware();
         
-        // Create a turn context with ChannelData as a JSON string
-        var mockActivity = new Mock<IActivity>();
-        mockActivity.Setup(a => a.Type).Returns("message");
-        mockActivity.Setup(a => a.Text).Returns("Hello");
-        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
-        {
-            Id = "caller-id",
-            Name = "Caller",
-            AadObjectId = "caller-aad",
-        });
-        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
-        {
-            Id = "agent-id",
-            Name = "Agent",
-            TenantId = "tenant-123",
-        });
-        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
-        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
-        
         // ChannelData as a JSON string (simulating deserialization from wire format)
         var channelDataJson = """{"productContext":"COPILOT"}""";
-        mockActivity.Setup(a => a.ChannelData).Returns(channelDataJson);
-
-        var mockTurnContext = new Mock<ITurnContext>();
-        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+        
+        var turnContext = CreateTurnContext(channelData: channelDataJson);
 
         string? capturedChannelLink = null;
 
@@ -354,7 +287,7 @@ public class BaggageTurnMiddlewareTests
         };
 
         // Act
-        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+        await middleware.OnTurnAsync(turnContext, next);
 
         // Assert
         capturedChannelLink.Should().Be("COPILOT");
@@ -366,31 +299,7 @@ public class BaggageTurnMiddlewareTests
         // Arrange
         var middleware = new BaggageTurnMiddleware();
         
-        // Create a turn context with ChannelData as an invalid JSON string
-        var mockActivity = new Mock<IActivity>();
-        mockActivity.Setup(a => a.Type).Returns("message");
-        mockActivity.Setup(a => a.Text).Returns("Hello");
-        mockActivity.Setup(a => a.From).Returns(new ChannelAccount
-        {
-            Id = "caller-id",
-            Name = "Caller",
-            AadObjectId = "caller-aad",
-        });
-        mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
-        {
-            Id = "agent-id",
-            Name = "Agent",
-            TenantId = "tenant-123",
-        });
-        mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
-        mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("msteams")); // No SubChannel
-        
-        // ChannelData as a non-JSON string
-        mockActivity.Setup(a => a.ChannelData).Returns("not valid json");
-
-        var mockTurnContext = new Mock<ITurnContext>();
-        mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
+        var turnContext = CreateTurnContext(channelData: "not valid json");
 
         string? capturedChannelLink = null;
 
@@ -401,7 +310,7 @@ public class BaggageTurnMiddlewareTests
         };
 
         // Act
-        await middleware.OnTurnAsync(mockTurnContext.Object, next);
+        await middleware.OnTurnAsync(turnContext, next);
 
         // Assert - Should not set ChannelLink, should fail gracefully
         capturedChannelLink.Should().BeNull();
@@ -413,7 +322,9 @@ public class BaggageTurnMiddlewareTests
         string? fromId = "caller-id",
         string? fromAadObjectId = "caller-aad",
         string? fromAgenticUserId = null,
-        string channelName = "msteams")
+        string channelName = "msteams",
+        string? subChannel = null,
+        object? channelData = null)
     {
         var mockActivity = new Mock<IActivity>();
         mockActivity.Setup(a => a.Type).Returns(activityType);
@@ -438,7 +349,20 @@ public class BaggageTurnMiddlewareTests
         });
         mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
         mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId(channelName));
+        
+        // Set up ChannelId with optional SubChannel
+        var channelId = new ChannelId(channelName);
+        if (subChannel != null)
+        {
+            channelId.SubChannel = subChannel;
+        }
+        mockActivity.Setup(a => a.ChannelId).Returns(channelId);
+        
+        // Set up ChannelData if provided
+        if (channelData != null)
+        {
+            mockActivity.Setup(a => a.ChannelData).Returns(channelData);
+        }
 
         var mockTurnContext = new Mock<ITurnContext>();
         mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
