@@ -130,9 +130,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         public const string GenAiToolDescriptionKey = "gen_ai.tool.description";
         
         /// <summary>
-        /// The GenAI tool arguments key.
+        /// The GenAI tool call arguments key.
         /// </summary>
-        public const string GenAiToolArgumentsKey = "gen_ai.tool.arguments";
+        public const string GenAiToolArgumentsKey = "gen_ai.tool.call.arguments";
         
         /// <summary>
         /// The GenAI tool type key.
