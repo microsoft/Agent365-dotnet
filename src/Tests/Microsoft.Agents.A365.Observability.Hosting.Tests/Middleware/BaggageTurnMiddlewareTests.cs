@@ -214,12 +214,13 @@ public class BaggageTurnMiddlewareTests
         // Arrange
         var middleware = new BaggageTurnMiddleware();
         
-        // Set up ChannelData with productContext - create a mock that returns JSON from ToString()
-        var channelDataJson = """{"productContext":"COPILOT"}""";
-        var mockChannelData = new Mock<object>();
-        mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
+        // Set up ChannelData with productContext using a real JSON-backed object.
+        var channelData = new System.Text.Json.Nodes.JsonObject
+        {
+            ["productContext"] = "COPILOT",
+        };
         
-        var turnContext = CreateTurnContext(channelData: mockChannelData.Object);
+        var turnContext = CreateTurnContext(channelData: channelData);
 
         string? capturedChannelLink = null;
 
