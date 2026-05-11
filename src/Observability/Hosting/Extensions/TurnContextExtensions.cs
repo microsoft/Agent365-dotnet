@@ -71,7 +71,31 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         public static IEnumerable<KeyValuePair<string, object?>> GetChannelBaggagePairs(this ITurnContext turnContext)
         {
             yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelNameKey, turnContext.Activity?.ChannelId?.Channel);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelLinkKey, turnContext.Activity?.ChannelId?.SubChannel);
+            
+            // Try to get SubChannel from ChannelId first, then fall back to productContext in ChannelData
+            var subChannel = turnContext.Activity?.ChannelId?.SubChannel;
+            if (string.IsNullOrWhiteSpace(subChannel) && turnContext.Activity?.ChannelData != null)
+            {
+                try
+                {
+                    var channelDataJson = turnContext.Activity.ChannelData.ToString();
+                    if (!string.IsNullOrWhiteSpace(channelDataJson))
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(channelDataJson);
+                        if (doc.RootElement.TryGetProperty("productContext", out var productContextElem) &&
+                            productContextElem.ValueKind == System.Text.Json.JsonValueKind.String)
+                        {
+                            subChannel = productContextElem.GetString();
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore ChannelData parsing failures and keep subChannel fallback behavior.
+                }
+            }
+            
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.ChannelLinkKey, subChannel);
         }
 
         /// <summary>
