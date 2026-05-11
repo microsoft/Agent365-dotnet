@@ -192,7 +192,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
             this.GetAttribute(attributes, "microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
             this.GetAttribute(attributes, "gen_ai.tool.name").Should().Be(toolCallDetails.ToolName);
-            this.GetAttribute(attributes, "gen_ai.tool.arguments").Should().Be(toolCallDetails.Arguments);
+            this.GetAttribute(attributes, "gen_ai.tool.call.arguments").Should().Be(toolCallDetails.Arguments);
             this.GetAttribute(attributes, "gen_ai.tool.call.id").Should().Be(toolCallDetails.ToolCallId);
             this.GetAttribute(attributes, "gen_ai.tool.description").Should().Be(toolCallDetails.Description);
             this.GetAttribute(attributes, "gen_ai.tool.type").Should().Be(toolCallDetails.ToolType);
@@ -502,7 +502,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 {
                     foundExecuteTool = true;
                     // Should be truncated
-                    var args = this.GetAttribute(attrs, "gen_ai.tool.arguments");
+                    var args = this.GetAttribute(attrs, "gen_ai.tool.call.arguments");
                     args.Should().Be("TRUNCATED");
                 }
             }
