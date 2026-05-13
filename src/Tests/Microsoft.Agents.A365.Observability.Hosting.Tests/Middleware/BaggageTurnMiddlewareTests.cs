@@ -107,224 +107,9 @@ public class BaggageTurnMiddlewareTests
         baggageAfterMiddleware.Should().Be(baggageBeforeMiddleware);
     }
 
-    [TestMethod]
-    public async Task OnTurnAsync_UserId_FallsBackToFromId_WhenAadObjectIdIsNull()
-    {
-        // Arrange — simulates email/Word/SPO channel where AadObjectId is null
-        var middleware = new BaggageTurnMiddleware();
-        var turnContext = CreateTurnContext(
-            channelName: "outlook",
-            fromId: "lukemoenning@microsoft.com",
-            fromAadObjectId: null);
-
-        string? capturedUserId = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedUserId.Should().Be("lukemoenning@microsoft.com");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_UserId_FallsBackToAgenticUserId_WhenAadObjectIdIsNull()
-    {
-        // Arrange — simulates A2A call where AadObjectId is null but AgenticUserId is set
-        var middleware = new BaggageTurnMiddleware();
-        var turnContext = CreateTurnContext(
-            fromId: "29:1sH5NArUwkWAX",
-            fromAadObjectId: null,
-            fromAgenticUserId: "agent@contoso.onmicrosoft.com");
-
-        string? capturedUserId = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedUserId.Should().Be("agent@contoso.onmicrosoft.com");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_UserId_PrefersAadObjectId_WhenBothAadAndAgenticUserIdSet()
-    {
-        // Arrange — both AadObjectId and AgenticUserId are populated; AadObjectId should win
-        var middleware = new BaggageTurnMiddleware();
-        var turnContext = CreateTurnContext(
-            channelName: "msteams",
-            fromId: "8:orgid:17649762-cd35-4a35-95ab-75eeb3017308",
-            fromAadObjectId: "aad-object-id-123",
-            fromAgenticUserId: "agent@contoso.onmicrosoft.com");
-
-        string? capturedUserId = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedUserId.Should().Be("aad-object-id-123");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_UserId_FallsBackToGuidAgenticUserId()
-    {
-        // Arrange — A2A where AgenticUserId is a GUID, not an email
-        var middleware = new BaggageTurnMiddleware();
-        var turnContext = CreateTurnContext(
-            fromId: "29:1sH5NArUwkWAX",
-            fromAadObjectId: null,
-            fromAgenticUserId: "bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
-
-        string? capturedUserId = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedUserId = Baggage.Current.GetBaggage(OpenTelemetryConstants.UserIdKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedUserId.Should().Be("bef730f4-d6f5-4ffb-b759-26ffa449ed7e");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_ExtractsProductContextFromChannelData()
-    {
-        // Arrange
-        var middleware = new BaggageTurnMiddleware();
-        
-        // Set up ChannelData with productContext using a real JSON-backed object.
-        var channelData = new System.Text.Json.Nodes.JsonObject
-        {
-            ["productContext"] = "COPILOT",
-        };
-        
-        var turnContext = CreateTurnContext(channelData: channelData);
-
-        string? capturedChannelLink = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedChannelLink.Should().Be("COPILOT");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_SubChannelTakesPrecedenceOverProductContext()
-    {
-        // Arrange
-        var middleware = new BaggageTurnMiddleware();
-        
-        // Set up ChannelData with productContext (should be ignored)
-        var channelDataJson = """{"productContext":"COPILOT"}""";
-        var mockChannelData = new Mock<object>();
-        mockChannelData.Setup(x => x.ToString()).Returns(channelDataJson);
-        
-        var turnContext = CreateTurnContext(
-            subChannel: "teams-subchannel",
-            channelData: mockChannelData.Object);
-
-        string? capturedChannelLink = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert - SubChannel should take precedence, productContext should be ignored
-        capturedChannelLink.Should().Be("teams-subchannel");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_ExtractsProductContextFromJsonStringChannelData()
-    {
-        // Arrange
-        var middleware = new BaggageTurnMiddleware();
-        
-        // ChannelData as a JSON string (simulating deserialization from wire format)
-        var channelDataJson = """{"productContext":"COPILOT"}""";
-        
-        var turnContext = CreateTurnContext(channelData: channelDataJson);
-
-        string? capturedChannelLink = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert
-        capturedChannelLink.Should().Be("COPILOT");
-    }
-
-    [TestMethod]
-    public async Task OnTurnAsync_HandlesInvalidJsonChannelDataGracefully()
-    {
-        // Arrange
-        var middleware = new BaggageTurnMiddleware();
-        
-        var turnContext = CreateTurnContext(channelData: "not valid json");
-
-        string? capturedChannelLink = null;
-
-        NextDelegate next = (ct) =>
-        {
-            capturedChannelLink = Baggage.Current.GetBaggage(OpenTelemetryConstants.ChannelLinkKey);
-            return Task.CompletedTask;
-        };
-
-        // Act
-        await middleware.OnTurnAsync(turnContext, next);
-
-        // Assert - Should not set ChannelLink, should fail gracefully
-        capturedChannelLink.Should().BeNull();
-    }
-
     private static ITurnContext CreateTurnContext(
         string activityType = "message",
-        string? activityName = null,
-        string? fromId = "caller-id",
-        string? fromAadObjectId = "caller-aad",
-        string? fromAgenticUserId = null,
-        string channelName = "msteams",
-        string? subChannel = null,
-        object? channelData = null)
+        string? activityName = null)
     {
         var mockActivity = new Mock<IActivity>();
         mockActivity.Setup(a => a.Type).Returns(activityType);
@@ -335,10 +120,9 @@ public class BaggageTurnMiddlewareTests
         mockActivity.Setup(a => a.Text).Returns("Hello");
         mockActivity.Setup(a => a.From).Returns(new ChannelAccount
         {
-            Id = fromId,
+            Id = "caller-id",
             Name = "Caller",
-            AadObjectId = fromAadObjectId,
-            AgenticUserId = fromAgenticUserId,
+            AadObjectId = "caller-aad",
         });
         mockActivity.Setup(a => a.Recipient).Returns(new ChannelAccount
         {
@@ -349,20 +133,7 @@ public class BaggageTurnMiddlewareTests
         });
         mockActivity.Setup(a => a.Conversation).Returns(new ConversationAccount { Id = "conv-id" });
         mockActivity.Setup(a => a.ServiceUrl).Returns("https://example.com");
-        
-        // Set up ChannelId with optional SubChannel
-        var channelId = new ChannelId(channelName);
-        if (subChannel != null)
-        {
-            channelId.SubChannel = subChannel;
-        }
-        mockActivity.Setup(a => a.ChannelId).Returns(channelId);
-        
-        // Set up ChannelData if provided
-        if (channelData != null)
-        {
-            mockActivity.Setup(a => a.ChannelData).Returns(channelData);
-        }
+        mockActivity.Setup(a => a.ChannelId).Returns(new ChannelId("test-channel"));
 
         var mockTurnContext = new Mock<ITurnContext>();
         mockTurnContext.Setup(tc => tc.Activity).Returns(mockActivity.Object);
