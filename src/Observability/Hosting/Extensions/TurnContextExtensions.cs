@@ -20,9 +20,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Extensions
         /// </summary>
         public static IEnumerable<KeyValuePair<string, object?>> GetCallerBaggagePairs(this ITurnContext turnContext)
         {
-            var from = turnContext.Activity?.From;
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserIdKey, from?.AadObjectId ?? from?.AgenticUserId ?? from?.Id);
-            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserNameKey, from?.Name);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserIdKey, turnContext.Activity?.From?.AadObjectId);
+            yield return new KeyValuePair<string, object?>(OpenTelemetryConstants.UserNameKey, turnContext.Activity?.From?.Name);
         }
 
         /// <summary>
