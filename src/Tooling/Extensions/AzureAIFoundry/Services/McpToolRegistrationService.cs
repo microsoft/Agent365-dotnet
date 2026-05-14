@@ -17,8 +17,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
-using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
 using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
 using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 using Constants = Microsoft.Agents.A365.Tooling.Utils.Constants;
@@ -177,14 +175,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         //                   falls back to the V1 shared-token path when they are absent.
         if (ToolingUtility.IsDevScenario(_configuration))
         {
-            IMcpTokenProvider tokenProvider = new DevMcpTokenProvider(_configuration, _logger);
+            IMcpTokenProvider tokenProvider = new TokenProviderCollection(
+                    new EnvMcpTokenProvider(_configuration, _logger),
+                    new AgenticMcpTokenProvider(userAuthorization!, authHandlerName!, turnContext, _configuration, _logger));
+
             (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
         }
         else if (userAuthorization is not null && authHandlerName is not null)
         {
             // Production V2-aware path: per-audience OBO tokens.
-            IMcpTokenProvider tokenProvider = new AgenticMcpTokenProvider(
-                userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+            IMcpTokenProvider tokenProvider = new TokenProviderCollection(
+                    new EnvMcpTokenProvider(_configuration, _logger),
+                    new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
 
             (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
         }

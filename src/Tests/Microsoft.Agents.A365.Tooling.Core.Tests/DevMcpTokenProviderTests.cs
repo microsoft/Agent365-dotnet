@@ -13,14 +13,14 @@ using Xunit;
 namespace Microsoft.Agents.A365.Tooling.Core.Tests;
 
 /// <summary>
-/// Tests for <see cref="DevMcpTokenProvider"/> and <see cref="Utility.IsDevScenario"/>.
+/// Tests for <see cref="EnvMcpTokenProvider"/> and <see cref="Utility.IsDevScenario"/>.
 /// </summary>
 public class DevMcpTokenProviderTests
 {
     private static MCPServerConfig Server(string name) =>
         new() { mcpServerName = name, id = $"id-{name}", url = "http://test" };
 
-    private static DevMcpTokenProvider Provider(IConfiguration config) =>
+    private static EnvMcpTokenProvider Provider(IConfiguration config) =>
         new(config, Mock.Of<ILogger>());
 
     private static IConfiguration Config(params (string key, string value)[] entries)

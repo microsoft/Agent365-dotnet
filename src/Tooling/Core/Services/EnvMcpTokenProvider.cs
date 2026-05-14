@@ -25,17 +25,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// </list>
     /// Hyphens in the server name are normalised to underscores before the lookup.
     /// </remarks>
-    internal sealed class DevMcpTokenProvider : IMcpTokenProvider
+    internal sealed class EnvMcpTokenProvider : IMcpTokenProvider
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="DevMcpTokenProvider"/>.
+        /// Initializes a new instance of <see cref="EnvMcpTokenProvider"/>.
         /// </summary>
         /// <param name="configuration">Application configuration (env vars, appsettings, etc.).</param>
         /// <param name="logger">Logger for diagnostic output.</param>
-        public DevMcpTokenProvider(IConfiguration configuration, ILogger logger)
+        public EnvMcpTokenProvider(IConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
             _logger = logger;
