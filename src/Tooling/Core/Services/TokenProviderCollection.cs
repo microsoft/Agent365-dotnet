@@ -1,4 +1,7 @@
-﻿using Microsoft.Agents.A365.Tooling.Models;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using Microsoft.Agents.A365.Tooling.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
