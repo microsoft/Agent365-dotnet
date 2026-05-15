@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 {
     internal class TokenProviderCollection : IMcpTokenProvider
     {
-        SortedDictionary<int, IMcpTokenProvider> _providers;
+        readonly SortedDictionary<int, IMcpTokenProvider> _providers;
         public TokenProviderCollection(params IMcpTokenProvider[] providers)
         {
            _providers = new SortedDictionary<int, IMcpTokenProvider>();
