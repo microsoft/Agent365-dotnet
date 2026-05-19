@@ -238,6 +238,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         }
 
         /// <summary>
+        /// Adds an event to the current activity.
+        /// </summary>
+        /// <param name="activityEvent">The event to add.</param>
+        protected void AddEvent(ActivityEvent activityEvent)
+        {
+            activity?.AddEvent(activityEvent);
+        }
+
+        /// <summary>
         /// Gets the <see cref="ActivityContext"/> for this scope's span.
         /// </summary>
         /// <remarks>

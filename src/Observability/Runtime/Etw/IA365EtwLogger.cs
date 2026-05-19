@@ -120,5 +120,30 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? spanId = null,
             string? parentSpanId = null,
             string? traceId = null);
+
+        /// <summary>
+        /// Logs an apply_guardrail event.
+        /// </summary>
+        /// <param name="guardrailDetails">The details of the guardrail evaluation.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
+        /// <param name="conversationId">The required conversation ID.</param>
+        /// <param name="parentSpanId">The required parent span ID for tracing.</param>
+        /// <param name="startTime">Optional start time of the guardrail evaluation.</param>
+        /// <param name="endTime">Optional end time of the guardrail evaluation.</param>
+        /// <param name="spanId">Optional span ID for tracing.</param>
+        /// <param name="channel">Optional channel information.</param>
+        /// <param name="callerDetails">Optional details of the caller.</param>
+        /// <param name="traceId">Optional trace ID for distributed tracing.</param>
+        public void LogApplyGuardrail(
+            GuardrailDetails guardrailDetails,
+            AgentDetails agentDetails,
+            string conversationId,
+            string parentSpanId,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            Channel? channel = null,
+            CallerDetails? callerDetails = null,
+            string? traceId = null);
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 
@@ -517,6 +518,158 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
         /// This test ensures the exporter registry correctly implements singleton behavior
         /// to avoid data duplication when the same exporter type is configured multiple times.
         /// </summary>
+        [TestMethod]
+        public void AddTracing_And_ApplyGuardrailScope_ExporterMakesExpectedRequest()
+        {
+            // Arrange
+            var expectedAgentDetails = new AgentDetails(
+                agentId: Guid.NewGuid().ToString(),
+                agentName: "Guardrail Agent",
+                agentDescription: "Agent for guardrail testing.",
+                agenticUserId: Guid.NewGuid().ToString(),
+                agenticUserEmail: "guardrailagent@ztaittest12.onmicrosoft.com",
+                agentBlueprintId: Guid.NewGuid().ToString(),
+                tenantId: Guid.NewGuid().ToString(),
+                agentType: AgentType.EntraEmbodied);
+
+            var guardrailDetails = new GuardrailDetails(
+                targetType: GuardrailTargetType.LlmInput,
+                decisionType: GuardrailDecisionType.Deny,
+                guardianId: "azure-content-safety-001",
+                guardianName: "Azure Content Safety",
+                guardianProviderName: "Azure",
+                guardianVersion: "2.0.0",
+                targetId: "msg-12345",
+                decisionReason: "Content violates hate speech policy",
+                decisionCode: "HATE_SPEECH_001",
+                policyId: "policy-abc",
+                policyName: "Content Safety Policy",
+                policyVersion: "1.2.0",
+                contentInputHash: "sha256:abc123def456",
+                contentModified: false,
+                externalEventId: "ext-event-789");
+
+            var expectedUserDetails = new UserDetails(
+                userId: "guardrail-caller-123",
+                userName: "Guardrail Caller",
+                userEmail: "guardrail-caller@ztaitest12.onmicrosoft.com",
+                userClientIP: IPAddress.Parse("192.168.1.42"));
+
+            var expectedRequest = new Request(
+                content: "Check this content for safety",
+                channel: new Channel(
+                    name: "msteams",
+                    link: "https://guardrail-channel.link"));
+
+            // Use ActivityListener to capture the activity directly
+            System.Diagnostics.Activity? capturedActivity = null;
+            using var listener = new System.Diagnostics.ActivityListener();
+            listener.ShouldListenTo = source => source.Name == OpenTelemetryConstants.SourceName;
+            listener.Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded;
+            listener.ActivityStarted = a => capturedActivity = a;
+            System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+            // Act
+            using (var scope = ApplyGuardrailScope.Start(
+                details: guardrailDetails,
+                agentDetails: expectedAgentDetails,
+                request: expectedRequest,
+                userDetails: expectedUserDetails))
+            {
+                scope.RecordDecision(GuardrailDecisionType.Deny);
+                scope.RecordContentOutput("sanitized-hash-output");
+                scope.RecordFinding(new GuardrailFinding(
+                    riskCategory: "hate_speech",
+                    riskSeverity: GuardrailRiskSeverity.High,
+                    policyDecisionType: "deny",
+                    policyId: "policy-abc",
+                    riskScore: 0.95,
+                    riskMetadata: new[] { "{\"category\":\"hate\",\"confidence\":0.95}" }));
+            }
+
+            // Assert activity was captured
+            capturedActivity.Should().NotBeNull("ApplyGuardrailScope should create an activity");
+
+            // Format activity as OTLP-like JSON for inspection
+            var spanJson = new
+            {
+                name = capturedActivity!.DisplayName,
+                traceId = capturedActivity.TraceId.ToHexString(),
+                spanId = capturedActivity.SpanId.ToHexString(),
+                parentSpanId = capturedActivity.ParentSpanId.ToHexString(),
+                kind = capturedActivity.Kind.ToString(),
+                startTimeUnixNano = capturedActivity.StartTimeUtc.Ticks,
+                endTimeUnixNano = (capturedActivity.StartTimeUtc + capturedActivity.Duration).Ticks,
+                attributes = capturedActivity.TagObjects.ToDictionary(t => t.Key, t => t.Value),
+                events = capturedActivity.Events.Select(e => new
+                {
+                    name = e.Name,
+                    timeUnixNano = e.Timestamp.Ticks,
+                    attributes = e.Tags.ToDictionary(t => t.Key, t => t.Value)
+                }).ToArray()
+            };
+
+            var prettyJson = JsonSerializer.Serialize(spanJson, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine("=== ApplyGuardrail Span JSON ===");
+            Console.WriteLine(prettyJson);
+            Console.WriteLine("=== End ApplyGuardrail Span JSON ===");
+
+            // Verify span name
+            capturedActivity.DisplayName.Should().Be("apply_guardrail Azure Content Safety llm_input");
+
+            // Verify operation name
+            capturedActivity.GetTagItem("gen_ai.operation.name").Should().Be("apply_guardrail");
+
+            // Verify agent details
+            capturedActivity.GetTagItem("gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
+            capturedActivity.GetTagItem("gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
+            capturedActivity.GetTagItem("gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
+            capturedActivity.GetTagItem("microsoft.agent.user.id").Should().Be(expectedAgentDetails.AgenticUserId);
+            capturedActivity.GetTagItem("microsoft.agent.user.email").Should().Be(expectedAgentDetails.AgenticUserEmail);
+            capturedActivity.GetTagItem("microsoft.a365.agent.blueprint.id").Should().Be(expectedAgentDetails.AgentBlueprintId);
+            capturedActivity.GetTagItem("microsoft.tenant.id").Should().Be(expectedAgentDetails.TenantId);
+
+            // Verify guardrail-specific attributes
+            capturedActivity.GetTagItem("microsoft.security.decision.type").Should().Be("deny");
+            capturedActivity.GetTagItem("microsoft.security.target.type").Should().Be("llm_input");
+            capturedActivity.GetTagItem("microsoft.guardian.id").Should().Be("azure-content-safety-001");
+            capturedActivity.GetTagItem("microsoft.guardian.name").Should().Be("Azure Content Safety");
+            capturedActivity.GetTagItem("microsoft.guardian.provider.name").Should().Be("Azure");
+            capturedActivity.GetTagItem("microsoft.guardian.version").Should().Be("2.0.0");
+            capturedActivity.GetTagItem("microsoft.security.target.id").Should().Be("msg-12345");
+            capturedActivity.GetTagItem("microsoft.security.decision.reason").Should().Be("Content violates hate speech policy");
+            capturedActivity.GetTagItem("microsoft.security.decision.code").Should().Be("HATE_SPEECH_001");
+            capturedActivity.GetTagItem("microsoft.security.policy.id").Should().Be("policy-abc");
+            capturedActivity.GetTagItem("microsoft.security.policy.name").Should().Be("Content Safety Policy");
+            capturedActivity.GetTagItem("microsoft.security.policy.version").Should().Be("1.2.0");
+            capturedActivity.GetTagItem("microsoft.security.content.input.hash").Should().Be("sha256:abc123def456");
+            capturedActivity.GetTagItem("microsoft.security.content.output.value").Should().Be("sanitized-hash-output");
+            capturedActivity.GetTagItem("microsoft.security.content.modified").Should().Be(false);
+            capturedActivity.GetTagItem("microsoft.security.external_event_id").Should().Be("ext-event-789");
+
+            // Verify caller details
+            capturedActivity.GetTagItem("user.id").Should().Be(expectedUserDetails.UserId);
+            capturedActivity.GetTagItem("user.email").Should().Be(expectedUserDetails.UserEmail);
+            capturedActivity.GetTagItem("user.name").Should().Be(expectedUserDetails.UserName);
+            capturedActivity.GetTagItem("client.address").Should().Be(expectedUserDetails.UserClientIP?.ToString());
+
+            // Verify channel
+            capturedActivity.GetTagItem("microsoft.channel.name").Should().Be(expectedRequest.Channel?.Name);
+            capturedActivity.GetTagItem("microsoft.channel.link").Should().Be(expectedRequest.Channel?.Link);
+
+            // Verify events (finding)
+            capturedActivity.Events.Should().HaveCount(1);
+            var findingEvent = capturedActivity.Events.First();
+            findingEvent.Name.Should().Be("microsoft.security.finding");
+            var findingTags = findingEvent.Tags.ToDictionary(t => t.Key, t => t.Value);
+            findingTags["microsoft.security.risk.category"].Should().Be("hate_speech");
+            findingTags["microsoft.security.risk.severity"].Should().Be(GuardrailRiskSeverity.High);
+            findingTags["microsoft.security.policy.decision.type"].Should().Be("deny");
+            findingTags["microsoft.security.policy.id"].Should().Be("policy-abc");
+            findingTags["microsoft.security.risk.score"].Should().Be(0.95);
+        }
+
         [TestMethod]
         public async Task AddTracing_MultipleInvocations_NoDuplicateExports()
         {
