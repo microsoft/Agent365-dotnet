@@ -177,6 +177,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         }
 
         /// <summary>
+        /// Adds telemetry SDK attributes (name, version, language) to the attributes dictionary.
+        /// </summary>
+        protected static void AddSdkAttributes(IDictionary<string, object?> attributes)
+        {
+            attributes[OpenTelemetryConstants.TelemetrySdkNameKey] = OpenTelemetryConstants.TelemetrySdkNameValue;
+            attributes[OpenTelemetryConstants.TelemetrySdkVersionKey] = OpenTelemetryConstants.TelemetrySdkVersionValue;
+            attributes[OpenTelemetryConstants.TelemetrySdkLanguageKey] = OpenTelemetryConstants.TelemetrySdkLanguageValue;
+        }
+
+        /// <summary>
         /// Adds a key-value pair to the dictionary if the value is not null.
         /// </summary>
         protected static void AddIfNotNull(IDictionary<string, object?> attributes, string key, object? value)
