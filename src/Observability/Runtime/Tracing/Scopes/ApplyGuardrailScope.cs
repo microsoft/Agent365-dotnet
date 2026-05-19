@@ -3,7 +3,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Runtime.Serialization;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
@@ -130,11 +129,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// Multiple findings may be recorded per guardrail evaluation.
         /// </summary>
         /// <param name="finding">The security finding to record.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="finding"/> is null.</exception>
         public void RecordFinding(GuardrailFinding finding)
         {
             if (finding == null)
             {
-                return;
+                throw new ArgumentNullException(nameof(finding));
             }
 
             var tags = new ActivityTagsCollection
