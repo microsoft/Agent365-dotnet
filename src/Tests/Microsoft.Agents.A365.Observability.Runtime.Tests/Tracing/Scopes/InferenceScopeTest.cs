@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
@@ -102,7 +102,7 @@ public sealed class InferenceScopeTest : ActivityTest
         });
 
         var tagValue = activity.Tags.First(t => t.Key == "gen_ai.input.messages").Value;
-        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().StartWith("[");
         tagValue.Should().Contain("\"role\":\"user\"");
         tagValue.Should().Contain("Hello");
         tagValue.Should().Contain("How are you?");
@@ -124,7 +124,7 @@ public sealed class InferenceScopeTest : ActivityTest
         });
 
         var tagValue = activity.Tags.First(t => t.Key == "gen_ai.output.messages").Value;
-        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().StartWith("[");
         tagValue.Should().Contain("\"role\":\"assistant\"");
         tagValue.Should().Contain("Hi there!");
         tagValue.Should().Contain("I\\u0027m fine.");

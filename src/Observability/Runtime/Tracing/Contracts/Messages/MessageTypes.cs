@@ -39,21 +39,23 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts.Messages
     /// </summary>
     public class OutputMessage : ChatMessage
     {
+        private const string DefaultFinishReason = "stop";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OutputMessage"/> class.
         /// </summary>
         /// <param name="role">The role of the message sender.</param>
         /// <param name="parts">The message parts.</param>
         /// <param name="name">Optional participant name.</param>
-        /// <param name="finishReason">Optional reason the model stopped generating.</param>
+        /// <param name="finishReason">Reason the model stopped generating. Defaults to "stop" per OTel spec.</param>
         public OutputMessage(MessageRole role, IReadOnlyList<IMessagePart> parts, string? name = null, string? finishReason = null)
             : base(role, parts, name)
         {
-            FinishReason = finishReason;
+            FinishReason = finishReason ?? DefaultFinishReason;
         }
 
-        /// <summary>Gets the optional reason the model stopped generating.</summary>
-        public string? FinishReason { get; }
+        /// <summary>Gets the reason the model stopped generating (required per OTel spec).</summary>
+        public string FinishReason { get; }
     }
 
 }
