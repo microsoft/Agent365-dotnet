@@ -135,10 +135,10 @@ public class AgentFrameworkSpanProcessorTests
         var chatSpan = _exportedActivities.LastOrDefault(a =>
         {
             var input = a.GetTagItem("gen_ai.input.messages") as string;
-            return input != null && input.Contains("version");
+            return input != null && input.StartsWith("[");
         });
 
-        chatSpan.Should().NotBeNull("should have at least one span with versioned input messages");
+        chatSpan.Should().NotBeNull("should have at least one span with structured input messages");
 
         var tags = GetTags(chatSpan!);
         var input = tags["gen_ai.input.messages"] as string;
