@@ -105,7 +105,7 @@ public class SemanticKernelSpanProcessorTests
             "SemanticKernelSpanProcessor should map input events to A365 versioned format");
 
         var inputMessages = tags["gen_ai.input.messages"] as string;
-        inputMessages.Should().Contain("\"version\":\"0.1.0\"", "should use A365 versioned wrapper");
+        inputMessages.Should().StartWith("[");
         inputMessages.Should().Contain("capital of France", "should contain user message text");
         inputMessages.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         inputMessages.Should().Contain("\"role\":\"system\"", "should include system message");
@@ -116,7 +116,7 @@ public class SemanticKernelSpanProcessorTests
             "SemanticKernelSpanProcessor should map choice events to A365 versioned format");
 
         var outputMessages = tags["gen_ai.output.messages"] as string;
-        outputMessages.Should().Contain("\"version\":\"0.1.0\"", "should use A365 versioned wrapper");
+        outputMessages.Should().StartWith("[");
         outputMessages.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         outputMessages.Should().Contain("\"role\":\"assistant\"", "should have assistant role");
         outputMessages.Should().Contain("\"finish_reason\":\"stop\"", "should map SK Stop → stop");
@@ -188,7 +188,7 @@ public class SemanticKernelSpanProcessorTests
         // Input messages should be in versioned format with tool call parts
         tags.Should().ContainKey("gen_ai.input.messages");
         var inputMessages = tags["gen_ai.input.messages"] as string;
-        inputMessages.Should().Contain("\"version\":\"0.1.0\"");
+        inputMessages.Should().StartWith("[");
         inputMessages.Should().Contain("\"role\":\"user\"");
         inputMessages.Should().Contain("weather");
 
@@ -210,7 +210,7 @@ public class SemanticKernelSpanProcessorTests
             lastInput.Should().Contain("GetWeather", "should contain function name");
 
             var lastOutput = lastTags["gen_ai.output.messages"] as string;
-            lastOutput.Should().Contain("\"version\":\"0.1.0\"");
+            lastOutput.Should().StartWith("[");
             lastOutput.Should().Contain("\"finish_reason\":\"stop\"");
         }
 

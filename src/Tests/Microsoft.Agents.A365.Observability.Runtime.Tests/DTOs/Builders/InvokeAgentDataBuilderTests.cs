@@ -148,7 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi there!").And.Contain("fine.").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi there!").And.Contain("fine.");
         }
 
         [TestMethod]
@@ -172,9 +172,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi");
         }
 
         [TestMethod]
@@ -482,7 +482,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
             telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantId);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello");
         }
 
         [TestMethod]

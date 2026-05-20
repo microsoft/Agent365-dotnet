@@ -98,8 +98,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "user.email").Should().Be(expectedCallerDetails.UserDetails?.UserEmail);
             this.GetAttribute(attributes, "user.name").Should().Be(expectedCallerDetails.UserDetails?.UserName);
             this.GetAttribute(attributes, "client.address").Should().Be(expectedCallerDetails.UserDetails?.UserClientIP?.ToString());
-            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Input message 1").And.Contain("Input message 2").And.Contain("\"version\":\"0.1.0\"");
-            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Output message 1").And.Contain("\"version\":\"0.1.0\"");
+            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Input message 1").And.Contain("Input message 2");
+            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Output message 1");
             this.GetAttribute(attributes, "gen_ai.agent.id").Should().Be(expectedAgentDetails.AgentId);
             this.GetAttribute(attributes, "gen_ai.agent.name").Should().Be(expectedAgentDetails.AgentName);
             this.GetAttribute(attributes, "gen_ai.agent.description").Should().Be(expectedAgentDetails.AgentDescription);
@@ -290,8 +290,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             this.GetAttribute(attributes, "gen_ai.usage.input_tokens").Should().Be("42");
             this.GetAttribute(attributes, "gen_ai.usage.output_tokens").Should().Be("84");
             this.GetAttribute(attributes, "gen_ai.response.finish_reasons").Should().Be("stop,length");
-            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Hello").And.Contain("World").And.Contain("\"version\":\"0.1.0\"");
-            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Hi there!").And.Contain("\"version\":\"0.1.0\"");
+            this.GetAttribute(attributes, "gen_ai.input.messages").Should().Contain("Hello").And.Contain("World");
+            this.GetAttribute(attributes, "gen_ai.output.messages").Should().Contain("Hi there!");
             this.GetAttribute(attributes, "user.id").Should().Be(expectedInferenceUserDetails.UserId);
             this.GetAttribute(attributes, "user.email").Should().Be(expectedInferenceUserDetails.UserEmail);
             this.GetAttribute(attributes, "user.name").Should().Be(expectedInferenceUserDetails.UserName);
@@ -497,7 +497,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     foundInvokeAgent = true;
                     // Should NOT be truncated
                     var input = this.GetAttribute(attrs, "gen_ai.input.messages");
-                    input.Should().Contain("Agent input").And.Contain("\"version\":\"0.1.0\"");
+                    input.Should().Contain("Agent input");
                 }
                 if (opName == "execute_tool")
                 {

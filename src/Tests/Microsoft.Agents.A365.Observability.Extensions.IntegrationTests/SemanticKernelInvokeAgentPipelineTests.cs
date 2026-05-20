@@ -84,7 +84,7 @@ public class SemanticKernelInvokeAgentPipelineTests
 
         // Input: versioned, all roles preserved, TextPart format
         var input = tags[OpenTelemetryConstants.GenAiInputMessagesKey] as string;
-        input.Should().Contain("\"version\":\"0.1.0\"", "should use A365 versioned wrapper");
+        input.Should().StartWith("[");
         input.Should().Contain("\"role\":\"system\"", "system messages should be preserved");
         input.Should().Contain("\"role\":\"user\"", "user messages should be mapped");
         input.Should().Contain("\"type\":\"text\"", "should use TextPart format");
@@ -93,7 +93,7 @@ public class SemanticKernelInvokeAgentPipelineTests
 
         // Output: versioned, nested content extracted, TextPart format
         var output = tags[OpenTelemetryConstants.GenAiOutputMessagesKey] as string;
-        output.Should().Contain("\"version\":\"0.1.0\"");
+        output.Should().StartWith("[");
         output.Should().Contain("\"role\":\"assistant\"");
         output.Should().Contain("\"type\":\"text\"");
         output.Should().Contain("I can help with many tasks!", "nested content should be extracted");
@@ -126,7 +126,7 @@ public class SemanticKernelInvokeAgentPipelineTests
         tags.Should().NotContainKey(OpenTelemetryConstants.GenAiAgentInvocationInputKey);
 
         var input = tags[OpenTelemetryConstants.GenAiInputMessagesKey] as string;
-        input.Should().Contain("\"version\":\"0.1.0\"");
+        input.Should().StartWith("[");
         input.Should().Contain("\"role\":\"system\"", "system messages should be preserved");
         input.Should().Contain("\"role\":\"user\"");
         input.Should().Contain("Hello agent", "Message: prefix should be trimmed");

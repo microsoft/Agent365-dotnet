@@ -31,7 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             var result = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value as string;
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("\"version\":\"0.1.0\""), "Should contain version");
+            Assert.IsTrue(result.StartsWith("["), "Should be a JSON array");
             Assert.IsTrue(result.Contains("\"role\":\"system\""), "System messages should be preserved");
             Assert.IsTrue(result.Contains("\"role\":\"user\""), "Should contain user role");
             Assert.IsTrue(result.Contains("System message"), "System message content should be preserved");
@@ -56,7 +56,7 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
 
             var result = activity.Tags.FirstOrDefault(t => t.Key == OpenTelemetryConstants.GenAiInputMessagesKey).Value as string;
             Assert.IsNotNull(result);
-            Assert.IsTrue(result.Contains("\"version\":\"0.1.0\""), "Should contain version");
+            Assert.IsTrue(result.StartsWith("["), "Should be a JSON array");
             Assert.IsTrue(result.Contains("\"role\":\"system\""), "System message should be preserved");
             Assert.IsTrue(result.Contains("\"role\":\"user\""), "Should contain user role");
             Assert.IsTrue(result.Contains("hi"), "User message should be preserved");
@@ -92,7 +92,7 @@ namespace Microsoft.Agents.A365.Observability.Extension.Tests
             Assert.IsNull(removedInputMessages, "Input messages key should be removed");
             Assert.IsNull(removedInvocationOutput, "Invocation output key should be removed");
             Assert.IsNotNull(output, "Output should be on gen_ai.output.messages");
-            Assert.IsTrue(output.Contains("\"version\":\"0.1.0\""), "Output should be in structured format");
+            Assert.IsTrue(output.StartsWith("["), "Output should be a JSON array");
             Assert.IsTrue(output.Contains("\"role\":\"assistant\""), "Should contain assistant role");
             Assert.IsTrue(output.Contains("Output message"), "Output content should be preserved");
         }

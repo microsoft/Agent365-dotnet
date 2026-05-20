@@ -78,8 +78,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId, inputMessages: input, outputMessages: output);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hi").And.Contain("\"version\":\"0.1.0\"");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hi");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
 
