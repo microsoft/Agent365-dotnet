@@ -430,6 +430,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_AllowsRequestModel_ViaExtraAttributes_WhenNotSetByBuilder()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-model", "ModelAgent");
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
+            var conversationId = "conv-model";
+            var extras = new Dictionary<string, object?>
+            {
+                {OpenTelemetryConstants.GenAiRequestModelKey, "gpt-4o"},
+            };
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                scopeDetails,
+                agentDetails,
+                conversationId,
+                extraAttributes: extras);
+
+            // Assert - gen_ai.request.model is allowed because InvokeAgentDataBuilder does not set it
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiRequestModelKey)
+                .WhoseValue.Should().Be("gpt-4o");
+        }
+
+        [TestMethod]
         public void Build_WithAgentPlatformId_SetsExpectedAttributes()
         {
             // Arrange
