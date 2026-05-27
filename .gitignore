@@ -70,3 +70,7 @@ nunit-*.xml
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# TypeSpec / Node.js build artifacts
+node_modules/
+tsp-output/

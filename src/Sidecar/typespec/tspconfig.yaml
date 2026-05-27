@@ -1,0 +1,8 @@
+emit:
+  - "@typespec/openapi3"
+
+options:
+  "@typespec/openapi3":
+    output-file: "a365-sidecar-v1.yaml"
+    output-dir: "{project-root}/tsp-output"
+    new-line: lf

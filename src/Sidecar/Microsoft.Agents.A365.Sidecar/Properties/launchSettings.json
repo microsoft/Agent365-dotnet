@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Microsoft.Agents.A365.Sidecar": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://127.0.0.1:5365",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "A365_AGENT_ID": "dev-agent",
+        "A365_AUTH__TenantId": "dev-tenant",
+        "A365_AUTH__ClientId": "dev-blueprint"
+      }
+    }
+  }
+}
