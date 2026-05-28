@@ -62,10 +62,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
 
         /// <summary>
-        /// Async delegate used to resolve the auth token with rich context including the agentic user ID.
+        /// Async delegate used to resolve the auth token with rich context, which may include the
+        /// agentic user ID associated with the export batch context.
         /// Takes precedence over <see cref="TokenResolver"/> when set.
-        /// When this resolver is active, the exporter partitions export batches by agentic user ID
-        /// in addition to tenant and agent, so each resolver call receives the correct user context.
+        /// The exporter does not guarantee separate batching or resolver invocation per agentic user ID.
         /// </summary>
         public AsyncContextualTokenResolver? ContextualTokenResolver { get; set; }
 
