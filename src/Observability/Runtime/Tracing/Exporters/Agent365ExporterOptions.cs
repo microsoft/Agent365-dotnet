@@ -13,6 +13,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
+    /// Async delegate used by the exporter to obtain an auth token using rich context.
+    /// Provides additional fields (e.g. <see cref="TokenResolverContext.Identity"/>)
+    /// beyond what <see cref="AsyncAuthTokenResolver"/> offers.
+    /// Must be fast and non-blocking (use internal caching elsewhere).
+    /// Return null/empty to omit the Authorization header.
+    /// </summary>
+    public delegate Task<string?> AsyncContextualTokenResolver(TokenResolverContext context);
+
+    /// <summary>
     /// Delegate used by the exporter to resolve the endpoint host or URL for a given tenant id.
     /// The return value may be a bare host name (e.g. "agent365.svc.cloud.microsoft") or a full URL
     /// (e.g. "https://agent365.svc.cloud.microsoft").
@@ -46,9 +55,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public string ClusterCategory { get; set; } = "production";
 
         /// <summary>
-        /// Async delegate used to resolve the auth token. REQUIRED.
+        /// Async delegate used to resolve the auth token.
+        /// Either this or <see cref="ContextualTokenResolver"/> must be set.
+        /// When both are set, <see cref="ContextualTokenResolver"/> takes precedence.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
+
+        /// <summary>
+        /// Async delegate used to resolve the auth token with rich context including the agentic user ID.
+        /// Takes precedence over <see cref="TokenResolver"/> when set.
+        /// When this resolver is active, the exporter partitions export batches by agentic user ID
+        /// in addition to tenant and agent, so each resolver call receives the correct user context.
+        /// </summary>
+        public AsyncContextualTokenResolver? ContextualTokenResolver { get; set; }
 
         /// <summary>
         /// Delegate used to resolve the endpoint host or URL for a given tenant id.
