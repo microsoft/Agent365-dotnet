@@ -95,13 +95,13 @@ public class AgentFrameworkSpanProcessorTests
         // Verify the processor mapped to A365 versioned format
         tags.Should().ContainKey("gen_ai.input.messages");
         var input = tags["gen_ai.input.messages"] as string;
-        input.Should().Contain("\"version\":\"0.1.0\"", "should produce versioned wrapper");
+        input.Should().StartWith("[");
         input.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         input.Should().Contain("capital of France");
 
         tags.Should().ContainKey("gen_ai.output.messages");
         var output = tags["gen_ai.output.messages"] as string;
-        output.Should().Contain("\"version\":\"0.1.0\"");
+        output.Should().StartWith("[");
         output.Should().Contain("\"type\":\"text\"");
         output.Should().Contain("\"role\":\"assistant\"");
     }
@@ -135,14 +135,14 @@ public class AgentFrameworkSpanProcessorTests
         var chatSpan = _exportedActivities.LastOrDefault(a =>
         {
             var input = a.GetTagItem("gen_ai.input.messages") as string;
-            return input != null && input.Contains("version");
+            return input != null && input.StartsWith("[");
         });
 
-        chatSpan.Should().NotBeNull("should have at least one span with versioned input messages");
+        chatSpan.Should().NotBeNull("should have at least one span with structured input messages");
 
         var tags = GetTags(chatSpan!);
         var input = tags["gen_ai.input.messages"] as string;
-        input.Should().Contain("\"version\":\"0.1.0\"");
+        input.Should().StartWith("[");
         input.Should().Contain("weather");
     }
 

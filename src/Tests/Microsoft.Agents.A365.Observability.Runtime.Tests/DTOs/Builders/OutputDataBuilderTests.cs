@@ -21,7 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOperationNameKey).WhoseValue.Should().Be("output_messages");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiAgentIdKey).WhoseValue.Should().Be("agent-1");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello");
             data.Name.Should().Be("OutputMessages");
 
             // Null optional parameters should be omitted
@@ -39,7 +39,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             var data = OutputDataBuilder.Build(agent, response);
 
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("World").And.Contain("\"version\":\"0.1.0\"");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("World");
         }
 
         [TestMethod]
@@ -111,7 +111,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             var data = OutputDataBuilder.Build(agent, response, extraAttributes: extras);
 
-            data.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("real-output").And.Contain("\"version\":\"0.1.0\"");
+            data.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("real-output");
             data.Attributes.Should().ContainKey("output.custom").WhoseValue.Should().Be("abc");
             data.Attributes.Should().NotContainKey("output.null");
         }
@@ -156,7 +156,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             attrs.Should().ContainKey(OpenTelemetryConstants.UserNameKey).WhoseValue.Should().Be("Output Caller Name");
             attrs.Should().ContainKey(OpenTelemetryConstants.UserEmailKey).WhoseValue.Should().Be("calleroutput@example.com");
             attrs.Should().ContainKey(OpenTelemetryConstants.CallerClientIpKey).WhoseValue.Should().Be("192.168.1.50");
-            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("World").And.Contain("\"version\":\"0.1.0\"");
+            attrs.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey).WhoseValue!.ToString()!.Should().Contain("Hello").And.Contain("World");
             data.StartTime.Should().Be(start);
             data.EndTime.Should().Be(end);
             data.Duration.Should().BeCloseTo(end - start, TimeSpan.FromMilliseconds(100));

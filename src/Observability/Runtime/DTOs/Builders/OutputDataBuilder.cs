@@ -59,6 +59,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var attributes = new Dictionary<string, object?>();
 
+            // SDK attributes
+            AddSdkAttributes(attributes);
+
             // Operation name
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiOperationNameKey, OutputMessagesOperationName);
             
