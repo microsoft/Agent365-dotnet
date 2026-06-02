@@ -552,7 +552,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Sequential acquisition avoids throttling the OBO endpoint.
             var tokenByScope = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            List<MCPServerConfig> failedToAquireServers = new List<MCPServerConfig>();
+            List<MCPServerConfig> failedToAcquireServers = new List<MCPServerConfig>();
             foreach (var server in servers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -573,18 +573,18 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
                 catch (Exception ex)
                 {
-                    failedToAquireServers.Add(server);
+                    failedToAcquireServers.Add(server);
                     _logger.LogError(ex, "Failed to acquire token for server '{ServerName}': {Message}", server.mcpServerName, ex.Message);
                 }
             }
 
-            if (failedToAquireServers.Count > 0)
+            if (failedToAcquireServers.Count > 0)
             {
                 _logger.LogWarning("Failed to acquire tokens for {Count} MCP servers: {ServerNames}",
-                    failedToAquireServers.Count, string.Join(", ", failedToAquireServers.Select(s => s.mcpServerName)));
+                    failedToAcquireServers.Count, string.Join(", ", failedToAcquireServers.Select(s => s.mcpServerName)));
                 // remove servers we failed to acquire tokens for, since they'll likely fail authentication anyway
-                servers.RemoveAll(s => failedToAquireServers.Contains(s));
-                failedToAquireServers.Clear(); 
+                servers.RemoveAll(s => failedToAcquireServers.Contains(s));
+                failedToAcquireServers.Clear(); 
             }
         }
 

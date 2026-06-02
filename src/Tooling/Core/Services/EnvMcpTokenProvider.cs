@@ -55,9 +55,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             if (string.IsNullOrWhiteSpace(token))
             {
-                throw new InvalidOperationException(
-                    $"No dev token found for MCP server '{server.mcpServerName}'. " +
+                if (Utility.IsDevScenario(_configuration)) // Only log warnings in dev scenarios, to avoid noise in prod if env vars are not set
+                {
+                    _logger.LogWarning(
+                     $"No Environment token found for MCP server '{server.mcpServerName}'. " +
                     $"Set environment variable '{perServerKey}' or 'BEARER_TOKEN'.");
+                }
+                return Task.FromResult(string.Empty);
             }
 
             // Warn when a V2 server (distinct audience) falls back to the shared BEARER_TOKEN.

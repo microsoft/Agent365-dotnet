@@ -3,23 +3,23 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
-using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
-using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
+using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Agent Framework scenarios.
@@ -62,10 +62,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
-        {
-            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-        }
         authToken ??= string.Empty;
 
         try
@@ -81,11 +77,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
-            // In dev scenarios tokens come from environment variables; in production from OBO flow.
-            IMcpTokenProvider tokenProvider = new TokenProviderCollection(
-                    new EnvMcpTokenProvider(_configuration, _logger),
-                    new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+            IMcpTokenProvider tokenProvider;
+            if (userAuthorization is not null && authHandlerName is not null)
+            {
+                // Production V2-aware path: per-audience OBO tokens.
+                tokenProvider = new TokenProviderCollection(_logger,
+                        new EnvMcpTokenProvider(_configuration, _logger),
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+            }
+            else
+            {
+                tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
+            }
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
@@ -124,10 +127,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
-            {
-                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-            }
             authToken ??= string.Empty;
 
             var toolOptions = new ToolOptions
@@ -135,9 +134,18 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            IMcpTokenProvider tokenProvider = new TokenProviderCollection(
-                    new EnvMcpTokenProvider(_configuration, _logger),
-                    new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+            IMcpTokenProvider tokenProvider;
+            if (userAuthorization is not null && authHandlerName is not null)
+            {
+                // Production V2-aware path: per-audience OBO tokens.
+                tokenProvider = new TokenProviderCollection(_logger,
+                        new EnvMcpTokenProvider(_configuration, _logger),
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+            }
+            else
+            {
+                tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
+            }
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
                 agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);

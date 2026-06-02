@@ -56,10 +56,6 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
-            {
-                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-            }
             authToken ??= string.Empty;
 
             // resolve agent identity from context or token.
@@ -70,13 +66,19 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
-            // In dev scenarios tokens come from environment variables; in production from OBO flow.
-            IMcpTokenProvider tokenProvider =
-                new TokenProviderCollection(
-                    new EnvMcpTokenProvider(_configuration, _logger),
-                    new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
-                
+            IMcpTokenProvider tokenProvider;
+            if (userAuthorization is not null && authHandlerName is not null)
+            {
+                // Production V2-aware path: per-audience OBO tokens.
+                tokenProvider = new TokenProviderCollection(_logger,
+                        new EnvMcpTokenProvider(_configuration, _logger),
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+            }
+            else
+            {
+                tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
+            }
+
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)

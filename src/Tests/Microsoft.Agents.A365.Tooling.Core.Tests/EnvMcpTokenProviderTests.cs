@@ -15,7 +15,7 @@ namespace Microsoft.Agents.A365.Tooling.Core.Tests;
 /// <summary>
 /// Tests for <see cref="EnvMcpTokenProvider"/> and <see cref="Utility.IsDevScenario"/>.
 /// </summary>
-public class DevMcpTokenProviderTests
+public class EnvMcpTokenProviderTests
 {
     private static MCPServerConfig Server(string name) =>
         new() { mcpServerName = name, id = $"id-{name}", url = "http://test" };

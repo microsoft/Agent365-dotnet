@@ -2,28 +2,44 @@
 // Licensed under the MIT License.
 
 using Microsoft.Agents.A365.Tooling.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
     internal class TokenProviderCollection : IMcpTokenProvider
     {
         readonly SortedDictionary<int, IMcpTokenProvider> _providers;
-        public TokenProviderCollection(params IMcpTokenProvider[] providers)
+        readonly ILogger _logger;
+
+        public TokenProviderCollection(
+            ILogger logger,
+            params IMcpTokenProvider[] providers)
         {
-           _providers = new SortedDictionary<int, IMcpTokenProvider>();
-           for (int i = 0; i < providers.Length; i++)
-           {
-               _providers.Add(i, providers[i]);
-           }
+            _logger = logger;
+            _providers = new SortedDictionary<int, IMcpTokenProvider>();
+            for (int i = 0; i < providers.Length; i++)
+            {
+                _providers.Add(i, providers[i]);
+            }
+
         }
 
         public async Task<string> GetTokenAsync(MCPServerConfig server, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if ( _providers != null && _providers.Count == 0)
+            {
+                throw new InvalidOperationException("No token providers are configured.");
+            }
+
+            if (_providers!.Values.Any(p => p == null))
+            {
+                throw new InvalidOperationException("One or more token providers are null.");
+            }
+
             List<Exception> exceptions = new List<Exception>();
             // Try each provider in turn, then return the first successful token. If no providers can return a token, throw an exception.
             foreach (var provider in _providers.Values)
