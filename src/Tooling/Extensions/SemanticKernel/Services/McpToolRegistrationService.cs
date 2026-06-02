@@ -6,14 +6,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using System;
     using System.Linq;
     using Microsoft.Agents.A365.Runtime;
-    using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
-    using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
-    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
     using Microsoft.SemanticKernel.ChatCompletion;

@@ -4,7 +4,6 @@
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
 using Microsoft.Agents.A365.Runtime;
-using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Agents.AI;
@@ -19,7 +18,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
-using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Agent Framework scenarios.

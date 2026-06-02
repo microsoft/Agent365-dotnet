@@ -214,7 +214,7 @@ public class IsDevScenarioTests
     {
         // Unset environment must NOT default to Development so that hosts without an
         // explicit ASPNETCORE_ENVIRONMENT / DOTNET_ENVIRONMENT are not silently treated
-        // as dev (which would enable manifest discovery, DevMcpTokenProvider, and relaxed TLS).
+        // as dev (which would enable manifest discovery, EnvMcpTokenProvider, and relaxed TLS).
         var config = Config(); // nothing set
         Utility.IsDevScenario(config).Should().BeFalse();
     }

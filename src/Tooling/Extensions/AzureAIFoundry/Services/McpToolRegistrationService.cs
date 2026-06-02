@@ -170,7 +170,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         Dictionary<string, IList<McpClientTool>> toolsByServer;
 
         // Select token provider:
-        //   Dev scenario  → DevMcpTokenProvider reads per-server env vars (no OBO flow needed).
+        //   Dev scenario  → EnvMcpTokenProvider reads per-server env vars (no OBO flow needed).
         //   Production    → AgenticMcpTokenProvider performs OBO when auth objects are supplied;
         //                   falls back to the V1 shared-token path when they are absent.
         if (userAuthorization is not null && authHandlerName is not null)

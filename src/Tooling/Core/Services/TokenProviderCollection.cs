@@ -3,8 +3,6 @@
 
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
 
 namespace Microsoft.Agents.A365.Tooling.Services
 {
@@ -51,10 +49,15 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     {
                         return token;
                     }
+                    else
+                    {
+                        _logger.LogDebug("Provider {ProviderName} returned an empty token.", provider.GetType().Name);
+                    }
                 }
                 catch(Exception ex)
                 {
                     exceptions.Add(new Exception($"Provider {provider.GetType().Name} failed to obtain a token." , ex));
+                    _logger.LogDebug(ex, "Token provider {ProviderType} failed to obtain a token for server '{ServerName}'.", provider.GetType().Name, server.mcpServerName);
                 }
             }
             throw new AggregateException("No valid token could be obtained from any provider.", exceptions);
