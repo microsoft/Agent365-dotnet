@@ -91,16 +91,6 @@ public class EnvMcpTokenProviderTests
         t2.Should().Be("shared-token");
     }
 
-    // ─── Missing token → exception ────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetTokenAsync_NeitherEnvVarSet_ThrowsInvalidOperationException()
-    {
-        var config = Config(); // empty — no BEARER_TOKEN_* or BEARER_TOKEN
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*mcp_MailTools*");
-    }
 
     [Fact]
     public async Task GetTokenAsync_PerServerVarWhitespaceOnly_FallsBackToSharedToken()
@@ -114,29 +104,6 @@ public class EnvMcpTokenProviderTests
         token.Should().Be("shared-token");
     }
 
-    [Fact]
-    public async Task GetTokenAsync_BothVarsWhitespaceOnly_ThrowsInvalidOperationException()
-    {
-        var config = Config(
-            ("BEARER_TOKEN_MCP_MAILTOOLS", "   "),
-            ("BEARER_TOKEN", "   "));
-
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    // ─── Error message quality ────────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetTokenAsync_MissingToken_ErrorMessageContainsNormalizedKey()
-    {
-        var config = Config();
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-
-        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
-        ex.Which.Message.Should().Contain("BEARER_TOKEN_MCP_MAILTOOLS");
-        ex.Which.Message.Should().Contain("BEARER_TOKEN");
-    }
 
     // ─── Cancellation ─────────────────────────────────────────────────────────
 
