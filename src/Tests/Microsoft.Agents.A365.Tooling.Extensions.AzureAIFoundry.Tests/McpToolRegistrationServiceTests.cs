@@ -26,14 +26,12 @@ public class McpToolRegistrationServiceTests
     private readonly Mock<IMcpToolServerConfigurationService> _mockConfigService;
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ITurnContext> _mockTurnContext;
-    private readonly TokenProviderCollection _mockTokenProviderCollection;
     private readonly McpToolRegistrationService _service;
 
     public McpToolRegistrationServiceTests()
     {
         _mockLogger = new Mock<ILogger<IMcpToolRegistrationService>>();
         _mockServiceProvider = new Mock<IServiceProvider>();
-        _mockTokenProviderCollection = new TokenProviderCollection(_mockLogger.Object);
 
         // Create mock for IMcpToolServerConfigurationService interface
         _mockConfigService = new Mock<IMcpToolServerConfigurationService>();
@@ -200,7 +198,7 @@ public class McpToolRegistrationServiceTests
             x => x.EnumerateToolsFromServersAsync(
                 TestAgentInstanceId,
                 TestAuthToken,
-                It.IsAny<TokenProviderCollection>(),
+                It.IsAny<IMcpTokenProvider>(),
                 _mockTurnContext.Object,
                 It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance)),
             Times.Once);
