@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -42,8 +43,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _options = options ?? throw new ArgumentNullException(nameof(options));
 
-            if (_options.TokenResolver == null)
-                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver must be provided.");
+            if (_options.TokenResolver == null && _options.ContextualTokenResolver == null)
+                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver or ContextualTokenResolver must be provided.");
 
             _httpClient = httpClient ?? HttpClientFactory.CreateWithTimeout(options.ExporterTimeoutMilliseconds);
             _resource = resource ?? ResourceBuilder.CreateEmpty().Build();
@@ -72,7 +73,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     groups: groups,
                     resource: _resource,
                     options: _options,
-                    tokenResolver: (agentId, tenantId) => _options.TokenResolver!(agentId, tenantId),
+                    tokenResolver: (agentId, tenantId) => _options.TokenResolver != null
+                        ? _options.TokenResolver(agentId, tenantId)
+                        : Task.FromResult<string?>(null),
                     sendAsync: request => _httpClient.SendAsync(request)
                 ).GetAwaiter().GetResult();
             }
