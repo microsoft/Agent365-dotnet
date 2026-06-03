@@ -9,6 +9,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
+    using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
+    using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
+    using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
     using Microsoft.Agents.Builder;
     using Microsoft.Agents.Builder.App.UserAuth;
     using Microsoft.Extensions.Configuration;
@@ -48,21 +51,18 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         }
 
         /// <inheritdoc />
-        public Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
-            => AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
-
-        /// <inheritdoc />
-        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken, CancellationToken cancellationToken)
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null, CancellationToken cancellationToken = default)
         {
             if (kernel == null)
             {
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            if (authToken is null)
+            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
+            authToken ??= string.Empty;
 
             // resolve agent identity from context or token.
             string agenticAppId = RuntimeUtility.ResolveAgentIdentity(turnContext, authToken);
@@ -72,7 +72,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
+            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
+            // In dev scenarios tokens come from environment variables; in production from OBO flow.
+            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
+                ? new DevMcpTokenProvider(_configuration, _logger)
+                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)
             {

@@ -78,7 +78,7 @@ public class OutputLoggingMiddlewareTests
     }
 
     [TestMethod]
-    public async Task OnTurnAsync_PassesThrough_WhenTenantIdIsMissing()
+    public async Task OnTurnAsync_RegistersHandler_WhenTenantIdIsMissing()
     {
         // Arrange
         var middleware = new OutputLoggingMiddleware();
@@ -88,7 +88,7 @@ public class OutputLoggingMiddlewareTests
         {
             Id = "agent-id",
             Name = "Agent",
-            // No TenantId set
+            // No TenantId set - middleware no longer gates on TenantId
         });
 
         var mockTurnContext = new Mock<ITurnContext>();
@@ -106,7 +106,7 @@ public class OutputLoggingMiddlewareTests
 
         // Assert
         nextCalled.Should().BeTrue();
-        mockTurnContext.Verify(tc => tc.OnSendActivities(It.IsAny<SendActivitiesHandler>()), Times.Never);
+        mockTurnContext.Verify(tc => tc.OnSendActivities(It.IsAny<SendActivitiesHandler>()), Times.Once);
     }
 
     private static ITurnContext CreateTurnContext()

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using System;
@@ -20,8 +21,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// Builds complete data for an execute_tool operation.
         /// </summary>
         /// <param name="toolCallDetails">The details of the tool call.</param>
-        /// <param name="agentDetails">The details of the agent.</param>
-        /// <param name="tenantDetails">The details of the tenant.</param>
+        /// <param name="agentDetails">The details of the agent (includes tenant ID).</param>
         /// <param name="conversationId">The conversation id.</param>
         /// <param name="responseContent">Optional response content from the tool.</param>
         /// <param name="startTime">Optional custom start time for the operation.</param>
@@ -29,7 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanId">Optional span ID for the operation.</param>
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="channel">Optional channel information for the operation.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
+        /// <param name="callerDetails">Optional details about the caller.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Internal"/> or <see cref="SpanKindConstants.Client"/> as appropriate.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
@@ -37,7 +37,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         public static ExecuteToolData Build(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string? responseContent = null,
             DateTimeOffset? startTime = null,
@@ -50,7 +49,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanKind = null,
             string? traceId = null)
         {
-            var attributes = BuildAttributes(toolCallDetails, agentDetails, tenantDetails, conversationId, responseContent, channel, callerDetails, extraAttributes);
+            var attributes = BuildAttributes(toolCallDetails, agentDetails, conversationId, responseContent, channel, callerDetails, extraAttributes);
 
             return new ExecuteToolData(attributes, startTime, endTime, spanId, parentSpanId, spanKind, traceId);
         }
@@ -58,7 +57,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         private static Dictionary<string, object?> BuildAttributes(
             ToolCallDetails toolCallDetails,
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             string conversationId,
             string? responseContent,
             Channel? channel,
@@ -67,12 +65,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var attributes = new Dictionary<string, object?>();
 
+            // SDK attributes
+            AddSdkAttributes(attributes);
+
             // Operation name
             AddIfNotNull(attributes, GenAiOperationNameKey, ExecuteToolDataBuilder.ExecuteToolOperationName);
 
-            // Agent & tenant
             AddAgentDetails(attributes, agentDetails);
-            AddTenantDetails(attributes, tenantDetails);
 
             // Tool details
             AddToolDetails(attributes, toolCallDetails);
@@ -80,8 +79,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             // Conversation
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
 
-            // Response content if supplied
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
+            // Response content — ensure JSON object per OTEL spec
+            if (responseContent != null)
+            {
+                if (MessageUtils.IsJson(responseContent))
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey, responseContent);
+                }
+                else
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallResultKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "result", responseContent } }));
+                }
+            }
 
             // Channel
             AddChannelAttributes(attributes, channel);
@@ -101,7 +111,25 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = toolCallDetails;
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolNameKey, toolName);
-            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+
+            // Arguments — prefer structured dict, then ensure JSON string per OTEL spec
+            if (toolCallDetails.ArgumentsObject != null)
+            {
+                AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, MessageUtils.Serialize(toolCallDetails.ArgumentsObject));
+            }
+            else if (arguments != null)
+            {
+                if (MessageUtils.IsJson(arguments))
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                }
+                else
+                {
+                    AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolArgumentsKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
+                }
+            }
+
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolCallIdKey, toolCallId);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolDescriptionKey, description);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiToolTypeKey, toolType);

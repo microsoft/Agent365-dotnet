@@ -21,12 +21,11 @@ public sealed class OutputScopeTest : ActivityTest
             agentId: "agent-output-123",
             agentName: "OutputAgent",
             agentType: AgentType.MicrosoftCopilot);
-        var tenantDetails = new TenantDetails(Guid.NewGuid());
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = OutputScope.Start(agentDetails, tenantDetails, response);
+            using var scope = OutputScope.Start(Util.GetDefaultRequest(), response, agentDetails);
         });
 
         // Assert - operation name and activity name
@@ -37,30 +36,36 @@ public sealed class OutputScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName!);
 
-        // Assert - output messages
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, string.Join(",", initialMessages));
+        // Assert - output messages (structured JSON format)
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
+        tagValue.Should().StartWith("[");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Hello");
+        tagValue.Should().Contain("World");
     }
 
     [TestMethod]
-    public void RecordOutputMessages_AppendsMessages()
+    public void RecordOutputMessages_OverwritesMessages()
     {
         // Arrange
         var initialMessages = new[] { "Hello", "World" };
         var additionalMessages = new[] { "Goodbye", "Moon" };
         var response = new Response(initialMessages);
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = OutputScope.Start(agentDetails, tenantDetails, response);
+            using var scope = OutputScope.Start(Util.GetDefaultRequest(), response, agentDetails);
             scope.RecordOutputMessages(additionalMessages);
         });
 
-        // Assert - output messages are appended (initial + additional)
-        var expectedMessages = string.Join(",", initialMessages) + "," + string.Join(",", additionalMessages);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, expectedMessages);
+        // Assert - output messages are overwritten (set-once), only additional messages remain
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
+        tagValue.Should().StartWith("[");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Goodbye");
+        tagValue.Should().Contain("Moon");
     }
 
     [TestMethod]
@@ -69,26 +74,29 @@ public sealed class OutputScopeTest : ActivityTest
         // Arrange
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Create a parent activity to get a valid parent context
         ActivityContext? parentContext = null;
         ListenForActivity(() =>
         {
-            using var parentScope = InvokeAgentScope.Start(Details, tenantDetails);
+            using var parentScope = InvokeAgentScope.Start(Util.GetDefaultRequest(), ScopeDetails, TestAgentDetails);
             parentContext = parentScope.GetActivityContext();
         });
 
         // Act
         var childActivity = ListenForActivity(() =>
         {
-            using var scope = OutputScope.Start(agentDetails, tenantDetails, response, parentContext: parentContext);
+            using var scope = OutputScope.Start(
+                Util.GetDefaultRequest(),
+                response,
+                agentDetails,
+                spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         // Assert - child activity should have the parent set
         childActivity.ParentSpanId.ToString().Should().NotBeNullOrEmpty();
         childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, OutputScope.OperationName);
-        childActivity.ShouldHaveTag(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
+        childActivity.ShouldHaveTagContaining(OpenTelemetryConstants.GenAiOutputMessagesKey, "Test message");
     }
 
     [TestMethod]
@@ -98,16 +106,15 @@ public sealed class OutputScopeTest : ActivityTest
         var customStartTime = new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero);
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = OutputScope.Start(
-                agentDetails,
-                tenantDetails,
+                Util.GetDefaultRequest(),
                 response,
-                startTime: customStartTime);
+                agentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime));
         });
 
         // Assert
@@ -123,17 +130,15 @@ public sealed class OutputScopeTest : ActivityTest
         var customEndTime = new DateTimeOffset(2023, 11, 14, 22, 13, 25, TimeSpan.Zero); // 5 seconds later
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = OutputScope.Start(
-                agentDetails,
-                tenantDetails,
+                Util.GetDefaultRequest(),
                 response,
-                startTime: customStartTime,
-                endTime: customEndTime);
+                agentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: customEndTime));
         });
 
         // Assert - Start time should be set to custom time
@@ -147,27 +152,22 @@ public sealed class OutputScopeTest : ActivityTest
         // Arrange
         var conversationId = "conv-output-123";
         var metadata = new Channel(name: "ChannelOutput", link: "https://channel/output");
-        var callerDetails = new CallerDetails(
-            callerId: "caller-output-123",
-            callerName: "Output Caller",
-            callerUpn: "caller-output@example.com",
-            callerClientIP: System.Net.IPAddress.Parse("10.0.0.2"),
-            tenantId: "tenant-output-456");
+        var userDetails = new UserDetails(
+            userId: "caller-output-123",
+            userName: "Output Caller",
+            userEmail: "caller-output@example.com",
+            userClientIP: System.Net.IPAddress.Parse("10.0.0.2"));
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = OutputScope.Start(
-                agentDetails,
-                tenantDetails,
+                new Request(conversationId: conversationId, channel: metadata),
                 response,
-                parentContext: null,
-                conversationId: conversationId,
-                channel: metadata,
-                callerDetails: callerDetails);
+                agentDetails,
+                userDetails: userDetails);
         });
 
         // Assert - conversation ID
@@ -178,10 +178,10 @@ public sealed class OutputScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelLinkKey, metadata.Link!);
 
         // Assert - caller details
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, userDetails.UserId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, userDetails.UserName!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, userDetails.UserEmail!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, userDetails.UserClientIP!.ToString());
     }
 
     [TestMethod]
@@ -193,17 +193,15 @@ public sealed class OutputScopeTest : ActivityTest
         var laterEndTime = new DateTimeOffset(2023, 11, 14, 22, 13, 48, TimeSpan.Zero);
         var response = new Response(new[] { "Test message" });
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = OutputScope.Start(
-                agentDetails,
-                tenantDetails,
+                Util.GetDefaultRequest(),
                 response,
-                startTime: customStartTime,
-                endTime: initialEndTime);
+                agentDetails,
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: initialEndTime));
             scope.SetEndTime(laterEndTime);
         });
 

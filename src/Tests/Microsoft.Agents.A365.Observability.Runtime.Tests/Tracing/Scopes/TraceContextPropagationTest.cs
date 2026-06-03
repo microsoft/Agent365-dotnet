@@ -22,9 +22,9 @@ public sealed class TraceContextPropagationTest : ActivityTest
         ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4", "openai"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails());
+                Util.GetAgentDetails());
             headers = scope.InjectTraceContext();
         });
 
@@ -49,9 +49,9 @@ public sealed class TraceContextPropagationTest : ActivityTest
         ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4", "openai"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails());
+                Util.GetAgentDetails());
             ctx = scope.GetActivityContext();
         });
 
@@ -127,9 +127,9 @@ public sealed class TraceContextPropagationTest : ActivityTest
         ListenForActivity(() =>
         {
             using var parentScope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4", "openai"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails());
+                Util.GetAgentDetails());
             injectedHeaders = parentScope.InjectTraceContext();
         });
 
@@ -138,10 +138,10 @@ public sealed class TraceContextPropagationTest : ActivityTest
         var childActivity = ListenForActivity(() =>
         {
             using var childScope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("search_tool", "{\"query\": \"test\"}"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: parentContext);
+                spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         // Assert - child should share parent's trace ID
@@ -167,9 +167,10 @@ public sealed class TraceContextPropagationTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InvokeAgentScope.Start(
-                Details,
-                Util.GetTenantDetails(),
-                parentContext: parentContext);
+                Util.GetDefaultRequest(),
+                ScopeDetails,
+                TestAgentDetails,
+                spanDetails: new SpanDetails(parentContext: parentContext));
             childHeaders = scope.InjectTraceContext();
         });
 
@@ -195,10 +196,10 @@ public sealed class TraceContextPropagationTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("test-tool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: parentContext);
+                spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         // Assert
@@ -220,10 +221,10 @@ public sealed class TraceContextPropagationTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = OutputScope.Start(
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
+                Util.GetDefaultRequest(),
                 new Response(new[] { "test" }),
-                parentContext: parentContext);
+                Util.GetAgentDetails(),
+                spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         // Assert

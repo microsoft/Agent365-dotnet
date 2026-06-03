@@ -58,5 +58,30 @@ namespace Microsoft.Agents.A365.Notifications
         /// The event name for agentic user deletion
         /// </summary>
         public const string AgenticUserDeleted = "agenticUserDeleted";
+
+        /// <summary>
+        /// The event name for agentic user undeletion
+        /// </summary>
+        public const string AgenticUserUndeleted = "agenticUserUndeleted";
+
+        /// <summary>
+        /// The event name for agentic user identity update
+        /// </summary>
+        public const string AgenticUserIdentityUpdated = "agenticUserIdentityUpdated";
+
+        /// <summary>
+        /// The event name for agentic user manager update
+        /// </summary>
+        public const string AgenticUserManagerUpdated = "agenticUserManagerUpdated";
+
+        /// <summary>
+        /// The event name for agentic user enabled
+        /// </summary>
+        public const string AgenticUserEnabled = "agenticUserEnabled";
+
+        /// <summary>
+        /// The event name for agentic user disabled
+        /// </summary>
+        public const string AgenticUserDisabled = "agenticUserDisabled";
     }
 }

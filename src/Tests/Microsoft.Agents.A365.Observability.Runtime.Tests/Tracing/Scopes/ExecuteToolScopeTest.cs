@@ -1,4 +1,7 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
 using FluentAssertions;
@@ -14,23 +17,25 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         const string expected = "Input: 42";
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", expected), Util.GetAgentDetails(),Util.GetTenantDetails());
+            using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), new ToolCallDetails("TestTool", expected), Util.GetAgentDetails());
         });
         
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolArgumentsKey, expected);
+        activity.ShouldHaveTagContaining(OpenTelemetryConstants.GenAiToolArgumentsKey, expected);
     }
-    
+
     [TestMethod]
     public void RecordResponse_Response_Set()
     {
         const string expected = "Output: 42";
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "x"), Util.GetAgentDetails(), Util.GetTenantDetails());
+            using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), new ToolCallDetails("TestTool", "x"), Util.GetAgentDetails());
             scope.RecordResponse(expected);
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiToolCallResultKey, expected);
+        var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiToolCallResultKey).Value;
+        tagValue.Should().Contain("\"result\"");
+        tagValue.Should().Contain(expected);
     }
 
     [TestMethod]
@@ -39,7 +44,7 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         const string expected = "Test error";
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "x"), Util.GetAgentDetails(), Util.GetTenantDetails());
+            using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), new ToolCallDetails("TestTool", "x"), Util.GetAgentDetails());
             scope?.RecordError(new Exception(expected));
         });
         
@@ -53,9 +58,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"), 
-                Util.GetAgentDetails(), 
-                Util.GetTenantDetails());
+                Util.GetAgentDetails());
             scope.SetStartTime(customStartTime);
         });
 
@@ -71,12 +76,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                new Request(conversationId: conversationId),
                 new ToolCallDetails("TestTool", "args"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: null,
-                conversationId: conversationId,
-                channel: null);
+                Util.GetAgentDetails());
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
@@ -90,12 +92,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                new Request(channel: metadata),
                 new ToolCallDetails("TestTool", "args"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: null,
-                conversationId: null,
-                channel: metadata);
+                Util.GetAgentDetails());
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
@@ -113,18 +112,14 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             diagnostics: null);
         var toolCallDetails = new ToolCallDetails("SecurityTool", "scan args");
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 toolCallDetails,
                 agentDetails,
-                tenantDetails,
-                parentContext: null,
-                conversationId: null,
-                channel: null,
                 threatDiagnosticsSummary: threatSummary);
         });
 
@@ -138,18 +133,14 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         // Arrange
         var toolCallDetails = new ToolCallDetails("TestTool", "args");
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 toolCallDetails,
                 agentDetails,
-                tenantDetails,
-                parentContext: null,
-                conversationId: null,
-                channel: null,
                 threatDiagnosticsSummary: null);
         });
 
@@ -168,12 +159,11 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             diagnostics: "{\"policy\":\"data-loss-prevention\"}");
         var toolCallDetails = new ToolCallDetails("TestTool", "args");
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
+            using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), toolCallDetails, agentDetails);
             scope.RecordThreatDiagnosticsSummary(threatSummary);
         });
 
@@ -195,12 +185,11 @@ public sealed class ExecuteToolScopeTest : ActivityTest
             arguments: "args",
             toolServerName: expectedToolServerName);
         var agentDetails = Util.GetAgentDetails();
-        var tenantDetails = Util.GetTenantDetails();
 
         // Act
         var activity = ListenForActivity(() =>
         {
-            using var scope = ExecuteToolScope.Start(toolCallDetails, agentDetails, tenantDetails);
+            using var scope = ExecuteToolScope.Start(Util.GetDefaultRequest(), toolCallDetails, agentDetails);
         });
 
         // Assert
@@ -211,28 +200,27 @@ public sealed class ExecuteToolScopeTest : ActivityTest
     public void Start_SetsCallerDetails_WhenProvided()
     {
         // Arrange
-        var callerDetails = new CallerDetails(
-            callerId: "caller-123",
-            callerName: "Test Caller",
-            callerUpn: "caller@example.com",
-            callerClientIP: System.Net.IPAddress.Parse("192.168.1.1"),
-            tenantId: "tenant-456");
+        var userDetails = new UserDetails(
+            userId: "caller-123",
+            userName: "Test Caller",
+            userEmail: "caller@example.com",
+            userClientIP: System.Net.IPAddress.Parse("192.168.1.1"));
 
         // Act
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                callerDetails: callerDetails);
+                userDetails: userDetails);
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, userDetails.UserId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, userDetails.UserName!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, userDetails.UserEmail!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, userDetails.UserClientIP!.ToString());
     }
 
     [TestMethod]
@@ -245,10 +233,10 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime);
+                spanDetails: new SpanDetails(startTime: customStartTime));
         });
 
         // Assert
@@ -267,11 +255,10 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: customEndTime);
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: customEndTime));
         });
 
         // Assert - Start time should be set to custom time
@@ -291,11 +278,10 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: initialEndTime);
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: initialEndTime));
             scope.SetEndTime(laterEndTime);
         });
 
@@ -311,9 +297,9 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails());
+                Util.GetAgentDetails());
         });
 
         // Assert
@@ -327,10 +313,10 @@ public sealed class ExecuteToolScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = ExecuteToolScope.Start(
+                Util.GetDefaultRequest(),
                 new ToolCallDetails("TestTool", "args"),
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                spanKind: System.Diagnostics.ActivityKind.Client);
+                spanDetails: new SpanDetails(spanKind: System.Diagnostics.ActivityKind.Client));
         });
 
         // Assert

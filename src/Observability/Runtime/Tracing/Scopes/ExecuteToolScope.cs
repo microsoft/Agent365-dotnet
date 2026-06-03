@@ -2,8 +2,11 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
+
+using Microsoft.Agents.A365.Observability.Runtime.Tracing;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 {
@@ -23,18 +26,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <summary>
         /// Creates and starts a new scope for tool execution tracing.
         /// </summary>
+        /// <param name="request">Request details for the tool execution.</param>
         /// <param name="details">Details of the tool call (name, args, type, call ID, description, endpoint).</param>
         /// <param name="agentDetails">Information about the agent executing the tool (service, version, identifiers).</param>
-        /// <param name="tenantDetails">Tenant context used for telemetry enrichment and correlation.</param>
-        /// <param name="parentContext">Optional parent <see cref="System.Diagnostics.ActivityContext"/> used to link this span to an upstream operation.
-        /// Use <see cref="TraceContextHelper.ExtractContextFromHeaders"/> to obtain an <see cref="System.Diagnostics.ActivityContext"/> from HTTP headers containing a W3C traceparent.</param>
-        /// <param name="conversationId">Optional conversation or session correlation ID for the tool execution.</param>
-        /// <param name="channel">Optional channel information for observability.</param>
+        /// <param name="userDetails">Optional human user details.</param>
+        /// <param name="spanDetails">Optional span configuration (parent context, timing, kind, span links).</param>
         /// <param name="threatDiagnosticsSummary">Optional threat diagnostics summary containing security-related information about blocked actions.</param>
-        /// <param name="callerDetails">Optional details about the non-agentic caller.</param>
-        /// <param name="startTime">Optional explicit start time. Useful when recording a tool call after execution has already completed.</param>
-        /// <param name="endTime">Optional explicit end time. When provided, the span will use this timestamp when disposed instead of the current wall-clock time.</param>
-        /// <param name="spanKind">Optional span kind override. Defaults to <see cref="ActivityKind.Internal"/>. Use <see cref="ActivityKind.Client"/> when the tool calls an external service.</param>
         /// <returns>A new ExecuteToolScope instance.</returns>
         /// <remarks>
         /// <para>
@@ -42,39 +39,52 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// <list type="bullet">
         ///   <item><paramref name="details"/></item>
         ///   <item><paramref name="agentDetails"/></item>
-        ///   <item><paramref name="tenantDetails"/></item>
         /// </list>
         /// </para>
         /// <para>
         /// <see href="https://go.microsoft.com/fwlink/?linkid=2344479">Learn more about certification requirements</see>
         /// </para>
         /// </remarks>
-        public static ExecuteToolScope Start(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null) => new ExecuteToolScope(details, agentDetails, tenantDetails, parentContext, conversationId, channel, threatDiagnosticsSummary, callerDetails, startTime, endTime, spanKind);
+        public static ExecuteToolScope Start(Request request, ToolCallDetails details, AgentDetails agentDetails, UserDetails? userDetails = null, SpanDetails? spanDetails = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null) => new ExecuteToolScope(request, details, agentDetails, userDetails, spanDetails, threatDiagnosticsSummary);
 
-        private ExecuteToolScope(ToolCallDetails details, AgentDetails agentDetails, TenantDetails tenantDetails, ActivityContext? parentContext = null, string? conversationId = null, Channel? channel = null, ThreatDiagnosticsSummary? threatDiagnosticsSummary = null, CallerDetails? callerDetails = null, DateTimeOffset? startTime = null, DateTimeOffset? endTime = null, ActivityKind? spanKind = null)
+        private ExecuteToolScope(Request request, ToolCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails, ThreatDiagnosticsSummary? threatDiagnosticsSummary)
             : base(
-                kind: spanKind ?? ActivityKind.Internal,
-                agentDetails: agentDetails,
-                tenantDetails: tenantDetails,
                 operationName: OperationName,
                 activityName: $"{OperationName} {details.ToolName}",
-                startTime: startTime,
-                endTime: endTime,
-                parentContext: parentContext,
-                conversationId: conversationId,
-                channel: channel,
-                callerDetails: callerDetails)
+                agentDetails: agentDetails,
+                spanDetails: new SpanDetails(spanDetails?.SpanKind ?? ActivityKind.Internal, spanDetails?.ParentContext, spanDetails?.StartTime, spanDetails?.EndTime, spanDetails?.SpanLinks),
+                userDetails: userDetails)
         {
             var (toolName, arguments, toolCallId, description, toolType, endpoint, toolServerName) = details;
             SetTagMaybe(OpenTelemetryConstants.GenAiToolNameKey, toolName);
-            SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+
+            // Per OTEL spec: arguments SHOULD be recorded in structured form.
+            // Prefer ArgumentsObject (dict → JSON); fall back to string with JSON check.
+            if (details.ArgumentsObject != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, MessageUtils.Serialize(details.ArgumentsObject));
+            }
+            else if (arguments != null)
+            {
+                if (MessageUtils.IsJson(arguments))
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey, arguments);
+                }
+                else
+                {
+                    SetTagMaybe(OpenTelemetryConstants.GenAiToolArgumentsKey,
+                        MessageUtils.Serialize(new Dictionary<string, object> { { "arguments", arguments } }));
+                }
+            }
+
             SetTagMaybe(OpenTelemetryConstants.GenAiToolTypeKey, toolType);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolCallIdKey, toolCallId);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolDescriptionKey, description);
             SetTagMaybe(OpenTelemetryConstants.GenAiToolServerNameKey, toolServerName);
             SetTagMaybe(OpenTelemetryConstants.ThreatDiagnosticsSummaryKey, threatDiagnosticsSummary?.ToJson());
+            SetTagMaybe(OpenTelemetryConstants.GenAiConversationIdKey, request?.ConversationId);
 
-            if (endpoint !=null)
+            if (endpoint != null)
             {
                 SetTagMaybe(OpenTelemetryConstants.ServerAddressKey, endpoint.Host);
                 if (endpoint.Port != 443)
@@ -82,14 +92,42 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                     SetTagMaybe(OpenTelemetryConstants.ServerPortKey, endpoint.Port.ToString());
                 }
             }
+
+            if (request?.Channel != null)
+            {
+                SetTagMaybe(OpenTelemetryConstants.ChannelNameKey, request.Channel.Name);
+                SetTagMaybe(OpenTelemetryConstants.ChannelLinkKey, request.Channel.Link);
+            }
         }
-        
+
         /// <summary>
         /// Records response information for telemetry tracking.
+        /// Per OTEL spec, the result SHOULD be recorded in structured form.
+        /// If the string is already valid JSON, it is recorded as-is.
+        /// Otherwise, it is wrapped as <c>{"result":"..."}</c>.
         /// </summary>
         public void RecordResponse(string response)
         {
-            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            if (MessageUtils.IsJson(response))
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, response);
+            }
+            else
+            {
+                SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey,
+                    MessageUtils.Serialize(new Dictionary<string, object> { { "result", response ?? string.Empty } }));
+            }
+        }
+
+        /// <summary>
+        /// Records a structured tool call result for telemetry tracking.
+        /// Per OTEL spec, the result SHOULD be recorded in structured form.
+        /// The dictionary is serialized to JSON.
+        /// </summary>
+        /// <param name="result">Tool call result as a structured dictionary.</param>
+        public void RecordResponse(IDictionary<string, object> result)
+        {
+            SetTagMaybe(OpenTelemetryConstants.GenAiToolCallResultKey, MessageUtils.Serialize(result));
         }
 
         /// <summary>

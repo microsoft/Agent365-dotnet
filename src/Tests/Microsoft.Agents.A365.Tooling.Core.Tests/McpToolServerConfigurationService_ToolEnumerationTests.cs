@@ -439,6 +439,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
 
     #region Helper Methods
 
+    // V1 server helper — no audience so the legacy (no-tokenProvider) overload is used safely.
     private static MCPServerConfig CreateServerConfig(string name, string url)
     {
         return new MCPServerConfig
@@ -447,7 +448,7 @@ public class McpToolServerConfigurationService_ToolEnumerationTests
             url = url,
             id = $"id-{name}",
             scope = "scope",
-            audience = "audience",
+            audience = null, // V1: no per-audience token needed
             publisher = "publisher"
         };
     }

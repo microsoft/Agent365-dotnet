@@ -18,11 +18,6 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <summary>
         /// Returns an observability token (cached inside the credential) or null on failure/not registered.
         /// </summary>
-        Task<string?> GetObservabilityToken(string agentId, string tenantId);
-
-        /// <summary>
-        /// Returns an observability token (cached inside the credential) or null on failure/not registered, with cancellation support.
-        /// </summary>
-        Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken);
+        Task<string?> GetObservabilityToken(string agentId, string tenantId, CancellationToken cancellationToken = default);
     }
 }

@@ -16,10 +16,10 @@ public static class ChatToolCallExtensions
     /// Starts an ExecuteToolScope for the given ChatToolCall for OpenTelemetry tracing.
     /// </summary>
     /// <param name="chatToolCall">The ChatToolCall instance.</param>
-    /// <param name="agentId"></param>
-    /// <param name="tenantId"></param>
+    /// <param name="agentId">The agent identifier.</param>
+    /// <param name="tenantId">The tenant identifier.</param>
     /// <returns>An ExecuteToolScope.</returns>
-    public static ExecuteToolScope? Trace(this ChatToolCall chatToolCall, string agentId, Guid tenantId)
+    public static ExecuteToolScope? Trace(this ChatToolCall chatToolCall, string agentId, string? tenantId = null)
     {
         var details = new ToolCallDetails(
             chatToolCall.FunctionName,
@@ -29,8 +29,7 @@ public static class ChatToolCallExtensions
             chatToolCall.Kind.ToString()
         );
 
-        var agentDetails = new AgentDetails(agentId);
-        var tenentDetails = new TenantDetails(tenantId);
-        return ExecuteToolScope.Start(details, agentDetails, tenentDetails);
+        var agentDetails = new AgentDetails(agentId: agentId, tenantId: tenantId);
+        return ExecuteToolScope.Start(new Request(), details, agentDetails);
     }
 }

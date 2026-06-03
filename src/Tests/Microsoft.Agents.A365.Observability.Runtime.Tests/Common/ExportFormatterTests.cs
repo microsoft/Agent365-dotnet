@@ -18,8 +18,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Common;
 
 public sealed class TestScope : OpenTelemetryScope
 {
-    public TestScope(ActivityKind kind, AgentDetails agentDetails, TenantDetails tenantDetails, string operationName, string activityName)
-        : base(kind, agentDetails, tenantDetails, operationName, activityName) { }
+    public TestScope(string operationName, string activityName, AgentDetails agentDetails, SpanDetails? spanDetails = null)
+        : base(operationName, activityName, agentDetails, spanDetails) { }
 }
 
 [TestClass]
@@ -201,7 +201,7 @@ public partial class ExportFormatterTests : ActivityTest
         var parentSpanId = manualParentActivity.SpanId.ToString();
         var activity = ListenForActivity(() =>
         {
-            using var toolScope = ExecuteToolScope.Start(new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), Util.GetTenantDetails(), parentContext);
+            using var toolScope = ExecuteToolScope.Start(new Request(), new ToolCallDetails("TestTool", "Input: 42"), Util.GetAgentDetails(), spanDetails: new SpanDetails(parentContext: parentContext));
         });
 
         var resource = ResourceBuilder.CreateDefault().Build();
@@ -525,7 +525,7 @@ public void FormatMany_DoesNothing_WhenUnderLimit()
 {
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
-    activity.SetTag("gen_ai.tool.arguments", new string('a', 1024)); // 1KB
+    activity.SetTag("gen_ai.tool.call.arguments", new string('a', 1024)); // 1KB
     var resource = ResourceBuilder.CreateEmpty().Build();
     var logs = new List<string>();
     var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
@@ -538,7 +538,7 @@ public void FormatMany_DoesNothing_WhenUnderLimit()
     var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
     var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
     var span = scopeSpans[0].GetProperty("spans")[0];
-    span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().NotBe("TRUNCATED");
+    span.GetProperty("attributes").GetProperty("gen_ai.tool.call.arguments").GetString().Should().NotBe("TRUNCATED");
     logs.Should().NotContain(l => l.Contains("Truncated"));
 }
 
@@ -547,7 +547,7 @@ public void FormatMany_TruncatesSingleLargeKey()
 {
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-2");
-    activity.SetTag("gen_ai.tool.arguments", new string('b', 300 * 1024)); // 300KB
+    activity.SetTag("gen_ai.tool.call.arguments", new string('b', 300 * 1024)); // 300KB
     var resource = ResourceBuilder.CreateEmpty().Build();
     var logs = new List<string>();
     var formatter = new ExportFormatter(new ListLogger<ExportFormatter>(logs));
@@ -560,9 +560,9 @@ public void FormatMany_TruncatesSingleLargeKey()
     var resourceSpans = doc.RootElement.GetProperty("resourceSpans");
     var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
     var span = scopeSpans[0].GetProperty("spans")[0];
-    span.GetProperty("attributes").GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
-    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
+    span.GetProperty("attributes").GetProperty("gen_ai.tool.call.arguments").GetString().Should().Be("TRUNCATED");
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.arguments' size = "));
+    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.call.arguments'"));
 }
 
 [TestMethod]
@@ -570,7 +570,7 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
 {
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
-    activity.SetTag("gen_ai.tool.arguments", new string('c', 200 * 1024));
+    activity.SetTag("gen_ai.tool.call.arguments", new string('c', 200 * 1024));
     activity.SetTag("gen_ai.tool.call.result", new string('d', 100 * 1024));
     var resource = ResourceBuilder.CreateEmpty().Build();
     var logs = new List<string>();
@@ -585,9 +585,9 @@ public void FormatMany_TruncatesMultipleKeys_LargestFirst()
     var scopeSpans = resourceSpans[0].GetProperty("scopeSpans");
     var span = scopeSpans[0].GetProperty("spans")[0];
     var attr = span.GetProperty("attributes");
-    attr.GetProperty("gen_ai.tool.arguments").GetString().Should().Be("TRUNCATED");
-    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.arguments'"));
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = "));
+    attr.GetProperty("gen_ai.tool.call.arguments").GetString().Should().Be("TRUNCATED");
+    logs.Should().Contain(l => l.Contains("Truncated 'gen_ai.tool.call.arguments'"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.arguments' size = "));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = "));
 }
 
@@ -596,7 +596,7 @@ public void FormatMany_LogsAllKeySizes()
 {
     // Arrange
     using var activity = CreateActivity("tenant-1", "agent-1");
-    activity.SetTag("gen_ai.tool.arguments", new string('x', 100 * 1024));
+    activity.SetTag("gen_ai.tool.call.arguments", new string('x', 100 * 1024));
     activity.SetTag("gen_ai.tool.call.result", new string('y', 125 * 1024));
     activity.SetTag("gen_ai.input.messages", new string('z', 75 * 1024));
     activity.SetTag("gen_ai.agent.invocation_input", new string('z', 0));
@@ -610,7 +610,7 @@ public void FormatMany_LogsAllKeySizes()
     formatter.FormatMany(new[] { activity }, resource);
 
     // Assert
-    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.arguments' size = 100"));
+    logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.arguments' size = 100"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.tool.call.result' size = 125"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.input.messages' size = 75"));
     logs.Should().Contain(l => l.Contains("Key 'gen_ai.agent.invocation_input' size = 0"));

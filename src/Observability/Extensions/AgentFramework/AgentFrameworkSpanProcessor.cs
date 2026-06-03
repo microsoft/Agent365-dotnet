@@ -39,7 +39,17 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
                     {
                         case InvokeAgentOperation:
                         case ChatOperation:
-                            AgentFrameworkSpanProcessorHelper.ProcessInputOutputMessages(activity);
+                            var inputMessages = AgentFrameworkMessageMapper.MapInputMessages(activity);
+                            if (inputMessages != null)
+                            {
+                                activity.SetTag(OpenTelemetryConstants.GenAiInputMessagesKey, inputMessages);
+                            }
+
+                            var outputMessages = AgentFrameworkMessageMapper.MapOutputMessages(activity);
+                            if (outputMessages != null)
+                            {
+                                activity.SetTag(OpenTelemetryConstants.GenAiOutputMessagesKey, outputMessages);
+                            }
                             break;
 
                         case ExecuteToolOperation:

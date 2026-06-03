@@ -22,6 +22,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         private static readonly EventId ExecuteToolEventId = new EventId(1003, ExecuteToolEventName);
         private const string OutputMessagesEventName = "OutputMessages";
         private static readonly EventId OutputMessagesEventId = new EventId(1004, OutputMessagesEventName);
+        private const string ApplyGuardrailEventName = "ApplyGuardrail";
+        private static readonly EventId ApplyGuardrailEventId = new EventId(1005, ApplyGuardrailEventName);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="A365EtwLogger{T}"/> class.
@@ -37,7 +39,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogInferenceCall(
             InferenceCallDetails inferenceCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string[]? inputMessages, 
             string[]? outputMessages, 
@@ -52,7 +53,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             var data = ExecuteInferenceDataBuilder.Build(
                 inferenceCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 inputMessages,
                 outputMessages,
@@ -75,11 +75,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogInvokeAgent(
-            InvokeAgentDetails invokeAgentDetails, 
-            TenantDetails tenantDetails, 
+            InvokeAgentScopeDetails invokeAgentScopeDetails, 
+            AgentDetails agentDetails, 
             string conversationId, 
             Request? request, 
-            AgentDetails? callerAgentDetails, 
             CallerDetails? callerDetails, 
             string[]? inputMessages, 
             string[]? outputMessages, 
@@ -90,11 +89,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             string? traceId)
         {
             var data = InvokeAgentDataBuilder.Build(
-                invokeAgentDetails,
-                tenantDetails,
+                invokeAgentScopeDetails,
+                agentDetails,
                 conversationId,
                 request,
-                callerAgentDetails,
                 callerDetails,
                 inputMessages,
                 outputMessages,
@@ -117,7 +115,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         public void LogToolCall(
             ToolCallDetails toolCallDetails, 
             AgentDetails agentDetails, 
-            TenantDetails tenantDetails, 
             string conversationId, 
             string? responseContent, 
             DateTimeOffset? startTime, 
@@ -131,7 +128,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             var data = ExecuteToolDataBuilder.Build(
                 toolCallDetails,
                 agentDetails,
-                tenantDetails,
                 conversationId,
                 responseContent,
                 startTime,
@@ -154,7 +150,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <inheritdoc/>
         public void LogOutput(
             AgentDetails agentDetails,
-            TenantDetails tenantDetails,
             Response response,
             string? conversationId = null,
             Channel? channel = null,
@@ -167,7 +162,6 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         {
             var data = OutputDataBuilder.Build(
                 agentDetails,
-                tenantDetails,
                 response,
                 conversationId,
                 channel,
@@ -181,6 +175,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             logger.Log(
                 LogLevel.Information,
                 OutputMessagesEventId,
+                data.ToDictionary(),
+                null,
+                LogFormatter
+            );
+        }
+
+        /// <inheritdoc/>
+        public void LogApplyGuardrail(
+            GuardrailDetails guardrailDetails,
+            AgentDetails agentDetails,
+            string conversationId,
+            string parentSpanId,
+            DateTimeOffset? startTime = null,
+            DateTimeOffset? endTime = null,
+            string? spanId = null,
+            Channel? channel = null,
+            CallerDetails? callerDetails = null,
+            string? traceId = null)
+        {
+            var data = ApplyGuardrailDataBuilder.Build(
+                guardrailDetails,
+                agentDetails,
+                conversationId,
+                parentSpanId,
+                startTime,
+                endTime,
+                spanId,
+                channel,
+                callerDetails: callerDetails,
+                traceId: traceId);
+
+            logger.Log(
+                LogLevel.Information,
+                ApplyGuardrailEventId,
                 data.ToDictionary(),
                 null,
                 LogFormatter

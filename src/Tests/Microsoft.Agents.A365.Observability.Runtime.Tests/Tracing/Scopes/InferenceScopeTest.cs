@@ -1,4 +1,7 @@
-﻿namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Scopes;
 
 using System;
 using FluentAssertions;
@@ -23,7 +26,7 @@ public sealed class InferenceScopeTest : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails());
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails());
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, details.OperationName.ToString());
@@ -44,7 +47,7 @@ public sealed class InferenceScopeTest : ActivityTest
             "openai");
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordInputTokens(inputTokens);
         });
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, inputTokens.ToString());
@@ -60,7 +63,7 @@ public sealed class InferenceScopeTest : ActivityTest
             "openai");
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordOutputTokens(outputTokens);
         });
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, outputTokens.ToString());
@@ -77,7 +80,7 @@ public sealed class InferenceScopeTest : ActivityTest
         
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordFinishReasons(finishReasons);
         });
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseFinishReasonsKey, string.Join(",", finishReasons));
@@ -94,11 +97,15 @@ public sealed class InferenceScopeTest : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordInputMessages(messages);
         });
 
-        activity.ShouldHaveTag("gen_ai.input.messages", string.Join(",", messages));
+        var tagValue = activity.Tags.First(t => t.Key == "gen_ai.input.messages").Value;
+        tagValue.Should().StartWith("[");
+        tagValue.Should().Contain("\"role\":\"user\"");
+        tagValue.Should().Contain("Hello");
+        tagValue.Should().Contain("How are you?");
     }
 
     [TestMethod]
@@ -112,11 +119,15 @@ public sealed class InferenceScopeTest : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordOutputMessages(messages);
         });
 
-        activity.ShouldHaveTag("gen_ai.output.messages", string.Join(",", messages));
+        var tagValue = activity.Tags.First(t => t.Key == "gen_ai.output.messages").Value;
+        tagValue.Should().StartWith("[");
+        tagValue.Should().Contain("\"role\":\"assistant\"");
+        tagValue.Should().Contain("Hi there!");
+        tagValue.Should().Contain("I\\u0027m fine.");
     }
 
     [TestMethod]
@@ -130,7 +141,7 @@ public sealed class InferenceScopeTest : ActivityTest
 
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails());
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails());
             scope.SetStartTime(customStartTime);
         });
 
@@ -151,12 +162,9 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                new Request(conversationId: conversationId),
                 details,
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: null,
-                conversationId: conversationId,
-                channel: null);
+                Util.GetAgentDetails());
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiConversationIdKey, conversationId);
@@ -174,12 +182,9 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                new Request(channel: metadata),
                 details,
-                Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                parentContext: null,
-                conversationId: null,
-                channel: metadata);
+                Util.GetAgentDetails());
         });
 
         activity.ShouldHaveTag(OpenTelemetryConstants.ChannelNameKey, metadata.Name!);
@@ -197,7 +202,7 @@ public sealed class InferenceScopeTest : ActivityTest
         
         var activity = ListenForActivity(() =>
         {
-            using var scope = InferenceScope.Start(details, Util.GetAgentDetails(), Util.GetTenantDetails())!;
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordThoughtProcess(thoughtProcess);
         });
         
@@ -208,12 +213,11 @@ public sealed class InferenceScopeTest : ActivityTest
     public void Start_SetsCallerDetails_WhenProvided()
     {
         // Arrange
-        var callerDetails = new CallerDetails(
-            callerId: "caller-inf-123",
-            callerName: "Inference Caller",
-            callerUpn: "caller-inf@example.com",
-            callerClientIP: System.Net.IPAddress.Parse("10.0.0.1"),
-            tenantId: "tenant-inf-456");
+        var userDetails = new UserDetails(
+            userId: "caller-inf-123",
+            userName: "Inference Caller",
+            userEmail: "caller-inf@example.com",
+            userClientIP: System.Net.IPAddress.Parse("10.0.0.1"));
         var details = new InferenceCallDetails(
             InferenceOperationType.Chat,
             "gpt-4o",
@@ -223,17 +227,17 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 details,
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                callerDetails: callerDetails);
+                userDetails: userDetails);
         });
 
         // Assert
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, callerDetails.CallerId);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, callerDetails.CallerName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, callerDetails.CallerUpn);
-        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, callerDetails.CallerClientIP!.ToString());
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserIdKey, userDetails.UserId!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserNameKey, userDetails.UserName!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.UserEmailKey, userDetails.UserEmail!);
+        activity.ShouldHaveTag(OpenTelemetryConstants.CallerClientIpKey, userDetails.UserClientIP!.ToString());
     }
 
     [TestMethod]
@@ -250,10 +254,10 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 details,
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime);
+                spanDetails: new SpanDetails(startTime: customStartTime));
         });
 
         // Assert
@@ -276,11 +280,10 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 details,
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: customEndTime);
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: customEndTime));
         });
 
         // Assert - Start time should be set to custom time
@@ -304,11 +307,10 @@ public sealed class InferenceScopeTest : ActivityTest
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(
+                Util.GetDefaultRequest(),
                 details,
                 Util.GetAgentDetails(),
-                Util.GetTenantDetails(),
-                startTime: customStartTime,
-                endTime: initialEndTime);
+                spanDetails: new SpanDetails(startTime: customStartTime, endTime: initialEndTime));
             scope.SetEndTime(laterEndTime);
         });
 

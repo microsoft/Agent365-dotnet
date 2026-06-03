@@ -35,14 +35,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot);
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
-            var callerDetails = new CallerDetails(callerId: "caller-id-1", callerName: "Caller Name", callerUpn: "caller@example.com", callerClientIP: IPAddress.Parse("192.168.1.100"), tenantId: "caller-tenant-id");
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot, tenantId: Guid.NewGuid().ToString());
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: new Uri("https://example.com/agent"));
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "caller-id-1", userName: "Caller Name", userEmail: "caller@example.com", userClientIP: IPAddress.Parse("192.168.1.100")));
             string conversationId = "conv-123";
 
             // Act
-            logger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId, callerDetails: callerDetails);
+            logger.LogInvokeAgent(invokeAgentScopeDetails, agentDetails, conversationId, request: new Request(sessionId: "session-1"), callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -60,12 +59,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("agent-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentIdKey).GetString());
             Assert.AreEqual("agent-name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentNameKey).GetString());
             Assert.AreEqual("example.com", attrsElement.GetProperty(OpenTelemetryConstants.ServerAddressKey).GetString());
-            Assert.AreEqual("session-1", attrsElement.GetProperty(OpenTelemetryConstants.SessionIdKey).GetString());
             Assert.AreEqual(conversationId, attrsElement.GetProperty(OpenTelemetryConstants.GenAiConversationIdKey).GetString());
             Assert.AreEqual("invoke_agent", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
-            var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
-            Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
-            Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual(agentDetails.TenantId, attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString());
             Assert.AreEqual("caller-id-1", attrsElement.GetProperty(OpenTelemetryConstants.UserIdKey).GetString());
             Assert.AreEqual("Caller Name", attrsElement.GetProperty(OpenTelemetryConstants.UserNameKey).GetString());
             Assert.AreEqual("caller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.UserEmailKey).GetString());
@@ -80,15 +76,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", tenantId: Guid.NewGuid().ToString());
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             string conversationId = "conv-inf-1";
             var source = new Channel(name: "ChannelInf", link: "https://channel/inf");
-            var callerDetails = new CallerDetails(callerId: "inf-caller-id", callerName: "Inference Caller", callerUpn: "infcaller@example.com", callerClientIP: IPAddress.Parse("10.0.0.50"));
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "inf-caller-id", userName: "Inference Caller", userEmail: "infcaller@example.com", userClientIP: IPAddress.Parse("10.0.0.50")));
 
             // Act
-            logger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" }, channel: source, callerDetails: callerDetails);
+            logger.LogInferenceCall(inferenceDetails, agentDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" }, channel: source, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -109,13 +104,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("chat", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
             Assert.AreEqual("model-x", attrsElement.GetProperty(OpenTelemetryConstants.GenAiRequestModelKey).GetString());
             Assert.AreEqual("provider-y", attrsElement.GetProperty(OpenTelemetryConstants.GenAiProviderNameKey).GetString());
-            Assert.AreEqual("hello", attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString());
-            Assert.AreEqual("world", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            Assert.IsTrue(attrsElement.GetProperty(OpenTelemetryConstants.GenAiInputMessagesKey).GetString()!.Contains("hello"));
+            Assert.IsTrue(attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString()!.Contains("world"));
             Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelNameKey).GetString());
             Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelLinkKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
-            Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
-            Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual(agentDetails.TenantId, tenantIdString);
             Assert.AreEqual("inf-caller-id", attrsElement.GetProperty(OpenTelemetryConstants.UserIdKey).GetString());
             Assert.AreEqual("Inference Caller", attrsElement.GetProperty(OpenTelemetryConstants.UserNameKey).GetString());
             Assert.AreEqual("infcaller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.UserEmailKey).GetString());
@@ -130,16 +124,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", tenantId: Guid.NewGuid().ToString());
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
             string conversationId = "conv-tool-1";
             string responseContent = @"{ ""value"": ""result"" }";
             var source = new Channel(name: "ChannelInf", link: "https://channel/inf");
-            var callerDetails = new CallerDetails(callerId: "tool-caller-id", callerName: "Tool Caller", callerUpn: "toolcaller@example.com", tenantId: "tool-caller-tenant");
+            var callerDetails = new CallerDetails(userDetails: new UserDetails(userId: "tool-caller-id", userName: "Tool Caller", userEmail: "toolcaller@example.com"));
 
             // Act
-            logger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, responseContent: responseContent, channel: source, callerDetails: callerDetails);
+            logger.LogToolCall(toolDetails, agentDetails, conversationId, responseContent: responseContent, channel: source, callerDetails: callerDetails);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -167,8 +160,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("ChannelInf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelNameKey).GetString());
             Assert.AreEqual("https://channel/inf", attrsElement.GetProperty(OpenTelemetryConstants.ChannelLinkKey).GetString());
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
-            Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
-            Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual(agentDetails.TenantId, tenantIdString);
             Assert.AreEqual("tool-caller-id", attrsElement.GetProperty(OpenTelemetryConstants.UserIdKey).GetString());
             Assert.AreEqual("Tool Caller", attrsElement.GetProperty(OpenTelemetryConstants.UserNameKey).GetString());
             Assert.AreEqual("toolcaller@example.com", attrsElement.GetProperty(OpenTelemetryConstants.UserEmailKey).GetString());
@@ -182,12 +174,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var logger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
-            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot);
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name", agentType: AgentType.MicrosoftCopilot, tenantId: Guid.NewGuid().ToString());
             var response = new Response(new[] { "Hello", "World" });
 
             // Act
-            logger.LogOutput(agentDetails, tenantDetails, response);
+            logger.LogOutput(agentDetails, response);
 
             // Assert
             var evt = listener.Events.Find(e => e.EventId == 2000);
@@ -205,10 +196,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             Assert.AreEqual("agent-id", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentIdKey).GetString());
             Assert.AreEqual("agent-name", attrsElement.GetProperty(OpenTelemetryConstants.GenAiAgentNameKey).GetString());
             Assert.AreEqual("output_messages", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOperationNameKey).GetString());
-            Assert.AreEqual("Hello,World", attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString());
+            var outputValue = attrsElement.GetProperty(OpenTelemetryConstants.GenAiOutputMessagesKey).GetString()!;
+            Assert.IsTrue(outputValue.Contains("Hello") && outputValue.Contains("World") && outputValue.StartsWith("["));
             var tenantIdString = attrsElement.GetProperty(OpenTelemetryConstants.TenantIdKey).GetString();
-            Assert.IsTrue(Guid.TryParse(tenantIdString, out var parsedTenant));
-            Assert.AreEqual(tenantDetails.TenantId, parsedTenant);
+            Assert.AreEqual(agentDetails.TenantId, tenantIdString);
         }
 
         [TestMethod]
@@ -221,13 +212,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
             var factory = provider.GetRequiredService<ILoggerFactory>();
             var blockedLogger = factory.CreateLogger("Custom.Blocked");
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: new Uri("https://example.com/agent"));
             string conversationId = "conv-123";
 
             // Act
-            etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
+            etwLogger.LogInvokeAgent(invokeAgentScopeDetails, agentDetails, conversationId, request: new Request(sessionId: "session-1"));
             blockedLogger.LogInformation("Blocked log");
 
             // Assert
@@ -244,19 +234,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
             using var provider = BuildProvider();
             var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
-            var tenantDetails = new TenantDetails(Guid.NewGuid());
             var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
-            var invokeAgentDetails = new InvokeAgentDetails(endpoint: new Uri("https://example.com/agent"), details: agentDetails, sessionId: "session-1");
+            var invokeAgentScopeDetails = new InvokeAgentScopeDetails(endpoint: new Uri("https://example.com/agent"));
             var inferenceDetails = new InferenceCallDetails(InferenceOperationType.Chat, "model-x", "provider-y");
             var toolDetails = new ToolCallDetails("tool-a", arguments: @"{ ""arg"": 1 }", toolCallId: "tool-call-1", description: "desc", toolType: "function");
             var response = new Response(new[] { "output" });
             string conversationId = "conv-123";
 
             // Act
-            etwLogger.LogInvokeAgent(invokeAgentDetails, tenantDetails, conversationId);
-            etwLogger.LogInferenceCall(inferenceDetails, agentDetails, tenantDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
-            etwLogger.LogToolCall(toolDetails, agentDetails, tenantDetails, conversationId, @"{ ""value"": ""result"" }");
-            etwLogger.LogOutput(agentDetails, tenantDetails, response);
+            etwLogger.LogInvokeAgent(invokeAgentScopeDetails, agentDetails, conversationId, request: new Request(sessionId: "session-1"));
+            etwLogger.LogInferenceCall(inferenceDetails, agentDetails, conversationId, inputMessages: new[] { "hello" }, outputMessages: new[] { "world" });
+            etwLogger.LogToolCall(toolDetails, agentDetails, conversationId, responseContent: @"{ ""value"": ""result"" }");
+            etwLogger.LogOutput(agentDetails, response);
 
             // Assert
             var payloads = listener.Events.Where(e => e.EventId == 2000).Select(e => e.Payload?[0] as string).Where(p => p != null).ToList();

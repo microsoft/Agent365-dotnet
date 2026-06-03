@@ -5,9 +5,55 @@ All notable changes to the Microsoft Kairo SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Breaking Changes
+
+- **New permission required: `Agent365.Observability.OtelWrite`** — The observability exporter now requires this scope as both a delegated and application permission on your agent blueprint. See [Upgrade Instructions](#upgrade-instructions-observability-permission-for-existing-agents) below.
+
+---
+
+### Upgrade Instructions: Observability Permission for Existing Agents
+
+Existing agent blueprints need `Agent365.Observability.OtelWrite` granted as both a **delegated permission** and an **application permission**. Choose either option below.
+
+#### Option A — Agent 365 CLI (requires both config files)
+
+Requires `a365.config.json` and `a365.generated.config.json` in your config directory, a Global Administrator account, and [Agent 365 CLI v1.1.139-preview](https://www.nuget.org/packages/Microsoft.Agents.A365.DevTools.Cli/1.1.139-preview) or later.
+
+```
+a365 setup admin --config-dir "<path-to-config-dir>"
+```
+
+This grants all missing permissions including the new Observability scopes.
+
+#### Option B — Entra Portal (no config files required)
+
+Requires Global Administrator access to the blueprint app registration.
+
+1. Go to **Entra portal** > **App registrations** > select your Blueprint app
+2. Go to **API permissions** > **Add a permission** > **APIs my organization uses** > search for `9b975845-388f-4429-889e-eab1ef63949c`
+3. Select **Delegated permissions** > check `Agent365.Observability.OtelWrite` > **Add permissions**
+4. Repeat step 2–3, this time select **Application permissions** > check `Agent365.Observability.OtelWrite` > **Add permissions**
+5. Click **Grant admin consent** and confirm
+
+Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.OtelWrite` (Application) should show **Granted** status.
+
+> **Note:** If your agent is autonomous, you only need the **Application permission**. The delegated permission is required for agents that authenticate via a user session.
+
+---
+
 ## [Unreleased]
 
 ### Added
+- **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
+  - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
+  - `IMcpTokenProvider` interface for pluggable OAuth token acquisition
+  - `AgenticMcpTokenProvider` — acquires per-audience tokens via the agentic OBO flow, with request-scoped token caching to avoid redundant exchanges
+  - `McpToolServerConfigurationService.ListToolServersWithTokensAsync` — attaches per-server `Authorization` headers before tool connections are established; deduplicates token exchanges by scope across servers
+  - `Utility.ResolveTokenScopeForServer` — resolves the correct OAuth scope for each server: when `audience` is present and not the ATG audience (V2), uses `{audience}/{scope}` if `scope` is set, otherwise `{audience}/.default`; when `audience` is absent or identifies ATG (V1), falls back to the shared ATG scope from configuration — `scope` alone (without a non-ATG audience) is intentionally ignored
+  - `Constants.Authentication.AtgAppId` — shared ATG Application ID constant for V1 scope resolution
+  - All three framework extensions (Semantic Kernel, Agent Framework, Azure AI Foundry) updated to use per-audience token provider, so V2 servers receive their own audience-scoped tokens
 - **Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel** - Comprehensive Roslyn analyzer package for enforcing Agent365 governance patterns
   - 6 diagnostic analyzers (A365SK0001-A365SK0006) for multi-tenant governance enforcement
   - `KernelDirectAccessAnalyzer` - Prevents direct Kernel injection, enforces IKernelProvider pattern
@@ -26,6 +72,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `IKernelProvider` interface for tenant-aware kernel access
   - `KernelProvider` implementation with governance compliance
   - `IGovernanceDelegateFactory` for standardized governance patterns
+
+### Changed
+- **Microsoft.Agents.A365.Tooling** — Tooling gateway endpoint updated to `/agents/v2/{id}/mcpServers`
 
 
 ## [1.0.0] - 2025-01-16

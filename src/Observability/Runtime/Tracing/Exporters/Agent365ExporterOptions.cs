@@ -14,6 +14,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Async delegate used by the exporter to obtain an auth token using rich context.
+    /// Provides additional fields (e.g. <see cref="TokenResolverContext.Identity"/>)
+    /// beyond what <see cref="AsyncAuthTokenResolver"/> offers.
+    /// Must be fast and non-blocking (use internal caching elsewhere).
+    /// Return null/empty to omit the Authorization header.
+    /// </summary>
+    public delegate Task<string?> AsyncContextualTokenResolver(TokenResolverContext context);
+
+    /// <summary>
     /// Delegate used by the exporter to resolve the endpoint host or URL for a given tenant id.
     /// The return value may be a bare host name (e.g. "agent365.svc.cloud.microsoft") or a full URL
     /// (e.g. "https://agent365.svc.cloud.microsoft").
@@ -47,9 +56,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public string ClusterCategory { get; set; } = "production";
 
         /// <summary>
-        /// Async delegate used to resolve the auth token. REQUIRED.
+        /// Async delegate used to resolve the auth token.
+        /// Either this or <see cref="ContextualTokenResolver"/> must be set.
+        /// When both are set, <see cref="ContextualTokenResolver"/> takes precedence.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
+
+        /// <summary>
+        /// Async delegate used to resolve the auth token with rich context, which may include the
+        /// agentic user ID associated with the export batch context.
+        /// Takes precedence over <see cref="TokenResolver"/> when set.
+        /// The exporter does not guarantee separate batching or resolver invocation per agentic user ID.
+        /// </summary>
+        public AsyncContextualTokenResolver? ContextualTokenResolver { get; set; }
 
         /// <summary>
         /// Delegate used to resolve the endpoint host or URL for a given tenant id.
@@ -58,8 +77,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
-        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/agents/{agentId}/traces
-        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/agents/{agentId}/traces
+        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces
+        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/otlp/agents/{agentId}/traces
         /// Default is false.
         /// </summary>
         public bool UseS2SEndpoint { get; set; } = false;
@@ -87,5 +106,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Default is 512.
         /// </summary>
         public int MaxExportBatchSize { get; set; } = 512;
+
+        /// <summary>
+        /// Upper bound on HTTP request body size in bytes used by per-request payload chunking.
+        /// 100 KB headroom under the 1 MB server limit accounts for estimator error and JSON/envelope
+        /// overhead (for example, resource attributes and scope wrappers).
+        /// Default is 900,000 bytes.
+        /// </summary>
+        public long MaxPayloadBytes { get; set; } = 900_000;
     }
 }

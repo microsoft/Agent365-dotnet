@@ -110,13 +110,14 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 .Setup(x => x.EnumerateToolsFromServersAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
+                    It.IsAny<IMcpTokenProvider>(),
                     It.IsAny<ITurnContext>(),
                     It.IsAny<ToolOptions>(),
                     It.IsAny<CancellationToken>()));
 
             if (captureToolOptions != null)
             {
-                setup.Callback<string, string, ITurnContext, ToolOptions, CancellationToken>((_, _, _, options, _) => captureToolOptions(options));
+                setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions, CancellationToken>((_, _, _, _, options, _) => captureToolOptions(options));
             }
 
             setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
@@ -168,6 +169,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 x => x.EnumerateToolsFromServersAsync(
                     It.IsAny<string>(),
                     _testJwtToken,
+                    It.IsAny<IMcpTokenProvider>(),
                     mockTurnContext.Object,
                     It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365SemanticKernelSdkUserAgentConfiguration.Instance),
                     It.IsAny<CancellationToken>()),

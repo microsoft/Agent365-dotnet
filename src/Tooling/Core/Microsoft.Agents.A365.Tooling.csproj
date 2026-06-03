@@ -11,9 +11,15 @@
     <Summary>Microsoft Agent 365 Tooling SDK - functionality to work with Agent 365 Tools</Summary>
     <Product>Microsoft Agent 365 Tooling SDK</Product>
     <PackageTags>Microsoft;Agent365;A365;Tooling;MCP;AI;Agents</PackageTags>
+    <!-- Suppress NU5104: ModelContextProtocol.Core 1.2.0 stable exists but requires MCP 1.x API migration; deferring to post-GA -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Core.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.AgentFramework" />
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
