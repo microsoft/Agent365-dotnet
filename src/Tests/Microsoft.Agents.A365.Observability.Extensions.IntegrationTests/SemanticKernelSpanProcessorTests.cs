@@ -6,6 +6,8 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
@@ -35,28 +37,36 @@ public class SemanticKernelSpanProcessorTests
         !string.IsNullOrEmpty(Deployment);
 
     private List<Activity> _exportedActivities = new();
-    private TracerProvider? _tracerProvider;
+    private ServiceProvider? _serviceProvider;
 
     [TestInitialize]
     public void Setup()
     {
-        // Enable SK sensitive content telemetry (emits gen_ai.user.message / gen_ai.choice events)
-        AppContext.SetSwitch("Microsoft.SemanticKernel.Experimental.GenAI.EnableOTelDiagnosticsSensitive", true);
-
         _exportedActivities = new List<Activity>();
 
-        // Wire up: SK source → SemanticKernelSpanProcessor → capture
-        _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource("Microsoft.SemanticKernel*")
-            .AddProcessor(new SemanticKernelSpanProcessor())
-            .AddProcessor(new ActivityCapturingProcessor(_exportedActivities))
+        // Use the real A365 SDK initialization path: Builder → WithSemanticKernel → Build
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        new Runtime.Builder(services, configuration: null, useOpenTelemetryBuilder: true)
+            .WithSemanticKernel()
             .Build();
+
+        // Add a capturing exporter — runs after all processors, at export time
+        services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddProcessor(new SimpleActivityExportProcessor(new ActivityCapturingExporter(_exportedActivities))));
+
+        _serviceProvider = services.BuildServiceProvider();
+
+        // Force the TracerProvider to be created by resolving it
+        _serviceProvider.GetService<TracerProvider>();
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        _tracerProvider?.Dispose();
+        _serviceProvider?.Dispose();
     }
 
     [TestMethod]
@@ -73,7 +83,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Find the chat completion span (SK may emit multiple spans)
         var chatSpan = _exportedActivities.FirstOrDefault(a =>
@@ -95,7 +105,7 @@ public class SemanticKernelSpanProcessorTests
             "SemanticKernelSpanProcessor should map input events to A365 versioned format");
 
         var inputMessages = tags["gen_ai.input.messages"] as string;
-        inputMessages.Should().Contain("\"version\":\"0.1.0\"", "should use A365 versioned wrapper");
+        inputMessages.Should().StartWith("[");
         inputMessages.Should().Contain("capital of France", "should contain user message text");
         inputMessages.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         inputMessages.Should().Contain("\"role\":\"system\"", "should include system message");
@@ -106,7 +116,7 @@ public class SemanticKernelSpanProcessorTests
             "SemanticKernelSpanProcessor should map choice events to A365 versioned format");
 
         var outputMessages = tags["gen_ai.output.messages"] as string;
-        outputMessages.Should().Contain("\"version\":\"0.1.0\"", "should use A365 versioned wrapper");
+        outputMessages.Should().StartWith("[");
         outputMessages.Should().Contain("\"type\":\"text\"", "should use TextPart format");
         outputMessages.Should().Contain("\"role\":\"assistant\"", "should have assistant role");
         outputMessages.Should().Contain("\"finish_reason\":\"stop\"", "should map SK Stop → stop");
@@ -153,7 +163,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history, settings, kernel);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Dump all spans
         Console.WriteLine($"\n  All captured activities ({_exportedActivities.Count}):");
@@ -178,7 +188,7 @@ public class SemanticKernelSpanProcessorTests
         // Input messages should be in versioned format with tool call parts
         tags.Should().ContainKey("gen_ai.input.messages");
         var inputMessages = tags["gen_ai.input.messages"] as string;
-        inputMessages.Should().Contain("\"version\":\"0.1.0\"");
+        inputMessages.Should().StartWith("[");
         inputMessages.Should().Contain("\"role\":\"user\"");
         inputMessages.Should().Contain("weather");
 
@@ -200,7 +210,7 @@ public class SemanticKernelSpanProcessorTests
             lastInput.Should().Contain("GetWeather", "should contain function name");
 
             var lastOutput = lastTags["gen_ai.output.messages"] as string;
-            lastOutput.Should().Contain("\"version\":\"0.1.0\"");
+            lastOutput.Should().StartWith("[");
             lastOutput.Should().Contain("\"finish_reason\":\"stop\"");
         }
 
@@ -220,7 +230,7 @@ public class SemanticKernelSpanProcessorTests
 
         _ = await chatService.GetChatMessageContentAsync(history);
 
-        _tracerProvider!.ForceFlush();
+        ForceFlush();
 
         // Find chat span and examine raw events before processor
         var chatSpan = _exportedActivities.FirstOrDefault(a =>
@@ -252,6 +262,12 @@ public class SemanticKernelSpanProcessorTests
     }
 
     #region Helpers
+
+    private void ForceFlush()
+    {
+        var tracerProvider = _serviceProvider?.GetService<TracerProvider>();
+        tracerProvider?.ForceFlush();
+    }
 
     private Kernel CreateKernel()
     {

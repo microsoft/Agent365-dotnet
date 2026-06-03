@@ -4,6 +4,7 @@
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Tooling.Models;
+using Microsoft.Agents.A365.Tooling.Services;
 using Moq;
 using Xunit;
 
@@ -16,7 +17,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Tests.Services
 public class GetMcpToolsAsync_Tests : McpToolRegistrationServiceTestBase
 {
     [Fact]
-    public async Task CallsEnumerateAllToolsAsync()
+    public async Task CallsEnumerateToolsFromServersAsync()
     {
         // Arrange
         var mockTurnContext = CreateMockTurnContext();
@@ -33,9 +34,10 @@ public class GetMcpToolsAsync_Tests : McpToolRegistrationServiceTestBase
 
         // Assert
         McpServerConfigurationServiceMock.Verify(
-            x => x.EnumerateAllToolsAsync(
+            x => x.EnumerateToolsFromServersAsync(
                 TestAgentUserId,
                 TestAuthToken,
+                It.IsAny<IMcpTokenProvider>(),
                 mockTurnContext.Object,
                 It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance)),
             Times.Once);

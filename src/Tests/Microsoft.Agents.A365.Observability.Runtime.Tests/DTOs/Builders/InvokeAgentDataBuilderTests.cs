@@ -148,7 +148,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi there!").And.Contain("fine.").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi there!").And.Contain("fine.");
         }
 
         [TestMethod]
@@ -172,9 +172,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
 
             // Assert
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello");
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiOutputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiOutputMessagesKey]!.ToString()!.Should().Contain("Hi");
         }
 
         [TestMethod]
@@ -430,6 +430,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_AllowsRequestModel_ViaExtraAttributes_WhenNotSetByBuilder()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-model", "ModelAgent");
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
+            var conversationId = "conv-model";
+            var extras = new Dictionary<string, object?>
+            {
+                {OpenTelemetryConstants.GenAiRequestModelKey, "gpt-4o"},
+            };
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(
+                scopeDetails,
+                agentDetails,
+                conversationId,
+                extraAttributes: extras);
+
+            // Assert - gen_ai.request.model is allowed because InvokeAgentDataBuilder does not set it
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiRequestModelKey)
+                .WhoseValue.Should().Be("gpt-4o");
+        }
+
+        [TestMethod]
         public void Build_WithAgentPlatformId_SetsExpectedAttributes()
         {
             // Arrange
@@ -482,7 +507,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.TenantIdKey);
             telemetry.Attributes[OpenTelemetryConstants.TenantIdKey].Should().Be(tenantId);
             telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiInputMessagesKey);
-            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello").And.Contain("\"version\":\"0.1.0\"");
+            telemetry.Attributes[OpenTelemetryConstants.GenAiInputMessagesKey]!.ToString()!.Should().Contain("Hello");
         }
 
         [TestMethod]

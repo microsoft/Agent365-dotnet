@@ -77,12 +77,13 @@ public abstract class McpToolRegistrationServiceTestBase
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<IMcpTokenProvider>(),
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ToolOptions>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions>((_, _, _, _, options) => captureToolOptions(options));
         }
 
         setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
@@ -98,17 +99,18 @@ public abstract class McpToolRegistrationServiceTestBase
     protected void SetupMocksForGetMcpTools(Action<ToolOptions>? captureToolOptions = null)
     {
         var setup = McpServerConfigurationServiceMock
-            .Setup(x => x.EnumerateAllToolsAsync(
+            .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<IMcpTokenProvider>(),
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ToolOptions>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions>((_, _, _, _, options) => captureToolOptions(options));
         }
 
-        setup.ReturnsAsync(new List<McpClientTool>());
+        setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
     }
 }

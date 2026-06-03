@@ -60,6 +60,23 @@ namespace Microsoft.Agents.A365.Tooling.Services
             return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
         }
 
+        /// <summary>
+        /// Gets the list of MCP servers and attaches per-audience Bearer tokens to each server's
+        /// <see cref="MCPServerConfig.Headers"/> dictionary before returning.
+        /// V1 servers share the ATG-scoped token; V2 servers receive audience-specific tokens.
+        /// </summary>
+        internal virtual async Task<List<MCPServerConfig>> ListToolServersWithTokensAsync(
+            string agentInstanceId,
+            string authToken,
+            IMcpTokenProvider tokenProvider,
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken = default)
+        {
+            var servers = await ListToolServersAsync(agentInstanceId, authToken, toolOptions).ConfigureAwait(false);
+            await AttachPerAudienceTokensAsync(servers, tokenProvider, cancellationToken).ConfigureAwait(false);
+            return servers;
+        }
+
         /// <inheritdoc/>
         public virtual async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
             ITurnContext turnContext,
@@ -75,10 +92,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     throw new ArgumentException("MCP Server name cannot be null or empty", nameof(mCPServerConfig.mcpServerName));
                 }
 
+                // Prefer the per-server token injected by AttachPerAudienceTokensAsync (V2 path).
+                // Fall back to the caller-supplied authToken for V1 servers and dev scenarios.
+                var effectiveToken = ResolveEffectiveToken(mCPServerConfig, authToken);
+
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), authToken, toolOptions);
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), effectiveToken, toolOptions);
                 var tools = await mcpClient.ListToolsAsync();
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
@@ -275,9 +296,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     mcpServerName = name,
                     url = endpoint,
                     id = id ?? string.Empty,
-                    scope = scope ?? string.Empty,
-                    audience = audience ?? string.Empty,
-                    publisher = publisher ?? string.Empty
+                    scope = scope,
+                    audience = audience,
+                    publisher = publisher
                 };
             }
             catch (Exception)
@@ -355,9 +376,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     mcpServerName = name,
                     url = fullUrl,
                     id = id ?? string.Empty,
-                    scope = scope ?? string.Empty,
-                    audience = audience ?? string.Empty,
-                    publisher = publisher ?? string.Empty
+                    scope = scope,
+                    audience = audience,
+                    publisher = publisher
                 };
             }
             catch (Exception)
@@ -541,14 +562,61 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
         }
 
-        private bool IsDevScenario()
+        /// <summary>
+        /// Attaches a per-audience Bearer token to each server's
+        /// <see cref="MCPServerConfig.Headers"/> dictionary.
+        /// Tokens are deduped by resolved scope before calling the provider, so V1 servers
+        /// that share the ATG scope trigger exactly one exchange regardless of how many
+        /// V1 servers are present.
+        /// </summary>
+        private async Task AttachPerAudienceTokensAsync(
+            List<MCPServerConfig> servers,
+            IMcpTokenProvider tokenProvider,
+            CancellationToken cancellationToken)
         {
-            // Determine environment from configuration (environment variables, appsettings.json, etc.), default to 'Development' if not set
-            var environment = this._configuration["ASPNETCORE_ENVIRONMENT"] ??
-                             this._configuration["DOTNET_ENVIRONMENT"] ??
-                             "Development";
+            // Pre-compute distinct scopes so we only call the provider once per unique scope.
+            // Sequential acquisition avoids throttling the OBO endpoint.
+            var tokenByScope = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+            foreach (var server in servers)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var scope = Utils.Utility.ResolveTokenScopeForServer(server, _configuration);
+                if (!tokenByScope.TryGetValue(scope, out var token))
+                {
+                    token = await tokenProvider.GetTokenAsync(server, cancellationToken).ConfigureAwait(false);
+                    tokenByScope[scope] = token;
+                    _logger.LogDebug(
+                        "Acquired token for scope '{Scope}' (server '{ServerName}')",
+                        scope, server.mcpServerName);
+                }
+
+                server.Headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                server.Headers[Constants.Headers.Authorization] = $"{Constants.Headers.BearerPrefix} {token}";
+            }
         }
+
+        /// <summary>
+        /// Extracts the effective raw token for MCP client authentication.
+        /// If <paramref name="serverConfig"/> already carries an Authorization header
+        /// (set by <see cref="AttachPerAudienceTokensAsync"/>), the token from that header
+        /// is used. Otherwise the caller-supplied <paramref name="fallbackToken"/> is returned.
+        /// </summary>
+        internal static string ResolveEffectiveToken(MCPServerConfig serverConfig, string fallbackToken)
+        {
+            if (serverConfig.Headers is not null &&
+                serverConfig.Headers.TryGetValue(Constants.Headers.Authorization, out var headerValue) &&
+                !string.IsNullOrWhiteSpace(headerValue))
+            {
+                return headerValue.StartsWith($"{Constants.Headers.BearerPrefix} ", StringComparison.OrdinalIgnoreCase)
+                    ? headerValue.Substring(Constants.Headers.BearerPrefix.Length + 1)
+                    : headerValue;
+            }
+
+            return fallbackToken;
+        }
+
+        private bool IsDevScenario() => Utility.IsDevScenario(_configuration);
     }
 }

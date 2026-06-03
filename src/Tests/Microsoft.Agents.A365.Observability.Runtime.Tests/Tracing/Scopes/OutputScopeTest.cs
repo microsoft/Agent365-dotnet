@@ -38,7 +38,7 @@ public sealed class OutputScopeTest : ActivityTest
 
         // Assert - output messages (structured JSON format)
         var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
-        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().StartWith("[");
         tagValue.Should().Contain("\"role\":\"assistant\"");
         tagValue.Should().Contain("Hello");
         tagValue.Should().Contain("World");
@@ -62,7 +62,7 @@ public sealed class OutputScopeTest : ActivityTest
 
         // Assert - output messages are overwritten (set-once), only additional messages remain
         var tagValue = activity.Tags.First(t => t.Key == OpenTelemetryConstants.GenAiOutputMessagesKey).Value;
-        tagValue.Should().Contain("\"version\":\"0.1.0\"");
+        tagValue.Should().StartWith("[");
         tagValue.Should().Contain("\"role\":\"assistant\"");
         tagValue.Should().Contain("Goodbye");
         tagValue.Should().Contain("Moon");

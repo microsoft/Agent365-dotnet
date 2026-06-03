@@ -1,4 +1,7 @@
-﻿using FluentAssertions;
+﻿// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters;
@@ -22,7 +25,7 @@ public sealed class Agent365ExporterTests
         "firstrelease", "prod", "production", "gov", "high", "dod", "mooncake", "ex", "rx"
     };
 
-    private static Activity CreateActivity(string? tenantId = null, string? agentId = null)
+    private static Activity CreateActivity(string? tenantId = null, string? agentId = null, string? operationName = "invoke_agent")
     {
         using var listener = new ActivityListener
         {
@@ -38,6 +41,10 @@ public sealed class Agent365ExporterTests
         if (activity == null)
             throw new InvalidOperationException("Failed to start activity. Ensure an ActivityListener is registered.");
 
+        if (operationName != null)
+        {
+            activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, operationName);
+        }
         if (tenantId != null)
         {
             activity.SetTag(OpenTelemetryConstants.TenantIdKey, tenantId);
@@ -188,6 +195,25 @@ public sealed class Agent365ExporterTests
         groups.Should().HaveCount(2);
         groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-1" && g.Activities.Count == 2);
         groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-2" && g.Activities.Count == 1);
+    }
+
+    [TestMethod]
+    public void PartitionByIdentity_FiltersOutNonGenAISpans()
+    {
+        // Arrange
+        using var genaiSpan = CreateActivity("tenant-1", "agent-1", operationName: "invoke_agent");
+        using var httpSpan = CreateActivity("tenant-1", "agent-1", operationName: null);
+        using var dbSpan = CreateActivity("tenant-1", "agent-1", operationName: "some_random_op");
+        using var chatSpan = CreateActivity("tenant-1", "agent-1", operationName: "Chat");
+
+        var batch = CreateBatch(genaiSpan, httpSpan, dbSpan, chatSpan);
+
+        // Act
+        var groups = Agent365ExporterTests._agent365ExporterCore.PartitionByIdentity(in batch);
+
+        // Assert
+        groups.Should().HaveCount(1);
+        groups.Should().Contain(g => g.TenantId == "tenant-1" && g.AgentId == "agent-1" && g.Activities.Count == 2);
     }
 
     [TestMethod]

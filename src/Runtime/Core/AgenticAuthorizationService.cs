@@ -26,5 +26,19 @@ namespace Microsoft.Agents.A365.Runtime.Authentication
 
             return await userAuthorization.ExchangeTurnTokenAsync(turnContext, authHandlerName, exchangeScopes: scopes);
         }
+
+        /// <summary>
+        /// Gets an agentic user token scoped to the specified OAuth scopes.
+        /// Use this overload for V2 MCP servers that require per-audience tokens.
+        /// </summary>
+        /// <param name="userAuthorization">The user authorization instance.</param>
+        /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System.</param>
+        /// <param name="turnContext">The turn context for the current conversation.</param>
+        /// <param name="scopes">The OAuth scopes to request. Must not be null or empty.</param>
+        /// <returns>The agentic user token as a string.</returns>
+        public static async Task<string> GetAgenticUserTokenAsync(UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, IEnumerable<string> scopes)
+        {
+            return await userAuthorization.ExchangeTurnTokenAsync(turnContext, authHandlerName, exchangeScopes: scopes.ToList());
+        }
     }
 }

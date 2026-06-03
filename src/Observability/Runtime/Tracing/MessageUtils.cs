@@ -12,14 +12,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
     /// <summary>
     /// Conversion and serialization helpers for OTEL gen-ai message format.
     /// Provides normalization from plain <c>string[]</c> (backward compat) to the
-    /// versioned wrapper format, and non-throwing SerializeMessages methods.
+    /// structured array format, and non-throwing Serialize methods.
     /// </summary>
     internal static class MessageUtils
     {
         private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
         private static readonly string DiagnosticFallback =
-            "{\"version\":\"" + MessageConstants.SchemaVersion + "\",\"messages\":[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"[serialization failed]\"}]}]}";
+            "[{\"role\":\"system\",\"parts\":[{\"type\":\"text\",\"content\":\"[serialization failed]\"}],\"finish_reason\":\"error\"}]";
 
         private static JsonSerializerOptions CreateSerializerOptions()
         {
@@ -35,11 +35,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         }
 
         // -------------------------------------------------------------------
-        // Normalization: string → structured wrappers
+        // Normalization: string → structured messages
         // -------------------------------------------------------------------
 
         /// <summary>
-        /// Normalizes a single string into a versioned <see cref="InputMessages"/> wrapper.
+        /// Normalizes a single string into an <see cref="InputMessages"/> instance.
         /// The string is wrapped as a user role <see cref="TextPart"/>.
         /// </summary>
         public static InputMessages NormalizeInputMessages(string content)
@@ -48,7 +48,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         }
 
         /// <summary>
-        /// Normalizes a string array into a versioned <see cref="InputMessages"/> wrapper.
+        /// Normalizes a string array into an <see cref="InputMessages"/> instance.
         /// Each string is wrapped as a user role <see cref="TextPart"/>.
         /// </summary>
         public static InputMessages NormalizeInputMessages(IEnumerable<string> messages)
@@ -66,7 +66,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         }
 
         /// <summary>
-        /// Normalizes a single string into a versioned <see cref="OutputMessages"/> wrapper.
+        /// Normalizes a single string into an <see cref="OutputMessages"/> instance.
         /// The string is wrapped as an assistant role <see cref="TextPart"/>.
         /// </summary>
         public static OutputMessages NormalizeOutputMessages(string content)
@@ -75,7 +75,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing
         }
 
         /// <summary>
-        /// Normalizes a string array into a versioned <see cref="OutputMessages"/> wrapper.
+        /// Normalizes a string array into an <see cref="OutputMessages"/> instance.
         /// Each string is wrapped as an assistant role <see cref="TextPart"/>.
         /// </summary>
         public static OutputMessages NormalizeOutputMessages(IEnumerable<string> messages)

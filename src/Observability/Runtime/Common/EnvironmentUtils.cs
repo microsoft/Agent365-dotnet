@@ -9,7 +9,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public class EnvironmentUtils
     {
-        private const string ProdObservabilityScope = "https://api.powerplatform.com/.default";
+        private const string ProdObservabilityScope = "api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite";
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
 

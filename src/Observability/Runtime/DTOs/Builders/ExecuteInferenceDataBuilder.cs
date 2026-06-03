@@ -74,6 +74,9 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         {
             var attributes = new Dictionary<string, object?>();
 
+            // SDK attributes
+            AddSdkAttributes(attributes);
+
             // Agent details (includes tenant ID)
             AddAgentDetails(attributes, agentDetails);
 

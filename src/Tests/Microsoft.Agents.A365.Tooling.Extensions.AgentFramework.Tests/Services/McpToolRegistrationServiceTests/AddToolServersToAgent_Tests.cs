@@ -4,6 +4,7 @@
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 using Microsoft.Agents.A365.Tooling.Models;
+using Microsoft.Agents.A365.Tooling.Services;
 using Microsoft.Extensions.AI;
 using Moq;
 using Xunit;
@@ -64,6 +65,7 @@ public class AddToolServersToAgent_Tests : McpToolRegistrationServiceTestBase
             x => x.EnumerateToolsFromServersAsync(
                 TestAgentUserId,
                 TestAuthToken,
+                It.IsAny<IMcpTokenProvider>(),
                 mockTurnContext.Object,
                 It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance)),
             Times.Once);

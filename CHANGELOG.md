@@ -46,7 +46,15 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 ## [Unreleased]
 
 ### Added
-- Comprehensive Roslyn analyzer package for enforcing Agent365 governance patterns
+- **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
+  - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
+  - `IMcpTokenProvider` interface for pluggable OAuth token acquisition
+  - `AgenticMcpTokenProvider` — acquires per-audience tokens via the agentic OBO flow, with request-scoped token caching to avoid redundant exchanges
+  - `McpToolServerConfigurationService.ListToolServersWithTokensAsync` — attaches per-server `Authorization` headers before tool connections are established; deduplicates token exchanges by scope across servers
+  - `Utility.ResolveTokenScopeForServer` — resolves the correct OAuth scope for each server: when `audience` is present and not the ATG audience (V2), uses `{audience}/{scope}` if `scope` is set, otherwise `{audience}/.default`; when `audience` is absent or identifies ATG (V1), falls back to the shared ATG scope from configuration — `scope` alone (without a non-ATG audience) is intentionally ignored
+  - `Constants.Authentication.AtgAppId` — shared ATG Application ID constant for V1 scope resolution
+  - All three framework extensions (Semantic Kernel, Agent Framework, Azure AI Foundry) updated to use per-audience token provider, so V2 servers receive their own audience-scoped tokens
+- **Microsoft.Kairo.Sdk.DevTools.Analyzer.SemanticKernel** - Comprehensive Roslyn analyzer package for enforcing Agent365 governance patterns
   - 6 diagnostic analyzers (A365SK0001-A365SK0006) for multi-tenant governance enforcement
   - `KernelDirectAccessAnalyzer` - Prevents direct Kernel injection, enforces IKernelProvider pattern
   - `KernelRetrievalBeforeBuildAnalyzer` - Ensures proper DI container lifecycle management
@@ -64,6 +72,9 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
   - `IKernelProvider` interface for tenant-aware kernel access
   - `KernelProvider` implementation with governance compliance
   - `IGovernanceDelegateFactory` for standardized governance patterns
+
+### Changed
+- **Microsoft.Agents.A365.Tooling** — Tooling gateway endpoint updated to `/agents/v2/{id}/mcpServers`
 
 
 ## [1.0.0] - 2025-01-16
