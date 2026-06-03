@@ -71,7 +71,7 @@ public sealed class BuilderTests
             // Provide required dependencies for exporter
             services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
-                TokenResolver = (_, _, _) => Task.FromResult<string?>("unit-test-token"),
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
                 UseS2SEndpoint = false
             });
 
@@ -106,7 +106,7 @@ public sealed class BuilderTests
             // Provide required dependencies for exporter
             services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
-                TokenResolver = (_, _, _) => Task.FromResult<string?>("unit-test-token"),
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
                 UseS2SEndpoint = false
             });
 
@@ -140,7 +140,7 @@ public sealed class BuilderTests
 
             services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
-                TokenResolver = (_, _, _) => Task.FromResult<string?>("unit-test-token"),
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
                 UseS2SEndpoint = false
             });
 
@@ -177,7 +177,7 @@ public sealed class BuilderTests
 
             services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
-                TokenResolver = (_, _, _) => Task.FromResult<string?>("unit-test-token"),
+                TokenResolver = (_, _) => Task.FromResult<string?>("unit-test-token"),
                 UseS2SEndpoint = false
             });
 

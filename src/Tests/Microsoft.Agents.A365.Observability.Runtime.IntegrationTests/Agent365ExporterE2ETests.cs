@@ -695,7 +695,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
             builder.Services.AddSingleton<Agent365ExporterOptions>(_ => new Agent365ExporterOptions
             {
                 UseS2SEndpoint = false,
-                TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
+                TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
             });
 
             // AddA365Tracing call
@@ -786,7 +786,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 return new Agent365ExporterOptions
                 {
                     UseS2SEndpoint = false,
-                    TokenResolver = (_, _, _) => Task.FromResult<string?>("test-token")
+                    TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });
             builder.AddA365Tracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365Exporter);

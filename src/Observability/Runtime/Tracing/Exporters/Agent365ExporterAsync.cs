@@ -74,11 +74,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     groups: groups,
                     resource: this._resource,
                     options: this._options,
-                    tokenResolver: (agentId, tenantId, ct) => this._options.TokenResolver != null
-                        ? this._options.TokenResolver(agentId, tenantId, ct)
+                    tokenResolver: (agentId, tenantId) => this._options.TokenResolver != null
+                        ? this._options.TokenResolver(agentId, tenantId)
                         : Task.FromResult<string?>(null),
-                    sendAsync: request => this._httpClient.SendAsync(request, cancellationToken),
-                    cancellationToken: cancellationToken
+                    sendAsync: request => this._httpClient.SendAsync(request, cancellationToken)
                 ).ConfigureAwait(false);
             }
             catch (OperationCanceledException)

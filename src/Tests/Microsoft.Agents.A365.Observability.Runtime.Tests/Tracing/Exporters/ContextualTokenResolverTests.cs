@@ -97,7 +97,7 @@ public sealed class ContextualTokenResolverTests
     {
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _, _) => Task.FromResult<string?>("token"),
+            TokenResolver = (_, _) => Task.FromResult<string?>("token"),
         };
 
         var exporter = new Agent365Exporter(Core, NullLogger<Agent365Exporter>.Instance, options, null);
@@ -121,7 +121,7 @@ public sealed class ContextualTokenResolverTests
     {
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _, _) => Task.FromResult<string?>("legacy-token"),
+            TokenResolver = (_, _) => Task.FromResult<string?>("legacy-token"),
             ContextualTokenResolver = ctx => Task.FromResult<string?>("contextual-token"),
         };
 
@@ -144,7 +144,7 @@ public sealed class ContextualTokenResolverTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _, _) =>
+            TokenResolver = (_, _) =>
             {
                 legacyResolverCalled = true;
                 return Task.FromResult<string?>("legacy-token");
@@ -169,7 +169,7 @@ public sealed class ContextualTokenResolverTests
             groups,
             ResourceBuilder.CreateEmpty().Build(),
             options,
-            (agentId, tenantId, ct) => options.TokenResolver!(agentId, tenantId, ct),
+            (agentId, tenantId) => options.TokenResolver!(agentId, tenantId),
             request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
 
         // Assert
@@ -190,7 +190,7 @@ public sealed class ContextualTokenResolverTests
 
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (agentId, tenantId, _) =>
+            TokenResolver = (agentId, tenantId) =>
             {
                 legacyResolverCalled = true;
                 capturedAgentId = agentId;
@@ -211,7 +211,7 @@ public sealed class ContextualTokenResolverTests
             groups,
             ResourceBuilder.CreateEmpty().Build(),
             options,
-            (agentId, tenantId, ct) => options.TokenResolver!(agentId, tenantId, ct),
+            (agentId, tenantId) => options.TokenResolver!(agentId, tenantId),
             request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
 
         // Assert
@@ -248,7 +248,7 @@ public sealed class ContextualTokenResolverTests
             groups,
             ResourceBuilder.CreateEmpty().Build(),
             options,
-            (_, _, _) => Task.FromResult<string?>(null),
+            (_, _) => Task.FromResult<string?>(null),
             request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
 
         // Assert
@@ -276,7 +276,7 @@ public sealed class ContextualTokenResolverTests
             groups,
             ResourceBuilder.CreateEmpty().Build(),
             options,
-            (_, _, _) => Task.FromResult<string?>(null),
+            (_, _) => Task.FromResult<string?>(null),
             request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
 
         // Assert
@@ -303,7 +303,7 @@ public sealed class ContextualTokenResolverTests
             groups,
             ResourceBuilder.CreateEmpty().Build(),
             options,
-            (_, _, _) => Task.FromResult<string?>(null),
+            (_, _) => Task.FromResult<string?>(null),
             request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)));
 
         // Assert

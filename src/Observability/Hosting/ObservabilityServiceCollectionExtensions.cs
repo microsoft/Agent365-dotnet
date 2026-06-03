@@ -27,7 +27,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting
                 return new Agent365ExporterOptions
                 {
                     ClusterCategory = clusterCategory ?? "production",
-                    TokenResolver = (agentId, tenantId, ct) => cache.GetObservabilityToken(agentId, tenantId, ct)
+                    TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId)
                 };
             });
 
@@ -51,7 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting
                 return new Agent365ExporterOptions
                 {
                     ClusterCategory = clusterCategory ?? "production",
-                    TokenResolver = (agentId, tenantId, ct) => cache.GetObservabilityToken(agentId, tenantId, ct),
+                    TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false),
                     UseS2SEndpoint = true // Service-to-service uses S2S endpoint
                 };
             });
