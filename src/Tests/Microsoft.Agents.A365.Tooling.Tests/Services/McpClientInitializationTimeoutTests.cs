@@ -20,14 +20,12 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
     public class McpClientInitializationTimeoutTests
     {
         private readonly Mock<ILogger<IMcpToolServerConfigurationService>> _loggerMock;
-        private readonly Mock<IConfiguration> _configurationMock;
         private readonly Mock<IServiceProvider> _serviceProviderMock;
         private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
 
         public McpClientInitializationTimeoutTests()
         {
             _loggerMock = new Mock<ILogger<IMcpToolServerConfigurationService>>();
-            _configurationMock = new Mock<IConfiguration>();
             _serviceProviderMock = new Mock<IServiceProvider>();
             _httpClientFactoryMock = new Mock<IHttpClientFactory>();
 
@@ -113,9 +111,54 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             Func<Task> act = async () => await service.GetMcpClientToolsAsync(
                 turnContextMock.Object, serverConfig, "test-token", toolOptions);
 
-            // Assert - ArgumentOutOfRangeException is wrapped in InvalidOperationException by the catch block
-            var ex = await act.Should().ThrowAsync<InvalidOperationException>();
-            ex.WithInnerException<ArgumentOutOfRangeException>();
+            // Assert - invalid timeout should surface an ArgumentOutOfRangeException either directly
+            // or wrapped by a higher-level InvalidOperationException depending on the call path.
+            var exception = await Record.ExceptionAsync(act);
+            exception.Should().NotBeNull();
+            (exception is ArgumentOutOfRangeException
+                || exception is InvalidOperationException { InnerException: ArgumentOutOfRangeException })
+                .Should().BeTrue("an invalid timeout should result in an ArgumentOutOfRangeException, either directly or wrapped");
+        }
+
+        [Fact]
+        public void GetValidatedInitializationTimeout_NullInput_ReturnsNull()
+        {
+            // Act
+            var result = McpToolServerConfigurationService.GetValidatedInitializationTimeout(null);
+
+            // Assert
+            result.Should().BeNull();
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(60)]
+        [InlineData(120)]
+        [InlineData(300)]
+        [InlineData(600)]
+        public void GetValidatedInitializationTimeout_ValidInput_ReturnsMatchingTimeSpan(int seconds)
+        {
+            // Act
+            var result = McpToolServerConfigurationService.GetValidatedInitializationTimeout(seconds);
+
+            // Assert
+            result.Should().Be(TimeSpan.FromSeconds(seconds));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(-100)]
+        [InlineData(601)]
+        [InlineData(int.MaxValue)]
+        public void GetValidatedInitializationTimeout_InvalidInput_ThrowsArgumentOutOfRangeException(int invalidSeconds)
+        {
+            // Act
+            Action act = () => McpToolServerConfigurationService.GetValidatedInitializationTimeout(invalidSeconds);
+
+            // Assert
+            act.Should().Throw<ArgumentOutOfRangeException>()
+                .Which.ParamName.Should().Be(nameof(ToolOptions.McpClientInitializationTimeoutSeconds));
         }
 
         [Theory]

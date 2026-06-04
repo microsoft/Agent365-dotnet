@@ -521,22 +521,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 TransportMode = HttpTransportMode.AutoDetect,
             };
 
+            // Validate and compute the initialization timeout once so HttpClient.Timeout
+            // and McpClientOptions.InitializationTimeout always agree.
+            var initializationTimeout = GetValidatedInitializationTimeout(toolOptions.McpClientInitializationTimeoutSeconds);
+
             // Create HTTP client with the authentication handler chain
             var httpClient = new HttpClient(loggingHandler);
 
             // Apply custom timeout only when explicitly configured
-            if (toolOptions.McpClientInitializationTimeoutSeconds.HasValue)
+            if (initializationTimeout.HasValue)
             {
-                var timeoutSeconds = toolOptions.McpClientInitializationTimeoutSeconds.Value;
-                if (timeoutSeconds < 1 || timeoutSeconds > 600)
-                {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(toolOptions),
-                        timeoutSeconds,
-                        "McpClientInitializationTimeoutSeconds must be between 1 and 600 seconds.");
-                }
-
-                httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                httpClient.Timeout = initializationTimeout.Value;
             }
 
             var clientTransport = new SseClientTransport(options, httpClient);
@@ -544,11 +539,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
             try
             {
                 // Only pass McpClientOptions when a custom timeout is set to preserve default SDK behavior
-                if (toolOptions.McpClientInitializationTimeoutSeconds.HasValue)
+                if (initializationTimeout.HasValue)
                 {
                     var clientOptions = new McpClientOptions
                     {
-                        InitializationTimeout = TimeSpan.FromSeconds(toolOptions.McpClientInitializationTimeoutSeconds.Value),
+                        InitializationTimeout = initializationTimeout.Value,
                     };
 
                     return await McpClientFactory.CreateAsync(clientTransport, clientOptions, loggerFactory: this._loggerFactory);
@@ -560,6 +555,35 @@ namespace Microsoft.Agents.A365.Tooling.Services
             {
                 throw new InvalidOperationException($"Failed to create MCP client for endpoint '{endpoint}': {ex.Message}", ex);
             }
+        }
+
+        /// <summary>
+        /// Validates <see cref="ToolOptions.McpClientInitializationTimeoutSeconds"/> and converts it
+        /// to a <see cref="TimeSpan"/>. Returns <c>null</c> when no custom timeout is configured so
+        /// callers can preserve the MCP SDK default behavior.
+        /// </summary>
+        /// <param name="timeoutSeconds">The configured timeout in seconds, or <c>null</c> to use the SDK default.</param>
+        /// <returns>The validated timeout as a <see cref="TimeSpan"/>, or <c>null</c> when not configured.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="timeoutSeconds"/> is set but falls outside the supported range of 1 to 600 seconds.
+        /// </exception>
+        internal static TimeSpan? GetValidatedInitializationTimeout(int? timeoutSeconds)
+        {
+            if (!timeoutSeconds.HasValue)
+            {
+                return null;
+            }
+
+            var value = timeoutSeconds.Value;
+            if (value < 1 || value > 600)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(ToolOptions.McpClientInitializationTimeoutSeconds),
+                    value,
+                    "McpClientInitializationTimeoutSeconds must be between 1 and 600 seconds.");
+            }
+
+            return TimeSpan.FromSeconds(value);
         }
 
         /// <summary>
