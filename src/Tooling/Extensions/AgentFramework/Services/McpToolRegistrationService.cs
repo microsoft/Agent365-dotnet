@@ -134,21 +134,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            IMcpTokenProvider tokenProvider;
-            if (userAuthorization is not null && authHandlerName is not null)
-            {
-                // Production V2-aware path: per-audience OBO tokens.
-                tokenProvider = new TokenProviderCollection(_logger,
+            IMcpTokenProvider tokenProvider =
+                 (userAuthorization is not null && authHandlerName is not null)
+                     ? new TokenProviderCollection(_logger,
                         new EnvMcpTokenProvider(_configuration, _logger),
-                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
-            }
-            else
-            {
-                tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
-            }
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+                     :
+                        new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+
             IList<ModelContextProtocol.Client.McpClientTool> mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
 
             // Convert to AITool list
