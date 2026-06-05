@@ -106,7 +106,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
+        // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
+        // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
+        if (authToken is null && userAuthorization is not null && authHandlerName is not null)
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }

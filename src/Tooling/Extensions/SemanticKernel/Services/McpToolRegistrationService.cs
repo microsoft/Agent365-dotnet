@@ -3,9 +3,8 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
 {
-    using System;
-    using System.Linq;
     using Microsoft.Agents.A365.Runtime;
+    using Microsoft.Agents.A365.Runtime.Authentication;
     using Microsoft.Agents.A365.Tooling.Models;
     using Microsoft.Agents.A365.Tooling.Services;
     using Microsoft.Agents.Builder;
@@ -14,6 +13,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.Extensions.Logging;
     using Microsoft.SemanticKernel;
     using Microsoft.SemanticKernel.ChatCompletion;
+    using System;
+    using System.Linq;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
@@ -53,6 +54,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
+            // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
+            // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
+            if (authToken is null && userAuthorization is not null && authHandlerName is not null)
+            {
+                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+            }
             authToken ??= string.Empty;
 
             // resolve agent identity from context or token.
