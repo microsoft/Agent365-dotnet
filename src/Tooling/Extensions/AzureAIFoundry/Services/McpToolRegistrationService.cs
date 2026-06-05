@@ -175,27 +175,21 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         //   Dev scenario  → EnvMcpTokenProvider reads per-server env vars (no OBO flow needed).
         //   Production    → AgenticMcpTokenProvider performs OBO when auth objects are supplied;
         //                   falls back to the V1 shared-token path when they are absent.
-        if (userAuthorization is not null && authHandlerName is not null)
-        {
-            // Production V2-aware path: per-audience OBO tokens.
-            IMcpTokenProvider tokenProvider = new TokenProviderCollection(_logger,
-                    new EnvMcpTokenProvider(_configuration, _logger),
-                    new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
+        IMcpTokenProvider tokenProvider =
+         (userAuthorization is not null && authHandlerName is not null)
+             ? new TokenProviderCollection(_logger,
+                new EnvMcpTokenProvider(_configuration, _logger),
+                new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+             :
+                new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
-        }
-        else
-        {
-            IMcpTokenProvider tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
+        (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+            agentInstanceId, 
+            authToken, 
+            tokenProvider, 
+            turnContext, 
+            toolOptions).ConfigureAwait(false);
 
-            // Production V1 fallback: all servers share the single authToken.
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentInstanceId,
-                authToken,
-                tokenProvider,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
-        }
 
         if (servers.Count == 0)
         {

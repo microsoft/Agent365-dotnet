@@ -70,18 +70,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 UserAgentConfiguration = Agent365SemanticKernelSdkUserAgentConfiguration.Instance
             };
 
-            IMcpTokenProvider tokenProvider;
-            if (userAuthorization is not null && authHandlerName is not null)
-            {
-                // Production V2-aware path: per-audience OBO tokens.
-                tokenProvider = new TokenProviderCollection(_logger,
-                        new EnvMcpTokenProvider(_configuration, _logger),
-                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger));
-            }
-            else
-            {
-                tokenProvider = new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
-            }
+            IMcpTokenProvider tokenProvider =
+              (userAuthorization is not null && authHandlerName is not null)
+                  ? new TokenProviderCollection(_logger,
+                     new EnvMcpTokenProvider(_configuration, _logger),
+                     new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+                  :
+                     new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
