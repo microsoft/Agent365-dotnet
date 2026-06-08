@@ -49,7 +49,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    public async Task<AIAgent> AddToolServersToAgent(
+    public Task<AIAgent> AddToolServersToAgent(
         IChatClient chatClient,
         string agentInstructions,
         IList<AITool> initialTools,
@@ -58,6 +58,19 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null)
+        => AddToolServersToAgent(chatClient, agentInstructions, initialTools, agentUserId, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
+    public async Task<AIAgent> AddToolServersToAgent(
+        IChatClient chatClient,
+        string agentInstructions,
+        IList<AITool> initialTools,
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         if (chatClient == null)
         {
@@ -89,7 +102,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 ? new DevMcpTokenProvider(_configuration, _logger)
                 : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
 
             // Add all MCP tools from all servers
             foreach (var serverEntry in toolsByServer)
@@ -117,12 +130,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    public async Task<IList<AITool>> GetMcpToolsAsync(
+    public Task<IList<AITool>> GetMcpToolsAsync(
         string agentUserId,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null)
+        => GetMcpToolsAsync(agentUserId, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
+    public async Task<IList<AITool>> GetMcpToolsAsync(
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -142,7 +165,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+                agentUserId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
             IList<ModelContextProtocol.Client.McpClientTool> mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
 
             // Convert to AITool list

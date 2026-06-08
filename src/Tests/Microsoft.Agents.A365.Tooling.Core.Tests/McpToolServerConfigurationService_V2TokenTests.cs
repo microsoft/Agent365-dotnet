@@ -58,7 +58,7 @@ public class McpToolServerConfigurationService_V2TokenTests
 
     private void SetupListServers(IEnumerable<MCPServerConfig> servers) =>
         _service
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(servers.ToList());
 
     // ─── AttachPerAudienceTokens (via ListToolServersWithTokensAsync) ─────────
@@ -246,16 +246,16 @@ public class McpToolServerConfigurationService_V2TokenTests
             .Setup(x => x.GetMcpClientToolsAsync(
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "v1"),
-                It.IsAny<string>(), It.IsAny<ToolOptions>()))
-            .Callback<ITurnContext, MCPServerConfig, string, ToolOptions>((_, s, _, _) => capturedV1 = s)
+                It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<ITurnContext, MCPServerConfig, string, ToolOptions, CancellationToken>((_, s, _, _, _) => capturedV1 = s)
             .ReturnsAsync(new List<McpClientTool>());
 
         _service
             .Setup(x => x.GetMcpClientToolsAsync(
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "v2"),
-                It.IsAny<string>(), It.IsAny<ToolOptions>()))
-            .Callback<ITurnContext, MCPServerConfig, string, ToolOptions>((_, s, _, _) => capturedV2 = s)
+                It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<ITurnContext, MCPServerConfig, string, ToolOptions, CancellationToken>((_, s, _, _, _) => capturedV2 = s)
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
@@ -280,7 +280,7 @@ public class McpToolServerConfigurationService_V2TokenTests
     {
         // Arrange
         _service
-            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("gateway unreachable"));
         var provider = TokenProvider();
 
@@ -308,7 +308,7 @@ public class McpToolServerConfigurationService_V2TokenTests
             .Setup(x => x.GetMcpClientToolsAsync(
                 It.IsAny<ITurnContext>(),
                 It.Is<MCPServerConfig>(s => s.mcpServerName == "valid"),
-                It.IsAny<string>(), It.IsAny<ToolOptions>()))
+                It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act
@@ -338,7 +338,7 @@ public class McpToolServerConfigurationService_V2TokenTests
             new Mock<IHttpClientFactory>().Object) { CallBase = true };
 
         service.Setup(x => x.ListToolServersAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MCPServerConfig> { V2Server("mail") });
 
         var act = () => service.Object.EnumerateToolsFromServersAsync(
@@ -369,11 +369,11 @@ public class McpToolServerConfigurationService_V2TokenTests
             audience = $"api://{AtgAppId}"  // equivalent ATG audience form
         };
         service.Setup(x => x.ListToolServersAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MCPServerConfig> { v1WithApiAudience });
         service.Setup(x => x.GetMcpClientToolsAsync(
                 It.IsAny<ITurnContext>(), It.IsAny<MCPServerConfig>(),
-                It.IsAny<string>(), It.IsAny<ToolOptions>()))
+                It.IsAny<string>(), It.IsAny<ToolOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<McpClientTool>());
 
         // Act — should NOT throw; api://<AtgAppId> is a V1 server

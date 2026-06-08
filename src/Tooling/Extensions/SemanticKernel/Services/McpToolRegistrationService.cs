@@ -51,7 +51,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         }
 
         /// <inheritdoc />
-        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+        public Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+            => AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+        /// <inheritdoc />
+        public async Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken, CancellationToken cancellationToken)
         {
             if (kernel == null)
             {
@@ -78,7 +82,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 ? new DevMcpTokenProvider(_configuration, _logger)
                 : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
 
             foreach (var serverEntry in toolsByServer)
             {

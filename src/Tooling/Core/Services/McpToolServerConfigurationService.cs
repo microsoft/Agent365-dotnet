@@ -11,6 +11,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
     using System.Reflection;
     using System.Text;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Agents.A365.Runtime;
     using Microsoft.Agents.A365.Tooling.Handlers;
@@ -49,15 +50,23 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
+        public virtual Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken)
+            => ListToolServersAsync(agentInstanceId, authToken, CancellationToken.None);
+
+        /// <inheritdoc/>
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, CancellationToken cancellationToken)
         {
-            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions());
+            return await ListToolServersAsync(agentInstanceId, authToken, new ToolOptions(), cancellationToken);
         }
 
         /// <inheritdoc/>
-        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+        public virtual Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
+            => ListToolServersAsync(agentInstanceId, authToken, toolOptions, CancellationToken.None);
+
+        /// <inheritdoc/>
+        public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions, cancellationToken);
         }
 
         /// <summary>
@@ -72,17 +81,26 @@ namespace Microsoft.Agents.A365.Tooling.Services
             ToolOptions toolOptions,
             CancellationToken cancellationToken = default)
         {
-            var servers = await ListToolServersAsync(agentInstanceId, authToken, toolOptions).ConfigureAwait(false);
+            var servers = await ListToolServersAsync(agentInstanceId, authToken, toolOptions, cancellationToken).ConfigureAwait(false);
             await AttachPerAudienceTokensAsync(servers, tokenProvider, cancellationToken).ConfigureAwait(false);
             return servers;
         }
+
+        /// <inheritdoc/>
+        public virtual Task<IList<McpClientTool>> GetMcpClientToolsAsync(
+            ITurnContext turnContext,
+            MCPServerConfig mCPServerConfig,
+            string authToken,
+            ToolOptions toolOptions)
+            => GetMcpClientToolsAsync(turnContext, mCPServerConfig, authToken, toolOptions, CancellationToken.None);
 
         /// <inheritdoc/>
         public virtual async Task<IList<McpClientTool>> GetMcpClientToolsAsync(
             ITurnContext turnContext,
             MCPServerConfig mCPServerConfig,
             string authToken,
-            ToolOptions toolOptions)
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken)
         {
             try
             {
@@ -99,8 +117,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), effectiveToken, toolOptions);
-                var tools = await mcpClient.ListToolsAsync();
+                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), effectiveToken, toolOptions, cancellationToken);
+                var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
 
                 this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
 
@@ -178,7 +196,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
-            string agentInstanceId, string authToken, ToolOptions toolOptions)
+            string agentInstanceId, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, this._configuration);
 
@@ -194,7 +212,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", authToken);
 
-                var response = await httpClient.GetStringAsync(configEndpoint);
+                var response = await httpClient.GetStringAsync(configEndpoint, cancellationToken);
 
                 var options = new JsonSerializerOptions
                 {
@@ -480,7 +498,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <summary>
         /// Creates an MCP client with authentication handlers similar to your reference implementation
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
+        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken = default)
         {
             // Create HTTP client handler chain for MCP service authentication
             var httpClientHandler = new HttpClientHandler();
@@ -528,7 +546,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             try
             {
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
+                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory, cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {

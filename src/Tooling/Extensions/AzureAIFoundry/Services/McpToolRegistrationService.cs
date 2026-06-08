@@ -96,12 +96,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     }
 
     /// <inheritdoc />
-    public async Task AddToolServersToAgentAsync(
+    public Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null)
+        => AddToolServersToAgentAsync(agentClient, userAuthorization, authHandlerName, turnContext, authToken, CancellationToken.None);
+
+    /// <inheritdoc />
+    public async Task AddToolServersToAgentAsync(
+        PersistentAgentsClient agentClient,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken,
+        CancellationToken cancellationToken)
     {
         if (agentClient == null)
         {
@@ -120,7 +130,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         {
             // Use V2-aware overload so per-audience tokens are applied to each server.
             var (toolDefinitions, toolResources) = await GetMcpToolDefinitionsAndResourcesAsync(
-                agenticAppId, authToken ?? string.Empty, turnContext, userAuthorization, authHandlerName).ConfigureAwait(false);
+                agenticAppId, authToken ?? string.Empty, turnContext, userAuthorization, authHandlerName, cancellationToken).ConfigureAwait(false);
 
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
@@ -143,6 +153,14 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext)
         => GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken, turnContext, userAuthorization: null, authHandlerName: null);
 
+    /// <inheritdoc />
+    public Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+        string agentInstanceId,
+        string authToken,
+        ITurnContext turnContext,
+        CancellationToken cancellationToken)
+        => GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken, turnContext, userAuthorization: null, authHandlerName: null, cancellationToken);
+
     /// <summary>
     /// Get MCP tool definitions and resources, optionally using per-audience tokens for V2 servers.
     /// </summary>
@@ -151,12 +169,30 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="turnContext">Turn context for the request.</param>
     /// <param name="userAuthorization">When provided together with <paramref name="authHandlerName"/>, enables per-audience token acquisition for V2 servers.</param>
     /// <param name="authHandlerName">Auth handler name used with <paramref name="userAuthorization"/>.</param>
-    public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+    public Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,
         ITurnContext turnContext,
         UserAuthorization? userAuthorization,
         string? authHandlerName)
+        => GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId, authToken, turnContext, userAuthorization, authHandlerName, CancellationToken.None);
+
+    /// <summary>
+    /// Get MCP tool definitions and resources, optionally using per-audience tokens for V2 servers.
+    /// </summary>
+    /// <param name="agentInstanceId">Agent instance ID.</param>
+    /// <param name="authToken">Shared auth token (V1 fallback).</param>
+    /// <param name="turnContext">Turn context for the request.</param>
+    /// <param name="userAuthorization">When provided together with <paramref name="authHandlerName"/>, enables per-audience token acquisition for V2 servers.</param>
+    /// <param name="authHandlerName">Auth handler name used with <paramref name="userAuthorization"/>.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    public async Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
+        string agentInstanceId,
+        string authToken,
+        ITurnContext turnContext,
+        UserAuthorization? userAuthorization,
+        string? authHandlerName,
+        CancellationToken cancellationToken)
     {
         // TODO: Make this method private
         // Tool resources should ideally be accessible via agentClient after AddToolServersToAgent.
@@ -178,7 +214,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         if (ToolingUtility.IsDevScenario(_configuration))
         {
             IMcpTokenProvider tokenProvider = new DevMcpTokenProvider(_configuration, _logger);
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
         }
         else if (userAuthorization is not null && authHandlerName is not null)
         {
@@ -186,7 +222,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             IMcpTokenProvider tokenProvider = new AgenticMcpTokenProvider(
                 userAuthorization, authHandlerName, turnContext, _configuration, _logger);
 
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -195,7 +231,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentInstanceId,
                 authToken,
                 turnContext,
-                toolOptions).ConfigureAwait(false);
+                toolOptions,
+                cancellationToken).ConfigureAwait(false);
         }
 
         if (servers.Count == 0)

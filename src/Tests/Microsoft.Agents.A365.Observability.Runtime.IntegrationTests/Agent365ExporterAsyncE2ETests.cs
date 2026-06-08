@@ -17,6 +17,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
     {
         private TestHttpMessageHandler? _handler;
         private ServiceProvider? _provider;
+        private HttpClient? _httpClient;
         private bool _receivedRequest;
         private string? _receivedContent;
 
@@ -408,8 +409,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                 req.Headers.Authorization.Should().NotBeNull();
                 return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
             });
-            var httpClient = new HttpClient(this._handler);
-            this._provider = this.CreateTestServiceProvider(httpClient);
+            this._httpClient = new HttpClient(this._handler);
+            this._provider = this.CreateTestServiceProvider(this._httpClient);
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            this._provider?.Dispose();
+            this._provider = null;
+            this._httpClient?.Dispose();
+            this._httpClient = null;
         }
     }
 }

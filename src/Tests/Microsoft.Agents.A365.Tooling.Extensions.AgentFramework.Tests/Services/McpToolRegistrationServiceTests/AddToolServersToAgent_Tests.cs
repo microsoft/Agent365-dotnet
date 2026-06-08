@@ -67,7 +67,8 @@ public class AddToolServersToAgent_Tests : McpToolRegistrationServiceTestBase
                 TestAuthToken,
                 It.IsAny<IMcpTokenProvider>(),
                 mockTurnContext.Object,
-                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance)),
+                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AgentFrameworkSdkUserAgentConfiguration.Instance),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
