@@ -25,17 +25,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// </list>
     /// Hyphens in the server name are normalised to underscores before the lookup.
     /// </remarks>
-    internal sealed class DevMcpTokenProvider : IMcpTokenProvider
+    internal sealed class EnvMcpTokenProvider : IMcpTokenProvider
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="DevMcpTokenProvider"/>.
+        /// Initializes a new instance of <see cref="EnvMcpTokenProvider"/>.
         /// </summary>
         /// <param name="configuration">Application configuration (env vars, appsettings, etc.).</param>
         /// <param name="logger">Logger for diagnostic output.</param>
-        public DevMcpTokenProvider(IConfiguration configuration, ILogger logger)
+        public EnvMcpTokenProvider(IConfiguration configuration, ILogger logger)
         {
             _configuration = configuration;
             _logger = logger;
@@ -55,9 +55,13 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             if (string.IsNullOrWhiteSpace(token))
             {
-                throw new InvalidOperationException(
-                    $"No dev token found for MCP server '{server.mcpServerName}'. " +
+                if (Utility.IsDevScenario(_configuration)) // Only log warnings in dev scenarios, to avoid noise in prod if env vars are not set
+                {
+                    _logger.LogWarning(
+                     $"No Environment token found for MCP server '{server.mcpServerName}'. " +
                     $"Set environment variable '{perServerKey}' or 'BEARER_TOKEN'.");
+                }
+                return Task.FromResult(string.Empty);
             }
 
             // Warn when a V2 server (distinct audience) falls back to the shared BEARER_TOKEN.

@@ -93,12 +93,13 @@ public class McpToolRegistrationServiceTests
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<TokenProviderCollection>(),
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ToolOptions>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, ITurnContext, ToolOptions>((_, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions>((_, _, _, _, options) => captureToolOptions(options));
         }
 
         setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
@@ -113,6 +114,7 @@ public class McpToolRegistrationServiceTests
             .Setup(x => x.EnumerateToolsFromServersAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<TokenProviderCollection>(),
                 It.IsAny<ITurnContext>(),
                 It.IsAny<ToolOptions>()))
             .ReturnsAsync((servers, toolsByServer));
@@ -196,6 +198,7 @@ public class McpToolRegistrationServiceTests
             x => x.EnumerateToolsFromServersAsync(
                 TestAgentInstanceId,
                 TestAuthToken,
+                It.IsAny<IMcpTokenProvider>(),
                 _mockTurnContext.Object,
                 It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance)),
             Times.Once);

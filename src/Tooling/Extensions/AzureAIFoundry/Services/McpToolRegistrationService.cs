@@ -17,8 +17,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
-using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
 using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
 using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 using Constants = Microsoft.Agents.A365.Tooling.Utils.Constants;
@@ -108,7 +106,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(agentClient));
         }
 
-        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
+        // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
+        // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
+        if (authToken is null && userAuthorization is not null && authHandlerName is not null)
         {
             authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
         }
@@ -172,31 +172,24 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         Dictionary<string, IList<McpClientTool>> toolsByServer;
 
         // Select token provider:
-        //   Dev scenario  → DevMcpTokenProvider reads per-server env vars (no OBO flow needed).
+        //   Dev scenario  → EnvMcpTokenProvider reads per-server env vars (no OBO flow needed).
         //   Production    → AgenticMcpTokenProvider performs OBO when auth objects are supplied;
         //                   falls back to the V1 shared-token path when they are absent.
-        if (ToolingUtility.IsDevScenario(_configuration))
-        {
-            IMcpTokenProvider tokenProvider = new DevMcpTokenProvider(_configuration, _logger);
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
-        }
-        else if (userAuthorization is not null && authHandlerName is not null)
-        {
-            // Production V2-aware path: per-audience OBO tokens.
-            IMcpTokenProvider tokenProvider = new AgenticMcpTokenProvider(
-                userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+        IMcpTokenProvider tokenProvider =
+         (userAuthorization is not null && authHandlerName is not null)
+             ? new TokenProviderCollection(_logger,
+                new EnvMcpTokenProvider(_configuration, _logger),
+                new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+             :
+                new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentInstanceId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
-        }
-        else
-        {
-            // Production V1 fallback: all servers share the single authToken.
-            (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentInstanceId,
-                authToken,
-                turnContext,
-                toolOptions).ConfigureAwait(false);
-        }
+        (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+            agentInstanceId, 
+            authToken, 
+            tokenProvider, 
+            turnContext, 
+            toolOptions).ConfigureAwait(false);
+
 
         if (servers.Count == 0)
         {

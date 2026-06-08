@@ -3,25 +3,22 @@
 
 namespace Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Services;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Agents.A365.Runtime;
 using Microsoft.Agents.A365.Runtime.Authentication;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
-using AgenticMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.AgenticMcpTokenProvider;
-using DevMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.DevMcpTokenProvider;
-using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
-using ToolingUtility = Microsoft.Agents.A365.Tooling.Utils.Utility;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.Builder;
 using Microsoft.Agents.Builder.App.UserAuth;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using IMcpTokenProvider = Microsoft.Agents.A365.Tooling.Services.IMcpTokenProvider;
 
 /// <summary>
 /// Service for registering and validating MCP tool servers for Agent Framework scenarios.
@@ -64,10 +61,6 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             throw new ArgumentNullException(nameof(chatClient));
         }
 
-        if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
-        {
-            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-        }
         authToken ??= string.Empty;
 
         try
@@ -83,11 +76,13 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            // Use per-audience token provider so V2 servers receive audience-scoped tokens.
-            // In dev scenarios tokens come from environment variables; in production from OBO flow.
-            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
-                ? new DevMcpTokenProvider(_configuration, _logger)
-                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+            IMcpTokenProvider tokenProvider =
+                 (userAuthorization is not null && authHandlerName is not null)
+                     ? new TokenProviderCollection(_logger,
+                        new EnvMcpTokenProvider(_configuration, _logger),
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+                     : 
+                        new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
@@ -126,7 +121,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            if (authToken is null && !ToolingUtility.IsDevScenario(_configuration))
+            // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
+            // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
+            if (authToken is null && userAuthorization is not null && authHandlerName is not null)
             {
                 authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
             }
@@ -137,12 +134,16 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            IMcpTokenProvider tokenProvider = ToolingUtility.IsDevScenario(_configuration)
-                ? new DevMcpTokenProvider(_configuration, _logger)
-                : new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger);
+            IMcpTokenProvider tokenProvider =
+                 (userAuthorization is not null && authHandlerName is not null)
+                     ? new TokenProviderCollection(_logger,
+                        new EnvMcpTokenProvider(_configuration, _logger),
+                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+                     :
+                        new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
-                agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+
             IList<ModelContextProtocol.Client.McpClientTool> mcpTools = toolsByServer.Values.SelectMany(t => t).ToList();
 
             // Convert to AITool list

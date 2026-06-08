@@ -602,22 +602,39 @@ namespace Microsoft.Agents.A365.Tooling.Services
             // Sequential acquisition avoids throttling the OBO endpoint.
             var tokenByScope = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+            List<MCPServerConfig> failedToAcquireServers = new List<MCPServerConfig>();
             foreach (var server in servers)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                var scope = Utils.Utility.ResolveTokenScopeForServer(server, _configuration);
-                if (!tokenByScope.TryGetValue(scope, out var token))
+                try
                 {
-                    token = await tokenProvider.GetTokenAsync(server, cancellationToken).ConfigureAwait(false);
-                    tokenByScope[scope] = token;
-                    _logger.LogDebug(
-                        "Acquired token for scope '{Scope}' (server '{ServerName}')",
-                        scope, server.mcpServerName);
-                }
+                    var scope = Utils.Utility.ResolveTokenScopeForServer(server, _configuration);
+                    if (!tokenByScope.TryGetValue(scope, out var token))
+                    {
+                        token = await tokenProvider.GetTokenAsync(server, cancellationToken).ConfigureAwait(false);
+                        tokenByScope[scope] = token;
+                        _logger.LogDebug(
+                            "Acquired token for scope '{Scope}' (server '{ServerName}')",
+                            scope, server.mcpServerName);
+                    }
 
-                server.Headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                server.Headers[Constants.Headers.Authorization] = $"{Constants.Headers.BearerPrefix} {token}";
+                    server.Headers ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    server.Headers[Constants.Headers.Authorization] = $"{Constants.Headers.BearerPrefix} {token}";
+                }
+                catch (Exception ex)
+                {
+                    failedToAcquireServers.Add(server);
+                    _logger.LogError(ex, "Failed to acquire token for server '{ServerName}': {Message}", server.mcpServerName, ex.Message);
+                }
+            }
+
+            if (failedToAcquireServers.Count > 0)
+            {
+                _logger.LogWarning("Failed to acquire tokens for {Count} MCP servers: {ServerNames}",
+                    failedToAcquireServers.Count, string.Join(", ", failedToAcquireServers.Select(s => s.mcpServerName)));
+                // remove servers we failed to acquire tokens for, since they'll likely fail authentication anyway
+                servers.RemoveAll(s => failedToAcquireServers.Contains(s));
+                failedToAcquireServers.Clear(); 
             }
         }
 

@@ -13,14 +13,14 @@ using Xunit;
 namespace Microsoft.Agents.A365.Tooling.Core.Tests;
 
 /// <summary>
-/// Tests for <see cref="DevMcpTokenProvider"/> and <see cref="Utility.IsDevScenario"/>.
+/// Tests for <see cref="EnvMcpTokenProvider"/> and <see cref="Utility.IsDevScenario"/>.
 /// </summary>
-public class DevMcpTokenProviderTests
+public class EnvMcpTokenProviderTests
 {
     private static MCPServerConfig Server(string name) =>
         new() { mcpServerName = name, id = $"id-{name}", url = "http://test" };
 
-    private static DevMcpTokenProvider Provider(IConfiguration config) =>
+    private static EnvMcpTokenProvider Provider(IConfiguration config) =>
         new(config, Mock.Of<ILogger>());
 
     private static IConfiguration Config(params (string key, string value)[] entries)
@@ -91,16 +91,6 @@ public class DevMcpTokenProviderTests
         t2.Should().Be("shared-token");
     }
 
-    // ─── Missing token → exception ────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetTokenAsync_NeitherEnvVarSet_ThrowsInvalidOperationException()
-    {
-        var config = Config(); // empty — no BEARER_TOKEN_* or BEARER_TOKEN
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*mcp_MailTools*");
-    }
 
     [Fact]
     public async Task GetTokenAsync_PerServerVarWhitespaceOnly_FallsBackToSharedToken()
@@ -114,29 +104,6 @@ public class DevMcpTokenProviderTests
         token.Should().Be("shared-token");
     }
 
-    [Fact]
-    public async Task GetTokenAsync_BothVarsWhitespaceOnly_ThrowsInvalidOperationException()
-    {
-        var config = Config(
-            ("BEARER_TOKEN_MCP_MAILTOOLS", "   "),
-            ("BEARER_TOKEN", "   "));
-
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-        await act.Should().ThrowAsync<InvalidOperationException>();
-    }
-
-    // ─── Error message quality ────────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetTokenAsync_MissingToken_ErrorMessageContainsNormalizedKey()
-    {
-        var config = Config();
-        Func<Task> act = () => Provider(config).GetTokenAsync(Server("mcp_MailTools"));
-
-        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
-        ex.Which.Message.Should().Contain("BEARER_TOKEN_MCP_MAILTOOLS");
-        ex.Which.Message.Should().Contain("BEARER_TOKEN");
-    }
 
     // ─── Cancellation ─────────────────────────────────────────────────────────
 
@@ -214,7 +181,7 @@ public class IsDevScenarioTests
     {
         // Unset environment must NOT default to Development so that hosts without an
         // explicit ASPNETCORE_ENVIRONMENT / DOTNET_ENVIRONMENT are not silently treated
-        // as dev (which would enable manifest discovery, DevMcpTokenProvider, and relaxed TLS).
+        // as dev (which would enable manifest discovery, EnvMcpTokenProvider, and relaxed TLS).
         var config = Config(); // nothing set
         Utility.IsDevScenario(config).Should().BeFalse();
     }
