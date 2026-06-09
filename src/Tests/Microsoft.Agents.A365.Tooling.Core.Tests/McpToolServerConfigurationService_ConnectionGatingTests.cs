@@ -7,6 +7,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Models;
 using Microsoft.Agents.A365.Tooling.Services;
+using Microsoft.Agents.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -219,6 +220,51 @@ public class McpToolServerConfigurationService_ConnectionGatingTests
         servers.Should().ContainSingle();
     }
 
+    // ─── Exception propagation through enumeration ───────────────────────────
+
+    [Fact]
+    public async Task EnumerateToolsFromServersAsync_NoTokenProvider_PropagatesConnectionsRequired()
+    {
+        var mockService = CreatePartialMock();
+        mockService
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ThrowsAsync(new McpConnectionsRequiredException("https://missing", "Pending", new[] { "srv" }));
+
+        await Assert.ThrowsAsync<McpConnectionsRequiredException>(() =>
+            mockService.Object.EnumerateToolsFromServersAsync(
+                "agent-id", "auth-token", new Mock<ITurnContext>().Object, new ToolOptions()));
+    }
+
+    [Fact]
+    public async Task EnumerateToolsFromServersAsync_WithTokenProvider_PropagatesConnectionsRequired()
+    {
+        var mockService = CreatePartialMock();
+        mockService
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ThrowsAsync(new McpConnectionsRequiredException("https://missing", "Pending", new[] { "srv" }));
+
+        await Assert.ThrowsAsync<McpConnectionsRequiredException>(() =>
+            mockService.Object.EnumerateToolsFromServersAsync(
+                "agent-id", "auth-token", new Mock<IMcpTokenProvider>().Object,
+                new Mock<ITurnContext>().Object, new ToolOptions()));
+    }
+
+    [Fact]
+    public async Task EnumerateToolsFromServersAsync_GenericFailure_StillReturnsEmpty()
+    {
+        // Regression guard: non-gating failures remain swallowed (return empty) — unchanged behavior.
+        var mockService = CreatePartialMock();
+        mockService
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ThrowsAsync(new Exception("network"));
+
+        var (servers, toolsByServer) = await mockService.Object.EnumerateToolsFromServersAsync(
+            "agent-id", "auth-token", new Mock<ITurnContext>().Object, new ToolOptions());
+
+        servers.Should().BeEmpty();
+        toolsByServer.Should().BeEmpty();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static McpDiscoveryResult ParseGateway(string json)
@@ -226,6 +272,15 @@ public class McpToolServerConfigurationService_ConnectionGatingTests
         using var doc = JsonDocument.Parse(json);
         return McpToolServerConfigurationService.ParseGatewayResponse(doc.RootElement);
     }
+
+    private static Mock<McpToolServerConfigurationService> CreatePartialMock() =>
+        new Mock<McpToolServerConfigurationService>(
+            MockBehavior.Default,
+            new Mock<ILogger<IMcpToolServerConfigurationService>>().Object,
+            new Mock<IConfiguration>().Object,
+            new Mock<IServiceProvider>().Object,
+            new Mock<IHttpClientFactory>().Object)
+        { CallBase = true };
 
     private static FakeHttpMessageHandler Respond(string json) =>
         new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) });
