@@ -57,7 +57,19 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <inheritdoc/>
         public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+            if (IsDevScenario())
+            {
+                // Dev manifests carry no connection metadata, so connection gating never applies.
+                return GetMCPServersFromManifest();
+            }
+
+            McpDiscoveryResult discovery = await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+
+            // Gate execution when configured MCP servers are not connection-ready. Runs before token
+            // attachment because readiness is independent of tokens.
+            EnforceConnectionReadiness(discovery);
+
+            return discovery.Servers;
         }
 
         /// <summary>
@@ -177,7 +189,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
             }
         }
 
-        private async Task<List<MCPServerConfig>> GetMCPServerFromToolingGatewayAsync(
+        private async Task<McpDiscoveryResult> GetMCPServerFromToolingGatewayAsync(
             string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
             string configEndpoint = Utility.GetToolingGatewayForDigitalWorker(agentInstanceId, this._configuration);
@@ -201,23 +213,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     PropertyNameCaseInsensitive = true
                 };
 
-                // Single parse approach
                 var jsonDoc = JsonSerializer.Deserialize<JsonElement>(response, options);
 
-                IEnumerable<JsonElement> serverElements = jsonDoc.ValueKind switch
-                {
-                    JsonValueKind.Array => jsonDoc.EnumerateArray(),
-                    JsonValueKind.Object when jsonDoc.TryGetProperty("mcpServers", out var servers)
-                                           && servers.ValueKind == JsonValueKind.Array
-                        => servers.EnumerateArray(),
-                    _ => throw new InvalidOperationException(
-                        $"Unexpected JSON structure. Expected array or object with 'mcpServers' property, got {jsonDoc.ValueKind}")
-                };
-
-                return serverElements
-                    .Select(ParseServerConfig)
-                    .Where(config => config != null)
-                    .ToList()!;
+                return ParseGatewayResponse(jsonDoc);
             }
             catch (HttpRequestException httpEx)
             {
@@ -285,6 +283,14 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     publisher = publisherElement.GetString();
                 }
 
+                string? allConnectionsUrl = GetStringPropertyCaseInsensitive(serverElement, "allConnectionsUrl");
+                string? missingConnectionsUrl = GetStringPropertyCaseInsensitive(serverElement, "missingConnectionsUrl");
+                string? connectivityStatus = GetStringPropertyCaseInsensitive(serverElement, "connectivityStatus");
+                if (IsReadyStatus(connectivityStatus))
+                {
+                    missingConnectionsUrl = null;
+                }
+
                 // Both Name and Endpoint are required
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(endpoint))
                 {
@@ -298,7 +304,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     id = id ?? string.Empty,
                     scope = scope,
                     audience = audience,
-                    publisher = publisher
+                    publisher = publisher,
+                    allConnectionsUrl = allConnectionsUrl,
+                    missingConnectionsUrl = missingConnectionsUrl,
+                    connectivityStatus = connectivityStatus
                 };
             }
             catch (Exception)
@@ -306,6 +315,141 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 // Return null if parsing fails for this individual server
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Raises <see cref="McpConnectionsRequiredException"/> when the aggregate connectivity status
+        /// indicates that one or more required downstream connections are missing.
+        /// </summary>
+        /// <param name="discovery">The discovery result carrying aggregate and per-server status.</param>
+        /// <remarks>
+        /// Blocks only when the response-level connectivity status is present and not <c>Ready</c>
+        /// (for example, <c>Pending</c>). Absent status (legacy raw-array gateway responses and
+        /// dev-mode manifests) is always treated as ready, so those paths are never gated. The
+        /// non-<c>Ready</c> check is intentionally defensive against any unexpected future status value.
+        /// </remarks>
+        internal void EnforceConnectionReadiness(McpDiscoveryResult discovery)
+        {
+            string? status = discovery.ConnectivityStatus;
+            if (string.IsNullOrWhiteSpace(status) || IsReadyStatus(status))
+            {
+                return;
+            }
+
+            List<string> serverNames = discovery.Servers
+                .Where(s => !string.IsNullOrWhiteSpace(s.connectivityStatus) && !IsReadyStatus(s.connectivityStatus))
+                .Select(s => string.IsNullOrEmpty(s.mcpServerName) ? s.id : s.mcpServerName)
+                .ToList();
+
+            this._logger.LogInformation(
+                "MCP connection gate blocking turn: connectivityStatus={ConnectivityStatus}, servers={ServerNames}",
+                status,
+                string.Join(", ", serverNames));
+
+            throw new McpConnectionsRequiredException(discovery.MissingConnectionsUrl, status, serverNames);
+        }
+
+        /// <summary>
+        /// Parses a tooling gateway response into an <see cref="McpDiscoveryResult"/>. Supports both the
+        /// legacy bare-array shape (servers only, no connection metadata) and the wrapped object shape
+        /// <c>{ "mcpServers": [...], allConnectionsUrl, missingConnectionsUrl, connectivityStatus }</c>.
+        /// </summary>
+        /// <param name="root">The root JSON element of the gateway response.</param>
+        /// <returns>The parsed discovery result with servers and aggregate connection metadata.</returns>
+        internal static McpDiscoveryResult ParseGatewayResponse(JsonElement root)
+        {
+            if (root.ValueKind == JsonValueKind.Array)
+            {
+                // Legacy bare-array: servers only, no aggregate connection metadata.
+                List<MCPServerConfig> legacyServers = root.EnumerateArray()
+                    .Select(ParseServerConfig)
+                    .Where(config => config != null)
+                    .ToList()!;
+                return new McpDiscoveryResult(legacyServers);
+            }
+
+            if (root.ValueKind == JsonValueKind.Object &&
+                TryGetPropertyCaseInsensitive(root, "mcpServers", out var serversElement) &&
+                serversElement.ValueKind == JsonValueKind.Array)
+            {
+                List<MCPServerConfig> servers = serversElement.EnumerateArray()
+                    .Select(ParseServerConfig)
+                    .Where(config => config != null)
+                    .ToList()!;
+
+                string? connectivityStatus = GetStringPropertyCaseInsensitive(root, "connectivityStatus");
+                string? allConnectionsUrl = GetStringPropertyCaseInsensitive(root, "allConnectionsUrl");
+                string? missingConnectionsUrl = GetStringPropertyCaseInsensitive(root, "missingConnectionsUrl");
+                if (IsReadyStatus(connectivityStatus))
+                {
+                    missingConnectionsUrl = null;
+                }
+
+                return new McpDiscoveryResult(servers, allConnectionsUrl, missingConnectionsUrl, connectivityStatus);
+            }
+
+            throw new InvalidOperationException(
+                $"Unexpected JSON structure. Expected array or object with 'mcpServers' property, got {root.ValueKind}");
+        }
+
+        /// <summary>
+        /// The connectivity status value indicating that all required connectors are already connected.
+        /// </summary>
+        private const string ReadyConnectivityStatus = "Ready";
+
+        /// <summary>
+        /// Determines whether a connectivity status value represents the ready state (case-insensitive).
+        /// </summary>
+        /// <param name="connectivityStatus">The connectivity status value to evaluate.</param>
+        /// <returns><c>true</c> when the value equals <c>Ready</c> ignoring case and surrounding whitespace.</returns>
+        private static bool IsReadyStatus(string? connectivityStatus) =>
+            !string.IsNullOrWhiteSpace(connectivityStatus) &&
+            connectivityStatus!.Trim().Equals(ReadyConnectivityStatus, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Attempts to read a property from a JSON object using a case-insensitive name match. The
+        /// property name is trimmed to tolerate stray whitespace in the source schema.
+        /// </summary>
+        /// <param name="element">The JSON object to read from.</param>
+        /// <param name="propertyName">The property name to match (case-insensitive).</param>
+        /// <param name="value">The matched property value, or default when not found.</param>
+        /// <returns><c>true</c> when a matching property is found; otherwise <c>false</c>.</returns>
+        private static bool TryGetPropertyCaseInsensitive(JsonElement element, string propertyName, out JsonElement value)
+        {
+            value = default;
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                if (string.Equals(property.Name.Trim(), propertyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Reads a string property from a JSON object using a case-insensitive name match, or null when
+        /// the property is absent or not a string.
+        /// </summary>
+        /// <param name="element">The JSON object to read from.</param>
+        /// <param name="propertyName">The property name to match (case-insensitive).</param>
+        /// <returns>The string value, or null when not present.</returns>
+        private static string? GetStringPropertyCaseInsensitive(JsonElement element, string propertyName)
+        {
+            if (TryGetPropertyCaseInsensitive(element, propertyName, out var value) &&
+                value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString();
+            }
+
+            return null;
         }
 
         /// <summary>
