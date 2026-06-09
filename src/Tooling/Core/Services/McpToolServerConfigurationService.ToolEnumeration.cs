@@ -38,6 +38,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     tokenProvider,
                     toolOptions).ConfigureAwait(false);
             }
+            catch (McpConnectionsRequiredException)
+            {
+                // Connection-readiness gating must reach the agent's turn handler so it can prompt
+                // the user with the setup URL. Never swallow it as a generic listing failure.
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
@@ -130,6 +136,12 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     agentInstanceId,
                     authToken,
                     toolOptions).ConfigureAwait(false);
+            }
+            catch (McpConnectionsRequiredException)
+            {
+                // Connection-readiness gating must reach the agent's turn handler so it can prompt
+                // the user with the setup URL. Never swallow it as a generic listing failure.
+                throw;
             }
             catch (Exception ex)
             {

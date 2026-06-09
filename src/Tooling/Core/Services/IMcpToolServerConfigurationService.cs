@@ -19,6 +19,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="agentInstanceId">Agent instance Id for the agent.</param>
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
+        /// <exception cref="Microsoft.Agents.A365.Tooling.McpConnectionsRequiredException">Thrown when configured MCP servers report missing downstream connections (aggregate connectivity status other than "Ready").</exception>
         Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken);
 
         /// <summary>
@@ -28,6 +29,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <param name="toolOptions">Tool options for listing servers.</param>
         /// <returns>Returns the list of MCP Servers that are configured.</returns>
+        /// <exception cref="Microsoft.Agents.A365.Tooling.McpConnectionsRequiredException">Thrown when configured MCP servers report missing downstream connections (aggregate connectivity status other than "Ready").</exception>
         Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions);
 
         /// <summary>

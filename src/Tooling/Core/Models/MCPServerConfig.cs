@@ -43,6 +43,26 @@ namespace Microsoft.Agents.A365.Tooling.Models
         public string? publisher { get; set; }
 
         /// <summary>
+        /// Gets or sets the URL containing the deduped union of all connectors required for this MCP
+        /// server to operate. Populated by the discovery endpoint (<c>discoverMCPServers</c>); null
+        /// when not supplied (for example, on the basic server-list path).
+        /// </summary>
+        public string? allConnectionsUrl { get; set; }
+
+        /// <summary>
+        /// Gets or sets the URL containing the deduped union of only the connectors required for this
+        /// MCP server that the connected user has not yet set up. Null when <c>connectivityStatus</c>
+        /// is <c>Ready</c> (no setup needed) or when not supplied.
+        /// </summary>
+        public string? missingConnectionsUrl { get; set; }
+
+        /// <summary>
+        /// Gets or sets the connectivity status for this MCP server (for example, <c>Ready</c> when all
+        /// required connectors are already connected). Compare case-insensitively. Null when not supplied.
+        /// </summary>
+        public string? connectivityStatus { get; set; }
+
+        /// <summary>
         /// Gets or sets per-server HTTP headers, including the Authorization header populated
         /// by <c>AttachPerAudienceTokensAsync</c> before tool connections are established.
         /// Null until token attachment has run; callers should treat a missing Authorization
