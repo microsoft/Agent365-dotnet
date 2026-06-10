@@ -46,6 +46,11 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 ## [Unreleased]
 
 ### Added
+- **Microsoft.Agents.A365.Tooling** - MCP connection-readiness gating
+  - Parses per-server and aggregate connection metadata (`allConnectionsUrl`, `missingConnectionsUrl`, `connectivityStatus`) from the tooling gateway discovery response, supporting both the legacy bare-array and wrapped `{ mcpServers, ... }` shapes
+  - `ListToolServersAsync` now throws the new public `McpConnectionsRequiredException` (exposing `MissingConnectionsUrl`, `ConnectivityStatus`, and `ServerNames`) when the aggregate connectivity status is present and not `Ready`; legacy responses and dev manifests are never gated
+  - The exception propagates through `EnumerateToolsFromServersAsync` / `EnumerateAllToolsAsync` and the framework extensions so callers can surface the setup URL to the user
+  - `MCPServerConfig` extended with `allConnectionsUrl`, `missingConnectionsUrl`, and `connectivityStatus`
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
   - `IMcpTokenProvider` interface for pluggable OAuth token acquisition

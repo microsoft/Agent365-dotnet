@@ -182,6 +182,74 @@ public class McpToolServerConfigurationService_ConnectionGatingTests
             .Which.ConnectivityStatus.Should().Be("Frozen");
     }
 
+    [Fact]
+    public void EnforceConnectionReadiness_AggregateReadyButPerServerPending_DoesNotThrow()
+    {
+        // Gating is aggregate-only by design: a per-server Pending does not block the turn when the
+        // gateway reports the aggregate connectivity status as Ready.
+        var service = CreateService();
+        var discovery = new McpDiscoveryResult(
+            new List<MCPServerConfig>
+            {
+                new() { mcpServerName = "srv", id = "id-1", url = "http://s", connectivityStatus = "Pending" },
+            },
+            connectivityStatus: "Ready");
+
+        var act = () => service.EnforceConnectionReadiness(discovery);
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("READY")]
+    [InlineData(" ready ")]
+    public void EnforceConnectionReadiness_ReadyStatusVariants_DoNotThrow(string status)
+    {
+        // Pins IsReadyStatus: comparison is case-insensitive and whitespace-tolerant.
+        var service = CreateService();
+        var discovery = new McpDiscoveryResult(new List<MCPServerConfig>(), connectivityStatus: status);
+
+        var act = () => service.EnforceConnectionReadiness(discovery);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void EnforceConnectionReadiness_PendingWithoutPerServerStatus_ThrowsWithEmptyServerNames()
+    {
+        var service = CreateService();
+        var discovery = new McpDiscoveryResult(
+            new List<MCPServerConfig>
+            {
+                new() { mcpServerName = "srv", id = "id-1", url = "http://s" },
+            },
+            connectivityStatus: "Pending");
+
+        var act = () => service.EnforceConnectionReadiness(discovery);
+
+        var ex = act.Should().Throw<McpConnectionsRequiredException>().Which;
+        ex.ServerNames.Should().BeEmpty();
+        ex.Message.Should().Contain("(unknown)");
+    }
+
+    [Fact]
+    public void EnforceConnectionReadiness_PendingWithoutMissingUrl_ThrowsWithNullUrl()
+    {
+        // Every consumer's handler must survive a null MissingConnectionsUrl.
+        var service = CreateService();
+        var discovery = new McpDiscoveryResult(
+            new List<MCPServerConfig>
+            {
+                new() { mcpServerName = "srv", id = "id-1", url = "http://s", connectivityStatus = "Pending" },
+            },
+            connectivityStatus: "Pending");
+
+        var act = () => service.EnforceConnectionReadiness(discovery);
+
+        act.Should().Throw<McpConnectionsRequiredException>()
+            .Which.MissingConnectionsUrl.Should().BeNull();
+    }
+
     // ─── ListToolServersAsync (end-to-end via gateway) ───────────────────────
 
     [Fact]

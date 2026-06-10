@@ -38,7 +38,10 @@ namespace Microsoft.Agents.A365.Tooling
         /// <summary>Gets the aggregate connectivity status reported by the gateway, or null when not provided.</summary>
         public string? ConnectivityStatus { get; }
 
-        /// <summary>Gets the names of the MCP servers that are not yet connection-ready.</summary>
+        /// <summary>
+        /// Gets the names of the MCP servers that are not yet connection-ready. May be empty when the
+        /// gateway reports only an aggregate connectivity status without per-server detail.
+        /// </summary>
         public IReadOnlyList<string> ServerNames { get; }
 
         private static string BuildMessage(string? missingConnectionsUrl, string? connectivityStatus, IReadOnlyList<string> serverNames)

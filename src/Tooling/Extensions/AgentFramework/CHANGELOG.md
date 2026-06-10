@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - V2 per-audience token support
   - `McpToolRegistrationService.AddToolServersToAgent` and `GetMcpToolsAsync` now instantiate `AgenticMcpTokenProvider` and use the V2-aware `EnumerateToolsFromServersAsync` overload, so each V2 MCP server receives its own audience-scoped Bearer token instead of the shared ATG token
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - MCP connection-readiness gating now propagates
+  - `AddToolServersToAgent` and `GetMcpToolsAsync` allow `McpConnectionsRequiredException` to propagate when configured MCP servers are not connection-ready, so callers can surface the setup URL to the user instead of receiving an empty tool list
 
 
 ## [1.0.0] - 2025-01-16

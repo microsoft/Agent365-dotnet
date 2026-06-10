@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - V2 per-audience token support
   - `McpToolRegistrationService.AddToolServersToAgentAsync` now instantiates `AgenticMcpTokenProvider` and uses the V2-aware `EnumerateToolsFromServersAsync` overload, so each V2 MCP server receives its own audience-scoped Bearer token instead of the shared ATG token
   - OBO token acquisition is deferred until after the dev-mode check; in `Development` environments the `DevMcpTokenProvider` supplies tokens from environment variables (`BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN`) without requiring a working auth setup
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - MCP connection-readiness gating now propagates
+  - `AddToolServersToAgentAsync` allows `McpConnectionsRequiredException` to propagate when configured MCP servers are not connection-ready, so callers can surface the setup URL to the user instead of receiving an empty tool list
 
 ### Added
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - Semantic Kernel integration tooling for MCP server management

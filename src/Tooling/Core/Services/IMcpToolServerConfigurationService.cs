@@ -84,6 +84,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
         /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
+        /// <exception cref="Microsoft.Agents.A365.Tooling.McpConnectionsRequiredException">Thrown when configured MCP servers report missing downstream connections (aggregate connectivity status other than "Ready").</exception>
         Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions);
 
         /// <summary>
@@ -97,6 +98,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
         /// <returns>A tuple containing server configurations and a dictionary mapping server names to their available tools.</returns>
+        /// <exception cref="Microsoft.Agents.A365.Tooling.McpConnectionsRequiredException">Thrown when configured MCP servers report missing downstream connections (aggregate connectivity status other than "Ready").</exception>
         Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(string agentInstanceId, string authToken, IMcpTokenProvider tokenProvider, ITurnContext turnContext, ToolOptions toolOptions);
 
         /// <summary>
@@ -107,6 +109,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <param name="turnContext">Turn context for the current request.</param>
         /// <param name="toolOptions">Tool options including user agent configuration.</param>
         /// <returns>A flat list of all MCP tools from all configured servers.</returns>
+        /// <exception cref="Microsoft.Agents.A365.Tooling.McpConnectionsRequiredException">Thrown when configured MCP servers report missing downstream connections (aggregate connectivity status other than "Ready").</exception>
         Task<IList<McpClientTool>> EnumerateAllToolsAsync(string agentInstanceId, string authToken, ITurnContext turnContext, ToolOptions toolOptions);
     }
 }

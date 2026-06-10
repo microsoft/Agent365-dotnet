@@ -28,6 +28,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
     /// </summary>
     public partial class McpToolServerConfigurationService : IMcpToolServerConfigurationService
     {
+        /// <summary>
+        /// The connectivity status value indicating that all required connectors are already connected.
+        /// </summary>
+        private const string ReadyConnectivityStatus = "Ready";
+
         private readonly ILogger<IMcpToolServerConfigurationService> _logger;
         private readonly IConfiguration _configuration;
         private readonly ILoggerFactory? _loggerFactory;
@@ -208,12 +213,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
                 var response = await httpClient.GetStringAsync(configEndpoint);
 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
-                var jsonDoc = JsonSerializer.Deserialize<JsonElement>(response, options);
+                // PropertyNameCaseInsensitive does not affect JsonElement materialization, so parse
+                // into a JsonElement directly; case-insensitive lookups are handled in ParseGatewayResponse.
+                var jsonDoc = JsonSerializer.Deserialize<JsonElement>(response);
 
                 return ParseGatewayResponse(jsonDoc);
             }
@@ -341,7 +343,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 .Select(s => string.IsNullOrEmpty(s.mcpServerName) ? s.id : s.mcpServerName)
                 .ToList();
 
-            this._logger.LogInformation(
+            this._logger.LogWarning(
                 "MCP connection gate blocking turn: connectivityStatus={ConnectivityStatus}, servers={ServerNames}",
                 status,
                 string.Join(", ", serverNames));
@@ -393,22 +395,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <summary>
-        /// The connectivity status value indicating that all required connectors are already connected.
-        /// </summary>
-        private const string ReadyConnectivityStatus = "Ready";
-
-        /// <summary>
         /// Determines whether a connectivity status value represents the ready state (case-insensitive).
         /// </summary>
         /// <param name="connectivityStatus">The connectivity status value to evaluate.</param>
         /// <returns><c>true</c> when the value equals <c>Ready</c> ignoring case and surrounding whitespace.</returns>
         private static bool IsReadyStatus(string? connectivityStatus) =>
             !string.IsNullOrWhiteSpace(connectivityStatus) &&
-            connectivityStatus!.Trim().Equals(ReadyConnectivityStatus, StringComparison.OrdinalIgnoreCase);
+            connectivityStatus.Trim().Equals(ReadyConnectivityStatus, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Attempts to read a property from a JSON object using a case-insensitive name match. The
-        /// property name is trimmed to tolerate stray whitespace in the source schema.
+        /// Attempts to read a property from a JSON object using a case-insensitive (ordinal) name match,
+        /// matching <c>JsonSerializerOptions.PropertyNameCaseInsensitive</c> semantics.
         /// </summary>
         /// <param name="element">The JSON object to read from.</param>
         /// <param name="propertyName">The property name to match (case-insensitive).</param>
@@ -424,7 +421,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
             foreach (var property in element.EnumerateObject())
             {
-                if (string.Equals(property.Name.Trim(), propertyName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
                 {
                     value = property.Value;
                     return true;
