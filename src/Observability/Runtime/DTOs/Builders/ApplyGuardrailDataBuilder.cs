@@ -29,6 +29,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
+        /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
         /// <returns>An ApplyGuardrailData object containing all telemetry data.</returns>
         public static ApplyGuardrailData Build(
             GuardrailDetails guardrailDetails,
@@ -42,11 +43,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             CallerDetails? callerDetails = null,
             IDictionary<string, object?>? extraAttributes = null,
             string? spanKind = null,
-            string? traceId = null)
+            string? traceId = null,
+            Exception? error = null)
         {
             var attributes = BuildAttributes(guardrailDetails, agentDetails, conversationId, channel, callerDetails, extraAttributes);
 
-            return new ApplyGuardrailData(parentSpanId, attributes, startTime, endTime, spanId, spanKind, traceId);
+            return ApplyStatus(new ApplyGuardrailData(parentSpanId, attributes, startTime, endTime, spanId, spanKind, traceId), error);
         }
 
         private static Dictionary<string, object?> BuildAttributes(

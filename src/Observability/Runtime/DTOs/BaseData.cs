@@ -81,6 +81,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public string? TraceId { get; }
 
         /// <summary>
+        /// Gets or sets the OpenTelemetry status code for the operation. Defaults to
+        /// <see cref="SpanStatusCode.Unset"/> (0); set to <see cref="SpanStatusCode.Error"/> (2)
+        /// when an error is recorded.
+        /// </summary>
+        public SpanStatusCode StatusCode { get; set; } = SpanStatusCode.Unset;
+
+        /// <summary>
+        /// Gets or sets the OpenTelemetry status message. Per the OTel spec this is only populated for an error status.
+        /// </summary>
+        public string? StatusMessage { get; set; }
+
+        /// <summary>
         /// Gets the duration of the operation if both start and end times are provided.
         /// </summary>
         public TimeSpan Duration => StartTime.HasValue && EndTime.HasValue
@@ -102,7 +114,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
                 { "ParentSpanId", ParentSpanId },
                 { "TraceId", TraceId },
                 { "SpanKind", SpanKind },
-                { "Duration", Duration }
+                { "Duration", Duration },
+                {
+                    "Status", new Dictionary<string, object>
+                    {
+                        { "code", (int)StatusCode },
+                        { "message", StatusMessage ?? "" }
+                    }
+                }
             };
 
             return dict;

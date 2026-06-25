@@ -33,6 +33,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="spanKind">Optional span kind override. Use <see cref="SpanKindConstants.Client"/> or <see cref="SpanKindConstants.Server"/> as appropriate.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
+        /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
         /// <returns>An InvokeAgentData object containing all telemetry data.</returns>
         public static InvokeAgentData Build(
             InvokeAgentScopeDetails invokeAgentScopeDetails,
@@ -48,7 +49,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null,
             string? spanKind = null,
-            string? traceId = null)
+            string? traceId = null,
+            Exception? error = null)
         {
             var attributes = BuildAttributes(
                 invokeAgentScopeDetails,
@@ -60,14 +62,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
                 outputMessages,
                 extraAttributes);
 
-            return new InvokeAgentData(
+            return ApplyStatus(new InvokeAgentData(
                 attributes,
                 startTime,
                 endTime,
                 spanId,
                 parentSpanId,
                 spanKind,
-                traceId);
+                traceId), error);
         }
 
         /// <summary>

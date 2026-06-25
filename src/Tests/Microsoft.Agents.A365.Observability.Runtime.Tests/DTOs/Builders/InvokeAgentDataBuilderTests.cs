@@ -221,6 +221,43 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_NoError_LeavesStatusUnset()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-123", "TestAgent");
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(scopeDetails, agentDetails, "conv-1");
+
+            // Assert
+            telemetry.StatusCode.Should().Be(SpanStatusCode.Unset);
+            telemetry.StatusMessage.Should().BeNull();
+            telemetry.Attributes.Should().NotContainKey(OpenTelemetryConstants.ErrorTypeKey);
+        }
+
+        [TestMethod]
+        public void Build_WithError_SetsErrorStatusAndErrorType()
+        {
+            // Arrange
+            var endpoint = new Uri("https://example.com");
+            var agentDetails = new AgentDetails("agent-123", "TestAgent");
+            var scopeDetails = new InvokeAgentScopeDetails(endpoint: endpoint);
+            var error = new InvalidOperationException("agent blew up");
+
+            // Act
+            var telemetry = InvokeAgentDataBuilder.Build(scopeDetails, agentDetails, "conv-1", error: error);
+
+            // Assert
+            telemetry.StatusCode.Should().Be(SpanStatusCode.Error);
+            telemetry.StatusMessage.Should().Be("agent blew up");
+            telemetry.Attributes.Should().ContainKey(OpenTelemetryConstants.ErrorTypeKey);
+            telemetry.Attributes[OpenTelemetryConstants.ErrorTypeKey].Should().Be(typeof(InvalidOperationException).FullName);
+        }
+
+
+        [TestMethod]
         public void Build_SetsTimingInformation_WhenProvided()
         {
             // Arrange

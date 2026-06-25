@@ -149,7 +149,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 SpanId = data["SpanId"],
                 ParentSpanId = data["ParentSpanId"],
                 TraceId = data.TryGetValue("TraceId", out var traceIdObj) ? traceIdObj : null,
-                Kind = data.TryGetValue("SpanKind", out var spanKindObj) && spanKindObj != null ? spanKindObj : SpanKindConstants.Client
+                Kind = data.TryGetValue("SpanKind", out var spanKindObj) && spanKindObj != null ? spanKindObj : SpanKindConstants.Client,
+                Status = data.TryGetValue("Status", out var statusObj) && statusObj != null
+                    ? statusObj
+                    : new Dictionary<string, object> { { "code", 0 }, { "message", "" } }
             };
 
             return SerializePayload(payload);
