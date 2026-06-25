@@ -195,5 +195,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             var dict = data.ToDictionary();
             dict.Should().ContainKey("TraceId").WhoseValue.Should().BeNull();
         }
+
+        [TestMethod]
+        public void StatusCode_DefaultsToUnset()
+        {
+            var data = new TestData();
+            data.StatusCode.Should().Be(SpanStatusCode.Unset);
+            data.StatusMessage.Should().BeNull();
+        }
+
+        [TestMethod]
+        public void Status_DefaultInToDictionary_IsUnsetWithEmptyMessage()
+        {
+            var data = new TestData();
+            var dict = data.ToDictionary();
+
+            dict.Should().ContainKey("Status");
+            var status = dict["Status"].Should().BeAssignableTo<IDictionary<string, object>>().Subject;
+            status["code"].Should().Be(0);
+            status["message"].Should().Be("");
+        }
+
+        [TestMethod]
+        public void Status_ErrorInToDictionary_EmitsCodeAndMessage()
+        {
+            var data = new TestData
+            {
+                StatusCode = SpanStatusCode.Error,
+                StatusMessage = "kaboom"
+            };
+            var dict = data.ToDictionary();
+
+            var status = dict["Status"].Should().BeAssignableTo<IDictionary<string, object>>().Subject;
+            status["code"].Should().Be(2);
+            status["message"].Should().Be("kaboom");
+        }
     }
 }

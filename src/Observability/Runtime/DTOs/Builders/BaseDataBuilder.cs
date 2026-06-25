@@ -16,6 +16,22 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
     {
 
         /// <summary>
+        /// Applies an OpenTelemetry status to the built data based on an optional error, and records
+        /// the <c>error.type</c> attribute when an error is present. When <paramref name="error"/> is
+        /// <c>null</c> the status is left as <see cref="SpanStatusCode.Unset"/>.
+        /// </summary>
+        /// <param name="data">The telemetry data to annotate.</param>
+        /// <param name="error">Optional exception describing a failure for the operation.</param>
+        /// <returns>The same <paramref name="data"/> instance, for fluent use.</returns>
+        protected static T ApplyStatus(T data, Exception? error)
+        {
+            var status = SpanStatusBuilder.FromError(error, data.Attributes);
+            data.StatusCode = status.Code;
+            data.StatusMessage = status.Message;
+            return data;
+        }
+
+        /// <summary>
         /// Adds attributes for input messages.
         /// </summary>
         protected static void AddInputMessagesAttributes(IDictionary<string, object?> attributes, string[]? messages)

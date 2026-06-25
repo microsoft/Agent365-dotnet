@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="parentSpanId">Optional parent span ID for distributed tracing.</param>
         /// <param name="extraAttributes">Optional dictionary of extra attributes.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
+        /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
         /// <returns>An OutputData object containing all telemetry data.</returns>
         public static OutputData Build(
             AgentDetails agentDetails,
@@ -42,11 +43,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             string? spanId = null,
             string? parentSpanId = null,
             IDictionary<string, object?>? extraAttributes = null,
-            string? traceId = null)
+            string? traceId = null,
+            Exception? error = null)
         {
             var attributes = BuildAttributes(agentDetails, response, conversationId, channel, callerDetails, extraAttributes);
 
-            return new OutputData(attributes, startTime, endTime, spanId, parentSpanId, traceId);
+            return ApplyStatus(new OutputData(attributes, startTime, endTime, spanId, parentSpanId, traceId), error);
         }
 
         private static Dictionary<string, object?> BuildAttributes(
