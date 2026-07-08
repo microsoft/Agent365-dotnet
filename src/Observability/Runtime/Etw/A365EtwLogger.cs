@@ -37,14 +37,14 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogInferenceCall(
-            InferenceCallDetails inferenceCallDetails, 
-            AgentDetails agentDetails, 
-            string conversationId, 
-            string[]? inputMessages, 
-            string[]? outputMessages, 
-            DateTimeOffset? startTime, 
-            DateTimeOffset? endTime, 
-            string? spanId, 
+            InferenceCallDetails inferenceCallDetails,
+            AgentDetails agentDetails,
+            string conversationId,
+            string[]? inputMessages,
+            string[]? outputMessages,
+            DateTimeOffset? startTime,
+            DateTimeOffset? endTime,
+            string? spanId,
             string? parentSpanId,
             Channel? channel,
             CallerDetails? callerDetails,
@@ -77,16 +77,16 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogInvokeAgent(
-            InvokeAgentScopeDetails invokeAgentScopeDetails, 
-            AgentDetails agentDetails, 
-            string conversationId, 
-            Request? request, 
-            CallerDetails? callerDetails, 
-            string[]? inputMessages, 
-            string[]? outputMessages, 
-            DateTimeOffset? startTime, 
-            DateTimeOffset? endTime, 
-            string? spanId, 
+            InvokeAgentScopeDetails invokeAgentScopeDetails,
+            AgentDetails agentDetails,
+            string conversationId,
+            Request? request,
+            CallerDetails? callerDetails,
+            string[]? inputMessages,
+            string[]? outputMessages,
+            DateTimeOffset? startTime,
+            DateTimeOffset? endTime,
+            string? spanId,
             string? parentSpanId,
             string? traceId,
             Exception? error = null)
@@ -117,13 +117,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 
         /// <inheritdoc/>
         public void LogToolCall(
-            ToolCallDetails toolCallDetails, 
-            AgentDetails agentDetails, 
-            string conversationId, 
-            string? responseContent, 
-            DateTimeOffset? startTime, 
-            DateTimeOffset? endTime, 
-            string? spanId, 
+            ToolCallDetails toolCallDetails,
+            AgentDetails agentDetails,
+            string conversationId,
+            string? responseContent,
+            DateTimeOffset? startTime,
+            DateTimeOffset? endTime,
+            string? spanId,
             string? parentSpanId,
             Channel? channel,
             CallerDetails? callerDetails,
@@ -201,7 +201,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             Channel? channel = null,
             CallerDetails? callerDetails = null,
             string? traceId = null,
-            Exception? error = null)
+            Exception? error = null,
+            IEnumerable<GuardrailFinding>? findings = null)
         {
             var data = ApplyGuardrailDataBuilder.Build(
                 guardrailDetails,
@@ -214,7 +215,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
                 channel,
                 callerDetails: callerDetails,
                 traceId: traceId,
-                error: error);
+                error: error,
+                findings: findings);
 
             logger.Log(
                 LogLevel.Information,
