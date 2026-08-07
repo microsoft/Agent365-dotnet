@@ -42,6 +42,9 @@
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.0.1-preview.1.25571.5" />
     <!-- Json packages -->
     <PackageVersion Include="System.Text.Json" Version="10.0.4" />
+    <!-- Transitive pin: patches CVE-2026-26127 (GHSA-73j8-2gch-69rq) DoS in Microsoft.Bcl.Memory <= 10.0.3, pulled in via Microsoft.Agents.Connector.
+         TODO: Remove this pin once the Microsoft.Agents.* packages are upgraded to >= 1.6.150, which already reference a patched Microsoft.Bcl.Memory (>= 10.0.7). -->
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.4" />
     <!-- Source Link Support -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <!-- Versioning -->
