@@ -45,6 +45,27 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **OBS exports always use `/observabilityService`** — `Microsoft.Agents.A365.Observability.Runtime`
+  now sends every Agent 365 telemetry export to the S2S OTLP route
+  `/observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces?api-version=1`.
+  `Agent365ExporterOptions.UseS2SEndpoint` is obsolete and ignored, even when `false`;
+  there is no fallback to `/observability`.
+- **OBS export requires a configured app-only resolver** — `TokenResolver` and
+  `ContextualTokenResolver` must return the final OBS app-only token for the exporting
+  agent and tenant. Missing resolvers fail exporter construction; empty tokens or resolver
+  failures fail the export batch before sending a request. Resolvers are invoked per export
+  batch, so they should cache and refresh tokens near expiry. Workload OBO/MCP/Graph auth is
+  unchanged.
+- **Delegated hosting OBS token acquisition is removed** —
+  `AgenticTokenCache.RegisterObservability(..., AgenticTokenStruct, ...)` is obsolete with
+  `error: true`, and `AgenticTokenStruct` construction is obsolete with `error: true`.
+  Use `ObservabilityTokenResolver` and `AgenticTokenCache.RefreshObservabilityToken(...)`
+  for app-only token acquisition. `AddAgenticTracingExporter` now registers
+  `IExporterTokenCache<ObservabilityTokenResolver>` instead of
+  `IExporterTokenCache<AgenticTokenStruct>`.
+
 ### Added
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
