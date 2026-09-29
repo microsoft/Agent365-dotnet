@@ -90,10 +90,12 @@ custom tenant domain resolution still control only the host, not the path.
 
 Exporter authentication comes only from the configured `TokenResolver` or
 `ContextualTokenResolver`. Both resolvers must return an app-only OBS token for the
-exporting agent identity; the exporter never reads per-request delegated tokens, never
-performs OBO/user_fic token exchange, and never retries 401/403/404 on the delegated
-`/observability` route. A missing resolver fails configuration, and a null/empty token or
-resolver exception fails the export batch before sending data.
+exporting agent identity; the default app-only OBS scope is
+`api://9b975845-388f-4429-889e-eab1ef63949c/.default`. The exporter never reads
+per-request delegated tokens, never performs OBO/user_fic token exchange, and never retries
+401/403/404 on the delegated `/observability` route. A missing resolver fails
+configuration, and a null/empty token or resolver exception fails the export batch before
+sending data.
 
 Resolvers are invoked once per export batch and should cache internally. They must validate
 the final token before returning it: accept `idtyp=app`, or, when `idtyp` is absent, a

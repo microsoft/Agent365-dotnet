@@ -25,7 +25,7 @@ public sealed class ExportConfigConsistencyTests
     private const string ScopeOverrideEnvVar = "A365_OBSERVABILITY_SCOPE_OVERRIDE";
 
     // Pinned production values — update ALL of these together when any one changes.
-    private const string ExpectedScope = "api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite";
+    private const string ExpectedScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
     private const string ExpectedS2SUri = "https://agent365.svc.cloud.microsoft/observabilityService/tenants/t1/otlp/agents/a1/traces?api-version=1";
 
     [TestInitialize]
@@ -56,7 +56,7 @@ public sealed class ExportConfigConsistencyTests
             "S2S export URI changed — also review ProdObservabilityScope and DefaultEndpointHost.");
 
         // Coarse sanity: scope targets Agent365 Observability, endpoint targets agent365 service
-        scopes[0].Should().Contain("Agent365.Observability");
+        scopes[0].Should().EndWith("/.default");
         Agent365ExporterOptions.DefaultEndpointHost.Should().Contain("agent365");
     }
 }

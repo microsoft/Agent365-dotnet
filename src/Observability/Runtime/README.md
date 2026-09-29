@@ -9,10 +9,11 @@ Agent 365 OBS export is S2S-only. The exporter always posts OTLP traces to
 the legacy `Agent365ExporterOptions.UseS2SEndpoint` switch is obsolete and ignored.
 
 Configure either `TokenResolver` or `ContextualTokenResolver` to return the final app-only
-OBS token for the exporting agent and tenant. The SDK never reads a delegated request token,
-never performs OBO/user_fic authentication for OBS export, and never falls back to
-`/observability` on 401, 403, or 404. The resolver is invoked once per export batch, so it
-should cache tokens and refresh only near expiry.
+OBS token for the exporting agent and tenant. The default app-only OBS scope is
+`api://9b975845-388f-4429-889e-eab1ef63949c/.default`. The SDK never reads a delegated
+request token, never performs OBO/user_fic authentication for OBS export, and never falls
+back to `/observability` on 401, 403, or 404. The resolver is invoked once per export batch,
+so it should cache tokens and refresh only near expiry.
 
 Resolvers must validate the returned token before handing it to the exporter: accept
 `idtyp=app`, or, when `idtyp` is absent, a non-empty `roles` array or a non-empty `oid`

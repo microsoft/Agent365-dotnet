@@ -13,7 +13,15 @@ public sealed class AgenticTokenCacheTests
 {
     private const string TestAgentId = "test-agent";
     private const string TestTenantId = "test-tenant";
+    private const string ScopeOverrideEnvVar = "A365_OBSERVABILITY_SCOPE_OVERRIDE";
+    private const string DefaultObsScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
     private static readonly string[] TestScopes = new[] { "api://9b975845-388f-4429-889e-eab1ef63949c/.default" };
+
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        Environment.SetEnvironmentVariable(ScopeOverrideEnvVar, null);
+    }
 
     [TestMethod]
     public async Task RegisterObservability_WithAppOnlyResolver_CachesTokenPerAgentTenant()
@@ -130,6 +138,39 @@ public sealed class AgenticTokenCacheTests
         now = now.AddMinutes(6);
         (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(secondToken);
         secondResolverCalls.Should().Be(1, "the resolver passed to RefreshObservabilityToken replaces the resolver for future refreshes");
+    }
+
+    [TestMethod]
+    public async Task RefreshObservabilityToken_ThreeArgumentOverload_UsesDefaultAppOnlyScope()
+    {
+        Environment.SetEnvironmentVariable(ScopeOverrideEnvVar, null);
+        string[]? capturedScopes = null;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, scopes) =>
+        {
+            capturedScopes = scopes;
+            return Task.FromResult<string?>("app-only-token");
+        });
+
+        capturedScopes.Should().Equal(DefaultObsScope);
+    }
+
+    [TestMethod]
+    public async Task RefreshObservabilityToken_ThreeArgumentOverload_HonorsScopeOverride()
+    {
+        const string overrideScope = "api://override-resource/.default";
+        Environment.SetEnvironmentVariable(ScopeOverrideEnvVar, overrideScope);
+        string[]? capturedScopes = null;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, scopes) =>
+        {
+            capturedScopes = scopes;
+            return Task.FromResult<string?>("app-only-token");
+        });
+
+        capturedScopes.Should().Equal(overrideScope);
     }
 
     [TestMethod]

@@ -76,7 +76,10 @@ cached token is still usable. It propagates acquisition failures and clears stal
 token state when the resolver fails or returns an empty token. Call it from the exporter's
 `TokenResolver` or catch errors on the request path; the exporter will fail the batch
 without attempting a delegated fallback. JWT tokens are refreshed near `exp`; opaque tokens
-without an `exp` claim use a one-hour fallback max age from acquisition.
+without an `exp` claim use a one-hour fallback max age from acquisition. The three-argument
+`RefreshObservabilityToken` overload passes the default app-only OBS scope
+`api://9b975845-388f-4429-889e-eab1ef63949c/.default` to the resolver unless
+`A365_OBSERVABILITY_SCOPE_OVERRIDE` is set.
 
 ### Custom Default Expiration
 
