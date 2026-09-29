@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Net;
 
+#pragma warning disable CS0618 // Tests intentionally cover ignored legacy S2S compatibility switches.
+
 namespace Microsoft.Agents.A365.Observability.Tests.Tracing.Exporters;
 
 [TestClass]
@@ -106,7 +108,9 @@ public sealed class Agent365ExporterTests
     {
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>("token")
+            TokenResolver = tokenResolver == null
+                ? (_, _) => Task.FromResult<string?>("token")
+                : (agentId, tenantId) => Task.FromResult(tokenResolver(agentId, tenantId))
         };
 
         var resource = ResourceBuilder.CreateEmpty()
@@ -296,16 +300,33 @@ public sealed class Agent365ExporterTests
     #region S2S Endpoint Functional Tests
 
     [TestMethod]
-    public void UseS2SEndpoint_WhenFalse_UsesStandardEndpoint()
+    public void UseS2SEndpoint_WhenFalse_IsIgnoredAndUsesS2SEndpoint()
     {
         // Arrange
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
         var options = new Agent365ExporterOptions
         {
             TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
             UseS2SEndpoint = false
         };
 
-        var exporter = CreateExporter((_, _) => "test-token");
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
         using var activity = CreateActivity(tenantId: "tenant-123", agentId: "agent-456");
         var batch = CreateBatch(activity);
 
@@ -314,7 +335,8 @@ public sealed class Agent365ExporterTests
 
         // Assert
         options.UseS2SEndpoint.Should().BeFalse();
-        result.Should().Be(ExportResult.Failure); // Expected to fail as there's no real endpoint
+        result.Should().Be(ExportResult.Success);
+        observedUri.Should().Contain("/observabilityService/tenants/tenant-123/otlp/agents/agent-456/traces");
     }
 
     [TestMethod]
@@ -528,13 +550,22 @@ public sealed class Agent365ExporterTests
         capturedTenantId.Should().Be("tenant-123");
     }
 
-    [TestMethod]
-    public void Export_S2SEndpoint_NullToken_StillSendsRequest()
+    [DataTestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    public void Export_S2SEndpoint_NullOrEmptyToken_FailsWithoutSendingRequest(string? token)
     {
         // Arrange
+        var sendCount = 0;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            Interlocked.Increment(ref sendCount);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
         var options = new Agent365ExporterOptions
         {
-            TokenResolver = (_, _) => Task.FromResult<string?>(null), // Return null token
+            TokenResolver = (_, _) => Task.FromResult(token),
             UseS2SEndpoint = true
         };
 
@@ -546,7 +577,8 @@ public sealed class Agent365ExporterTests
             Agent365ExporterTests._agent365ExporterCore,
             NullLogger<Agent365Exporter>.Instance,
             options,
-            resource);
+            resource,
+            httpClient);
 
         using var activity = CreateActivity(tenantId: "tenant-123", agentId: "agent-456");
         var batch = CreateBatch(activity);
@@ -555,37 +587,8 @@ public sealed class Agent365ExporterTests
         var result = exporter.Export(in batch);
 
         // Assert
-        result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
-    }
-
-    [TestMethod]
-    public void Export_S2SEndpoint_EmptyToken_StillSendsRequest()
-    {
-        // Arrange
-        var options = new Agent365ExporterOptions
-        {
-            TokenResolver = (_, _) => Task.FromResult<string?>(string.Empty), // Return empty token
-            UseS2SEndpoint = true
-        };
-
-        var resource = ResourceBuilder.CreateEmpty()
-            .AddService("unit-test-service", serviceVersion: "1.0.0")
-            .Build();
-
-        var exporter = new Agent365Exporter(
-            Agent365ExporterTests._agent365ExporterCore,
-            NullLogger<Agent365Exporter>.Instance,
-            options,
-            resource);
-
-        using var activity = CreateActivity(tenantId: "tenant-123", agentId: "agent-456");
-        var batch = CreateBatch(activity);
-
-        // Act
-        var result = exporter.Export(in batch);
-
-        // Assert
-        result.Should().Be(ExportResult.Failure); // Expected to fail due to no real endpoint
+        result.Should().Be(ExportResult.Failure);
+        sendCount.Should().Be(0, "empty resolver results must fail before sending a request");
     }
 
     [TestMethod]
@@ -646,6 +649,131 @@ public sealed class Agent365ExporterTests
 
         // Assert
         result.Should().Be(ExportResult.Failure);
+    }
+
+    [TestMethod]
+    public void Export_TokenResolver_IsInvokedForEachExportBatch()
+    {
+        // Arrange
+        var resolverCalls = 0;
+        var handler = new TestHttpMessageHandler(req => new HttpResponseMessage(HttpStatusCode.OK));
+        var httpClient = new HttpClient(handler);
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) =>
+            {
+                Interlocked.Increment(ref resolverCalls);
+                return Task.FromResult<string?>("test-token");
+            }
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var firstActivity = CreateActivity("tenant-123", "agent-456");
+        using var secondActivity = CreateActivity("tenant-123", "agent-456");
+        var firstBatch = CreateBatch(firstActivity);
+        var secondBatch = CreateBatch(secondActivity);
+
+        // Act
+        exporter.Export(in firstBatch).Should().Be(ExportResult.Success);
+        exporter.Export(in secondBatch).Should().Be(ExportResult.Success);
+
+        // Assert
+        resolverCalls.Should().Be(2);
+    }
+
+    [DataTestMethod]
+    [DataRow(HttpStatusCode.Unauthorized)]
+    [DataRow(HttpStatusCode.Forbidden)]
+    [DataRow(HttpStatusCode.NotFound)]
+    public void Export_HttpAuthOrNotFoundFailure_DoesNotRetryOrFallback(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var resolverCalls = 0;
+        var sendCount = 0;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            Interlocked.Increment(ref sendCount);
+            return new HttpResponseMessage(statusCode);
+        });
+        var httpClient = new HttpClient(handler);
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) =>
+            {
+                Interlocked.Increment(ref resolverCalls);
+                return Task.FromResult<string?>("test-token");
+            },
+            UseS2SEndpoint = false
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365Exporter(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity("tenant-123", "agent-456");
+        var batch = CreateBatch(activity);
+
+        // Act
+        var result = exporter.Export(in batch);
+
+        // Assert
+        result.Should().Be(ExportResult.Failure);
+        resolverCalls.Should().Be(1);
+        sendCount.Should().Be(1, "401/403/404 must not trigger a delegated retry or alternate endpoint");
+    }
+
+    [TestMethod]
+    public async Task Agent365ExporterAsync_UsesS2SEndpoint_WhenLegacyFlagIsFalse()
+    {
+        // Arrange
+        string? observedUri = null;
+        var handler = new TestHttpMessageHandler(req =>
+        {
+            observedUri = req.RequestUri?.AbsoluteUri;
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var httpClient = new HttpClient(handler);
+        var options = new Agent365ExporterOptions
+        {
+            TokenResolver = (_, _) => Task.FromResult<string?>("test-token"),
+            UseS2SEndpoint = false
+        };
+
+        var resource = ResourceBuilder.CreateEmpty()
+            .AddService("unit-test-service", serviceVersion: "1.0.0")
+            .Build();
+
+        var exporter = new Agent365ExporterAsync(
+            Agent365ExporterTests._agent365ExporterCore,
+            NullLogger<Agent365Exporter>.Instance,
+            options,
+            resource,
+            httpClient);
+
+        using var activity = CreateActivity("tenant-async", "agent-async");
+
+        // Act
+        await exporter.ExportAsync(new[] { activity }, CancellationToken.None).ConfigureAwait(false);
+
+        // Assert
+        observedUri.Should().Contain("/observabilityService/tenants/tenant-async/otlp/agents/agent-async/traces");
     }
 
     [TestMethod]
@@ -1088,7 +1216,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{overrideDomain}");
-        observedUri!.Should().Contain($"/observability/tenants/tenant-env-overrides/otlp/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observabilityService/tenants/tenant-env-overrides/otlp/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
 
         // Cleanup
@@ -1137,7 +1265,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{overrideDomain}");
-        observedUri!.Should().Contain($"/observability/tenants/tenant-env/otlp/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observabilityService/tenants/tenant-env/otlp/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
 
         // Cleanup
@@ -1188,7 +1316,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{resolverDomain}");
-        observedUri!.Should().Contain($"/observability/tenants/tenant-resolver/otlp/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observabilityService/tenants/tenant-resolver/otlp/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
         // Cleanup
         Environment.SetEnvironmentVariable("A365_OBSERVABILITY_DOMAIN_OVERRIDE", null);
@@ -1236,7 +1364,7 @@ public sealed class Agent365ExporterTests
         result.Should().Be(ExportResult.Success);
         observedUri.Should().NotBeNull();
         observedUri!.Should().StartWith($"https://{Agent365ExporterOptions.DefaultEndpointHost}");
-        observedUri!.Should().Contain($"/observability/tenants/{tenantId}/otlp/agents/agent-xyz/traces");
+        observedUri!.Should().Contain($"/observabilityService/tenants/{tenantId}/otlp/agents/agent-xyz/traces");
         observedUri!.Should().Contain("api-version=1");
     }
 

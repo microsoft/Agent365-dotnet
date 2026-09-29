@@ -45,7 +45,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
             this._options = options ?? throw new ArgumentNullException(nameof(options));
 
             if (_options.TokenResolver == null && _options.ContextualTokenResolver == null)
-                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver or ContextualTokenResolver must be provided.");
+                throw new ArgumentNullException(nameof(options.TokenResolver), "Agent365ExporterOptions.TokenResolver or ContextualTokenResolver must provide an app-only OBS token.");
 
             this._httpClient = httpClient ?? HttpClientFactory.CreateWithTimeout(options.ExporterTimeoutMilliseconds);
             this._resource = resource ?? ResourceBuilder.CreateEmpty().Build();
@@ -92,4 +92,3 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
     }
 }
-
