@@ -67,7 +67,7 @@ ObservabilityTokenResolver resolver = async (agentId, tenantId, scopes) =>
     return token;
 };
 
-await cache.RefreshObservabilityToken("my-agent", "my-tenant", resolver, scopes);
+await cache.RefreshObservabilityToken("my-agent", "my-tenant", resolver);
 var token = await cache.GetObservabilityToken("my-agent", "my-tenant");
 ```
 
@@ -293,7 +293,7 @@ If you're upgrading from a delegated OBS token flow, replace `AgenticTokenStruct
 `ObservabilityTokenResolver`:
 
 ```csharp
-await cache.RefreshObservabilityToken("agent", "tenant", resolver, scopes);
+await cache.RefreshObservabilityToken("agent", "tenant", resolver);
 var token = await cache.GetObservabilityToken("agent", "tenant");
 ```
 
