@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-using Azure.Core;
+using Microsoft.Agents.A365.Observability.Runtime.Common;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,21 +12,21 @@ using System.Threading.Tasks;
 namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
     /// <summary>
-    /// Caches observability tokens per (agentId, tenantId) using the provided UserAuthorization and TurnContext.
+    /// Caches app-only observability tokens per (agentId, tenantId) using the provided resolver.
     /// Includes automatic periodic cleanup of expired tokens for improved memory management.
     /// </summary>
-    public class AgenticTokenCache : IExporterTokenCache<AgenticTokenStruct>, IDisposable
+    public class AgenticTokenCache : IExporterTokenCache<ObservabilityTokenResolver>, IDisposable
     {
         private sealed class Entry
         {
-            public AgenticTokenStruct AgenticTokenStruct { get; }
+            public ObservabilityTokenResolver TokenResolver { get; set; }
             public string? Token { get; set; }
-            public string[] Scopes { get; }
+            public string[] Scopes { get; set; }
             public DateTimeOffset? ExpiresAt { get; set; }
 
-            public Entry(AgenticTokenStruct agenticTokenStruct, string[] scopes)
+            public Entry(ObservabilityTokenResolver tokenResolver, string[] scopes)
             {
-                AgenticTokenStruct = agenticTokenStruct;
+                TokenResolver = tokenResolver;
                 Scopes = scopes;
             }
 
@@ -42,6 +43,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
         private readonly Timer? _cleanupTimer;
         private int _disposed; // Using int for Interlocked operations
+        private int _removedDelegatedRegistrationLogged;
 
         /// <summary>
         /// Default interval for automatic cleanup of expired tokens (5 minutes).
@@ -67,25 +69,48 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         }
 
         /// <summary>
-        /// Registers observability for the specified agent and tenant.
+        /// Registers an app-only observability token resolver for the specified agent and tenant.
         /// </summary>
         /// <param name="agentId">The agent identifier.</param>
         /// <param name="tenantId">The tenant identifier.</param>
-        /// <param name="tokenGenerator">The token generator.</param>
+        /// <param name="tokenGenerator">The app-only token resolver.</param>
         /// <param name="observabilityScopes">The observability scopes.</param>
+        public void RegisterObservability(string agentId, string tenantId, ObservabilityTokenResolver tokenGenerator, string[] observabilityScopes)
+        {
+            ValidateAgentAndTenant(agentId, tenantId);
+            if (tokenGenerator == null)
+            {
+                throw new ArgumentNullException(nameof(tokenGenerator));
+            }
+
+            var scopes = ValidateScopes(observabilityScopes);
+            var entry = new Entry(tokenGenerator, scopes);
+            _map.AddOrUpdate(
+                GetKey(agentId, tenantId),
+                entry,
+                (_, existing) =>
+                {
+                    existing.TokenResolver = tokenGenerator;
+                    existing.Scopes = scopes;
+                    existing.ClearToken();
+                    return existing;
+                });
+        }
+
+        /// <summary>
+        /// Delegated OBS token acquisition was removed. This overload is retained only to produce a compile-time error.
+        /// </summary>
+        /// <param name="agentId">The agent identifier.</param>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="tokenGenerator">The removed delegated token generator.</param>
+        /// <param name="observabilityScopes">The observability scopes.</param>
+        [Obsolete("Delegated OBS token acquisition has been removed. Register an ObservabilityTokenResolver app-only callback instead.", error: true)]
         public void RegisterObservability(string agentId, string tenantId, AgenticTokenStruct tokenGenerator, string[] observabilityScopes)
         {
-            if (string.IsNullOrWhiteSpace(agentId))
-                throw new ArgumentException("Value cannot be null or whitespace.", nameof(agentId));
-
-            if (string.IsNullOrWhiteSpace(tenantId))
-                throw new ArgumentException("Value cannot be null or whitespace.", nameof(tenantId));
-
-            if (tokenGenerator == null)
-                throw new ArgumentNullException(nameof(tokenGenerator));
-
-            // First registration wins; subsequent calls ignored (idempotent).
-            _map.TryAdd($"{agentId}:{tenantId}", new Entry(tokenGenerator, observabilityScopes));
+            if (Interlocked.Exchange(ref _removedDelegatedRegistrationLogged, 1) == 0)
+            {
+                Trace.TraceError("AgenticTokenCache.RegisterObservability with AgenticTokenStruct is removed. OBS export requires an app-only ObservabilityTokenResolver.");
+            }
         }
 
         /// <summary>
@@ -98,36 +123,78 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </returns>
         public async Task<string?> GetObservabilityToken(string agentId, string tenantId)
         {
-            if (!_map.TryGetValue($"{agentId}:{tenantId}", out var entry))
-                return null;
-
-            try
+            if (string.IsNullOrWhiteSpace(agentId) || string.IsNullOrWhiteSpace(tenantId))
             {
-                // Check current entry to avoid unnecessary token exchange calls if the token is still valid.
-                if (!string.IsNullOrEmpty(entry.Token) && entry.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(5)) // Consider token valid if it expires in more than 5 minutes.
+                return null;
+            }
+
+            if (!_map.TryGetValue(GetKey(agentId, tenantId), out var entry))
+            {
+                return null;
+            }
+
+            if (IsTokenUsable(entry))
+            {
+                return entry.Token;
+            }
+
+            return await RefreshObservabilityToken(agentId, tenantId, entry.TokenResolver, entry.Scopes).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Refreshes and caches an app-only observability token for the specified agent and tenant.
+        /// </summary>
+        /// <param name="agentId">The agent identifier.</param>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="tokenResolver">The app-only token resolver.</param>
+        /// <returns>The refreshed token.</returns>
+        public Task<string> RefreshObservabilityToken(string agentId, string tenantId, ObservabilityTokenResolver tokenResolver)
+        {
+            return RefreshObservabilityToken(agentId, tenantId, tokenResolver, EnvironmentUtils.GetObservabilityAuthenticationScope());
+        }
+
+        /// <summary>
+        /// Refreshes and caches an app-only observability token for the specified agent and tenant.
+        /// </summary>
+        /// <param name="agentId">The agent identifier.</param>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="tokenResolver">The app-only token resolver.</param>
+        /// <param name="observabilityScopes">The observability scopes.</param>
+        /// <returns>The refreshed token.</returns>
+        public async Task<string> RefreshObservabilityToken(string agentId, string tenantId, ObservabilityTokenResolver tokenResolver, string[] observabilityScopes)
+        {
+            ValidateAgentAndTenant(agentId, tenantId);
+            if (tokenResolver == null)
+            {
+                throw new ArgumentNullException(nameof(tokenResolver));
+            }
+
+            var scopes = ValidateScopes(observabilityScopes);
+            var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                throw new InvalidOperationException("The observability token resolver returned an empty token.");
+            }
+
+            var refreshedEntry = new Entry(tokenResolver, scopes)
+            {
+                Token = token,
+                ExpiresAt = GetTokenExpiration(token!)
+            };
+
+            _map.AddOrUpdate(
+                GetKey(agentId, tenantId),
+                refreshedEntry,
+                (_, existing) =>
                 {
-                    return entry.Token;
-                }
+                    existing.TokenResolver = tokenResolver;
+                    existing.Scopes = scopes;
+                    existing.Token = token;
+                    existing.ExpiresAt = refreshedEntry.ExpiresAt;
+                    return existing;
+                });
 
-                // Use sync path; credential handles caching & refresh internally.
-                var ctx = new TokenRequestContext(entry.Scopes);
-                var userAuthorization = entry.AgenticTokenStruct.UserAuthorization;
-                var turnContext = entry.AgenticTokenStruct.TurnContext;
-
-                var token = await userAuthorization.ExchangeTurnTokenAsync(turnContext,
-                        entry.AgenticTokenStruct.AuthHandlerName,
-                        exchangeConnection: entry.AgenticTokenStruct.ConnectionName!,
-                        exchangeScopes: entry.Scopes).ConfigureAwait(false);
-
-                entry.Token = token;
-                entry.ExpiresAt = GetTokenExpiration(token);
-
-                return token;
-            }
-            catch
-            {
-                return null;
-            }
+            return token!;
         }
 
         /// <summary>
@@ -141,7 +208,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             if (string.IsNullOrWhiteSpace(agentId) || string.IsNullOrWhiteSpace(tenantId))
                 return false;
 
-            var key = $"{agentId}:{tenantId}";
+            var key = GetKey(agentId, tenantId);
             if (_map.TryRemove(key, out var entry))
             {
                 // Clear the token value for security
@@ -218,12 +285,60 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             {
                 return null;
             }
+
+            if (token.Split('.').Length < 2)
+            {
+                return null;
+            }
+
             var handler = new JwtSecurityTokenHandler();
-            var jwtToken = handler.ReadJwtToken(token);
+            JwtSecurityToken jwtToken;
+            try
+            {
+                jwtToken = handler.ReadJwtToken(token);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+
             if (jwtToken.Payload.Expiration == null)
-                return null; 
+            {
+                return null;
+            }
 
             return new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero);
+        }
+
+        private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";
+
+        private static bool IsTokenUsable(Entry entry)
+        {
+            return !string.IsNullOrEmpty(entry.Token)
+                && (!entry.ExpiresAt.HasValue || entry.ExpiresAt.Value > DateTimeOffset.UtcNow.AddMinutes(5));
+        }
+
+        private static void ValidateAgentAndTenant(string agentId, string tenantId)
+        {
+            if (string.IsNullOrWhiteSpace(agentId))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(agentId));
+            }
+
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(tenantId));
+            }
+        }
+
+        private static string[] ValidateScopes(string[] observabilityScopes)
+        {
+            if (observabilityScopes == null || observabilityScopes.Length == 0)
+            {
+                throw new ArgumentException("Observability scopes cannot be null or empty.", nameof(observabilityScopes));
+            }
+
+            return (string[])observabilityScopes.Clone();
         }
 
         /// <summary>
