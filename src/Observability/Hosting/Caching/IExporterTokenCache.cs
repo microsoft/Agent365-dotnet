@@ -10,7 +10,10 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
     public interface IExporterTokenCache<T> where T : class
     {
         /// <summary>
-        /// Registers or updates a credential or resolver to be used for app-only observability token acquisition.
+        /// Registers a credential or resolver used for app-only observability token acquisition.
+        /// Whether a repeated registration for the same agent and tenant replaces the existing one is
+        /// implementation-specific: <see cref="AgenticTokenCache"/> keeps the first registration and
+        /// <see cref="ServiceTokenCache"/> replaces it.
         /// </summary>
         void RegisterObservability(string agentId, string tenantId, T tokenGenerator, string[] observabilityScopes);
 

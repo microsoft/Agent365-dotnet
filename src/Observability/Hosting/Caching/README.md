@@ -81,6 +81,10 @@ without an `exp` claim use a one-hour fallback max age from acquisition. The thr
 `api://9b975845-388f-4429-889e-eab1ef63949c/.default` to the resolver unless
 `A365_OBSERVABILITY_SCOPE_OVERRIDE` is set.
 
+Concurrent refreshes for the same agent and tenant are serialized, so callers share one
+acquisition. The automatic cleanup and `RemoveExpiredTokens` clear expired token values but
+keep the resolver registration, so the next `GetObservabilityToken` call acquires a new token.
+
 ### Custom Default Expiration
 
 ```csharp

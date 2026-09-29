@@ -258,6 +258,89 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
+    public async Task RefreshObservabilityToken_ConcurrentCallers_ShareOneAcquisition()
+    {
+        var resolverCalls = 0;
+        var release = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+        ObservabilityTokenResolver resolver = (_, _, _) =>
+        {
+            Interlocked.Increment(ref resolverCalls);
+            return release.Task;
+        };
+
+        var first = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, resolver, TestScopes);
+        var second = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, resolver, TestScopes);
+        release.SetResult("app-only-token");
+
+        (await Task.WhenAll(first, second)).Should().Equal("app-only-token", "app-only-token");
+        resolverCalls.Should().Be(1, "concurrent refreshes for one agent and tenant should share one acquisition");
+    }
+
+    [TestMethod]
+    public async Task RefreshObservabilityToken_ConcurrentFailure_DoesNotClearTokenCachedByAnotherCaller()
+    {
+        var failingResolverCalls = 0;
+        var release = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+
+        var succeeding = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => release.Task, TestScopes);
+        var failing = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref failingResolverCalls);
+            return Task.FromException<string?>(new InvalidOperationException("acquisition failed"));
+        }, TestScopes);
+        release.SetResult("app-only-token");
+
+        (await succeeding).Should().Be("app-only-token");
+        (await failing).Should().Be("app-only-token", "a waiting caller should reuse the token cached by the refresh ahead of it");
+        failingResolverCalls.Should().Be(0);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("app-only-token");
+    }
+
+    [TestMethod]
+    public async Task RemoveExpiredTokens_ClearsExpiredTokenButKeepsResolverRegistration()
+    {
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var resolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        ObservabilityTokenResolver resolver = (_, _, _) =>
+        {
+            Interlocked.Increment(ref resolverCalls);
+            return Task.FromResult<string?>(CreateJwt(now.AddHours(1)));
+        };
+
+        cache.RegisterObservability(TestAgentId, TestTenantId, resolver, TestScopes);
+        var firstToken = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
+
+        now = now.AddHours(2);
+        cache.RemoveExpiredTokens().Should().Be(1);
+        cache.Count.Should().Be(1, "cleanup must keep the app-only resolver registration");
+
+        var secondToken = await cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        secondToken.Should().NotBeNull().And.NotBe(firstToken);
+        resolverCalls.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task RemoveExpiredTokens_SkipsEntryWhileRefreshIsInFlight()
+    {
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(CreateJwt(now.AddMinutes(10))), TestScopes);
+
+        now = now.AddMinutes(30);
+        var release = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var refresh = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => release.Task, TestScopes);
+
+        cache.RemoveExpiredTokens().Should().Be(0, "cleanup must not race an in-flight refresh");
+        release.SetResult(CreateJwt(now.AddHours(1)));
+
+        var refreshed = await refresh;
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(refreshed);
+    }
+
+    [TestMethod]
     public async Task RemovedDelegatedRegisterObservabilityShape_DoesNotRegisterOrThrowWhenInvokedDynamically()
     {
         var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);

@@ -13,7 +13,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 {
     /// <summary>
     /// Caches app-only observability tokens per (agentId, tenantId) using the provided resolver.
-    /// Includes automatic periodic cleanup of expired tokens for improved memory management.
+    /// Includes automatic periodic cleanup that clears expired token values while keeping resolver registrations.
     /// </summary>
     public class AgenticTokenCache : IExporterTokenCache<ObservabilityTokenResolver>, IDisposable
     {
@@ -24,6 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             public string[] Scopes { get; set; }
             public DateTimeOffset? ExpiresAt { get; set; }
             public DateTimeOffset? AcquiredAt { get; set; }
+            public SemaphoreSlim RefreshLock { get; } = new SemaphoreSlim(1, 1);
 
             public Entry(ObservabilityTokenResolver tokenResolver, string[] scopes)
             {
@@ -180,32 +181,43 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             var scopes = ValidateScopes(observabilityScopes);
             var key = GetKey(agentId, tenantId);
             var entry = _map.GetOrAdd(key, _ => new Entry(tokenResolver, scopes));
-            entry.TokenResolver = tokenResolver;
-            entry.Scopes = scopes;
 
-            if (IsTokenUsable(entry))
-            {
-                return entry.Token!;
-            }
-
+            // Serialize refreshes per agent and tenant: concurrent callers share one acquisition, and a
+            // failed refresh cannot clear a token that another caller cached while it was waiting.
+            await entry.RefreshLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
-                if (string.IsNullOrWhiteSpace(token))
+                entry.TokenResolver = tokenResolver;
+                entry.Scopes = scopes;
+
+                if (IsTokenUsable(entry))
                 {
-                    throw new InvalidOperationException("The observability token resolver returned an empty token.");
+                    return entry.Token!;
                 }
 
-                entry.Token = token;
-                entry.ExpiresAt = GetTokenExpiration(token!);
-                entry.AcquiredAt = _utcNow();
+                try
+                {
+                    var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(token))
+                    {
+                        throw new InvalidOperationException("The observability token resolver returned an empty token.");
+                    }
 
-                return token!;
+                    entry.Token = token;
+                    entry.ExpiresAt = GetTokenExpiration(token!);
+                    entry.AcquiredAt = _utcNow();
+
+                    return token!;
+                }
+                catch
+                {
+                    entry.ClearToken();
+                    throw;
+                }
             }
-            catch
+            finally
             {
-                entry.ClearToken();
-                throw;
+                entry.RefreshLock.Release();
             }
         }
 
@@ -244,31 +256,37 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         }
 
         /// <summary>
-        /// Removes all expired tokens from the cache.
+        /// Clears all expired tokens from the cache. Resolver registrations are kept, so the next
+        /// <see cref="GetObservabilityToken(string, string)"/> call acquires a new token.
         /// </summary>
-        /// <returns>The number of expired tokens that were removed.</returns>
+        /// <returns>The number of expired tokens that were cleared.</returns>
         public int RemoveExpiredTokens()
         {
             var now = _utcNow();
-            var expiredKeys = new List<string>();
+            int removedCount = 0;
 
-            // Find expired keys without using LINQ
             foreach (var kvp in _map)
             {
-                if (IsTokenExpired(kvp.Value, now))
-                {
-                    expiredKeys.Add(kvp.Key);
-                }
-            }
+                var entry = kvp.Value;
 
-            int removedCount = 0;
-            foreach (var key in expiredKeys)
-            {
-                if (_map.TryRemove(key, out var entry))
+                // Skip entries with a refresh in flight; the next cleanup pass re-evaluates them.
+                if (!entry.RefreshLock.Wait(0))
                 {
-                    // Clear the token value for security
-                    entry.ClearToken();
-                    removedCount++;
+                    continue;
+                }
+
+                try
+                {
+                    if (IsTokenExpired(entry, now))
+                    {
+                        // Clear the token value for security
+                        entry.ClearToken();
+                        removedCount++;
+                    }
+                }
+                finally
+                {
+                    entry.RefreshLock.Release();
                 }
             }
 
