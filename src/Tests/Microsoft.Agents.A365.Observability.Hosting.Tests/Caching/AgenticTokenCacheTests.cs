@@ -409,6 +409,26 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
+    public async Task RefreshObservabilityToken_SeparatorBearingIds_DoNotShareCacheEntry()
+    {
+        var secondResolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+
+        (await cache.RefreshObservabilityToken("a:b", "c", (_, _, _) => Task.FromResult<string?>("token-for-first"), TestScopes))
+            .Should().Be("token-for-first");
+        (await cache.RefreshObservabilityToken("a", "b:c", (_, _, _) =>
+        {
+            Interlocked.Increment(ref secondResolverCalls);
+            return Task.FromResult<string?>("token-for-second");
+        }, TestScopes)).Should().Be("token-for-second");
+
+        secondResolverCalls.Should().Be(1, "a different agent/tenant pair must not reuse another pair's token");
+        (await cache.GetObservabilityToken("a:b", "c")).Should().Be("token-for-first");
+        (await cache.GetObservabilityToken("a", "b:c")).Should().Be("token-for-second");
+        cache.Count.Should().Be(2);
+    }
+
+    [TestMethod]
     public async Task RemovedDelegatedRegisterObservabilityShape_DoesNotRegisterOrThrowWhenInvokedDynamically()
     {
         var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);

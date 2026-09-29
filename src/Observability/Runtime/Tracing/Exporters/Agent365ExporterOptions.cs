@@ -59,7 +59,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         /// Async delegate used to resolve the app-only OBS auth token.
         /// Either this or <see cref="ContextualTokenResolver"/> must be set.
         /// When both are set, <see cref="ContextualTokenResolver"/> takes precedence.
-        /// The exporter invokes this resolver once per export batch and never falls back to a delegated token.
+        /// The exporter invokes this resolver once per tenant/agent identity group in each export batch, so a batch
+        /// that contains several identities invokes it several times. It never falls back to a delegated token.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
 

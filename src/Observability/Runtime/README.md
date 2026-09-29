@@ -12,8 +12,9 @@ Configure either `TokenResolver` or `ContextualTokenResolver` to return the fina
 OBS token for the exporting agent and tenant. The default app-only OBS scope is
 `api://9b975845-388f-4429-889e-eab1ef63949c/.default`. The SDK never reads a delegated
 request token, never performs OBO/user_fic authentication for OBS export, and never falls
-back to `/observability` on 401, 403, or 404. The resolver is invoked once per export batch,
-so it should cache tokens and refresh only near expiry.
+back to `/observability` on 401, 403, or 404. The resolver is invoked once per tenant/agent
+identity group in each export batch, so a batch that contains several identities invokes it
+several times. Cache tokens per agent and tenant and refresh only near expiry.
 
 Resolvers must validate the returned token before handing it to the exporter: accept
 `idtyp=app`, or, when `idtyp` is absent, a non-empty `roles` array or a non-empty `oid`

@@ -55,8 +55,9 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 - **OBS export requires a configured app-only resolver** — `TokenResolver` and
   `ContextualTokenResolver` must return the final OBS app-only token for the exporting
   agent and tenant. Missing resolvers fail exporter construction; empty tokens or resolver
-  failures fail the export batch before sending a request. Resolvers are invoked per export
-  batch, so they should cache and refresh tokens near expiry. Workload OBO/MCP/Graph auth is
+  failures fail the export batch before sending a request. Resolvers are invoked once per
+  tenant/agent identity group in each export batch, so they should cache tokens per agent and
+  tenant and refresh them near expiry. Workload OBO/MCP/Graph auth is
   unchanged. `EnvironmentUtils.GetObservabilityAuthenticationScope()` now returns the OBS
   `/.default` scope for app-only S2S export instead of the delegated
   `Agent365.Observability.OtelWrite` scope.

@@ -97,7 +97,9 @@ per-request delegated tokens, never performs OBO/user_fic token exchange, and ne
 configuration, and a null/empty token or resolver exception fails the export batch before
 sending data.
 
-Resolvers are invoked once per export batch and should cache internally. They must validate
+Resolvers are invoked once per tenant/agent identity group in each export batch, so a batch
+that contains several identities invokes them several times; cache tokens per agent and
+tenant. They must validate
 the final token before returning it: accept `idtyp=app`, or, when `idtyp` is absent, a
 non-empty `roles` array or a non-empty `oid` equal to `sub`; reject any other `idtyp` and
 any `scp` claim. Also verify the OBS audience

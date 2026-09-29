@@ -43,7 +43,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             }
         }
 
-        private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
+        private readonly ConcurrentDictionary<(string AgentId, string TenantId), Entry> _map = new ConcurrentDictionary<(string AgentId, string TenantId), Entry>();
         private readonly Func<DateTimeOffset> _utcNow;
         private readonly Timer? _cleanupTimer;
         private int _disposed; // Using int for Interlocked operations
@@ -354,7 +354,8 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             return new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero);
         }
 
-        private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";
+        // A tuple key keeps identities apart even when an ID contains a separator character.
+        private static (string AgentId, string TenantId) GetKey(string agentId, string tenantId) => (agentId, tenantId);
 
         private bool IsTokenUsable(Entry entry)
         {
