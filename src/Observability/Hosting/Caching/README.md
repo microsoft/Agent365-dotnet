@@ -9,7 +9,9 @@ and require app-only OBS tokens for the exporting agent identity.
 `ServiceTokenCache` is a reference implementation of `IExporterTokenCache<string>` that provides secure token caching with built-in expiration and invalidation features for observability exporters.
 `AgenticTokenCache` stores app-only tokens resolved by `ObservabilityTokenResolver`; the
 former delegated `AgenticTokenStruct` registration is obsolete and no longer performs OBO
-or TurnContext token exchange for OBS.
+or TurnContext token exchange for OBS. `RegisterObservability` is idempotent:
+first registration wins and repeated calls do not replace the resolver or clear a cached
+token. Use `RefreshObservabilityToken` to replace the resolver used by future refreshes.
 
 Resolvers must validate the token they return: accept `idtyp=app`, or, when `idtyp` is
 absent, a non-empty `roles` array or a non-empty `oid` equal to `sub`; reject any other
@@ -69,9 +71,12 @@ await cache.RefreshObservabilityToken("my-agent", "my-tenant", resolver, scopes)
 var token = await cache.GetObservabilityToken("my-agent", "my-tenant");
 ```
 
-`RefreshObservabilityToken` propagates acquisition failures. Call it from the exporter's
+`RefreshObservabilityToken` returns the cached token without calling the resolver while the
+cached token is still usable. It propagates acquisition failures and clears stale cached
+token state when the resolver fails or returns an empty token. Call it from the exporter's
 `TokenResolver` or catch errors on the request path; the exporter will fail the batch
-without attempting a delegated fallback.
+without attempting a delegated fallback. JWT tokens are refreshed near `exp`; opaque tokens
+without an `exp` claim use a one-hour fallback max age from acquisition.
 
 ### Custom Default Expiration
 

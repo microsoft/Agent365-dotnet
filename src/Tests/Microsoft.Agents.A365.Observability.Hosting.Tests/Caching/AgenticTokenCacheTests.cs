@@ -19,7 +19,7 @@ public sealed class AgenticTokenCacheTests
     public async Task RegisterObservability_WithAppOnlyResolver_CachesTokenPerAgentTenant()
     {
         var resolverCalls = 0;
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
         ObservabilityTokenResolver resolver = (agentId, tenantId, scopes) =>
         {
             Interlocked.Increment(ref resolverCalls);
@@ -40,9 +40,41 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
+    public async Task RegisterObservability_RepeatedRegistration_DoesNotReplaceResolverOrClearToken()
+    {
+        var firstResolverCalls = 0;
+        var secondResolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
+
+        cache.RegisterObservability(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref firstResolverCalls);
+            return Task.FromResult<string?>("first-token");
+        }, TestScopes);
+
+        cache.RegisterObservability(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref secondResolverCalls);
+            return Task.FromResult<string?>("second-token");
+        }, TestScopes);
+
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("first-token");
+
+        cache.RegisterObservability(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref secondResolverCalls);
+            return Task.FromResult<string?>("second-token");
+        }, TestScopes);
+
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("first-token");
+        firstResolverCalls.Should().Be(1);
+        secondResolverCalls.Should().Be(0, "RegisterObservability is idempotent and first registration wins");
+    }
+
+    [TestMethod]
     public async Task RegisterObservability_MultipleAgentTenantKeys_AreIndependent()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
 
         cache.RegisterObservability("agent-1", "tenant-1", (_, _, _) => Task.FromResult<string?>("token-11"), TestScopes);
         cache.RegisterObservability("agent-2", "tenant-1", (_, _, _) => Task.FromResult<string?>("token-21"), TestScopes);
@@ -56,9 +88,10 @@ public sealed class AgenticTokenCacheTests
     [TestMethod]
     public async Task RefreshObservabilityToken_UpdatesCachedTokenAndExpiry()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
-        var firstToken = CreateJwt(DateTimeOffset.UtcNow.AddMinutes(10));
-        var secondToken = CreateJwt(DateTimeOffset.UtcNow.AddMinutes(20));
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        var firstToken = CreateJwt(now.AddMinutes(4));
+        var secondToken = CreateJwt(now.AddMinutes(20));
 
         await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(firstToken), TestScopes);
         await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(secondToken), TestScopes);
@@ -69,10 +102,42 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
+    public async Task RefreshObservabilityToken_ReturnsCachedTokenUntilNearExpiry_AndReplacesFutureResolver()
+    {
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var firstToken = CreateJwt(now.AddMinutes(10));
+        var secondToken = CreateJwt(now.AddMinutes(20));
+        var firstResolverCalls = 0;
+        var secondResolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref firstResolverCalls);
+            return Task.FromResult<string?>(firstToken);
+        }, TestScopes);
+
+        var cachedToken = await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) =>
+        {
+            Interlocked.Increment(ref secondResolverCalls);
+            return Task.FromResult<string?>(secondToken);
+        }, TestScopes);
+
+        cachedToken.Should().Be(firstToken);
+        firstResolverCalls.Should().Be(1);
+        secondResolverCalls.Should().Be(0, "RefreshObservabilityToken should not call the resolver while a token is usable");
+
+        now = now.AddMinutes(6);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(secondToken);
+        secondResolverCalls.Should().Be(1, "the resolver passed to RefreshObservabilityToken replaces the resolver for future refreshes");
+    }
+
+    [TestMethod]
     public async Task RefreshObservabilityToken_OpaqueTokenClearsStaleExpiryMetadata()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
-        var expiredJwt = CreateJwt(DateTimeOffset.UtcNow.AddMinutes(-10));
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        var expiredJwt = CreateJwt(now.AddMinutes(-10));
 
         await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(expiredJwt), TestScopes);
         await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>("opaque-token"), TestScopes);
@@ -85,10 +150,35 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
-    public async Task RefreshObservabilityToken_ResolverFailure_PropagatesAndLeavesCachedToken()
+    public async Task OpaqueToken_IsUsableBeforeFallbackMaxAge_AndRefreshesAtBoundary()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
-        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>("cached-token"), TestScopes);
+        var acquiredAt = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var now = acquiredAt;
+        var resolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        ObservabilityTokenResolver resolver = (_, _, _) =>
+        {
+            var call = Interlocked.Increment(ref resolverCalls);
+            return Task.FromResult<string?>(call == 1 ? "opaque-token-1" : "opaque-token-2");
+        };
+
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, resolver, TestScopes);
+
+        now = acquiredAt.AddHours(1).AddTicks(-1);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("opaque-token-1");
+        resolverCalls.Should().Be(1);
+
+        now = acquiredAt.AddHours(1);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("opaque-token-2");
+        resolverCalls.Should().Be(2);
+    }
+
+    [TestMethod]
+    public async Task RefreshObservabilityToken_ResolverFailure_PropagatesAndClearsCachedToken()
+    {
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(CreateJwt(now.AddMinutes(4))), TestScopes);
 
         Func<Task> act = () => cache.RefreshObservabilityToken(
             TestAgentId,
@@ -97,13 +187,19 @@ public sealed class AgenticTokenCacheTests
             TestScopes);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("acquisition failed");
-        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be("cached-token");
+
+        cache.RemoveExpiredTokens().Should().Be(0, "a refresh failure must clear stale token and expiry metadata");
+        Func<Task> get = async () => await cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        await get.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("acquisition failed");
     }
 
     [TestMethod]
-    public async Task RefreshObservabilityToken_EmptyToken_PropagatesFailure()
+    public async Task RefreshObservabilityToken_EmptyToken_PropagatesFailureAndClearsCachedToken()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(CreateJwt(now.AddMinutes(4))), TestScopes);
 
         Func<Task> act = () => cache.RefreshObservabilityToken(
             TestAgentId,
@@ -113,12 +209,17 @@ public sealed class AgenticTokenCacheTests
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("The observability token resolver returned an empty token.");
+
+        cache.RemoveExpiredTokens().Should().Be(0, "an empty resolver result must clear stale token and expiry metadata");
+        Func<Task> get = async () => await cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        await get.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("The observability token resolver returned an empty token.");
     }
 
     [TestMethod]
     public async Task RemovedDelegatedRegisterObservabilityShape_DoesNotRegisterOrThrowWhenInvokedDynamically()
     {
-        var cache = new AgenticTokenCache(cleanupInterval: TimeSpan.Zero);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
         var removedOverload = typeof(AgenticTokenCache).GetMethod(
             nameof(AgenticTokenCache.RegisterObservability),
             BindingFlags.Instance | BindingFlags.Public,

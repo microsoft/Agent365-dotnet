@@ -23,6 +23,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             public string? Token { get; set; }
             public string[] Scopes { get; set; }
             public DateTimeOffset? ExpiresAt { get; set; }
+            public DateTimeOffset? AcquiredAt { get; set; }
 
             public Entry(ObservabilityTokenResolver tokenResolver, string[] scopes)
             {
@@ -37,13 +38,17 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             {
                 Token = null;
                 ExpiresAt = null;
+                AcquiredAt = null;
             }
         }
 
         private readonly ConcurrentDictionary<string, Entry> _map = new ConcurrentDictionary<string, Entry>();
+        private readonly Func<DateTimeOffset> _utcNow;
         private readonly Timer? _cleanupTimer;
         private int _disposed; // Using int for Interlocked operations
         private int _removedDelegatedRegistrationLogged;
+        private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan MaxOpaqueTokenAge = TimeSpan.FromHours(1);
 
         /// <summary>
         /// Default interval for automatic cleanup of expired tokens (5 minutes).
@@ -55,7 +60,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// </summary>
         /// <param name="cleanupInterval">The interval for automatic cleanup of expired tokens. Defaults to 5 minutes if not specified. Set to TimeSpan.Zero to disable automatic cleanup.</param>
         public AgenticTokenCache(TimeSpan? cleanupInterval = null)
+            : this(cleanupInterval, () => DateTimeOffset.UtcNow)
         {
+        }
+
+        internal AgenticTokenCache(TimeSpan? cleanupInterval, Func<DateTimeOffset> utcNow)
+        {
+            _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             var interval = cleanupInterval ?? DefaultCleanupInterval;
             if (interval > TimeSpan.Zero)
             {
@@ -75,6 +86,12 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <param name="tenantId">The tenant identifier.</param>
         /// <param name="tokenGenerator">The app-only token resolver.</param>
         /// <param name="observabilityScopes">The observability scopes.</param>
+        /// <remarks>
+        /// First registration wins. Repeated calls for the same agent and tenant are idempotent
+        /// and do not replace the resolver or clear the cached token. Use
+        /// <see cref="RefreshObservabilityToken(string, string, ObservabilityTokenResolver, string[])"/>
+        /// to replace the resolver used by future refreshes.
+        /// </remarks>
         public void RegisterObservability(string agentId, string tenantId, ObservabilityTokenResolver tokenGenerator, string[] observabilityScopes)
         {
             ValidateAgentAndTenant(agentId, tenantId);
@@ -85,16 +102,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
             var scopes = ValidateScopes(observabilityScopes);
             var entry = new Entry(tokenGenerator, scopes);
-            _map.AddOrUpdate(
-                GetKey(agentId, tenantId),
-                entry,
-                (_, existing) =>
-                {
-                    existing.TokenResolver = tokenGenerator;
-                    existing.Scopes = scopes;
-                    existing.ClearToken();
-                    return existing;
-                });
+            _map.TryAdd(GetKey(agentId, tenantId), entry);
         }
 
         /// <summary>
@@ -170,31 +178,35 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             }
 
             var scopes = ValidateScopes(observabilityScopes);
-            var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(token))
+            var key = GetKey(agentId, tenantId);
+            var entry = _map.GetOrAdd(key, _ => new Entry(tokenResolver, scopes));
+            entry.TokenResolver = tokenResolver;
+            entry.Scopes = scopes;
+
+            if (IsTokenUsable(entry))
             {
-                throw new InvalidOperationException("The observability token resolver returned an empty token.");
+                return entry.Token!;
             }
 
-            var refreshedEntry = new Entry(tokenResolver, scopes)
+            try
             {
-                Token = token,
-                ExpiresAt = GetTokenExpiration(token!)
-            };
-
-            _map.AddOrUpdate(
-                GetKey(agentId, tenantId),
-                refreshedEntry,
-                (_, existing) =>
+                var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(token))
                 {
-                    existing.TokenResolver = tokenResolver;
-                    existing.Scopes = scopes;
-                    existing.Token = token;
-                    existing.ExpiresAt = refreshedEntry.ExpiresAt;
-                    return existing;
-                });
+                    throw new InvalidOperationException("The observability token resolver returned an empty token.");
+                }
 
-            return token!;
+                entry.Token = token;
+                entry.ExpiresAt = GetTokenExpiration(token!);
+                entry.AcquiredAt = _utcNow();
+
+                return token!;
+            }
+            catch
+            {
+                entry.ClearToken();
+                throw;
+            }
         }
 
         /// <summary>
@@ -237,13 +249,13 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <returns>The number of expired tokens that were removed.</returns>
         public int RemoveExpiredTokens()
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = _utcNow();
             var expiredKeys = new List<string>();
 
             // Find expired keys without using LINQ
             foreach (var kvp in _map)
             {
-                if (kvp.Value.ExpiresAt.HasValue && now >= kvp.Value.ExpiresAt.Value)
+                if (IsTokenExpired(kvp.Value, now))
                 {
                     expiredKeys.Add(kvp.Key);
                 }
@@ -312,10 +324,30 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
         private static string GetKey(string agentId, string tenantId) => $"{agentId}:{tenantId}";
 
-        private static bool IsTokenUsable(Entry entry)
+        private bool IsTokenUsable(Entry entry)
         {
             return !string.IsNullOrEmpty(entry.Token)
-                && (!entry.ExpiresAt.HasValue || entry.ExpiresAt.Value > DateTimeOffset.UtcNow.AddMinutes(5));
+                && !IsTokenExpired(entry, _utcNow());
+        }
+
+        private static bool IsTokenExpired(Entry entry, DateTimeOffset now)
+        {
+            if (string.IsNullOrEmpty(entry.Token))
+            {
+                return false;
+            }
+
+            if (entry.ExpiresAt.HasValue)
+            {
+                return now >= entry.ExpiresAt.Value.Subtract(RefreshSkew);
+            }
+
+            if (entry.AcquiredAt.HasValue)
+            {
+                return now >= entry.AcquiredAt.Value.Add(MaxOpaqueTokenAge);
+            }
+
+            return true;
         }
 
         private static void ValidateAgentAndTenant(string agentId, string tenantId)
