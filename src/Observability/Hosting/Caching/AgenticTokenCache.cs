@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Runtime.Common;
 using System;
@@ -147,7 +147,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
                 return entry.Token;
             }
 
-            return await RefreshObservabilityToken(agentId, tenantId, entry.TokenResolver, entry.Scopes).ConfigureAwait(false);
+            return await RefreshEntryAsync(agentId, tenantId, entry, replacementResolver: null, replacementScopes: null).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -182,13 +182,27 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
             var key = GetKey(agentId, tenantId);
             var entry = _map.GetOrAdd(key, _ => new Entry(tokenResolver, scopes));
 
+            return await RefreshEntryAsync(agentId, tenantId, entry, tokenResolver, scopes).ConfigureAwait(false);
+        }
+
+        private async Task<string> RefreshEntryAsync(
+            string agentId,
+            string tenantId,
+            Entry entry,
+            ObservabilityTokenResolver? replacementResolver,
+            string[]? replacementScopes)
+        {
             // Serialize refreshes per agent and tenant: concurrent callers share one acquisition, and a
             // failed refresh cannot clear a token that another caller cached while it was waiting.
             await entry.RefreshLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                entry.TokenResolver = tokenResolver;
-                entry.Scopes = scopes;
+                // Only explicit refreshes replace the resolver; cache-driven refreshes use the current one.
+                if (replacementResolver != null && replacementScopes != null)
+                {
+                    entry.TokenResolver = replacementResolver;
+                    entry.Scopes = replacementScopes;
+                }
 
                 if (IsTokenUsable(entry))
                 {
@@ -197,7 +211,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
 
                 try
                 {
-                    var token = await tokenResolver(agentId, tenantId, scopes).ConfigureAwait(false);
+                    var token = await entry.TokenResolver(agentId, tenantId, entry.Scopes).ConfigureAwait(false);
                     if (string.IsNullOrWhiteSpace(token))
                     {
                         throw new InvalidOperationException("The observability token resolver returned an empty token.");

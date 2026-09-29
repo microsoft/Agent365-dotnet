@@ -341,6 +341,74 @@ public sealed class AgenticTokenCacheTests
     }
 
     [TestMethod]
+    public async Task GetObservabilityToken_QueuedBehindExplicitRefresh_DoesNotRestoreReplacedResolver()
+    {
+        var now = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var registeredResolverCalls = 0;
+        var replacementResolverCalls = 0;
+        var firstToken = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        cache.RegisterObservability(TestAgentId, TestTenantId, (_, _, _) =>
+            Interlocked.Increment(ref registeredResolverCalls) == 1
+                ? firstToken.Task
+                : Task.FromResult<string?>(CreateJwt(now.AddHours(1))), TestScopes);
+        ObservabilityTokenResolver replacementResolver = (_, _, _) =>
+        {
+            Interlocked.Increment(ref replacementResolverCalls);
+            return Task.FromResult<string?>(CreateJwt(now.AddHours(1)));
+        };
+
+        var inFlightGet = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        var explicitRefresh = cache.RefreshObservabilityToken(TestAgentId, TestTenantId, replacementResolver, TestScopes);
+        var queuedGet = cache.GetObservabilityToken(TestAgentId, TestTenantId);
+        firstToken.SetResult(CreateJwt(now.AddHours(1)));
+        await Task.WhenAll(new Task[] { inFlightGet, explicitRefresh, queuedGet });
+
+        now = now.AddHours(2);
+        await cache.GetObservabilityToken(TestAgentId, TestTenantId);
+
+        replacementResolverCalls.Should().Be(1, "the resolver installed by an explicit refresh is used for the next refresh");
+        registeredResolverCalls.Should().Be(1, "a cache-driven refresh must not restore the resolver an explicit refresh replaced");
+    }
+
+    [TestMethod]
+    [DataRow("opaque.token")]
+    [DataRow("not.a.jwt")]
+    [DataRow("header.@@@.signature")]
+    public async Task RefreshObservabilityToken_UnparseableTokenWithPeriods_UsesOpaqueFallback(string unparseableToken)
+    {
+        var acquiredAt = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var now = acquiredAt;
+        var resolverCalls = 0;
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+        ObservabilityTokenResolver resolver = (_, _, _) =>
+        {
+            Interlocked.Increment(ref resolverCalls);
+            return Task.FromResult<string?>(unparseableToken);
+        };
+
+        (await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, resolver, TestScopes)).Should().Be(unparseableToken);
+
+        now = acquiredAt.AddMinutes(59);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(unparseableToken);
+        resolverCalls.Should().Be(1, "tokens the JWT handler cannot parse use the opaque one-hour fallback");
+    }
+
+    [TestMethod]
+    public async Task RefreshObservabilityToken_JwtWithNonNumericExp_UsesOpaqueFallback()
+    {
+        var acquiredAt = DateTimeOffset.Parse("2026-09-29T00:00:00Z");
+        var now = acquiredAt;
+        var token = $"{Base64Url("{\"alg\":\"none\",\"typ\":\"JWT\"}")}.{Base64Url("{\"exp\":\"soon\"}")}.";
+        var cache = new AgenticTokenCache(TimeSpan.Zero, () => now);
+
+        (await cache.RefreshObservabilityToken(TestAgentId, TestTenantId, (_, _, _) => Task.FromResult<string?>(token), TestScopes)).Should().Be(token);
+
+        now = acquiredAt.AddMinutes(59);
+        (await cache.GetObservabilityToken(TestAgentId, TestTenantId)).Should().Be(token);
+    }
+
+    [TestMethod]
     public async Task RemovedDelegatedRegisterObservabilityShape_DoesNotRegisterOrThrowWhenInvokedDynamically()
     {
         var cache = new AgenticTokenCache(TimeSpan.Zero, () => DateTimeOffset.UtcNow);
