@@ -19,11 +19,11 @@ namespace Microsoft.Agents.A365.Observability.Hosting
         /// <returns>The updated service collection.</returns>
         public static IServiceCollection AddAgenticTracingExporter(this IServiceCollection services, string? clusterCategory = "production")
         {
-            services.AddSingleton<IExporterTokenCache<AgenticTokenStruct>, AgenticTokenCache>();
+            services.AddSingleton<IExporterTokenCache<ObservabilityTokenResolver>, AgenticTokenCache>();
 
             services.AddSingleton(sp =>
             {
-                var cache = sp.GetRequiredService<IExporterTokenCache<AgenticTokenStruct>>();
+                var cache = sp.GetRequiredService<IExporterTokenCache<ObservabilityTokenResolver>>();
                 return new Agent365ExporterOptions
                 {
                     ClusterCategory = clusterCategory ?? "production",
@@ -51,8 +51,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting
                 return new Agent365ExporterOptions
                 {
                     ClusterCategory = clusterCategory ?? "production",
-                    TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false),
-                    UseS2SEndpoint = true // Service-to-service uses S2S endpoint
+                    TokenResolver = async (agentId, tenantId) => await cache.GetObservabilityToken(agentId, tenantId).ConfigureAwait(false)
                 };
             });
 

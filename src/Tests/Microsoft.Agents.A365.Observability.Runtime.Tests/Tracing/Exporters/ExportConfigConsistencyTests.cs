@@ -25,9 +25,8 @@ public sealed class ExportConfigConsistencyTests
     private const string ScopeOverrideEnvVar = "A365_OBSERVABILITY_SCOPE_OVERRIDE";
 
     // Pinned production values — update ALL of these together when any one changes.
-    private const string ExpectedScope = "api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite";
-    private const string ExpectedStandardUri = "https://agent365.svc.cloud.microsoft/observability/tenants/t1/otlp/agents/a1/traces?api-version=1";
-    private const string ExpectedS2SUr = "https://agent365.svc.cloud.microsoft/observabilityService/tenants/t1/otlp/agents/a1/traces?api-version=1";
+    private const string ExpectedScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
+    private const string ExpectedS2SUri = "https://agent365.svc.cloud.microsoft/observabilityService/tenants/t1/otlp/agents/a1/traces?api-version=1";
 
     [TestInitialize]
     public void TestInitialize() => Environment.SetEnvironmentVariable(ScopeOverrideEnvVar, null);
@@ -44,27 +43,20 @@ public sealed class ExportConfigConsistencyTests
             .Which.Should().Be(ExpectedScope,
                 "ProdObservabilityScope changed — also review DefaultEndpointHost and BuildEndpointPath.");
 
-        // Full URIs (standard + S2S) combining DefaultEndpointHost + BuildEndpointPath + BuildRequestUri
+        // Full URI combining DefaultEndpointHost + BuildEndpointPath + BuildRequestUri.
         var core = new Agent365ExporterCore(
             new ExportFormatter(NullLogger<ExportFormatter>.Instance),
             NullLogger<Agent365ExporterCore>.Instance);
 
-        var standardUri = core.BuildRequestUri(
-            Agent365ExporterOptions.DefaultEndpointHost,
-            core.BuildEndpointPath("t1", "a1", useS2SEndpoint: false));
-
         var s2sUri = core.BuildRequestUri(
             Agent365ExporterOptions.DefaultEndpointHost,
-            core.BuildEndpointPath("t1", "a1", useS2SEndpoint: true));
+            core.BuildEndpointPath("t1", "a1"));
 
-        standardUri.Should().Be(ExpectedStandardUri,
-            "Standard export URI changed — also review ProdObservabilityScope and DefaultEndpointHost.");
-
-        s2sUri.Should().Be(ExpectedS2SUr,
+        s2sUri.Should().Be(ExpectedS2SUri,
             "S2S export URI changed — also review ProdObservabilityScope and DefaultEndpointHost.");
 
         // Coarse sanity: scope targets Agent365 Observability, endpoint targets agent365 service
-        scopes[0].Should().Contain("Agent365.Observability");
+        scopes[0].Should().EndWith("/.default");
         Agent365ExporterOptions.DefaultEndpointHost.Should().Contain("agent365");
     }
 }

@@ -8,7 +8,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
     /// <para>
     /// <see cref="Identity"/> provides first-class access to agent identity fields (agent ID,
     /// agentic user ID). <see cref="TenantId"/> and <see cref="Identity"/>
-    /// together identify the cache key.
+    /// together identify the cache key. Resolvers must still return app-only OBS tokens for
+    /// the exporting agent; the SDK never exchanges this context for delegated OBS tokens.
     /// </para>
     /// </summary>
     public class TokenResolverContext

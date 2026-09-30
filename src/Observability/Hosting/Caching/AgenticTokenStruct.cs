@@ -39,6 +39,7 @@ namespace Microsoft.Agents.A365.Observability.Hosting.Caching
         /// <param name="authHandlerName"></param>
         /// <param name="connectionName"></param>
         /// <exception cref="ArgumentNullException"></exception>
+        [Obsolete("Delegated OBS token acquisition has been removed. Use ObservabilityTokenResolver with app-only tokens instead.", error: true)]
         public AgenticTokenStruct(
             UserAuthorization userAuthorization,
             ITurnContext turnContext,

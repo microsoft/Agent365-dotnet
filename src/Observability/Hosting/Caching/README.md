@@ -1,8 +1,22 @@
-# ServiceTokenCache - Token Expiration and Invalidation
+# OBS Token Caches - Token Expiration and Invalidation
 
 ## Overview
 
+Agent 365 OBS export is S2S-only. Exporters always send traces to
+`/observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces?api-version=1`
+and require app-only OBS tokens for the exporting agent identity.
+
 `ServiceTokenCache` is a reference implementation of `IExporterTokenCache<string>` that provides secure token caching with built-in expiration and invalidation features for observability exporters.
+`AgenticTokenCache` stores app-only tokens resolved by `ObservabilityTokenResolver`; the
+former delegated `AgenticTokenStruct` registration is obsolete and no longer performs OBO
+or TurnContext token exchange for OBS. `RegisterObservability` is idempotent:
+first registration wins and repeated calls do not replace the resolver or clear a cached
+token. Use `RefreshObservabilityToken` to replace the resolver used by future refreshes.
+
+Resolvers must validate the token they return: accept `idtyp=app`, or, when `idtyp` is
+absent, a non-empty `roles` array or a non-empty `oid` equal to `sub`; reject any other
+`idtyp` and reject any token containing `scp`. They must also verify the OBS audience
+(`api://9b975845-388f-4429-889e-eab1ef63949c`) and token lifetime.
 
 ## Features
 
@@ -40,6 +54,36 @@ cache.RegisterObservability(
 // Retrieve the token (returns null if expired or not found)
 var token = cache.GetObservabilityToken("my-agent", "my-tenant");
 ```
+
+### App-only Resolver Cache
+
+```csharp
+var cache = new AgenticTokenCache();
+
+ObservabilityTokenResolver resolver = async (agentId, tenantId, scopes) =>
+{
+    var token = await AcquireAppOnlyObsTokenAsync(agentId, tenantId, scopes);
+    ValidateAppOnlyObsToken(token);
+    return token;
+};
+
+await cache.RefreshObservabilityToken("my-agent", "my-tenant", resolver);
+var token = await cache.GetObservabilityToken("my-agent", "my-tenant");
+```
+
+`RefreshObservabilityToken` returns the cached token without calling the resolver while the
+cached token is still usable. It propagates acquisition failures and clears stale cached
+token state when the resolver fails or returns an empty token. Call it from the exporter's
+`TokenResolver` or catch errors on the request path; the exporter will fail the batch
+without attempting a delegated fallback. JWT tokens are refreshed near `exp`; opaque tokens
+without an `exp` claim use a one-hour fallback max age from acquisition. The three-argument
+`RefreshObservabilityToken` overload passes the default app-only OBS scope
+`api://9b975845-388f-4429-889e-eab1ef63949c/.default` to the resolver unless
+`A365_OBSERVABILITY_SCOPE_OVERRIDE` is set.
+
+Concurrent refreshes for the same agent and tenant are serialized, so callers share one
+acquisition. The automatic cleanup and `RemoveExpiredTokens` clear expired token values but
+keep the resolver registration, so the next `GetObservabilityToken` call acquires a new token.
 
 ### Custom Default Expiration
 
@@ -186,16 +230,10 @@ public class TokenCleanupService : BackgroundService
 
 - **Never log tokens**: Avoid logging the actual token values
 - **Use appropriate expiration**: Match expiration time with your security requirements
-- **Invalidate on logout**: Call `InvalidateToken` when a user logs out
+- **Keep workload auth separate**: OBS export tokens are app-only and independent of MCP/Graph/OBO tokens
 - **Clear cache on security events**: Use `InvalidateAll()` in response to security events
 
 ```csharp
-// On user logout
-public void OnUserLogout(string agentId, string tenantId)
-{
-    cache.InvalidateToken(agentId, tenantId);
-}
-
 // On security breach detection
 public void OnSecurityBreach()
 {
@@ -250,25 +288,17 @@ Parallel.For(0, 100, i =>
 
 ## Migration from Previous Version
 
-If you're upgrading from a previous version without expiration support, no code changes are required. The default behavior maintains backward compatibility:
+If you're upgrading from a delegated OBS token flow, replace `AgenticTokenStruct` and
+`RegisterObservability(..., AgenticTokenStruct, ...)` with an app-only
+`ObservabilityTokenResolver`:
 
 ```csharp
-// Old code - still works with default 1-hour expiration
-var cache = new ServiceTokenCache();
-cache.RegisterObservability("agent", "tenant", "token", scopes);
-var token = cache.GetObservabilityToken("agent", "tenant");
-```
-
-To opt-in to custom expiration:
-
-```csharp
-// New code - with custom expiration
-var cache = new ServiceTokenCache(TimeSpan.FromMinutes(30));
-cache.RegisterObservability("agent", "tenant", "token", scopes, TimeSpan.FromMinutes(10));
+await cache.RefreshObservabilityToken("agent", "tenant", resolver);
+var token = await cache.GetObservabilityToken("agent", "tenant");
 ```
 
 ## See Also
 
-- [IExporterTokenCache Interface](../Core/Caching/IExporterTokenCache.cs)
-- [AgenticTokenCache](../Core/Caching/AgenticTokenCache.cs) - Alternative implementation for agentic scenarios
+- [IExporterTokenCache Interface](IExporterTokenCache.cs)
+- [AgenticTokenCache](AgenticTokenCache.cs) - App-only resolver cache
 - [Observability SDK Documentation](../README.md)

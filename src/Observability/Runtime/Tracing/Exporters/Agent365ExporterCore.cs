@@ -106,20 +106,31 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         }
 
         /// <summary>
-        /// Builds the endpoint path for the trace export request based on tenant ID, agent ID and S2S setting.
+        /// Builds the S2S OTLP endpoint path for the trace export request based on tenant ID and agent ID.
         /// </summary>
         /// <param name="tenantId">The tenant identifier.</param>
         /// <param name="agentId">The agent identifier.</param>
-        /// <param name="useS2SEndpoint">Whether to use the S2S endpoint.</param>
         /// <returns>The endpoint path string.</returns>
-        public string BuildEndpointPath(string tenantId, string agentId, bool useS2SEndpoint)
+        public string BuildEndpointPath(string tenantId, string agentId)
         {
             var encodedTenantId = Uri.EscapeDataString(tenantId);
             var encodedAgentId = Uri.EscapeDataString(agentId);
 
-            return useS2SEndpoint
-                ? $"/observabilityService/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces"
-                : $"/observability/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces";
+            return $"/observabilityService/tenants/{encodedTenantId}/otlp/agents/{encodedAgentId}/traces";
+        }
+
+        /// <summary>
+        /// Builds the S2S OTLP endpoint path for the trace export request based on tenant ID and agent ID.
+        /// The <paramref name="useS2SEndpoint"/> value is ignored for source compatibility.
+        /// </summary>
+        /// <param name="tenantId">The tenant identifier.</param>
+        /// <param name="agentId">The agent identifier.</param>
+        /// <param name="useS2SEndpoint">Ignored. OBS export always uses the S2S OTLP endpoint.</param>
+        /// <returns>The endpoint path string.</returns>
+        [Obsolete("Agent 365 OBS export always uses the service-to-service /observabilityService OTLP endpoint; this argument is ignored.", false)]
+        public string BuildEndpointPath(string tenantId, string agentId, bool useS2SEndpoint)
+        {
+            return BuildEndpointPath(tenantId, agentId);
         }
 
         /// <summary>
@@ -188,7 +199,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
                     ? endpointOverride
                     : options.DomainResolver.Invoke(tenantId);
 
-                var endpointPath = BuildEndpointPath(tenantId, agentId, options.UseS2SEndpoint);
+                var endpointPath = BuildEndpointPath(tenantId, agentId);
                 var requestUri = BuildRequestUri(endpoint, endpointPath);
 
                 string? token = null;

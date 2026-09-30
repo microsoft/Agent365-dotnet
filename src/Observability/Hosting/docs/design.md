@@ -119,25 +119,37 @@ var sourceMetadataPairs = turnContext.GetSourceMetadataBaggagePairs();
 
 ### Token Caching
 
-Token caches for managing authentication tokens used by telemetry exporters.
+Token caches for managing app-only authentication tokens used by telemetry exporters.
+OBS export always uses the S2S OTLP route and never uses TurnContext or delegated
+authorization to acquire OBS tokens.
 
 **IExporterTokenCache Interface:**
 
 ```csharp
-public interface IExporterTokenCache
+public interface IExporterTokenCache<T> where T : class
 {
-    Task<string?> GetTokenAsync(string resource, CancellationToken cancellationToken);
-    Task SetTokenAsync(string resource, string token, DateTimeOffset expiry, CancellationToken cancellationToken);
+    void RegisterObservability(string agentId, string tenantId, T tokenGenerator, string[] observabilityScopes);
+    Task<string?> GetObservabilityToken(string agentId, string tenantId);
 }
 ```
 
 **AgenticTokenCache:**
 
-Caches tokens for agentic operations, using the user's delegated identity.
+Caches app-only OBS tokens per `(agentId, tenantId)` using an `ObservabilityTokenResolver`.
+The previous `AgenticTokenStruct`/`UserAuthorization` registration is obsolete with
+`error: true`; typed callers must migrate, and dynamic callers do not trigger a delegated
+exchange. Use `RefreshObservabilityToken(agentId, tenantId, tokenResolver, scopes)` to
+refresh at export time and let acquisition failures propagate to the exporter.
 
 **ServiceTokenCache:**
 
-Caches tokens for service-to-service operations, using the application identity.
+Caches already-acquired app-only tokens for service-to-service operations.
+
+Resolvers must validate the final OBS token before caching it: accept `idtyp=app`, or,
+when `idtyp` is absent, a non-empty `roles` array or a non-empty `oid` equal to `sub`;
+reject any other `idtyp` and any `scp` claim. Resolvers must also verify the OBS audience
+(`api://9b975845-388f-4429-889e-eab1ef63949c`) and token lifetime. Workload MCP/Graph/OBO
+authorization is separate and unchanged.
 
 ### BaggageBuilderExtensions
 
