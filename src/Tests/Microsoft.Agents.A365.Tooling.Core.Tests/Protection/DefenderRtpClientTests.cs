@@ -366,6 +366,31 @@ public class DefenderRtpClientTests
         result.Error.Should().Be(DefenderRtpClient.TruncatedContentError);
     }
 
+    [Theory]
+    [InlineData(200)]
+    [InlineData(100_000)]
+    public async Task CutsContentNestedTooDeeply(int levels)
+    {
+        var handler = DeniesThePayload();
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(new DefenderRtpOptions { FailClosed = true }), httpClient);
+        JsonNode nested = JsonValue.Create(Payload)!;
+        for (var level = 0; level < levels; level++)
+        {
+            nested = new JsonObject { [string.Empty] = nested };
+        }
+
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tool_call"]!["args"] = nested;
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().BeTrue("the payload lies deeper than the copy Defender is sent");
+        result.Allowed.Should().BeFalse("a fail-closed client does not let an allow of a cut copy through");
+        DefenderContract.Errors(handler.Calls.Single().Body).Should().BeEmpty();
+    }
+
     [Fact]
     public async Task KeepsTheCalledToolsDeclarationWhenTheBudgetIsShort()
     {

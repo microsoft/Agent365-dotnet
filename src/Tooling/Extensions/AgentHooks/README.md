@@ -19,7 +19,9 @@ Defender's verdict decides:
 | `post_tool_call` | a tool result, before the agent uses it | the result is withheld |
 | `output` | the reply, before it is sent | the reply is replaced |
 
-Other points (`agent_startup`, model calls, `agent_shutdown`) are allowed without a call.
+Other points (`agent_startup`, model calls, `agent_shutdown`) are allowed without a call. Defender's warnings and
+result labels are passed through to the agent-hooks verdict; a warning reason in the `host_error:` namespace, which
+agent-hooks reserves for host failures, is reported as `defender:warning`.
 
 ## Authentication
 
@@ -112,6 +114,7 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 truncated before it is sent, and the request as a whole carries at most four times that much content: the content
 under decision at the point (the input, the tool call's arguments, the tool result or the reply) first, then tool
 declarations, the newest message history, extensions and other members, with the oldest messages dropped first.
+Content nested more than 32 levels deep is cut the same way.
 The agent's own context is not modified. When the content under decision was cut, Defender has not seen all of
 it: its deny still blocks, but its allow does not cover the rest, so the result follows the fail mode. Fail open
 allows with a `defender:unverified` warning; fail closed denies with `runtime_error:defender_unverified`. Raise the

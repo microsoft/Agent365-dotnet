@@ -50,6 +50,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// <summary>The name the interceptor is registered under.</summary>
         public const string Name = "defender";
 
+        // agent-hooks reserves this reason namespace for failures the host synthesizes.
+        private const string ReservedReasonPrefix = "host_error:";
+
         private static readonly Regex InvalidReasonCharacters = new("[^A-Za-z0-9_.-]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private readonly DefenderRtpClient _client;
@@ -164,7 +167,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 if (result.Allowed)
                 {
                     var warnings = result.Verdict?.Warnings
-                        .Select(warning => new Warning(warning.Reason ?? $"{Name}:warning", warning.Message ?? string.Empty))
+                        .Select(warning => new Warning(WarningReason(warning.Reason), warning.Message ?? string.Empty))
                         .ToList();
                     return new Verdict(
                         Decision.Allow,
@@ -192,6 +195,16 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                     Message: result.BlockReason ?? "Security validation is unavailable and this agent is configured to fail closed.",
                     Warnings: unverified);
         }
+
+        /// <summary>
+        /// Defender's warning reason, or the interceptor's own when it is empty or in the <c>host_error:</c>
+        /// namespace, which agent-hooks reserves for host failures: the emitter rejects a verdict that uses it, which
+        /// would turn Defender's allow into a fail-closed host error whatever the fail mode.
+        /// </summary>
+        private static string WarningReason(string? reason) =>
+            string.IsNullOrWhiteSpace(reason) || reason.StartsWith(ReservedReasonPrefix, StringComparison.Ordinal)
+                ? $"{Name}:warning"
+                : reason;
     }
 
     /// <summary>Agent 365 protection helpers for agent-hooks hosts.</summary>

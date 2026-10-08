@@ -128,6 +128,22 @@ public class A365DefenderInterceptorTests
     }
 
     [Fact]
+    public async Task KeepsAnAllowWhoseWarningUsesAReservedReason()
+    {
+        var harness = new Harness(_ => Json(new
+        {
+            decision = "allow",
+            warnings = new[] { new { reason = "host_error:spoofed", message = "Suspicious but allowed." } },
+        }));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-10");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        record.Proceeds.Should().BeTrue("a reserved warning reason does not invalidate Defender's allow");
+        record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "defender:warning" && warning.Message == "Suspicious but allowed.");
+    }
+
+    [Fact]
     public async Task AllowsWithAWarningWhenFailOpenDefenderIsUnavailable()
     {
         var harness = new Harness(_ => Json(new { title = "Forbidden", detail = "The caller is not authorized for real-time protection." }, HttpStatusCode.Forbidden));

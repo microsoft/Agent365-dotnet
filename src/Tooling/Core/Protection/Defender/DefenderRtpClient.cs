@@ -50,6 +50,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         // A fitted copy carries at most this many times MaxContentCharacters of content in all.
         private const int ContentBudgetFactor = 4;
+
+        // Content nested deeper than this is cut like content over the size limit, so the copy stays within common
+        // JSON parser depth limits and the walk over the host's JSON stays shallow however deep it is.
+        private const int MaxContentDepth = 32;
         private static readonly TimeSpan TokenRefreshSkew = TimeSpan.FromMinutes(5);
         private static readonly HashSet<string> EvaluatedPoints = new(StringComparer.Ordinal) { "input", "pre_tool_call", "post_tool_call", "output" };
         private static readonly HashSet<string> ActorKinds = new(StringComparer.Ordinal) { "human", "service", "agent" };
@@ -1066,9 +1070,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>
         /// Copies a value with every string clamped to <paramref name="maxCharacters"/> and the whole copy kept within
         /// <paramref name="budget"/>. Each array element and property also costs at least one character, so the copy
-        /// stays bounded however the value is shaped. <paramref name="truncated"/> is set when anything was cut.
+        /// stays bounded however the value is shaped, and arrays and objects nested deeper than
+        /// <see cref="MaxContentDepth"/> are cut, so the recursion stays shallow. <paramref name="truncated"/> is set
+        /// when anything was cut.
         /// </summary>
-        private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ContentBudget budget, ref bool truncated)
+        private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ContentBudget budget, ref bool truncated, int depth = 0)
         {
             switch (node)
             {
@@ -1080,6 +1086,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     var clamped = Truncate(text, limit);
                     budget.Spend(clamped.Length);
                     return JsonValue.Create(clamped);
+                case JsonArray or JsonObject when depth >= MaxContentDepth:
+                    truncated = true;
+                    return null;
                 case JsonArray array:
                     var items = new JsonArray();
                     foreach (var item in array)
@@ -1091,7 +1100,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         }
 
                         budget.Spend(1);
-                        items.Add(Clamp(item, maxCharacters, budget, ref truncated));
+                        items.Add(Clamp(item, maxCharacters, budget, ref truncated, depth + 1));
                     }
 
                     return items;
@@ -1106,7 +1115,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         }
 
                         budget.Spend(property.Key.Length + 1);
-                        properties[property.Key] = Clamp(property.Value, maxCharacters, budget, ref truncated);
+                        properties[property.Key] = Clamp(property.Value, maxCharacters, budget, ref truncated, depth + 1);
                     }
 
                     return properties;
@@ -1119,7 +1128,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// A copy of the value with lone surrogates replaced by U+FFFD in every string and property name: they are
         /// not valid UTF-16, so Defender cannot parse a request that carries them. Valid surrogate pairs are kept.
         /// Keys stay distinct, so no value is dropped: a renamed key that would collide with another gets a numbered
-        /// suffix.
+        /// suffix. It only walks the fitted copy, whose depth <see cref="Clamp"/> bounds.
         /// </summary>
         private static JsonNode? ReplaceLoneSurrogates(JsonNode? node)
         {
