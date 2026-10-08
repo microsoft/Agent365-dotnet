@@ -50,8 +50,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private static readonly HashSet<string> KnownMembers = new(StringComparer.Ordinal)
         {
             "spec", "interception_point", "timestamp", "sequence", "request_id", "session", "agent", "tenant", "actor", "model",
-            "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
+            "trace", "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
         };
+
+        // Used when the caller passes no HttpClient; pooled connections are recycled so DNS changes are picked up.
+        internal static readonly HttpClient SharedHttpClient = new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
 
         private readonly HttpClient _httpClient;
         private readonly Func<Guid> _idFactory;
@@ -62,7 +65,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>Initializes a new instance of the <see cref="DefenderRtpClient"/> class.</summary>
         /// <param name="options">The Defender configuration, for example <see cref="DefenderRtpOptions.FromEnvironment()"/>.</param>
-        /// <param name="httpClient">The HTTP client; a pooled client is recommended.</param>
+        /// <param name="httpClient">The HTTP client, for example from <c>IHttpClientFactory</c>; defaults to a shared client.</param>
         /// <param name="idFactory">Creates correlation ids (tests).</param>
         /// <param name="timeProvider">The clock (tests).</param>
         public DefenderRtpClient(
@@ -73,7 +76,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         {
             Options = options ?? throw new ArgumentNullException(nameof(options));
             options.Validate();
-            _httpClient = httpClient ?? new HttpClient();
+            _httpClient = httpClient ?? SharedHttpClient;
             _idFactory = idFactory ?? Guid.NewGuid;
             _timeProvider = timeProvider ?? TimeProvider.System;
         }
@@ -267,12 +270,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             hook["agent"] = preparedAgent;
 
-            if (string.IsNullOrEmpty(ReadString(hook["tenant"]?["id"])))
-            {
-                var tenant = hook["tenant"] as JsonObject ?? new JsonObject();
-                tenant["id"] = agent.TenantId;
-                hook["tenant"] = tenant;
-            }
+            // Defender requires tenant.id to equal the token's tid, and the token is always acquired for the
+            // agent's tenant, so a host-supplied value is never trusted over it.
+            var tenant = hook["tenant"] as JsonObject ?? new JsonObject();
+            tenant["id"] = agent.TenantId;
+            hook["tenant"] = tenant;
 
             if (hook["actor"] == null && !string.IsNullOrEmpty(agent.UserId))
             {
@@ -937,10 +939,22 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             }
         }
 
-        private static string Truncate(string value, int maxCharacters) =>
-            value.Length <= maxCharacters
-                ? value
-                : string.Concat(value.AsSpan(0, maxCharacters), $"...[truncated {value.Length - maxCharacters} chars]");
+        private static string Truncate(string value, int maxCharacters)
+        {
+            if (value.Length <= maxCharacters)
+            {
+                return value;
+            }
+
+            // The marker counts toward the limit; it is sized for the most digits it can need, so the result
+            // never exceeds maxCharacters. A limit too small to hold it cuts without a marker.
+            var kept = maxCharacters - TruncationMarker(value.Length).Length;
+            return kept > 0
+                ? string.Concat(value.AsSpan(0, kept), TruncationMarker(value.Length - kept))
+                : value.Substring(0, maxCharacters);
+        }
+
+        private static string TruncationMarker(int dropped) => $"...[truncated {dropped} chars]";
 
         private static string? ReadString(JsonNode? node) =>
             node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;

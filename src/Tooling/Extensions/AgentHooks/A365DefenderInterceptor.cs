@@ -32,9 +32,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// copy keeps the context's session, sequence and tool call ids; the host's context is not modified.
     /// </para>
     /// <para>
-    /// When no verdict is obtained (transport, authentication or validation failure), the verdict follows
-    /// <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning, or deny
-    /// with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
+    /// When no verdict is obtained (identity resolution, transport, authentication or validation failure), the
+    /// verdict follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning,
+    /// or deny with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
     /// </para>
     /// <para>
     /// Register it on an emitter whose per-interceptor timeout is longer than
@@ -59,7 +59,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// <param name="client">The Defender client.</param>
         /// <param name="resolveCall">
         /// Returns the agent identity and token resolver for a context, for example from the current turn;
-        /// null allows the context without a call.
+        /// null allows the context without a call. It is invoked only when Defender RTP is enabled and Defender
+        /// evaluates the context's point, and an exception it throws follows the fail mode.
         /// </param>
         /// <param name="onEvaluated">
         /// Receives each evaluation, for logging and telemetry (for example the correlation id). It never changes
@@ -81,8 +82,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// <inheritdoc/>
         public async ValueTask<Verdict> InterceptAsync(AgentContext context, CancellationToken cancellationToken)
         {
-            var call = _resolveCall(context);
-            if (call == null)
+            var point = InterceptionPointExtensions.ToWireName(context.InterceptionPoint);
+            if (!_client.Options.Enabled || !DefenderRtpClient.IsEvaluatedInterceptionPoint(point))
             {
                 return new Verdict(Decision.Allow);
             }
@@ -90,12 +91,18 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             DefenderRtpEvaluationResult? result;
             try
             {
+                var call = _resolveCall(context);
+                if (call == null)
+                {
+                    return new Verdict(Decision.Allow);
+                }
+
                 result = await _client.EvaluateHookContextAsync(context.Json, call.Agent, call.TokenResolver, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                // An invalid context or identity is never a verdict: it follows the fail mode.
-                result = _client.Unavailable(InterceptionPointExtensions.ToWireName(context.InterceptionPoint), $"{ex.GetType().Name}: {ex.Message}");
+                // A failure to resolve the identity or to evaluate is never a verdict: it follows the fail mode.
+                result = _client.Unavailable(point, $"{ex.GetType().Name}: {ex.Message}");
             }
 
             if (result == null)

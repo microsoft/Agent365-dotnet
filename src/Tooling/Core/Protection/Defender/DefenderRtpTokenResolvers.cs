@@ -27,7 +27,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// The agent's connection, for example <c>connections.GetDefaultConnection()</c> cast to
         /// <see cref="IAgenticTokenProvider"/> (MSAL connections implement it).
         /// </param>
-        /// <param name="httpClient">The HTTP client for the token endpoint; a pooled client is recommended.</param>
+        /// <param name="httpClient">
+        /// The HTTP client for the token endpoint, for example from <c>IHttpClientFactory</c>; defaults to a shared client.
+        /// </param>
         /// <param name="authority">
         /// The Entra authority, an absolute HTTPS URL; defaults to <c>https://login.microsoftonline.com</c>.
         /// </param>
@@ -49,7 +51,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 throw new ArgumentException("The authority must be an absolute HTTPS URL.", nameof(authority));
             }
 
-            var http = httpClient ?? new HttpClient();
+            var http = httpClient ?? DefenderRtpClient.SharedHttpClient;
             var baseAuthority = authorityUrl.AbsoluteUri.TrimEnd('/');
             return async (agentId, tenantId, scopes, cancellationToken) =>
             {

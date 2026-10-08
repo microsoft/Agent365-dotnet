@@ -27,18 +27,27 @@ Calls carry the **agent identity's own app-only token** in the agent's tenant, f
 authority as Observability S2S export: `DefenderRtpTokenResolvers.FromAgenticConnection` asks the agent's
 connection (`IAgenticTokenProvider`) for the agent identity's assertion and exchanges it.
 
-The agent blueprint needs `RealtimeProtection.Evaluate.All` as an application permission with admin consent.
-[microsoft/Agent365-devTools#485](https://github.com/microsoft/Agent365-devTools/pull/485) adds it to
-`a365 setup all`; until that ships, grant it manually (Global Administrator):
+Defender accepts only callers whose app-only token carries the application permission
+`RealtimeProtection.Evaluate.All` on the Defender API (`86a21212-634e-4553-b3d6-e477e4c9d9ec`).
+[microsoft/Agent365-devTools#485](https://github.com/microsoft/Agent365-devTools/pull/485) adds this to
+`a365 setup`. Until it ships, a tenant administrator grants it once per agent blueprint, and every agent identity
+created from the blueprint inherits it:
 
-1. In the Entra portal, go to **App registrations** and select your blueprint app.
-2. Go to **API permissions** > **Add a permission** > **APIs my organization uses** and search for
-   `86a21212-634e-4553-b3d6-e477e4c9d9ec`.
-3. Select **Application permissions** > `RealtimeProtection.Evaluate.All` > **Add permissions**.
-4. Click **Grant admin consent** and confirm.
+1. If the tenant has no service principal for the Defender API yet, create one:
+   `az ad sp create --id 86a21212-634e-4553-b3d6-e477e4c9d9ec`.
+2. Assign the app role to the blueprint's service principal:
+   `POST https://graph.microsoft.com/v1.0/servicePrincipals/{blueprint-sp-object-id}/appRoleAssignments` with
+   `principalId` (the blueprint service principal), `resourceId` (the Defender API service principal) and
+   `appRoleId` (the id of `RealtimeProtection.Evaluate.All` in that service principal's `appRoles`). Requires
+   Global Administrator or Privileged Role Administrator.
+3. Make it inheritable:
+   `POST https://graph.microsoft.com/beta/applications/microsoft.graph.agentIdentityBlueprint/{blueprint-object-id}/inheritablePermissions`
+   with
+   `{"resourceAppId":"86a21212-634e-4553-b3d6-e477e4c9d9ec","inheritableScopes":{"@odata.type":"#microsoft.graph.allAllowedScopes","kind":"allAllowed"},"inheritableRoles":{"@odata.type":"#microsoft.graph.allAllowedRoles","kind":"allAllowed"}}`.
+   Requires Agent ID Administrator or Global Administrator.
 
-Defender also requires the agent's tenant to be onboarded to Microsoft Defender for AI. Without the permission
-or the onboarding, Defender answers `403`, which follows the fail mode.
+The tenant must also be onboarded to Microsoft Defender for AI; otherwise Defender returns `403`, which follows
+the fail mode.
 
 ## Usage
 
@@ -46,6 +55,7 @@ or the onboarding, Defender answers `403`, which follows the fail mode.
 using AgentHooks;
 using Microsoft.Agents.A365.Tooling.Extensions.AgentHooks;
 using Microsoft.Agents.A365.Tooling.Protection.Defender;
+using Microsoft.Agents.Authentication;
 
 var defender = new DefenderRtpClient(DefenderRtpOptions.FromEnvironment(), httpClient);
 var tokens = DefenderRtpTokenResolvers.FromAgenticConnection(

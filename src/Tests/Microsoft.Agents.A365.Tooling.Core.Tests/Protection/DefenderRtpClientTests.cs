@@ -190,21 +190,48 @@ public class DefenderRtpClientTests
         context["messages"] = new JsonArray(new JsonObject { ["role"] = "assistant", ["content"] = "previous reply" });
         context["tools"] = new JsonArray(new JsonObject { ["name"] = "search_web", ["description"] = "Searches the web." });
         context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["note"] = "long extension text" } };
+        context["trace"] = new JsonObject { ["trace_id"] = "4bf92f3577b34da6a3ce929d0e0e4736", ["span_id"] = "00f067aa0ba902b7" };
         context["metadata"] = "host-added value";
 
         await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
-        body["input"]!["content"]!.GetValue<string>().Should().Be("abcd...[truncated 4 chars]");
-        body["messages"]![0]!["content"]!.GetValue<string>().Should().Be("prev...[truncated 10 chars]");
-        body["tools"]![0]!["description"]!.GetValue<string>().Should().Be("Sear...[truncated 13 chars]");
-        body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be("long...[truncated 15 chars]");
-        body["metadata"]!.GetValue<string>().Should().Be("host...[truncated 12 chars]");
+        body["input"]!["content"]!.GetValue<string>().Should().Be("abcd", "a limit too small for the marker cuts without one");
+        body["messages"]![0]!["content"]!.GetValue<string>().Should().Be("prev");
+        body["tools"]![0]!["description"]!.GetValue<string>().Should().Be("Sear");
+        body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be("long");
+        body["metadata"]!.GetValue<string>().Should().Be("host");
         body["messages"]![0]!["role"]!.GetValue<string>().Should().Be("assistant");
         body["tools"]![0]!["name"]!.GetValue<string>().Should().Be("search_web");
+        body["trace"]!.ToJsonString().Should().Be("""{"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}""");
         body["agent"]!["name"]!.GetValue<string>().Should().Be("SampleAgent");
         body["session"]!["id"]!.GetValue<string>().Should().Be("conversation:activity");
+    }
+
+    [Fact]
+    public async Task KeepsTruncatedContentWithinTheLimit()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 40 });
+
+        await client.EvaluateHookContextAsync(InputContext(new string('a', 100)), Agent, tokens.Resolve);
+
+        var content = handler.Calls.Single().Body["input"]!["content"]!.GetValue<string>();
+        content.Should().Be(new string('a', 16) + "...[truncated 84 chars]");
+        content.Length.Should().BeLessThanOrEqualTo(40);
+    }
+
+    [Fact]
+    public async Task AlwaysSendsTheAgentTenant()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = InputContext("hello");
+        context["tenant"] = new JsonObject { ["id"] = "cccccccc-0000-4000-8000-000000000003", ["name"] = "Contoso" };
+
+        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        handler.Calls.Single().Body["tenant"]!.ToJsonString().Should().Be($$"""{"id":"{{TenantId}}","name":"Contoso"}""",
+            "the token is acquired for the agent's tenant, and Defender requires the two to match");
     }
 
     [Fact]
@@ -225,8 +252,8 @@ public class DefenderRtpClientTests
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
-        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seat...[truncated 12 chars]"}}""");
-        body["tool_result"]!["value"]!.GetValue<string>().Should().Be("thre...[truncated 9 chars]");
+        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seat"}}""");
+        body["tool_result"]!["value"]!.GetValue<string>().Should().Be("thre");
         JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
     }
 
@@ -490,7 +517,8 @@ public class DefenderRtpClientTests
     {
         var clock = new ManualClock();
         var handler = new RecordingHandler(_ => Json(new { decision = "allow" }));
-        var client = new DefenderRtpClient(Options(), new HttpClient(handler), timeProvider: clock);
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(), httpClient, timeProvider: clock);
         var tokens = new TokenSource(() => clock.Now);
         var release = new TaskCompletionSource();
         DefenderRtpTokenResolver resolver = async (agentId, tenantId, scopes, cancellationToken) =>
@@ -525,7 +553,8 @@ public class DefenderRtpClientTests
     {
         var clock = new ManualClock();
         var handler = new RecordingHandler(_ => Json(new { decision = "allow" }));
-        var client = new DefenderRtpClient(Options(), new HttpClient(handler), timeProvider: clock);
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(), httpClient, timeProvider: clock);
         var tokens = new TokenSource(() => clock.Now);
         await client.EvaluateHookContextAsync(InputContext("one"), Agent, tokens.Resolve);
         var cached = tokens.Token;

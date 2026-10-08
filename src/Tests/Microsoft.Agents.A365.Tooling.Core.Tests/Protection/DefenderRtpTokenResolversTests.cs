@@ -24,7 +24,8 @@ public class DefenderRtpTokenResolversTests
     {
         var connection = Connection(Assertion);
         var endpoint = new TokenEndpoint(_ => Json("""{"token_type":"Bearer","expires_in":3599,"access_token":"defender-token"}"""));
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(connection.Object, new HttpClient(endpoint));
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(connection.Object, httpClient);
 
         var token = await resolver(AgentId, TenantId, Scopes, CancellationToken.None);
 
@@ -47,7 +48,8 @@ public class DefenderRtpTokenResolversTests
     public async Task UsesTheGivenAuthority()
     {
         var endpoint = new TokenEndpoint(_ => Json("""{"access_token":"defender-token"}"""));
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, new HttpClient(endpoint), "https://login.example.test/");
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient, "https://login.example.test/");
 
         await resolver(AgentId, TenantId, Scopes, CancellationToken.None);
 
@@ -60,7 +62,8 @@ public class DefenderRtpTokenResolversTests
     [InlineData("")]
     public void RejectsAnAuthorityThatIsNotAbsoluteHttps(string authority)
     {
-        var act = () => DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, new HttpClient(), authority);
+        using var httpClient = new HttpClient();
+        var act = () => DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient, authority);
 
         act.Should().Throw<ArgumentException>().WithParameterName("authority");
     }
@@ -71,7 +74,8 @@ public class DefenderRtpTokenResolversTests
     public async Task FailsWithoutAnAssertion(string? assertion)
     {
         var endpoint = new TokenEndpoint(_ => Json("""{"access_token":"defender-token"}"""));
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(assertion).Object, new HttpClient(endpoint));
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(assertion).Object, httpClient);
 
         var act = () => resolver(AgentId, TenantId, Scopes, CancellationToken.None);
 
@@ -85,7 +89,8 @@ public class DefenderRtpTokenResolversTests
         var endpoint = new TokenEndpoint(_ => Json(
             $$"""{"error":"invalid_client","error_description":"Assertion {{Assertion}} was rejected."}""",
             HttpStatusCode.Unauthorized));
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, new HttpClient(endpoint));
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient);
 
         var act = () => resolver(AgentId, TenantId, Scopes, CancellationToken.None);
 
@@ -100,7 +105,8 @@ public class DefenderRtpTokenResolversTests
     public async Task FailsOnAMalformedSuccessResponse(string body, string message)
     {
         var endpoint = new TokenEndpoint(_ => Json(body));
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, new HttpClient(endpoint));
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient);
 
         var act = () => resolver(AgentId, TenantId, Scopes, CancellationToken.None);
 
@@ -115,7 +121,8 @@ public class DefenderRtpTokenResolversTests
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return Json("""{"access_token":"defender-token"}""");
         });
-        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, new HttpClient(endpoint));
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
 
         var act = () => resolver(AgentId, TenantId, Scopes, cancellation.Token);

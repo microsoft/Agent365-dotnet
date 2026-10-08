@@ -121,6 +121,68 @@ public class A365DefenderInterceptorTests
     }
 
     [Fact]
+    public async Task ResolvesTheCallOnlyForPointsDefenderEvaluatesAndOnlyWhenEnabled()
+    {
+        var calls = 0;
+        DefenderRtpTokenResolver tokens = (_, _, _, _) => Task.FromResult<string?>(Token);
+        A365DefenderCall? Resolve(AgentContext _)
+        {
+            calls++;
+            return new A365DefenderCall(new DefenderRtpAgentContext { AgentId = AgentId, TenantId = TenantId }, tokens);
+        }
+
+        var enabled = new Harness(_ => Json(new { decision = "allow" }), resolveCall: Resolve);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-9");
+        await enabled.Emitter.EmitUncheckedAsync(builder.AgentStartup(new[] { "SearchFlights" }), CancellationToken.None);
+        calls.Should().Be(0, "agent_startup is not evaluated by Defender");
+        await enabled.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+        calls.Should().Be(1);
+
+        var disabled = new Harness(_ => Json(new { decision = "deny" }), resolveCall: Resolve, enabled: false);
+        var record = await disabled.Emitter.EmitUncheckedAsync(
+            new AgentContextBuilder(AgentId, "agent-framework", "s-10").Input(JsonValue.Create("hello")!),
+            CancellationToken.None);
+
+        record.Proceeds.Should().BeTrue();
+        calls.Should().Be(1, "a disabled client never resolves the call");
+        disabled.Bodies.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeWhenResolvingTheCallFails(bool failClosed)
+    {
+        var harness = new Harness(
+            _ => Json(new { decision = "allow" }),
+            failClosed: failClosed,
+            resolveCall: _ => throw new InvalidOperationException("no turn is available"));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-11");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        AssertFollowsTheFailMode(record, failClosed);
+        harness.Bodies.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeWhenTheTokenResolverFails(bool failClosed)
+    {
+        var harness = new Harness(
+            _ => Json(new { decision = "allow" }),
+            failClosed: failClosed,
+            tokenResolver: (_, _, _, _) => throw new InvalidOperationException("no credential"));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-12");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        AssertFollowsTheFailMode(record, failClosed);
+        harness.Bodies.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task AppliesTheFailModeBeforeTheInterceptorTimeout()
     {
         var options = new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(Endpoint), Timeout = TimeSpan.FromSeconds(1) };
@@ -196,6 +258,19 @@ public class A365DefenderInterceptorTests
         harness.Bodies.Should().BeEmpty();
     }
 
+    private static void AssertFollowsTheFailMode(InterceptionRecord record, bool failClosed)
+    {
+        record.Proceeds.Should().Be(!failClosed);
+        if (failClosed)
+        {
+            record.Verdict.Reason.Should().Be("runtime_error:defender_unverified", "a failure is not a host error");
+        }
+        else
+        {
+            record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "defender:unverified");
+        }
+    }
+
     private static string Token
     {
         get
@@ -217,17 +292,20 @@ public class A365DefenderInterceptorTests
             bool failClosed = false,
             string agentId = AgentId,
             bool resolveNothing = false,
-            Action<DefenderRtpEvaluationResult>? onEvaluated = null)
+            Action<DefenderRtpEvaluationResult>? onEvaluated = null,
+            Func<AgentContext, A365DefenderCall?>? resolveCall = null,
+            DefenderRtpTokenResolver? tokenResolver = null,
+            bool enabled = true)
         {
             var handler = new FakeEndpoint(respond, Bodies, CorrelationIds);
-            var options = new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(Endpoint), FailClosed = failClosed };
+            var options = new DefenderRtpOptions { Enabled = enabled, Endpoint = new Uri(Endpoint), FailClosed = failClosed };
             var client = new DefenderRtpClient(options, new HttpClient(handler));
-            DefenderRtpTokenResolver tokens = (_, _, _, _) => Task.FromResult<string?>(Token);
+            DefenderRtpTokenResolver tokens = tokenResolver ?? ((_, _, _, _) => Task.FromResult<string?>(Token));
             var agent = new DefenderRtpAgentContext { AgentId = agentId, TenantId = TenantId, UserId = "user-object-id" };
             Emitter = A365AgentHooks.CreateProtectionEmitter(defender: options)
                 .AddA365Defender(new A365DefenderInterceptor(
                     client,
-                    _ => resolveNothing ? null : new A365DefenderCall(agent, tokens),
+                    resolveCall ?? (_ => resolveNothing ? null : new A365DefenderCall(agent, tokens)),
                     onEvaluated ?? Evaluations.Add));
         }
 
