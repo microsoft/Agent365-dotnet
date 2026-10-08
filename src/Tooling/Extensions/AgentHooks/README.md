@@ -72,6 +72,9 @@ var record = await emitter.EmitUncheckedAsync(builder.Input(userMessage), cancel
 if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 ```
 
+The evaluation callback is for logging and telemetry and never changes the verdict: an exception it throws is
+logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored.
+
 Agents built on Microsoft Agent Framework can register the same interceptor with
 `Microsoft.Agents.AI.AgentHooks`, which mediates model and tool calls.
 

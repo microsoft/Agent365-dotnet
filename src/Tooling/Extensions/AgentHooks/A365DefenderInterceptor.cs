@@ -11,6 +11,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     using System.Threading.Tasks;
     using global::AgentHooks;
     using Microsoft.Agents.A365.Tooling.Protection.Defender;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>The agent identity and credentials for the Defender call of one emitted context.</summary>
     /// <param name="Agent">The agent identity and turn; fills context fields the host did not set.</param>
@@ -38,7 +39,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// <para>
     /// Register it on an emitter whose per-interceptor timeout is longer than
     /// <see cref="DefenderRtpOptions.Timeout"/>, such as one from <see cref="A365AgentHooks.CreateProtectionEmitter"/>;
-    /// a shorter timeout turns a slow evaluation into a fail-closed agent-hooks host error.
+    /// a shorter timeout turns a slow evaluation into a fail-closed agent-hooks host error. The evaluation
+    /// callback never changes the verdict: an exception it throws is logged and ignored.
     /// </para>
     /// </remarks>
     public sealed class A365DefenderInterceptor : IInterceptor
@@ -51,6 +53,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         private readonly DefenderRtpClient _client;
         private readonly Func<AgentContext, A365DefenderCall?> _resolveCall;
         private readonly Action<DefenderRtpEvaluationResult>? _onEvaluated;
+        private readonly ILogger? _logger;
 
         /// <summary>Initializes a new instance of the <see cref="A365DefenderInterceptor"/> class.</summary>
         /// <param name="client">The Defender client.</param>
@@ -58,15 +61,21 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// Returns the agent identity and token resolver for a context, for example from the current turn;
         /// null allows the context without a call.
         /// </param>
-        /// <param name="onEvaluated">Receives each evaluation, for logging and telemetry (for example the correlation id).</param>
+        /// <param name="onEvaluated">
+        /// Receives each evaluation, for logging and telemetry (for example the correlation id). It never changes
+        /// the verdict: an exception it throws is logged to <paramref name="logger"/>, when given, and ignored.
+        /// </param>
+        /// <param name="logger">Receives failures of <paramref name="onEvaluated"/>.</param>
         public A365DefenderInterceptor(
             DefenderRtpClient client,
             Func<AgentContext, A365DefenderCall?> resolveCall,
-            Action<DefenderRtpEvaluationResult>? onEvaluated = null)
+            Action<DefenderRtpEvaluationResult>? onEvaluated = null,
+            ILogger? logger = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _resolveCall = resolveCall ?? throw new ArgumentNullException(nameof(resolveCall));
             _onEvaluated = onEvaluated;
+            _logger = logger;
         }
 
         /// <inheritdoc/>
@@ -94,8 +103,33 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 return new Verdict(Decision.Allow);
             }
 
-            _onEvaluated?.Invoke(result);
+            NotifyEvaluated(result);
             return ToVerdict(result);
+        }
+
+        /// <summary>
+        /// Hands the evaluation to the host's callback. The callback is for logging and telemetry, so its
+        /// failure is logged at most and never changes the verdict, in either fail mode.
+        /// </summary>
+        private void NotifyEvaluated(DefenderRtpEvaluationResult result)
+        {
+            if (_onEvaluated == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _onEvaluated(result);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(
+                    ex,
+                    "The Defender evaluation callback failed at {InterceptionPoint}; the verdict is unchanged. CorrelationId: {CorrelationId}",
+                    result.InterceptionPoint,
+                    result.CorrelationId);
+            }
         }
 
         /// <summary>Maps a Defender evaluation to the agent-hooks verdict the host composes.</summary>

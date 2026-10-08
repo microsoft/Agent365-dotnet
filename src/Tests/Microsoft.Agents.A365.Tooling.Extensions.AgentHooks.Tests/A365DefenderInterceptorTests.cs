@@ -97,6 +97,29 @@ public class A365DefenderInterceptorTests
             && warning.Message != null && warning.Message.Contains("not authorized for real-time protection"));
     }
 
+    [Theory]
+    [InlineData("allow", true)]
+    [InlineData("deny", false)]
+    public async Task KeepsTheVerdictWhenTheEvaluationCallbackThrows(string decision, bool proceeds)
+    {
+        var harness = new Harness(
+            _ => Json(new { decision, reason = "prevention_blocked" }),
+            onEvaluated: _ => throw new InvalidOperationException("telemetry is unavailable"));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-8");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        record.Proceeds.Should().Be(proceeds);
+        if (proceeds)
+        {
+            record.Verdict.Decision.Should().Be(Decision.Allow);
+        }
+        else
+        {
+            record.Verdict.Reason.Should().Be("defender:block:prevention_blocked", "a failing callback is not a host error");
+        }
+    }
+
     [Fact]
     public async Task AppliesTheFailModeBeforeTheInterceptorTimeout()
     {
@@ -193,7 +216,8 @@ public class A365DefenderInterceptorTests
             Func<JsonObject, HttpResponseMessage> respond,
             bool failClosed = false,
             string agentId = AgentId,
-            bool resolveNothing = false)
+            bool resolveNothing = false,
+            Action<DefenderRtpEvaluationResult>? onEvaluated = null)
         {
             var handler = new FakeEndpoint(respond, Bodies, CorrelationIds);
             var options = new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(Endpoint), FailClosed = failClosed };
@@ -204,7 +228,7 @@ public class A365DefenderInterceptorTests
                 .AddA365Defender(new A365DefenderInterceptor(
                     client,
                     _ => resolveNothing ? null : new A365DefenderCall(agent, tokens),
-                    Evaluations.Add));
+                    onEvaluated ?? Evaluations.Add));
         }
 
         public InterceptionEmitter Emitter { get; }
