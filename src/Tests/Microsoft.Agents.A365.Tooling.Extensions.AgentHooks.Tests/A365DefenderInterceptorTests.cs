@@ -182,11 +182,16 @@ public class A365DefenderInterceptorTests
     [Fact]
     public async Task DoesNotLetASlowEvaluationCallbackDecideTheVerdict()
     {
-        var release = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var callbackDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var harness = new Harness(
             _ => Json(new { decision = "allow" }),
             timeout: TimeSpan.FromMilliseconds(500),
-            onEvaluated: _ => release.Wait(TimeSpan.FromSeconds(30)),
+            onEvaluated: _ =>
+            {
+                release.Wait(TimeSpan.FromSeconds(30));
+                callbackDone.TrySetResult();
+            },
             tokenResolver: async (_, _, _, _) =>
             {
                 // Asynchronous like a real call, so the emitter is already timing the interceptor when the callback runs.
@@ -197,6 +202,7 @@ public class A365DefenderInterceptorTests
 
         var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
         release.Set();
+        await callbackDone.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         record.Proceeds.Should().BeTrue("the callback runs after the verdict, outside the emitter's interceptor timeout");
         record.Verdict.Decision.Should().Be(Decision.Allow);
