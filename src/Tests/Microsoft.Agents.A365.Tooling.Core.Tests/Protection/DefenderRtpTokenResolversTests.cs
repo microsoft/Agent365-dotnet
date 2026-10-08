@@ -102,6 +102,8 @@ public class DefenderRtpTokenResolversTests
     [InlineData("not json", "*not valid JSON*")]
     [InlineData("""{"token_type":"Bearer"}""", "*no access_token*")]
     [InlineData("""{"access_token":42}""", "*no access_token*")]
+    [InlineData("[]", "*no access_token*")]
+    [InlineData("\"defender-token\"", "*no access_token*")]
     public async Task FailsOnAMalformedSuccessResponse(string body, string message)
     {
         var endpoint = new TokenEndpoint(_ => Json(body));

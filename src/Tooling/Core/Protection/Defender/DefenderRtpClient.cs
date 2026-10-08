@@ -47,6 +47,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private const int MaxErrorDetailCharacters = 200;
         private const int MaxCachedTokens = 100;
         private const int MaxTrackedSessions = 1000;
+
+        // A fitted copy carries at most this many times MaxContentCharacters of content in all.
+        private const int ContentBudgetFactor = 4;
         private static readonly TimeSpan TokenRefreshSkew = TimeSpan.FromMinutes(5);
         private static readonly HashSet<string> EvaluatedPoints = new(StringComparer.Ordinal) { "input", "pre_tool_call", "post_tool_call", "output" };
         private static readonly HashSet<string> ActorKinds = new(StringComparer.Ordinal) { "human", "service", "agent" };
@@ -58,6 +61,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         {
             "spec", "interception_point", "timestamp", "sequence", "request_id", "session", "agent", "tenant", "actor", "model",
             "trace", "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
+        };
+
+        // Envelope members: copied and repaired, never treated as content.
+        private static readonly string[] EnvelopeMembers =
+        {
+            "interception_point", "timestamp", "sequence", "request_id", "session", "agent", "tenant", "actor", "model", "trace",
         };
 
         // Used when the caller passes no HttpClient; pooled connections are recycled so DNS changes are picked up.
@@ -146,7 +155,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             RequireString(agent.AgentId, nameof(agent.AgentId));
             RequireString(agent.TenantId, nameof(agent.TenantId));
             var hook = Prepare(context, agent, out var truncated);
-            var sessionId = ReadString(hook["session"]?["id"]);
+            var sessionId = ReadString((hook["session"] as JsonObject)?["id"]);
             var started = _timeProvider.GetTimestamp();
 
             // One deadline covers token acquisition and the request, so the fail mode applies within
@@ -245,24 +254,34 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         // ---- agent-hooks context -------------------------------------------------------------
 
         /// <summary>
-        /// A copy of the context that meets Defender's request validation: <c>target</c> equals the point's
-        /// field, <c>tool_call</c> and <c>tool_result</c> carry only spec members, every content string is
-        /// clamped, the timestamp is UTC, and loosely filled optional fields are repaired or dropped.
-        /// <paramref name="truncated"/> is set when the content under decision at the point (the field
-        /// <c>target</c> mirrors) was cut, so Defender cannot see all of what the verdict would authorize.
+        /// Builds the copy of the context Defender evaluates without cloning the host's content. The envelope is
+        /// copied and repaired so the request meets Defender's validation; the content under decision at the point
+        /// (the field <c>target</c> mirrors) is clamped first, and then the tool call's arguments at
+        /// <c>post_tool_call</c>, tool declarations, the newest message history, extensions and any other member
+        /// share what remains of <see cref="ContentBudgetFactor"/> times
+        /// <see cref="DefenderRtpOptions.MaxContentCharacters"/>. Lone surrogates are replaced, since Defender cannot
+        /// parse them. <paramref name="truncated"/> is set when the content under decision was cut, so Defender
+        /// cannot see all of what its verdict would authorize.
         /// </summary>
         private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent, out bool truncated)
         {
-            var hook = (JsonObject)context.DeepClone();
             var maxCharacters = Options.MaxContentCharacters;
-            var decisionTruncated = false;
-            hook["spec"] = AgentHooksSpec;
+            var budget = new ContentBudget((int)Math.Min(int.MaxValue, (long)ContentBudgetFactor * maxCharacters));
+            var hook = new JsonObject { ["spec"] = AgentHooksSpec };
+            foreach (var member in EnvelopeMembers)
+            {
+                if (context[member] is { } value)
+                {
+                    hook[member] = value.DeepClone();
+                }
+            }
+
             hook["timestamp"] = UtcTimestamp(hook["timestamp"]);
 
             var agentNode = hook["agent"] as JsonObject;
             var agentId = FirstNonEmpty(agent.AgentObjectId, ReadString(agentNode?["id"]), agent.AgentId);
             RequireString(agentId, "agent.id");
-            var sessionId = ReadString(hook["session"]?["id"]);
+            var sessionId = ReadString((hook["session"] as JsonObject)?["id"]);
             RequireString(sessionId, "session.id");
             if (!IsNonNegativeInteger(hook["sequence"]))
             {
@@ -307,17 +326,23 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 hook["model"] = new JsonObject { ["id"] = agent.ModelName };
             }
 
-            DropInvalidOptionalFields(hook);
+            FitModelAndActor(hook);
 
-            switch (ReadString(hook["interception_point"]))
+            // The content under decision is sent twice, as the point's field and as target, so it may use half of
+            // the budget; the rest of the context shares what it leaves.
+            var point = ReadString(hook["interception_point"]);
+            var decisionBudget = new ContentBudget(budget.Remaining / 2);
+            var decisionTruncated = false;
+            string? toolName = null;
+            switch (point)
             {
                 case "input":
                     {
-                        var input = hook["input"] as JsonObject;
+                        var input = context["input"] as JsonObject;
                         var role = ReadString(input?["role"]);
                         var prepared = new JsonObject
                         {
-                            ["content"] = Clamp(input?["content"], maxCharacters, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
+                            ["content"] = Clamp(input?["content"], maxCharacters, decisionBudget, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
                             ["role"] = role is "system" or "external" ? role : "user",
                         };
                         hook["input"] = prepared;
@@ -329,7 +354,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     {
                         var prepared = new JsonObject
                         {
-                            ["content"] = Clamp((hook["output"] as JsonObject)?["content"], maxCharacters, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
+                            ["content"] = Clamp((context["output"] as JsonObject)?["content"], maxCharacters, decisionBudget, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
                         };
                         hook["output"] = prepared;
                         hook["target"] = prepared.DeepClone();
@@ -339,28 +364,25 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 case "pre_tool_call":
                 case "post_tool_call":
                     {
-                        var toolCall = hook["tool_call"] as JsonObject;
-                        var toolName = ReadString(toolCall?["name"]);
+                        var toolCall = context["tool_call"] as JsonObject;
+                        toolName = ReadString(toolCall?["name"]);
                         RequireString(toolName, "tool_call.name");
-                        var isPreToolCall = ReadString(hook["interception_point"]) == "pre_tool_call";
-                        var argsTruncated = false;
-                        var args = ToArguments(toolCall?["args"], maxCharacters, ref argsTruncated);
-                        hook["tool_call"] = new JsonObject
+                        var preparedCall = new JsonObject
                         {
                             ["id"] = FirstNonEmpty(ReadString(toolCall?["id"])) ?? GeneratedToolCallId(),
                             ["name"] = toolName,
-                            ["args"] = args,
                         };
-
-                        if (isPreToolCall)
+                        hook["tool_call"] = preparedCall;
+                        if (point == "pre_tool_call")
                         {
-                            decisionTruncated = argsTruncated;
+                            var args = ToArguments(toolCall?["args"], maxCharacters, decisionBudget, ref decisionTruncated);
+                            preparedCall["args"] = args;
                             hook["target"] = args.DeepClone();
                         }
                         else
                         {
-                            var toolResult = hook["tool_result"] as JsonObject;
-                            var value = Clamp(toolResult?["value"], maxCharacters, ref decisionTruncated);
+                            var toolResult = context["tool_result"] as JsonObject;
+                            var value = Clamp(toolResult?["value"], maxCharacters, decisionBudget, ref decisionTruncated);
                             var isError = toolResult?["is_error"] is JsonValue flag && flag.TryGetValue<bool>(out var failed) && failed;
                             hook["tool_result"] = new JsonObject
                             {
@@ -370,80 +392,48 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                             hook["target"] = value?.DeepClone();
                         }
 
-                        if (hook["tools"] is not JsonArray { Count: > 0 })
-                        {
-                            hook["tools"] = new JsonArray(ToolFromExtensions(hook, toolName!));
-                        }
-
                         break;
                     }
             }
 
-            ClampOtherContent(hook, maxCharacters);
+            budget.Spend(2 * decisionBudget.Used);
+
+            // The rest of the context. What is cut here does not change the authority of the verdict.
+            var contextCut = false;
+            if (point == "post_tool_call" && hook["tool_call"] is JsonObject calledTool)
+            {
+                calledTool["args"] = ToArguments((context["tool_call"] as JsonObject)?["args"], maxCharacters, budget, ref contextCut);
+            }
+
+            AddTools(hook, context, toolName, maxCharacters, budget);
+            AddMessages(hook, context, maxCharacters, budget);
+            AddExtensions(hook, context, maxCharacters, budget);
+            foreach (var property in context)
+            {
+                if (budget.Remaining == 0)
+                {
+                    break;
+                }
+
+                if (!KnownMembers.Contains(property.Key))
+                {
+                    hook[property.Key] = Clamp(property.Value, maxCharacters, budget, ref contextCut);
+                }
+            }
+
             truncated = decisionTruncated;
-            return hook;
+            return (JsonObject)ReplaceLoneSurrogates(hook)!;
         }
 
         /// <summary>
-        /// Applies <see cref="DefenderRtpOptions.MaxContentCharacters"/> to the content <see cref="Prepare"/>
-        /// does not already clamp with the point's field: message content, tool descriptions and schemas,
-        /// extensions, and any member a host adds. Envelope fields (ids, names, roles, timestamps) are not
-        /// truncated, so the request still validates and correlates.
+        /// Repairs <c>model</c> and <c>actor</c>, which a host may fill loosely but Defender validates strictly (a
+        /// 400 would leave the call unverified).
         /// </summary>
-        private static void ClampOtherContent(JsonObject hook, int maxCharacters)
+        private static void FitModelAndActor(JsonObject hook)
         {
-            ClampMember(hook, "extensions", maxCharacters);
-            foreach (var message in (hook["messages"] as JsonArray ?? new JsonArray()).OfType<JsonObject>())
+            if (hook.TryGetPropertyValue("model", out var model))
             {
-                ClampMember(message, "content", maxCharacters);
-            }
-
-            foreach (var tool in (hook["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>())
-            {
-                ClampMember(tool, "description", maxCharacters);
-                ClampMember(tool, "schema", maxCharacters);
-            }
-
-            foreach (var key in hook.Select(property => property.Key).Where(key => !KnownMembers.Contains(key)).ToList())
-            {
-                ClampMember(hook, key, maxCharacters);
-            }
-        }
-
-        private static void ClampMember(JsonObject owner, string key, int maxCharacters)
-        {
-            if (owner[key] is { } value)
-            {
-                owner[key] = Clamp(value, maxCharacters);
-            }
-        }
-
-        /// <summary>
-        /// Optional fields a host may fill loosely but Defender validates strictly (a 400 would leave the
-        /// call unverified): extension namespaces, <c>model.id</c>, tool declarations, messages, actor.
-        /// </summary>
-        private static void DropInvalidOptionalFields(JsonObject hook)
-        {
-            if (hook["extensions"] is JsonObject extensions)
-            {
-                foreach (var key in extensions.Select(property => property.Key).Where(key => !ExtensionKeyPattern.IsMatch(key)).ToList())
-                {
-                    extensions.Remove(key);
-                }
-
-                if (extensions.Count == 0)
-                {
-                    hook.Remove("extensions");
-                }
-            }
-            else if (hook.ContainsKey("extensions"))
-            {
-                hook.Remove("extensions");
-            }
-
-            if (hook.ContainsKey("model"))
-            {
-                if (ReadString(hook["model"]?["id"]) is { Length: > 0 } modelId)
+                if (ReadString((model as JsonObject)?["id"]) is { Length: > 0 } modelId)
                 {
                     hook["model"] = new JsonObject { ["id"] = modelId };
                 }
@@ -453,55 +443,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 }
             }
 
-            if (hook.ContainsKey("tools"))
+            if (hook.TryGetPropertyValue("actor", out var actorNode))
             {
-                var tools = new JsonArray();
-                foreach (var tool in (hook["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>())
-                {
-                    if (ReadString(tool["name"]) is not { Length: > 0 } toolName)
-                    {
-                        continue;
-                    }
-
-                    var declaration = new JsonObject { ["name"] = toolName };
-                    if (ReadString(tool["description"]) is { } description)
-                    {
-                        declaration["description"] = description;
-                    }
-
-                    if (tool["schema"] is JsonObject schema)
-                    {
-                        declaration["schema"] = schema.DeepClone();
-                    }
-
-                    tools.Add(declaration);
-                }
-
-                if (tools.Count > 0)
-                {
-                    hook["tools"] = tools;
-                }
-                else
-                {
-                    hook.Remove("tools");
-                }
-            }
-
-            if (hook.ContainsKey("messages"))
-            {
-                var valid = hook["messages"] is JsonArray messages
-                    && messages.All(message => message is JsonObject item
-                        && ReadString(item["role"]) is { Length: > 0 }
-                        && item.ContainsKey("content"));
-                if (!valid)
-                {
-                    hook.Remove("messages");
-                }
-            }
-
-            if (hook.ContainsKey("actor"))
-            {
-                if (hook["actor"] is JsonObject actor)
+                if (actorNode is JsonObject actor)
                 {
                     var prepared = new JsonObject();
                     if (ReadString(actor["id"]) is { Length: > 0 } actorId)
@@ -523,20 +467,132 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             }
         }
 
-        private static JsonObject ToolFromExtensions(JsonObject hook, string toolName)
+        /// <summary>
+        /// Copies the valid tool declarations (a name, and a string description and object schema when present)
+        /// within the budget, the called tool's first so a short budget never drops it. At a tool point without
+        /// declarations, the called tool is declared from the <c>a365</c> extension.
+        /// </summary>
+        private static void AddTools(JsonObject hook, JsonObject context, string? toolName, int maxCharacters, ContentBudget budget)
         {
-            var declaration = new JsonObject { ["name"] = toolName };
-            if (ReadString(hook["extensions"]?[A365Extension]?["tool"]?["description"]) is { Length: > 0 } description)
+            var cut = false;
+            var tools = new JsonArray();
+            var declared = (context["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
+                .OrderBy(tool => toolName != null && ReadString(tool["name"]) == toolName ? 0 : 1);
+            foreach (var tool in declared)
             {
-                declaration["description"] = description;
+                if (budget.Remaining == 0)
+                {
+                    break;
+                }
+
+                if (ReadString(tool["name"]) is not { Length: > 0 } declaredName)
+                {
+                    continue;
+                }
+
+                var declaration = new JsonObject { ["name"] = declaredName };
+                if (tool["description"] is JsonValue description && ReadString(description) != null)
+                {
+                    declaration["description"] = Clamp(description, maxCharacters, budget, ref cut);
+                }
+
+                if (tool["schema"] is JsonObject schema)
+                {
+                    declaration["schema"] = Clamp(schema, maxCharacters, budget, ref cut);
+                }
+
+                tools.Add(declaration);
             }
 
-            return declaration;
+            if (tools.Count == 0 && toolName != null)
+            {
+                var declaration = new JsonObject { ["name"] = toolName };
+                // An extension namespace may hold any JSON value, so each level's shape is checked before it is read.
+                if ((context["extensions"] as JsonObject)?[A365Extension] is JsonObject a365
+                    && a365["tool"] is JsonObject calledTool
+                    && calledTool["description"] is JsonValue description
+                    && ReadString(Clamp(description, maxCharacters, budget, ref cut)) is { Length: > 0 } clamped)
+                {
+                    declaration["description"] = clamped;
+                }
+
+                tools.Add(declaration);
+            }
+
+            if (tools.Count > 0)
+            {
+                hook["tools"] = tools;
+            }
         }
 
-        private static JsonObject ToArguments(JsonNode? args, int maxCharacters, ref bool truncated)
+        /// <summary>
+        /// Copies the message history within the budget, newest first, so older messages are dropped before newer
+        /// ones. A history with a message lacking a role or content is dropped whole, since Defender rejects it.
+        /// </summary>
+        private static void AddMessages(JsonObject hook, JsonObject context, int maxCharacters, ContentBudget budget)
         {
-            var clamped = Clamp(args ?? new JsonObject(), maxCharacters, ref truncated);
+            if (context["messages"] is not JsonArray messages
+                || !messages.All(message => message is JsonObject item
+                    && ReadString(item["role"]) is { Length: > 0 }
+                    && item.ContainsKey("content")))
+            {
+                return;
+            }
+
+            var cut = false;
+            var kept = new List<JsonNode?>();
+            for (var index = messages.Count - 1; index >= 0 && budget.Remaining > 0; index--)
+            {
+                var copy = new JsonObject();
+                foreach (var property in (JsonObject)messages[index]!)
+                {
+                    copy[property.Key] = property.Key == "role"
+                        ? property.Value?.DeepClone()
+                        : Clamp(property.Value, maxCharacters, budget, ref cut);
+                }
+
+                kept.Add(copy);
+            }
+
+            if (kept.Count > 0)
+            {
+                kept.Reverse();
+                hook["messages"] = new JsonArray(kept.ToArray());
+            }
+        }
+
+        /// <summary>Copies the extension namespaces Defender accepts, within the budget.</summary>
+        private static void AddExtensions(JsonObject hook, JsonObject context, int maxCharacters, ContentBudget budget)
+        {
+            if (context["extensions"] is not JsonObject extensions)
+            {
+                return;
+            }
+
+            var cut = false;
+            var kept = new JsonObject();
+            foreach (var property in extensions)
+            {
+                if (budget.Remaining == 0)
+                {
+                    break;
+                }
+
+                if (ExtensionKeyPattern.IsMatch(property.Key))
+                {
+                    kept[property.Key] = Clamp(property.Value, maxCharacters, budget, ref cut);
+                }
+            }
+
+            if (kept.Count > 0)
+            {
+                hook["extensions"] = kept;
+            }
+        }
+
+        private static JsonObject ToArguments(JsonNode? args, int maxCharacters, ContentBudget budget, ref bool truncated)
+        {
+            var clamped = Clamp(args ?? new JsonObject(), maxCharacters, budget, ref truncated);
             return clamped as JsonObject ?? new JsonObject { ["input"] = clamped };
         }
 
@@ -721,7 +777,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     .Select(Text)
                     .OfType<string>()
                     .ToList(),
-                TransformPath = Text(verdict["transform"]?["path"]),
+                // Read only from an object, so unexpected transform metadata never costs Defender its decision.
+                TransformPath = Text((verdict["transform"] as JsonObject)?["path"]),
             };
         }
 
@@ -772,7 +829,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 }
             }
 
-            var messages = (parsed?["validationErrors"] as JsonArray ?? new JsonArray())
+            var messages = ((parsed as JsonObject)?["validationErrors"] as JsonArray ?? new JsonArray())
                 .OfType<JsonObject>()
                 .Select(item => ReadString(item["message"]))
                 .Where(message => !string.IsNullOrEmpty(message))
@@ -907,7 +964,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             {
                 var payload = parts[1].Replace('-', '+').Replace('_', '/');
                 payload = payload.PadRight(payload.Length + ((4 - (payload.Length % 4)) % 4), '=');
-                if (JsonNode.Parse(Convert.FromBase64String(payload))?["exp"] is not JsonValue exp)
+                if ((JsonNode.Parse(Convert.FromBase64String(payload)) as JsonObject)?["exp"] is not JsonValue exp)
                 {
                     return null;
                 }
@@ -960,27 +1017,35 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             return value.Length > 0 ? value : DefaultFramework;
         }
 
-        private static JsonNode? Clamp(JsonNode? node, int maxCharacters)
-        {
-            var truncated = false;
-            return Clamp(node, maxCharacters, ref truncated);
-        }
-
-        /// <summary>Clamps every string in the value; <paramref name="truncated"/> is set when any was cut.</summary>
-        private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ref bool truncated)
+        /// <summary>
+        /// Copies a value with every string clamped to <paramref name="maxCharacters"/> and the whole copy kept within
+        /// <paramref name="budget"/>. Each array element and property also costs at least one character, so the copy
+        /// stays bounded however the value is shaped. <paramref name="truncated"/> is set when anything was cut.
+        /// </summary>
+        private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ContentBudget budget, ref bool truncated)
         {
             switch (node)
             {
                 case null:
                     return null;
                 case JsonValue value when value.TryGetValue<string>(out var text):
-                    truncated |= text.Length > maxCharacters;
-                    return JsonValue.Create(Truncate(text, maxCharacters));
+                    var limit = Math.Min(maxCharacters, budget.Remaining);
+                    truncated |= text.Length > limit;
+                    var clamped = Truncate(text, limit);
+                    budget.Spend(clamped.Length);
+                    return JsonValue.Create(clamped);
                 case JsonArray array:
                     var items = new JsonArray();
                     foreach (var item in array)
                     {
-                        items.Add(Clamp(item, maxCharacters, ref truncated));
+                        if (budget.Remaining == 0)
+                        {
+                            truncated = true;
+                            break;
+                        }
+
+                        budget.Spend(1);
+                        items.Add(Clamp(item, maxCharacters, budget, ref truncated));
                     }
 
                     return items;
@@ -988,13 +1053,83 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     var properties = new JsonObject();
                     foreach (var property in obj)
                     {
-                        properties[property.Key] = Clamp(property.Value, maxCharacters, ref truncated);
+                        if (budget.Remaining < property.Key.Length + 1)
+                        {
+                            truncated = true;
+                            break;
+                        }
+
+                        budget.Spend(property.Key.Length + 1);
+                        properties[property.Key] = Clamp(property.Value, maxCharacters, budget, ref truncated);
                     }
 
                     return properties;
                 default:
                     return node.DeepClone();
             }
+        }
+
+        /// <summary>
+        /// A copy of the value with lone surrogates replaced by U+FFFD in every string and property name: they are
+        /// not valid UTF-16, so Defender cannot parse a request that carries them. Valid surrogate pairs are kept.
+        /// </summary>
+        private static JsonNode? ReplaceLoneSurrogates(JsonNode? node)
+        {
+            switch (node)
+            {
+                case null:
+                    return null;
+                case JsonValue value when value.TryGetValue<string>(out var text):
+                    return JsonValue.Create(ReplaceLoneSurrogates(text));
+                case JsonArray array:
+                    var items = new JsonArray();
+                    foreach (var item in array)
+                    {
+                        items.Add(ReplaceLoneSurrogates(item));
+                    }
+
+                    return items;
+                case JsonObject obj:
+                    var properties = new JsonObject();
+                    foreach (var property in obj)
+                    {
+                        properties[ReplaceLoneSurrogates(property.Key)] = ReplaceLoneSurrogates(property.Value);
+                    }
+
+                    return properties;
+                default:
+                    return node.DeepClone();
+            }
+        }
+
+        private static string ReplaceLoneSurrogates(string text)
+        {
+            var index = 0;
+            while (index < text.Length && !char.IsSurrogate(text[index]))
+            {
+                index++;
+            }
+
+            if (index == text.Length)
+            {
+                return text;
+            }
+
+            var builder = new StringBuilder(text.Length).Append(text, 0, index);
+            for (; index < text.Length; index++)
+            {
+                var character = text[index];
+                if (char.IsHighSurrogate(character) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+                {
+                    builder.Append(character).Append(text[++index]);
+                }
+                else
+                {
+                    builder.Append(char.IsSurrogate(character) ? '\uFFFD' : character);
+                }
+            }
+
+            return builder.ToString();
         }
 
         private static string Truncate(string value, int maxCharacters)
@@ -1007,10 +1142,18 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             // The marker counts toward the limit; it is sized for the most digits it can need, so the result
             // never exceeds maxCharacters. A limit too small to hold it cuts without a marker.
             var kept = maxCharacters - TruncationMarker(value.Length).Length;
-            return kept > 0
-                ? string.Concat(value.AsSpan(0, kept), TruncationMarker(value.Length - kept))
-                : value.Substring(0, maxCharacters);
+            if (kept <= 0)
+            {
+                return value.Substring(0, KeepSurrogatePairs(value, maxCharacters));
+            }
+
+            kept = KeepSurrogatePairs(value, kept);
+            return string.Concat(value.AsSpan(0, kept), TruncationMarker(value.Length - kept));
         }
+
+        /// <summary>Moves a cut back one code unit when it would split a surrogate pair, which cannot be serialized.</summary>
+        private static int KeepSurrogatePairs(string value, int cut) =>
+            cut > 0 && cut < value.Length && char.IsHighSurrogate(value[cut - 1]) && char.IsLowSurrogate(value[cut]) ? cut - 1 : cut;
 
         private static string TruncationMarker(int dropped) => $"...[truncated {dropped} chars]";
 
@@ -1032,5 +1175,25 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         }
 
         private sealed record CachedToken(string Token, DateTimeOffset ExpiresAt);
+
+        /// <summary>The characters of content a fitted copy may still carry.</summary>
+        private sealed class ContentBudget
+        {
+            public ContentBudget(int characters)
+            {
+                Remaining = Math.Max(0, characters);
+            }
+
+            public int Remaining { get; private set; }
+
+            public int Used { get; private set; }
+
+            public void Spend(int characters)
+            {
+                var spent = Math.Min(Remaining, Math.Max(0, characters));
+                Remaining -= spent;
+                Used += spent;
+            }
+        }
     }
 }

@@ -32,10 +32,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// copy keeps the context's session, sequence and tool call ids; the host's context is not modified.
     /// </para>
     /// <para>
-    /// When no verdict is obtained (identity resolution, transport, authentication or validation failure), or
-    /// Defender allowed a copy truncated to <see cref="DefenderRtpOptions.MaxContentCharacters"/>, the verdict
-    /// follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning, or deny
-    /// with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
+    /// When no verdict is obtained (no agent identity, identity resolution, transport, authentication or validation
+    /// failure), or Defender allowed a copy truncated to <see cref="DefenderRtpOptions.MaxContentCharacters"/>, the
+    /// verdict follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning,
+    /// or deny with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
     /// </para>
     /// <para>
     /// Register it on an emitter whose per-interceptor timeout is longer than
@@ -59,9 +59,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// <summary>Initializes a new instance of the <see cref="A365DefenderInterceptor"/> class.</summary>
         /// <param name="client">The Defender client.</param>
         /// <param name="resolveCall">
-        /// Returns the agent identity and token resolver for a context, for example from the current turn;
-        /// null allows the context without a call. It is invoked only when Defender RTP is enabled and Defender
-        /// evaluates the context's point, and an exception it throws follows the fail mode.
+        /// Returns the agent identity and token resolver for a context, for example from the current turn. It is
+        /// invoked only when Defender RTP is enabled and Defender evaluates the context's point. When it returns
+        /// null (no agent identity is available) or throws, the context is not sent and the verdict follows the
+        /// fail mode.
         /// </param>
         /// <param name="onEvaluated">
         /// Receives each evaluation, for logging and telemetry (for example the correlation id). It never changes
@@ -92,13 +93,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             DefenderRtpEvaluationResult? result;
             try
             {
+                // Without an agent identity Defender cannot be called; like any missing verdict, that follows the
+                // fail mode rather than allowing silently.
                 var call = _resolveCall(context);
-                if (call == null)
-                {
-                    return new Verdict(Decision.Allow);
-                }
-
-                result = await _client.EvaluateHookContextAsync(context.Json, call.Agent, call.TokenResolver, cancellationToken).ConfigureAwait(false);
+                result = call == null
+                    ? _client.Unavailable(point, "no agent identity was resolved")
+                    : await _client.EvaluateHookContextAsync(context.Json, call.Agent, call.TokenResolver, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
@@ -130,7 +130,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             {
                 _onEvaluated(result);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 _logger?.LogWarning(
                     ex,

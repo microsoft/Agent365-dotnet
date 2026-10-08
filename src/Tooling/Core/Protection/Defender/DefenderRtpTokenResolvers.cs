@@ -91,7 +91,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     throw new InvalidOperationException("The Defender token response was not valid JSON.");
                 }
 
-                return payload?["access_token"] is JsonValue token && token.TryGetValue<string>(out var accessToken)
+                return (payload as JsonObject)?["access_token"] is JsonValue token && token.TryGetValue<string>(out var accessToken)
                     ? accessToken
                     : throw new InvalidOperationException("The Defender token response had no access_token.");
             };

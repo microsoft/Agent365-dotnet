@@ -286,16 +286,19 @@ public class A365DefenderInterceptorTests
         harness.Bodies.Should().BeEmpty();
     }
 
-    [Fact]
-    public async Task AllowsWithoutACallWhenNoIdentityIsResolved()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeWhenNoIdentityIsResolved(bool failClosed)
     {
-        var harness = new Harness(_ => Json(new { decision = "deny" }), resolveNothing: true);
+        var harness = new Harness(_ => Json(new { decision = "allow" }), failClosed: failClosed, resolveNothing: true);
         var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-6");
 
         var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
 
-        record.Proceeds.Should().BeTrue();
+        AssertFollowsTheFailMode(record, failClosed);
         harness.Bodies.Should().BeEmpty();
+        harness.Evaluations.Should().ContainSingle().Which.Error.Should().Be("no agent identity was resolved");
     }
 
     /// <summary>A fake Defender that denies only content containing <see cref="Payload"/>.</summary>

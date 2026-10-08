@@ -183,26 +183,47 @@ public class DefenderRtpClientTests
         body["actor"]!.ToJsonString().Should().Be("""{"id":"user"}""");
     }
 
-    [Fact]
-    public async Task ClampsEveryContentStringButNotTheEnvelope()
+    [Theory]
+    [InlineData("\"metadata\"")]
+    [InlineData("""{ "tool": "metadata" }""")]
+    [InlineData("[1, 2]")]
+    public async Task ToleratesOptionalMembersOfAnotherShape(string a365)
     {
-        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 4 });
-        var context = InputContext("abcdefgh");
-        context["messages"] = new JsonArray(new JsonObject { ["role"] = "assistant", ["content"] = "previous reply" });
-        context["tools"] = new JsonArray(new JsonObject { ["name"] = "search_web", ["description"] = "Searches the web." });
-        context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["note"] = "long extension text" } };
-        context["trace"] = new JsonObject { ["trace_id"] = "4bf92f3577b34da6a3ce929d0e0e4736", ["span_id"] = "00f067aa0ba902b7" };
-        context["metadata"] = "host-added value";
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["model"] = "gpt-4o";
+        context["extensions"] = new JsonObject { ["a365"] = JsonNode.Parse(a365) };
 
-        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body.ContainsKey("model").Should().BeFalse();
+        body["tools"]!.ToJsonString().Should().Be("""[{"name":"FetchPage"}]""");
+    }
+
+    [Fact]
+    public async Task ClampsEachContentStringButNotTheEnvelope()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
+        var context = InputContext("hello");
+        context["messages"] = new JsonArray(new JsonObject { ["role"] = "assistant", ["content"] = new string('m', 150) });
+        context["tools"] = new JsonArray(new JsonObject { ["name"] = "search_web", ["description"] = new string('d', 150) });
+        context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["note"] = new string('e', 150) } };
+        context["trace"] = new JsonObject { ["trace_id"] = "4bf92f3577b34da6a3ce929d0e0e4736", ["span_id"] = "00f067aa0ba902b7" };
+        context["metadata"] = new string('h', 150);
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
-        body["input"]!["content"]!.GetValue<string>().Should().Be("abcd", "a limit too small for the marker cuts without one");
-        body["messages"]![0]!["content"]!.GetValue<string>().Should().Be("prev");
-        body["tools"]![0]!["description"]!.GetValue<string>().Should().Be("Sear");
-        body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be("long");
-        body["metadata"]!.GetValue<string>().Should().Be("host");
+        result!.Truncated.Should().BeFalse("the content under decision was not cut");
+        body["input"]!["content"]!.GetValue<string>().Should().Be("hello");
+        body["tools"]![0]!["description"]!.GetValue<string>().Should().Be(new string('d', 76) + "...[truncated 74 chars]");
+        body["messages"]![0]!["content"]!.GetValue<string>().Should().Be(new string('m', 76) + "...[truncated 74 chars]");
+        body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be(new string('e', 76) + "...[truncated 74 chars]");
+        body["metadata"]!.GetValue<string>().Should().Be(new string('h', 64) + "...[truncated 86 chars]", "it gets what the rest left");
         body["messages"]![0]!["role"]!.GetValue<string>().Should().Be("assistant");
         body["tools"]![0]!["name"]!.GetValue<string>().Should().Be("search_web");
         body["trace"]!.ToJsonString().Should().Be("""{"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}""");
@@ -223,6 +244,19 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
+    public async Task DoesNotSplitASurrogatePairWhenTruncating()
+    {
+        var (withMarker, markerHandler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 40 });
+        var (withoutMarker, plainHandler, _) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 4 });
+
+        await withMarker.EvaluateHookContextAsync(InputContext(new string('a', 15) + "\U0001F600" + new string('b', 100)), Agent, tokens.Resolve);
+        await withoutMarker.EvaluateHookContextAsync(InputContext("abc\U0001F600def"), Agent, tokens.Resolve);
+
+        markerHandler.Calls.Single().Body["input"]!["content"]!.GetValue<string>().Should().Be(new string('a', 15) + "...[truncated 102 chars]");
+        plainHandler.Calls.Single().Body["input"]!["content"]!.GetValue<string>().Should().Be("abc");
+    }
+
+    [Fact]
     public async Task AlwaysSendsTheAgentTenant()
     {
         var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
@@ -238,7 +272,7 @@ public class DefenderRtpClientTests
     [Fact]
     public async Task ClampsToolContentButNotTheToolIdentity()
     {
-        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 4 });
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 10 });
         var context = JsonNode.Parse($$"""
             {
               "spec": "agent-hooks/0.1", "interception_point": "post_tool_call", "timestamp": "2026-10-07T10:00:00.000Z", "sequence": 4,
@@ -249,13 +283,106 @@ public class DefenderRtpClientTests
             }
             """)!.AsObject();
 
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        result!.Truncated.Should().BeTrue("the tool result under decision was cut");
+        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seattle to"}}""");
+        body["tool_result"]!["value"]!.GetValue<string>().Should().Be("three resu");
+        JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task KeepsTheContentUnderDecisionAndDropsTheOldestHistoryFirst()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
+        var context = InputContext(new string('i', 100));
+        context["messages"] = new JsonArray(Enumerable.Range(0, 5)
+            .Select(index => (JsonNode?)new JsonObject { ["role"] = "user", ["content"] = index + new string('m', 99) })
+            .ToArray());
+        context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["note"] = "dropped" } };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        result!.Truncated.Should().BeFalse("the content under decision fit");
+        body["input"]!["content"]!.GetValue<string>().Should().Be(new string('i', 100));
+        body["messages"]!.AsArray().Select(message => message!["content"]!.GetValue<string>()[0]).Should().Equal('3', '4');
+        body["extensions"].Should().BeNull("the budget ran out before the extensions");
+    }
+
+    [Fact]
+    public async Task CapsTheTotalSizeOfTheCopy()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
+        var hugeResult = new JsonObject();
+        for (var index = 0; index < 1000; index++)
+        {
+            hugeResult[$"k{index}"] = new string('x', 100);
+        }
+
+        var context = ToolContext("post_tool_call", "query", null);
+        context["tool_result"] = new JsonObject { ["value"] = hugeResult, ["is_error"] = false };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body.ToJsonString().Length.Should().BeLessThan(2000, "the copy carries at most four times MaxContentCharacters of content");
+        JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
+        result!.Truncated.Should().BeTrue();
+        result.Allowed.Should().BeTrue("Defender allowed a truncated copy and the client fails open");
+        result.Error.Should().Be(DefenderRtpClient.TruncatedContentError);
+    }
+
+    [Fact]
+    public async Task KeepsTheCalledToolsDeclarationWhenTheBudgetIsShort()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 20 });
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(Enumerable.Range(0, 4)
+            .Select(index => (JsonNode?)new JsonObject { ["name"] = $"Other{index}", ["description"] = new string('d', 20) })
+            .Append(new JsonObject { ["name"] = "FetchPage", ["description"] = "Reads a page." })
+            .ToArray());
+
         await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
-        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seat"}}""");
-        body["tool_result"]!["value"]!.GetValue<string>().Should().Be("thre");
-        JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
+        body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage","description":"Reads a page."}""");
+    }
+
+    [Fact]
+    public async Task ReplacesLoneSurrogatesSoDefenderCanParseTheRequest()
+    {
+        RecordingHandler? handler = null;
+        handler = new RecordingHandler(_ =>
+        {
+            var sent = handler!.Calls[^1].Body;
+            if (ContainsLoneSurrogate(sent))
+            {
+                return Json(new { title = "Bad Request", detail = "The request is not valid UTF-16." }, HttpStatusCode.BadRequest);
+            }
+
+            return sent.ToJsonString().Contains(Payload, StringComparison.Ordinal)
+                ? Json(new { decision = "deny", reason = "prevention_blocked" })
+                : Json(new { decision = "allow" });
+        });
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(), httpClient);
+        var context = InputContext("placeholder");
+        context["input"]!["content"] = "\uD800" + Payload;
+        context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["key\uDC00"] = "value" } };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue("the request no longer carries a lone surrogate");
+        result.Allowed.Should().BeFalse();
+        var body = handler.Calls.Single().Body;
+        body["input"]!["content"]!.GetValue<string>().Should().Be("\uFFFD" + Payload);
+        body["extensions"]!["custom"]!.AsObject().Select(property => property.Key).Should().Equal("key\uFFFD");
     }
 
     [Fact]
@@ -268,6 +395,19 @@ public class DefenderRtpClientTests
         var act = () => client.EvaluateHookContextAsync(context, new DefenderRtpAgentContext { AgentId = " ", TenantId = TenantId }, tokens.Resolve);
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task RejectsAContextWhoseSessionIsNotAnObject()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = InputContext("hello");
+        context["session"] = "s-1";
+
+        var act = () => client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        await act.Should().ThrowAsync<ArgumentException>().WithMessage("*session.id*");
+        handler.Calls.Should().BeEmpty();
     }
 
     // ─── verdicts ────────────────────────────────────────────────────────────
@@ -317,6 +457,21 @@ public class DefenderRtpClientTests
         result!.Allowed.Should().BeFalse();
         result.Verdict!.TransformPath.Should().Be("/target");
         result.BlockReason.Should().Contain("rewrite");
+    }
+
+    [Theory]
+    [InlineData("deny")]
+    [InlineData("transform")]
+    public async Task KeepsTheDecisionWhenTransformHasAnotherShape(string decision)
+    {
+        var (client, _, tokens) = Create(_ => Json(new { decision, reason = "prevention_blocked", transform = new[] { "unexpected" } }));
+
+        var result = await client.EvaluateHookContextAsync(InputContext("secret"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Allowed.Should().BeFalse();
+        result.Verdict!.Decision.Should().Be(decision);
+        result.Verdict.TransformPath.Should().BeNull();
     }
 
     [Theory]
@@ -416,6 +571,20 @@ public class DefenderRtpClientTests
         var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
 
         result!.Error.Should().Be("http 400: validation: The target field must match input.");
+    }
+
+    [Theory]
+    [InlineData("[1]")]
+    [InlineData("\"[1]\"")]
+    public async Task ReportsA400WhoseDiagnosticsHaveAnotherShape(string diagnostics)
+    {
+        var error = new JsonObject { ["title"] = "Bad Request", ["diagnostics"] = JsonNode.Parse(diagnostics) };
+        var (client, _, tokens) = Create(_ => Json(error, HttpStatusCode.BadRequest));
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeFalse();
+        result.Error.Should().Be("http 400: Bad Request");
     }
 
     [Fact]
@@ -639,6 +808,17 @@ public class DefenderRtpClientTests
         handler.Calls.Should().HaveCount(2);
     }
 
+    [Fact]
+    public async Task UsesATokenWhosePayloadIsNotAnObject()
+    {
+        var (client, handler, _) = Create(_ => Json(new { decision = "allow" }));
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, (_, _, _, _) => Task.FromResult<string?>("e30.W10.signature"));
+
+        result!.Evaluated.Should().BeTrue("a token without a readable expiry is still used");
+        handler.Calls.Should().ContainSingle();
+    }
+
     // ─── options ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -709,6 +889,31 @@ public class DefenderRtpClientTests
         (await request.Content!.ReadAsStringAsync(cancellationToken)).Contains(Payload, StringComparison.Ordinal)
             ? Json(new { decision = "deny", reason = "prevention_blocked", message = "Blocked payload." })
             : Json(new { decision = "allow" }));
+
+    private static bool ContainsLoneSurrogate(JsonNode? node) => node switch
+    {
+        JsonValue value when value.TryGetValue<string>(out var text) => HasLoneSurrogate(text),
+        JsonArray array => array.Any(ContainsLoneSurrogate),
+        JsonObject obj => obj.Any(property => HasLoneSurrogate(property.Key) || ContainsLoneSurrogate(property.Value)),
+        _ => false,
+    };
+
+    private static bool HasLoneSurrogate(string text)
+    {
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1]))
+            {
+                index++;
+            }
+            else if (char.IsSurrogate(text[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static JsonObject ToolContext(string point, string args, string? result)
     {
@@ -860,10 +1065,10 @@ internal static class DefenderContract
         if (string.IsNullOrEmpty(Text(context["agent"]?["id"]))) errors.Add("agent.id");
         if (Text(context["agent"]?["framework"]) is not { } framework || !Framework.IsMatch(framework)) errors.Add("agent.framework");
         if (string.IsNullOrEmpty(Text(context["session"]?["id"]))) errors.Add("session.id");
-        if (!context.ContainsKey("target")) errors.Add("target");
+        if (!context.TryGetPropertyValue("target", out var target)) errors.Add("target");
         if (context["extensions"] is JsonObject extensions && extensions.Any(property => !ExtensionKey.IsMatch(property.Key))) errors.Add("extensions");
-        if (context.ContainsKey("model") && string.IsNullOrEmpty(Text(context["model"]?["id"]))) errors.Add("model.id");
-        if (context.ContainsKey("tools") && (context["tools"] is not JsonArray tools
+        if (context.TryGetPropertyValue("model", out var model) && string.IsNullOrEmpty(Text(model?["id"]))) errors.Add("model.id");
+        if (context.TryGetPropertyValue("tools", out var declaredTools) && (declaredTools is not JsonArray tools
             || tools.Any(tool => string.IsNullOrEmpty(Text(tool?["name"])) || (tool!["schema"] != null && tool["schema"] is not JsonObject)))) errors.Add("tools");
         if (context["actor"]?["kind"] is { } kind && Text(kind) is not ("human" or "service" or "agent")) errors.Add("actor.kind");
         if (context["tool_call"] is JsonObject call && call.Any(property => property.Key is not ("id" or "name" or "args" or "content_hash"))) errors.Add("tool_call members");
@@ -873,10 +1078,10 @@ internal static class DefenderContract
         {
             case "input":
                 if (Text(context["input"]?["role"]) is not ("user" or "system" or "external")) errors.Add("input.role");
-                if (!JsonNode.DeepEquals(context["target"], context["input"])) errors.Add("target != input");
+                if (!JsonNode.DeepEquals(target, context["input"])) errors.Add("target != input");
                 break;
             case "output":
-                if (!JsonNode.DeepEquals(context["target"], context["output"])) errors.Add("target != output");
+                if (!JsonNode.DeepEquals(target, context["output"])) errors.Add("target != output");
                 break;
             case "pre_tool_call":
             case "post_tool_call":
@@ -884,13 +1089,13 @@ internal static class DefenderContract
                 if (context["tool_call"]?["args"] is not JsonObject) errors.Add("tool_call.args");
                 if (Text(context["interception_point"]) == "pre_tool_call")
                 {
-                    if (!JsonNode.DeepEquals(context["target"], context["tool_call"]?["args"])) errors.Add("target != tool_call.args");
+                    if (!JsonNode.DeepEquals(target, context["tool_call"]?["args"])) errors.Add("target != tool_call.args");
                 }
                 else
                 {
                     if (context["tool_result"]?["is_error"] is not JsonValue flag || !flag.TryGetValue<bool>(out _)) errors.Add("tool_result.is_error");
-                    if (context["tool_result"] is not JsonObject value || !value.ContainsKey("value")) errors.Add("tool_result.value");
-                    else if (!JsonNode.DeepEquals(context["target"], value["value"])) errors.Add("target != tool_result.value");
+                    if (context["tool_result"] is not JsonObject toolResult || !toolResult.TryGetPropertyValue("value", out var resultValue)) errors.Add("tool_result.value");
+                    else if (!JsonNode.DeepEquals(target, resultValue)) errors.Add("target != tool_result.value");
                 }
 
                 break;
