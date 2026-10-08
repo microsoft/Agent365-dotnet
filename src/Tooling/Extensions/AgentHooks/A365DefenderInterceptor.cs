@@ -42,7 +42,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// Register it on an emitter whose per-interceptor timeout is longer than
     /// <see cref="DefenderRtpOptions.Timeout"/>, such as one from <see cref="A365AgentHooks.CreateProtectionEmitter"/>;
     /// a shorter timeout turns a slow evaluation into a fail-closed agent-hooks host error. The evaluation
-    /// callback runs once the verdict is decided and never changes it: an exception it throws is logged and ignored.
+    /// callback runs on the thread pool once the verdict is decided, outside that timeout, and never changes the
+    /// verdict: an exception it throws is logged and ignored.
     /// </para>
     /// </remarks>
     public sealed class A365DefenderInterceptor : IInterceptor
@@ -70,9 +71,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// <paramref name="logger"/>.
         /// </param>
         /// <param name="onEvaluated">
-        /// Receives each evaluation once its verdict is decided, for logging and telemetry (for example the
-        /// correlation id). It never changes the verdict: an exception it throws is logged to
-        /// <paramref name="logger"/>, when given, and ignored.
+        /// Receives each evaluation for logging and telemetry (for example the correlation id). It runs on the thread
+        /// pool once the verdict is decided, so it may run after the interceptor returns and alongside later
+        /// evaluations. It never changes the verdict: an exception it throws is logged to <paramref name="logger"/>,
+        /// when given, and ignored.
         /// </param>
         /// <param name="logger">Receives failures of the evaluation and of <paramref name="onEvaluated"/>.</param>
         public A365DefenderInterceptor(
@@ -120,9 +122,14 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 return new Verdict(Decision.Allow);
             }
 
-            // The verdict is decided before the callback sees the result, so nothing the callback does changes it.
+            // The verdict is decided before the callback sees the result, and the callback runs on the thread pool,
+            // off the emitter's timed interception, so neither what it does nor how long it takes changes the verdict.
             var verdict = ToVerdict(result);
-            NotifyEvaluated(result);
+            if (_onEvaluated is { } onEvaluated)
+            {
+                _ = Task.Run(() => NotifyEvaluated(onEvaluated, result));
+            }
+
             return verdict;
         }
 
@@ -130,16 +137,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// Hands the evaluation to the host's callback. The callback is for logging and telemetry, so its
         /// failure is logged at most and never changes the verdict, in either fail mode.
         /// </summary>
-        private void NotifyEvaluated(DefenderRtpEvaluationResult result)
+        private void NotifyEvaluated(Action<DefenderRtpEvaluationResult> onEvaluated, DefenderRtpEvaluationResult result)
         {
-            if (_onEvaluated == null)
-            {
-                return;
-            }
-
             try
             {
-                _onEvaluated(result);
+                onEvaluated(result);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

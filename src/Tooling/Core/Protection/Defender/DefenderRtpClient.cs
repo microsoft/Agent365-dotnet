@@ -46,7 +46,6 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private const string A365Extension = "a365";
         private const int MaxErrorDetailCharacters = 200;
         private const int MaxCachedTokens = 100;
-        private const int MaxTrackedSessions = 1000;
 
         // A fitted copy carries at most this many times MaxContentCharacters of content in all.
         private const int ContentBudgetFactor = 4;
@@ -79,6 +78,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private readonly object _tokenCacheLock = new();
         private readonly ConcurrentDictionary<string, Lazy<Task<string>>> _inFlightTokens = new(StringComparer.Ordinal);
         private readonly ConcurrentDictionary<string, long> _sequences = new(StringComparer.Ordinal);
+
+        // The highest sequence given to a session that is no longer tracked; a session that comes back resumes above
+        // it, so its sequence keeps increasing.
+        private long _sequenceFloor;
 
         /// <summary>Initializes a new instance of the <see cref="DefenderRtpClient"/> class.</summary>
         /// <param name="options">The Defender configuration, for example <see cref="DefenderRtpOptions.FromEnvironment()"/>.</param>
@@ -482,23 +485,29 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Copies the valid tool declarations (a name, and a string description and object schema when present)
-        /// within the budget, the called tool's first so a short budget never drops it. Each declaration is charged
-        /// for its element and name as well as its content, so name-only declarations are bounded too. At a tool point
-        /// without declarations, the called tool is declared from the <c>a365</c> extension.
+        /// within the budget, reading only as many entries as it can hold: each entry costs its element, and a copied
+        /// declaration its name and members too. A called tool whose declaration lies beyond them, or that has none,
+        /// is declared first from its name, with the <c>a365</c> extension's description when there is one.
         /// </summary>
         private static void AddTools(JsonObject hook, JsonObject context, string? toolName, int maxCharacters, ContentBudget budget)
         {
             var cut = false;
             var tools = new JsonArray();
-            var declared = (context["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
-                .Where(tool => ReadString(tool["name"]) is { Length: > 0 });
-
-            // One scan finds the called tool; the rest keep their order, and copying stops when the budget runs out.
-            var calledTool = toolName == null ? null : declared.FirstOrDefault(tool => ReadString(tool["name"]) == toolName);
-            var ordered = calledTool == null ? declared : declared.Where(tool => !ReferenceEquals(tool, calledTool)).Prepend(calledTool);
-            foreach (var tool in ordered)
+            var calledToolDeclared = false;
+            foreach (var entry in context["tools"] as JsonArray ?? new JsonArray())
             {
-                var declaredName = ReadString(tool["name"])!;
+                if (budget.Remaining == 0)
+                {
+                    break;
+                }
+
+                if (entry is not JsonObject tool || ReadString(tool["name"]) is not { Length: > 0 } declaredName)
+                {
+                    // An entry Defender would reject is skipped, but reading it still costs its element.
+                    budget.Spend(1);
+                    continue;
+                }
+
                 var cost = 1 + MemberCost("name", declaredName);
                 if (budget.Remaining < cost)
                 {
@@ -517,10 +526,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     AddMember(declaration, "schema", schema, maxCharacters, budget, ref cut);
                 }
 
+                calledToolDeclared |= declaredName == toolName;
                 tools.Add(declaration);
             }
 
-            if (tools.Count == 0 && toolName != null)
+            if (toolName != null && !calledToolDeclared)
             {
                 var declaration = new JsonObject { ["name"] = toolName };
                 // An extension namespace may hold any JSON value, so each level's shape is checked before it is read.
@@ -532,7 +542,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     declaration["description"] = clamped;
                 }
 
-                tools.Add(declaration);
+                tools.Insert(0, declaration);
             }
 
             if (tools.Count > 0)
@@ -595,7 +605,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             }
         }
 
-        /// <summary>Copies the extension namespaces Defender accepts, within the budget.</summary>
+        /// <summary>
+        /// Copies the extension namespaces Defender accepts within the budget, reading only as many as it can hold: a
+        /// namespace Defender would reject is skipped but still costs a character.
+        /// </summary>
         private static void AddExtensions(JsonObject hook, JsonObject context, int maxCharacters, ContentBudget budget)
         {
             if (context["extensions"] is not JsonObject extensions)
@@ -605,8 +618,19 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             var cut = false;
             var kept = new JsonObject();
-            foreach (var property in extensions.Where(property => ExtensionKeyPattern.IsMatch(property.Key)))
+            foreach (var property in extensions)
             {
+                if (!ExtensionKeyPattern.IsMatch(property.Key))
+                {
+                    if (budget.Remaining == 0)
+                    {
+                        break;
+                    }
+
+                    budget.Spend(1);
+                    continue;
+                }
+
                 if (!AddMember(kept, property.Key, property.Value, maxCharacters, budget, ref cut))
                 {
                     break;
@@ -906,11 +930,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 {
                     // Refresh early in the background and keep using the cached token until it actually
                     // expires, as MSAL and Azure.Identity do; a failed refresh is retried by a later call.
-                    _ = StartOrJoinAcquisition(key, agent, tokenResolver, scope).ContinueWith(
-                        static task => { _ = task.Exception; },
-                        CancellationToken.None,
-                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                        TaskScheduler.Default);
+                    ObserveFailure(StartOrJoinAcquisition(key, agent, tokenResolver, scope));
                 }
 
                 return cached.Token;
@@ -929,8 +949,19 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>The number of cached tokens; for tests.</summary>
         internal int CachedTokenCount => _tokens.Count;
 
+        /// <summary>How many sessions' sequences are tracked; settable for tests, so eviction needs few sessions.</summary>
+        internal int MaxTrackedSessions { get; init; } = 1000;
+
         private static string TokenKey(DefenderRtpAgentContext agent, string scope) =>
             string.Join(":", agent.TenantId, agent.AgentId, scope);
+
+        /// <summary>Observes the failure of a task no caller awaits, so it is not reported as unobserved.</summary>
+        private static void ObserveFailure(Task task) =>
+            _ = task.ContinueWith(
+                static completed => { _ = completed.Exception; },
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
 
         /// <summary>
         /// One acquisition per agent, tenant and scope, shared by concurrent callers. It is bounded by the
@@ -984,7 +1015,20 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             string scope)
         {
             using var timeout = new CancellationTokenSource(Options.Timeout, _timeProvider);
-            var token = await tokenResolver(agent.AgentId, agent.TenantId, new[] { scope }, timeout.Token).ConfigureAwait(false);
+            var resolving = tokenResolver(agent.AgentId, agent.TenantId, new[] { scope }, timeout.Token);
+            string? token;
+            try
+            {
+                // The timeout bounds the resolver's task as well as asking it to stop, so a resolver that ignores
+                // cancellation cannot hold the identity's acquisition, and every later evaluation, forever.
+                token = await resolving.WaitAsync(timeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                ObserveFailure(resolving);
+                throw;
+            }
+
             if (string.IsNullOrWhiteSpace(token))
             {
                 throw new InvalidOperationException("The Defender token resolver returned no token.");
@@ -1066,16 +1110,36 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         private long NextSequence(string sessionId)
         {
-            var next = _sequences.AddOrUpdate(sessionId, 1, (_, current) => current + 1);
+            // A session the client does not track starts above every sequence given to a session it dropped, so a
+            // session that comes back never repeats or goes back.
+            var next = _sequences.AddOrUpdate(sessionId, _ => Interlocked.Read(ref _sequenceFloor) + 1, (_, current) => current + 1);
             if (_sequences.Count > MaxTrackedSessions)
             {
-                foreach (var key in _sequences.Keys.Where(key => key != sessionId).Take(_sequences.Count - MaxTrackedSessions).ToList())
+                foreach (var entry in _sequences.Where(entry => entry.Key != sessionId).Take(_sequences.Count - MaxTrackedSessions).ToList())
                 {
-                    _sequences.TryRemove(key, out _);
+                    // The floor rises before the session is dropped, and the session is dropped only if it was not
+                    // numbered since, so a concurrent call for it cannot fall below the floor.
+                    RaiseSequenceFloor(entry.Value);
+                    _sequences.TryRemove(entry);
                 }
             }
 
             return next;
+        }
+
+        private void RaiseSequenceFloor(long sequence)
+        {
+            var floor = Interlocked.Read(ref _sequenceFloor);
+            while (floor < sequence)
+            {
+                var observed = Interlocked.CompareExchange(ref _sequenceFloor, sequence, floor);
+                if (observed == floor)
+                {
+                    return;
+                }
+
+                floor = observed;
+            }
         }
 
         private string GeneratedToolCallId() => "tooluse_" + _idFactory().ToString("N").Substring(0, 12);

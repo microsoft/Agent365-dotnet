@@ -41,7 +41,7 @@ public class A365DefenderInterceptorTests
         body["tenant"]!["id"]!.GetValue<string>().Should().Be(TenantId);
         body["actor"]!.ToJsonString().Should().Be("""{"id":"user-object-id","kind":"human"}""");
         JsonNode.DeepEquals(body["target"], body["input"]).Should().BeTrue();
-        harness.Evaluations.Should().ContainSingle().Which.CorrelationId.Should().Be(harness.CorrelationIds.Single());
+        (await harness.EvaluationsAsync()).Should().ContainSingle().Which.CorrelationId.Should().Be(harness.CorrelationIds.Single());
     }
 
     [Fact]
@@ -180,6 +180,29 @@ public class A365DefenderInterceptorTests
     }
 
     [Fact]
+    public async Task DoesNotLetASlowEvaluationCallbackDecideTheVerdict()
+    {
+        var release = new ManualResetEventSlim();
+        var harness = new Harness(
+            _ => Json(new { decision = "allow" }),
+            timeout: TimeSpan.FromMilliseconds(500),
+            onEvaluated: _ => release.Wait(TimeSpan.FromSeconds(30)),
+            tokenResolver: async (_, _, _, _) =>
+            {
+                // Asynchronous like a real call, so the emitter is already timing the interceptor when the callback runs.
+                await Task.Delay(10).ConfigureAwait(false);
+                return Token;
+            });
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-13");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+        release.Set();
+
+        record.Proceeds.Should().BeTrue("the callback runs after the verdict, outside the emitter's interceptor timeout");
+        record.Verdict.Decision.Should().Be(Decision.Allow);
+    }
+
+    [Fact]
     public async Task ResolvesTheCallOnlyForPointsDefenderEvaluatesAndOnlyWhenEnabled()
     {
         var calls = 0;
@@ -234,7 +257,7 @@ public class A365DefenderInterceptorTests
         var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
 
         AssertFollowsTheFailMode(record, failClosed: false);
-        harness.Evaluations.Should().ContainSingle().Which.Error.Should().Be("evaluation failed (InvalidOperationException)");
+        (await harness.EvaluationsAsync()).Should().ContainSingle().Which.Error.Should().Be("evaluation failed (InvalidOperationException)");
         record.Verdict.Warnings.Should().OnlyContain(warning => warning.Message == null || !warning.Message.Contains(Secret));
     }
 
@@ -370,7 +393,7 @@ public class A365DefenderInterceptorTests
 
         AssertFollowsTheFailMode(record, failClosed);
         harness.Bodies.Should().BeEmpty();
-        harness.Evaluations.Should().ContainSingle().Which.Error.Should().Be("no agent identity was resolved");
+        (await harness.EvaluationsAsync()).Should().ContainSingle().Which.Error.Should().Be("no agent identity was resolved");
     }
 
     /// <summary>A fake Defender that denies only content containing <see cref="Payload"/>.</summary>
@@ -408,6 +431,9 @@ public class A365DefenderInterceptorTests
 
     private sealed class Harness
     {
+        private readonly List<DefenderRtpEvaluationResult> _evaluations = new();
+        private readonly SemaphoreSlim _evaluated = new(0);
+
         public Harness(
             Func<JsonObject, HttpResponseMessage> respond,
             bool failClosed = false,
@@ -416,10 +442,16 @@ public class A365DefenderInterceptorTests
             Action<DefenderRtpEvaluationResult>? onEvaluated = null,
             Func<AgentContext, A365DefenderCall?>? resolveCall = null,
             DefenderRtpTokenResolver? tokenResolver = null,
-            bool enabled = true)
+            bool enabled = true,
+            TimeSpan? timeout = null)
         {
             var handler = new FakeEndpoint(respond, Bodies, CorrelationIds);
             var options = new DefenderRtpOptions { Enabled = enabled, Endpoint = new Uri(Endpoint), FailClosed = failClosed };
+            if (timeout is { } deadline)
+            {
+                options.Timeout = deadline;
+            }
+
             var client = new DefenderRtpClient(options, new HttpClient(handler));
             DefenderRtpTokenResolver tokens = tokenResolver ?? ((_, _, _, _) => Task.FromResult<string?>(Token));
             var agent = new DefenderRtpAgentContext { AgentId = agentId, TenantId = TenantId, UserId = "user-object-id" };
@@ -427,7 +459,7 @@ public class A365DefenderInterceptorTests
                 .AddA365Defender(new A365DefenderInterceptor(
                     client,
                     resolveCall ?? (_ => resolveNothing ? null : new A365DefenderCall(agent, tokens)),
-                    onEvaluated ?? Evaluations.Add));
+                    onEvaluated ?? Record));
         }
 
         public InterceptionEmitter Emitter { get; }
@@ -436,7 +468,29 @@ public class A365DefenderInterceptorTests
 
         public List<string> CorrelationIds { get; } = new();
 
-        public List<DefenderRtpEvaluationResult> Evaluations { get; } = new();
+        /// <summary>Waits for the evaluations the callback receives, which runs on the thread pool after the verdict.</summary>
+        public async Task<List<DefenderRtpEvaluationResult>> EvaluationsAsync(int count = 1)
+        {
+            for (var received = 0; received < count; received++)
+            {
+                (await _evaluated.WaitAsync(TimeSpan.FromSeconds(10))).Should().BeTrue("the callback runs soon after the verdict");
+            }
+
+            lock (_evaluations)
+            {
+                return _evaluations.ToList();
+            }
+        }
+
+        private void Record(DefenderRtpEvaluationResult result)
+        {
+            lock (_evaluations)
+            {
+                _evaluations.Add(result);
+            }
+
+            _evaluated.Release();
+        }
     }
 
     /// <summary>An endpoint that never answers, so only a deadline ends the request.</summary>

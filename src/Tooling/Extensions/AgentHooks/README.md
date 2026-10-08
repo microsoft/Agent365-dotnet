@@ -85,10 +85,11 @@ var record = await emitter.EmitUncheckedAsync(builder.Input(userMessage), cancel
 if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 ```
 
-The evaluation callback is for logging and telemetry. It runs once the verdict is decided and never changes it: an
-exception it throws is logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored. When
-resolving the identity or evaluating throws, the result and verdict record only the exception's type; the exception
-itself goes to the same logger.
+The evaluation callback is for logging and telemetry. It runs on the thread pool once the verdict is decided, outside
+the emitter's interceptor timeout, so neither what it does nor how long it takes changes the verdict; it may run
+after the interceptor returns and alongside later evaluations. An exception it throws is logged (to the optional
+`ILogger` passed to `A365DefenderInterceptor`) and ignored. When resolving the identity or evaluating throws, the
+result and verdict record only the exception's type; the exception itself goes to the same logger.
 
 Agents built on Microsoft Agent Framework can register the same interceptor with
 `Microsoft.Agents.AI.AgentHooks`, which mediates model and tool calls.
@@ -117,7 +118,8 @@ truncated before it is sent, and the request as a whole carries at most four tim
 under decision at the point (the input, the tool call's arguments, the tool result or the reply) first, then tool
 declarations, the newest message history, extensions and other members, with the oldest messages dropped first.
 Names, keys and nulls count toward that too, so a context padded with many empty or null items cannot inflate the
-request. Content nested more than 32 levels deep is cut the same way.
+request, and only as many tool declarations as the budget can hold are read: a called tool beyond them is declared
+from its name. Content nested more than 32 levels deep is cut the same way.
 The agent's own context is not modified. When the content under decision was cut, Defender has not seen all of
 it: its deny still blocks, but its allow does not cover the rest, so the result follows the fail mode. Fail open
 allows with a `defender:unverified` warning; fail closed denies with `runtime_error:defender_unverified`. Raise the

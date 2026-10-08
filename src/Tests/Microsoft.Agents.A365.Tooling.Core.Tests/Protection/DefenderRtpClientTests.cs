@@ -429,7 +429,7 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
-    public async Task KeepsTheCalledToolsDeclarationWhenTheBudgetIsShort()
+    public async Task DeclaresTheCalledToolFromItsNameWhenItsDeclarationIsBeyondTheBudget()
     {
         var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 20 });
         var context = ToolContext("pre_tool_call", "x", null);
@@ -442,7 +442,35 @@ public class DefenderRtpClientTests
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
-        body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage","description":"Reads a page."}""");
+        body["tools"]!.AsArray().Select(tool => tool!["name"]!.GetValue<string>()).Should().Equal(
+            new[] { "FetchPage", "Other0", "Other1" },
+            "only the entries the budget holds are read");
+        body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""", "a called tool beyond them is declared from its name");
+    }
+
+    [Fact]
+    public async Task KeepsTheSequenceIncreasingForASessionThatWasDropped()
+    {
+        var handler = new RecordingHandler(_ => Json(new { decision = "allow" }));
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(), httpClient) { MaxTrackedSessions = 1 };
+        var tokens = new TokenSource();
+
+        async Task<long> Send(string sessionId)
+        {
+            var context = InputContext("hello");
+            context.Remove("sequence");
+            context["session"] = new JsonObject { ["id"] = sessionId };
+            await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+            return handler.Calls[^1].Body["sequence"]!.GetValue<long>();
+        }
+
+        var first = new[] { await Send("a"), await Send("a"), await Send("a") };
+        await Send("b");
+        var resumed = await Send("a");
+
+        first.Should().Equal(1, 2, 3);
+        resumed.Should().BeGreaterThan(3, "a session the client stopped tracking resumes above every sequence it was given");
     }
 
     [Fact]
@@ -970,6 +998,23 @@ public class DefenderRtpClientTests
         client.CachedTokenCount.Should().BeLessThanOrEqualTo(100, "the cache holds at most 100 tokens however acquisitions interleave");
     }
 
+    [Fact]
+    public async Task ReleasesAnAcquisitionWhoseResolverIgnoresTheDeadline()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { Timeout = TimeSpan.FromMilliseconds(300) });
+        var never = new TaskCompletionSource<string?>();
+        DefenderRtpTokenResolver hung = (_, _, _, _) => never.Task;
+
+        var first = await client.EvaluateHookContextAsync(InputContext("one"), Agent, hung);
+        await WaitForTheAcquisition(client);
+        var second = await client.EvaluateHookContextAsync(InputContext("two"), Agent, tokens.Resolve);
+
+        first!.Evaluated.Should().BeFalse();
+        first.Error.Should().Be("entra token timeout");
+        second!.Evaluated.Should().BeTrue("a resolver that ignores the deadline does not hold the identity's acquisition");
+        handler.Calls.Should().ContainSingle();
+    }
+
     // ─── options ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -1074,7 +1119,8 @@ public class DefenderRtpClientTests
     {
         if (client.PendingTokenAcquisition(Agent) is { } pending)
         {
-            await Task.WhenAny(pending);
+            // Bounded, so an acquisition that never ends fails the test instead of hanging it.
+            await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(10)));
         }
 
         client.PendingTokenAcquisition(Agent).Should().BeNull("an acquisition leaves the in-flight map as it completes");
