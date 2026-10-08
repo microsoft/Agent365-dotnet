@@ -35,7 +35,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
     /// <summary>
     /// The outcome of one Defender evaluation. <see cref="Evaluated"/> is false when no verdict was
-    /// obtained; <see cref="Allowed"/> then follows <see cref="DefenderRtpOptions.FailClosed"/>.
+    /// obtained; <see cref="Allowed"/> then follows <see cref="DefenderRtpOptions.FailClosed"/>, as it does when
+    /// Defender allowed a <see cref="Truncated"/> copy.
     /// </summary>
     public sealed class DefenderRtpEvaluationResult
     {
@@ -44,6 +45,14 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>Whether Defender returned a verdict.</summary>
         public bool Evaluated { get; init; }
+
+        /// <summary>
+        /// Whether the content under decision was longer than <see cref="DefenderRtpOptions.MaxContentCharacters"/>,
+        /// so Defender evaluated a truncated copy. Its deny stands; an allow does not cover the content that was cut,
+        /// so <see cref="Allowed"/> follows <see cref="DefenderRtpOptions.FailClosed"/> and <see cref="Error"/> is
+        /// <see cref="DefenderRtpClient.TruncatedContentError"/>.
+        /// </summary>
+        public bool Truncated { get; init; }
 
         /// <summary>The agent-hooks interception point that was evaluated.</summary>
         public string InterceptionPoint { get; init; } = string.Empty;

@@ -83,7 +83,9 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
     `DefenderRtpTokenResolvers.FromAgenticConnection` uses the agent's connection (`IAgenticTokenProvider`), the
     same authority as Observability S2S export.
   - Every call sends a unique `x-ms-correlation-id`. Failures follow `A365_DEFENDER_RTP_FAIL_MODE`, and a `400`
-    reports the failed validation rule.
+    reports the failed validation rule. Content under decision longer than
+    `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` is evaluated as a truncated copy: Defender's deny stands, and its
+    allow follows the fail mode (`DefenderRtpEvaluationResult.Truncated`).
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** (new, preview) - `A365DefenderInterceptor`, an
   agent-hooks interceptor (`ResponsibleAI.AgentHooks` 0.1.0-beta.1) for Defender, and
   `A365AgentHooks.CreateProtectionEmitter` (`parallel/strictest`).

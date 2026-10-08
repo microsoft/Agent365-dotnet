@@ -105,7 +105,14 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 | `A365_DEFENDER_RTP_FAIL_MODE` | `closed` blocks when no verdict is obtained; default is open |
 | `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS` | the deadline for one evaluation, including token acquisition (default 10000) |
 | `A365_DEFENDER_RTP_AUTHENTICATION_SCOPE` | overrides the Defender API scope |
-| `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each content string sent; ids, names and roles are not truncated (default 20000) |
+| `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each content string sent; ids, names and roles are not truncated (default 20000). See **Content size** |
+
+**Content size.** Content longer than `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` is truncated before it is sent, and
+the agent's own context is not modified. When the content under decision at a point (the input, the tool call's
+arguments, the tool result or the reply) was truncated, Defender has not seen all of it: its deny still blocks,
+but its allow does not cover the rest, so the result follows the fail mode. Fail open allows with a
+`defender:unverified` warning; fail closed denies with `runtime_error:defender_unverified`. Raise the limit for
+agents that handle long content. Evaluating long content in chunks is a planned follow-up.
 
 Every call sends a unique `x-ms-correlation-id`, returned as `DefenderRtpEvaluationResult.CorrelationId`;
 Defender logs each evaluation under it. A `400` reports the failed validation rule in `Error`.

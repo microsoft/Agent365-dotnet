@@ -32,9 +32,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// copy keeps the context's session, sequence and tool call ids; the host's context is not modified.
     /// </para>
     /// <para>
-    /// When no verdict is obtained (identity resolution, transport, authentication or validation failure), the
-    /// verdict follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning,
-    /// or deny with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
+    /// When no verdict is obtained (identity resolution, transport, authentication or validation failure), or
+    /// Defender allowed a copy truncated to <see cref="DefenderRtpOptions.MaxContentCharacters"/>, the verdict
+    /// follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning, or deny
+    /// with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
     /// </para>
     /// <para>
     /// Register it on an emitter whose per-interceptor timeout is longer than
@@ -149,7 +150,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 throw new ArgumentNullException(nameof(result));
             }
 
-            if (result.Evaluated)
+            // Defender's allow of a truncated copy does not cover the content that was cut, so it is reported
+            // like a missing verdict; a deny (or transform) of a truncated copy stands.
+            var authoritative = result.Evaluated && !(result.Truncated && result.Verdict?.Decision == "allow");
+            if (authoritative)
             {
                 var labels = result.Verdict?.ResultLabels is { Count: > 0 } resultLabels ? resultLabels : null;
                 if (result.Allowed)

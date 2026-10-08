@@ -20,6 +20,7 @@ public class A365DefenderInterceptorTests
     private const string Endpoint = "https://prevention.example.test/v1/protection/evaluate";
     private const string AgentId = "aaaaaaaa-0000-4000-8000-000000000001";
     private const string TenantId = "bbbbbbbb-0000-4000-8000-000000000002";
+    private const string Payload = "BLOCK_ME";
 
     [Fact]
     public async Task ForwardsTheEmittedContextAndAllows()
@@ -182,6 +183,45 @@ public class A365DefenderInterceptorTests
         harness.Bodies.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeWhenDefenderAllowsATruncatedCopy(bool failClosed)
+    {
+        var harness = new Harness(DeniesThePayload, failClosed: failClosed);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-13");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create(new string('a', 20000) + Payload)!), CancellationToken.None);
+
+        AssertFollowsTheFailMode(record, failClosed);
+        record.Verdict.Warnings.Should().Contain(warning => warning.Reason == "defender:unverified" && warning.Message == DefenderRtpClient.TruncatedContentError);
+    }
+
+    [Fact]
+    public async Task BlocksWhenDefenderDeniesATruncatedCopy()
+    {
+        var harness = new Harness(DeniesThePayload);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-14");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create(Payload + new string('a', 20000))!), CancellationToken.None);
+
+        record.Proceeds.Should().BeFalse();
+        record.Verdict.Reason.Should().Be("defender:block:prevention_blocked");
+    }
+
+    [Fact]
+    public async Task AllowsContentWithinTheLimit()
+    {
+        var harness = new Harness(DeniesThePayload, failClosed: true);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-15");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create(new string('a', 20000))!), CancellationToken.None);
+
+        record.Proceeds.Should().BeTrue();
+        record.Verdict.Decision.Should().Be(Decision.Allow);
+        (record.Verdict.Warnings ?? Array.Empty<Warning>()).Should().NotContain(warning => warning.Reason == "defender:unverified");
+    }
+
     [Fact]
     public async Task AppliesTheFailModeBeforeTheInterceptorTimeout()
     {
@@ -257,6 +297,12 @@ public class A365DefenderInterceptorTests
         record.Proceeds.Should().BeTrue();
         harness.Bodies.Should().BeEmpty();
     }
+
+    /// <summary>A fake Defender that denies only content containing <see cref="Payload"/>.</summary>
+    private static HttpResponseMessage DeniesThePayload(JsonObject body) =>
+        body.ToJsonString().Contains(Payload, StringComparison.Ordinal)
+            ? Json(new { decision = "deny", reason = "prevention_blocked", message = "Blocked payload." })
+            : Json(new { decision = "allow" });
 
     private static void AssertFollowsTheFailMode(InterceptionRecord record, bool failClosed)
     {

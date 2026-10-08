@@ -17,6 +17,7 @@ public class DefenderRtpClientTests
     private const string Endpoint = "https://prevention.example.test/v1/protection/evaluate";
     private const string AgentId = "aaaaaaaa-0000-4000-8000-000000000001";
     private const string TenantId = "bbbbbbbb-0000-4000-8000-000000000002";
+    private const string Payload = "BLOCK_ME";
 
     private static readonly DefenderRtpAgentContext Agent = new()
     {
@@ -316,6 +317,69 @@ public class DefenderRtpClientTests
         result!.Allowed.Should().BeFalse();
         result.Verdict!.TransformPath.Should().Be("/target");
         result.BlockReason.Should().Contain("rewrite");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DoesNotLetAnAllowOfATruncatedCopyAuthorizeTheContent(bool failClosed)
+    {
+        using var httpClient = new HttpClient(DeniesThePayload());
+        var client = new DefenderRtpClient(Options(new DefenderRtpOptions { FailClosed = failClosed }), httpClient);
+
+        var result = await client.EvaluateHookContextAsync(InputContext(new string('a', 20000) + Payload), Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().BeTrue();
+        result.Verdict!.Decision.Should().Be("allow", "Defender only saw the harmless prefix");
+        result.Allowed.Should().Be(!failClosed);
+        result.Error.Should().Be(DefenderRtpClient.TruncatedContentError);
+        (result.BlockReason != null).Should().Be(failClosed);
+    }
+
+    [Fact]
+    public async Task KeepsADenyOfATruncatedCopy()
+    {
+        using var httpClient = new HttpClient(DeniesThePayload());
+        var client = new DefenderRtpClient(Options(), httpClient);
+
+        var result = await client.EvaluateHookContextAsync(InputContext(Payload + new string('a', 20000)), Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().BeTrue();
+        result.Allowed.Should().BeFalse();
+        result.Verdict!.Decision.Should().Be("deny");
+    }
+
+    [Fact]
+    public async Task AllowsContentWithinTheLimitNormally()
+    {
+        using var httpClient = new HttpClient(DeniesThePayload());
+        var client = new DefenderRtpClient(Options(new DefenderRtpOptions { FailClosed = true }), httpClient);
+
+        var result = await client.EvaluateHookContextAsync(InputContext(new string('a', 20000)), Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().BeFalse();
+        result.Allowed.Should().BeTrue();
+        result.Error.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TracksTruncationOfTheContentUnderDecisionOnly()
+    {
+        var (client, _, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
+        var longText = new string('a', 200);
+        var input = InputContext("short");
+        input["messages"] = new JsonArray(new JsonObject { ["role"] = "user", ["content"] = longText });
+
+        var inputResult = await client.EvaluateHookContextAsync(input, Agent, tokens.Resolve);
+        var preToolCall = await client.EvaluateHookContextAsync(ToolContext("pre_tool_call", longText, null), Agent, tokens.Resolve);
+        var postToolCall = await client.EvaluateHookContextAsync(ToolContext("post_tool_call", longText, "short"), Agent, tokens.Resolve);
+
+        inputResult!.Truncated.Should().BeFalse("only the message history was cut");
+        preToolCall!.Truncated.Should().BeTrue("the arguments under decision were cut");
+        postToolCall!.Truncated.Should().BeFalse("the tool result under decision was not cut");
     }
 
     // ─── failures ────────────────────────────────────────────────────────────
@@ -638,6 +702,32 @@ public class DefenderRtpClientTests
         options.Enabled = true;
         options.Endpoint = new Uri(Endpoint);
         return options;
+    }
+
+    /// <summary>A fake Defender that denies only content containing <see cref="Payload"/>.</summary>
+    private static RecordingHandler DeniesThePayload() => new(async (request, cancellationToken) =>
+        (await request.Content!.ReadAsStringAsync(cancellationToken)).Contains(Payload, StringComparison.Ordinal)
+            ? Json(new { decision = "deny", reason = "prevention_blocked", message = "Blocked payload." })
+            : Json(new { decision = "allow" }));
+
+    private static JsonObject ToolContext(string point, string args, string? result)
+    {
+        var context = new JsonObject
+        {
+            ["spec"] = "agent-hooks/0.1",
+            ["interception_point"] = point,
+            ["timestamp"] = "2026-10-07T10:00:00.000Z",
+            ["sequence"] = 5L,
+            ["agent"] = new JsonObject { ["id"] = AgentId, ["framework"] = "agent365" },
+            ["session"] = new JsonObject { ["id"] = "s-tools" },
+            ["tool_call"] = new JsonObject { ["id"] = "call_7", ["name"] = "FetchPage", ["args"] = new JsonObject { ["query"] = args } },
+        };
+        if (result != null)
+        {
+            context["tool_result"] = new JsonObject { ["value"] = result, ["is_error"] = false };
+        }
+
+        return context;
     }
 
     private static (DefenderRtpClient Client, RecordingHandler Handler, TokenSource Tokens) Create(

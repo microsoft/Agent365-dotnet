@@ -35,6 +35,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>The header Defender logs each evaluation under.</summary>
         public const string CorrelationIdHeader = "x-ms-correlation-id";
 
+        /// <summary>
+        /// The <see cref="DefenderRtpEvaluationResult.Error"/> of a result whose content under decision was longer
+        /// than <see cref="DefenderRtpOptions.MaxContentCharacters"/> and that Defender allowed: Defender evaluated a
+        /// truncated copy, so the result follows <see cref="DefenderRtpOptions.FailClosed"/>.
+        /// </summary>
+        public const string TruncatedContentError = "content exceeded MaxContentCharacters; Defender evaluated a truncated copy";
+
         private const string DefaultFramework = "agent365";
         private const string A365Extension = "a365";
         private const int MaxErrorDetailCharacters = 200;
@@ -93,6 +100,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>
         /// Evaluates an agent-hooks context with Defender. The context is not modified.
         /// </summary>
+        /// <remarks>
+        /// When the content under decision is longer than <see cref="DefenderRtpOptions.MaxContentCharacters"/>,
+        /// Defender evaluates a truncated copy: its deny stands, but an allow does not cover the content that was
+        /// cut, so the result is marked <see cref="DefenderRtpEvaluationResult.Truncated"/> and follows
+        /// <see cref="DefenderRtpOptions.FailClosed"/>.
+        /// </remarks>
         /// <param name="context">The agent-hooks/0.1 context emitted by the host.</param>
         /// <param name="agent">The agent identity and turn; fills fields the context does not set.</param>
         /// <param name="tokenResolver">Resolves the agent identity's Defender token.</param>
@@ -132,7 +145,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             RequireString(agent.AgentId, nameof(agent.AgentId));
             RequireString(agent.TenantId, nameof(agent.TenantId));
-            var hook = Prepare(context, agent);
+            var hook = Prepare(context, agent, out var truncated);
             var sessionId = ReadString(hook["session"]?["id"]);
             var started = _timeProvider.GetTimestamp();
 
@@ -162,7 +175,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 return Unavailable(point!, tokenError, sessionId, null, _timeProvider.GetElapsedTime(started));
             }
 
-            return await PostAsync(hook, point!, sessionId, token!, started, deadline.Token, cancellationToken).ConfigureAwait(false);
+            return await PostAsync(hook, point!, sessionId, token!, truncated, started, deadline.Token, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -235,11 +248,14 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// A copy of the context that meets Defender's request validation: <c>target</c> equals the point's
         /// field, <c>tool_call</c> and <c>tool_result</c> carry only spec members, every content string is
         /// clamped, the timestamp is UTC, and loosely filled optional fields are repaired or dropped.
+        /// <paramref name="truncated"/> is set when the content under decision at the point (the field
+        /// <c>target</c> mirrors) was cut, so Defender cannot see all of what the verdict would authorize.
         /// </summary>
-        private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent)
+        private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent, out bool truncated)
         {
             var hook = (JsonObject)context.DeepClone();
             var maxCharacters = Options.MaxContentCharacters;
+            var decisionTruncated = false;
             hook["spec"] = AgentHooksSpec;
             hook["timestamp"] = UtcTimestamp(hook["timestamp"]);
 
@@ -301,7 +317,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         var role = ReadString(input?["role"]);
                         var prepared = new JsonObject
                         {
-                            ["content"] = Clamp(input?["content"], maxCharacters) ?? JsonValue.Create(string.Empty),
+                            ["content"] = Clamp(input?["content"], maxCharacters, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
                             ["role"] = role is "system" or "external" ? role : "user",
                         };
                         hook["input"] = prepared;
@@ -313,7 +329,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     {
                         var prepared = new JsonObject
                         {
-                            ["content"] = Clamp((hook["output"] as JsonObject)?["content"], maxCharacters) ?? JsonValue.Create(string.Empty),
+                            ["content"] = Clamp((hook["output"] as JsonObject)?["content"], maxCharacters, ref decisionTruncated) ?? JsonValue.Create(string.Empty),
                         };
                         hook["output"] = prepared;
                         hook["target"] = prepared.DeepClone();
@@ -326,7 +342,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         var toolCall = hook["tool_call"] as JsonObject;
                         var toolName = ReadString(toolCall?["name"]);
                         RequireString(toolName, "tool_call.name");
-                        var args = ToArguments(toolCall?["args"], maxCharacters);
+                        var isPreToolCall = ReadString(hook["interception_point"]) == "pre_tool_call";
+                        var argsTruncated = false;
+                        var args = ToArguments(toolCall?["args"], maxCharacters, ref argsTruncated);
                         hook["tool_call"] = new JsonObject
                         {
                             ["id"] = FirstNonEmpty(ReadString(toolCall?["id"])) ?? GeneratedToolCallId(),
@@ -334,14 +352,15 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                             ["args"] = args,
                         };
 
-                        if (ReadString(hook["interception_point"]) == "pre_tool_call")
+                        if (isPreToolCall)
                         {
+                            decisionTruncated = argsTruncated;
                             hook["target"] = args.DeepClone();
                         }
                         else
                         {
                             var toolResult = hook["tool_result"] as JsonObject;
-                            var value = Clamp(toolResult?["value"], maxCharacters);
+                            var value = Clamp(toolResult?["value"], maxCharacters, ref decisionTruncated);
                             var isError = toolResult?["is_error"] is JsonValue flag && flag.TryGetValue<bool>(out var failed) && failed;
                             hook["tool_result"] = new JsonObject
                             {
@@ -361,6 +380,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             }
 
             ClampOtherContent(hook, maxCharacters);
+            truncated = decisionTruncated;
             return hook;
         }
 
@@ -514,33 +534,40 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             return declaration;
         }
 
-        private static JsonObject ToArguments(JsonNode? args, int maxCharacters)
+        private static JsonObject ToArguments(JsonNode? args, int maxCharacters, ref bool truncated)
         {
-            var clamped = Clamp(args ?? new JsonObject(), maxCharacters);
+            var clamped = Clamp(args ?? new JsonObject(), maxCharacters, ref truncated);
             return clamped as JsonObject ?? new JsonObject { ["input"] = clamped };
         }
 
         // ---- transport -----------------------------------------------------------------------
 
-        /// <summary>Posts the context; <paramref name="deadline"/> is the evaluation's one deadline.</summary>
+        /// <summary>
+        /// Posts the context; <paramref name="deadline"/> is the evaluation's one deadline, and
+        /// <paramref name="truncated"/> says whether the content under decision was cut to fit
+        /// <see cref="DefenderRtpOptions.MaxContentCharacters"/>.
+        /// </summary>
         private async Task<DefenderRtpEvaluationResult> PostAsync(
             JsonObject hook,
             string point,
             string? sessionId,
             string accessToken,
+            bool truncated,
             long started,
             CancellationToken deadline,
             CancellationToken cancellationToken)
         {
             var correlationId = _idFactory().ToString();
 
-            // Options is mutable: never send the token or content to an endpoint that is not HTTPS.
-            if (!DefenderRtpOptions.IsHttpsUrl(Options.Endpoint))
+            // Options is mutable: read the endpoint once, and never send the token or content to one that is
+            // not HTTPS.
+            var endpoint = Options.Endpoint;
+            if (!DefenderRtpOptions.IsHttpsUrl(endpoint))
             {
                 return Failure(point, correlationId, sessionId, "endpoint is not an absolute https URL", null, started);
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, Options.Endpoint)
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
                 Content = new StringContent(hook.ToJsonString(), Encoding.UTF8, "application/json"),
             };
@@ -603,10 +630,33 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 }
 
                 var allowed = verdict.Decision == "allow";
+                if (truncated && allowed)
+                {
+                    // Defender saw only a truncated copy, so its allow does not cover the content that was cut and
+                    // follows the fail mode instead. A deny, or a transform (applied here as a block), stands.
+                    return new DefenderRtpEvaluationResult
+                    {
+                        Allowed = !Options.FailClosed,
+                        Evaluated = true,
+                        Truncated = true,
+                        InterceptionPoint = point,
+                        CorrelationId = correlationId,
+                        SessionId = sessionId,
+                        Verdict = verdict,
+                        HttpStatus = status,
+                        Error = TruncatedContentError,
+                        Latency = _timeProvider.GetElapsedTime(started),
+                        BlockReason = Options.FailClosed
+                            ? "The content is longer than Defender evaluates and this agent is configured to fail closed."
+                            : null,
+                    };
+                }
+
                 return new DefenderRtpEvaluationResult
                 {
                     Allowed = allowed,
                     Evaluated = true,
+                    Truncated = truncated,
                     InterceptionPoint = point,
                     CorrelationId = correlationId,
                     SessionId = sessionId,
@@ -912,17 +962,25 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         private static JsonNode? Clamp(JsonNode? node, int maxCharacters)
         {
+            var truncated = false;
+            return Clamp(node, maxCharacters, ref truncated);
+        }
+
+        /// <summary>Clamps every string in the value; <paramref name="truncated"/> is set when any was cut.</summary>
+        private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ref bool truncated)
+        {
             switch (node)
             {
                 case null:
                     return null;
                 case JsonValue value when value.TryGetValue<string>(out var text):
+                    truncated |= text.Length > maxCharacters;
                     return JsonValue.Create(Truncate(text, maxCharacters));
                 case JsonArray array:
                     var items = new JsonArray();
                     foreach (var item in array)
                     {
-                        items.Add(Clamp(item, maxCharacters));
+                        items.Add(Clamp(item, maxCharacters, ref truncated));
                     }
 
                     return items;
@@ -930,7 +988,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     var properties = new JsonObject();
                     foreach (var property in obj)
                     {
-                        properties[property.Key] = Clamp(property.Value, maxCharacters);
+                        properties[property.Key] = Clamp(property.Value, maxCharacters, ref truncated);
                     }
 
                     return properties;
