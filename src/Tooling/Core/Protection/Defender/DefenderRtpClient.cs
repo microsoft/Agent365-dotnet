@@ -42,6 +42,22 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// </summary>
         public const string TruncatedContentError = "content exceeded MaxContentCharacters; Defender evaluated a truncated copy";
 
+        /// <summary>
+        /// The <see cref="DefenderRtpEvaluationResult.Error"/> of a result that Defender allowed at a tool point after
+        /// the called tool's description or schema had to be cut: Defender evaluated a truncated copy, so the result
+        /// follows <see cref="DefenderRtpOptions.FailClosed"/>.
+        /// </summary>
+        public const string TruncatedToolDeclarationError =
+            "the called tool's declaration exceeded MaxContentCharacters; Defender evaluated a truncated copy";
+
+        /// <summary>
+        /// The <see cref="DefenderRtpEvaluationResult.Error"/> of a result that Defender allowed at a tool point when
+        /// the list of tool declarations is longer than 10,000 and the called tool was not among the first 10,000:
+        /// Defender evaluated without its declaration, so the result follows <see cref="DefenderRtpOptions.FailClosed"/>.
+        /// </summary>
+        public const string UnseenToolDeclarationError =
+            "the called tool was not among the first 10000 tool declarations; Defender evaluated without its declaration";
+
         private const string DefaultFramework = "agent365";
         private const string A365Extension = "a365";
         private const int MaxErrorDetailCharacters = 200;
@@ -174,7 +190,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             RequireString(agent.AgentId, nameof(agent.AgentId));
             RequireString(agent.TenantId, nameof(agent.TenantId));
-            var hook = Prepare(context, agent, out var truncated);
+            var hook = Prepare(context, agent, out var truncation);
             var sessionId = ReadString((hook["session"] as JsonObject)?["id"]);
             var started = _timeProvider.GetTimestamp();
 
@@ -204,7 +220,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 return Unavailable(point!, tokenError, sessionId, null, _timeProvider.GetElapsedTime(started));
             }
 
-            return await PostAsync(hook, point!, sessionId, token!, truncated, started, deadline.Token, cancellationToken).ConfigureAwait(false);
+            return await PostAsync(hook, point!, sessionId, token!, truncation, started, deadline.Token, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -280,10 +296,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// point, and then the tool call's arguments at <c>post_tool_call</c>, the other tool declarations, the newest
         /// message history, extensions and any other member share what remains of <see cref="ContentBudgetFactor"/>
         /// times <see cref="DefenderRtpOptions.MaxContentCharacters"/>. Lone surrogates are replaced, since Defender
-        /// cannot parse them. <paramref name="truncated"/> is set when the content under decision or the called tool's
-        /// declaration was cut, so Defender cannot see all of what its verdict would authorize.
+        /// cannot parse them. <paramref name="truncation"/> says why Defender cannot see all of what its verdict would
+        /// authorize (the content under decision or the called tool's declaration was cut, or the declaration was not
+        /// among those scanned), or is null when it can.
         /// </summary>
-        private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent, out bool truncated)
+        private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent, out string? truncation)
         {
             var maxCharacters = Options.MaxContentCharacters;
             var budget = new ContentBudget((int)Math.Min(int.MaxValue, (long)ContentBudgetFactor * maxCharacters));
@@ -363,7 +380,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             // evaluates the call against it, so a declaration it cannot see in full leaves the verdict unverified, like
             // cut content under decision.
             var tools = new JsonArray();
-            var calledToolCut = toolName != null && AddCalledTool(tools, context, toolName, maxCharacters, budget);
+            JsonObject? calledToolDeclaration = null;
+            var calledToolTruncation = toolName == null
+                ? null
+                : AddCalledTool(tools, context, toolName, maxCharacters, budget, out calledToolDeclaration);
 
             // The rest of the context. What is cut here does not change the authority of the verdict.
             var contextCut = false;
@@ -372,7 +392,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 calledTool["args"] = ToArguments((context["tool_call"] as JsonObject)?["args"], maxCharacters, budget, ref contextCut);
             }
 
-            AddOtherTools(tools, context, toolName, maxCharacters, budget);
+            AddOtherTools(tools, context, calledToolDeclaration, maxCharacters, budget);
             if (tools.Count > 0)
             {
                 hook["tools"] = tools;
@@ -388,7 +408,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 }
             }
 
-            truncated = decisionTruncated || calledToolCut;
+            truncation = decisionTruncated ? TruncatedContentError : calledToolTruncation;
             return (JsonObject)ReplaceLoneSurrogates(hook)!;
         }
 
@@ -511,22 +531,29 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         }
 
         /// <summary>
-        /// Declares the called tool, from its declaration in <c>tools</c> when a name-only scan of the first
-        /// <see cref="MaxCalledToolScan"/> entries finds it, and otherwise from its name (with the <c>a365</c>
-        /// extension's description when there is one). Returns true when Defender cannot see the tool's full
-        /// declaration: the scan stopped short of the end of the list without finding it, or its description or schema
-        /// had to be cut. A tool absent from a list scanned to the end is declared from its name and is not cut.
+        /// Declares the called tool. A name-only scan of the first <see cref="MaxCalledToolScan"/> entries of
+        /// <c>tools</c> finds its declaration, whose description and schema use the budget; the name, the tool's
+        /// identity, is copied whole and not charged. Without declarations at all, the <c>a365</c> extension's
+        /// description is used. Returns why Defender cannot see the tool's full declaration (its description or schema
+        /// had to be cut, or the list is longer than the scan and the tool was not among the entries scanned), or null.
+        /// A tool absent from a list scanned to the end is declared from its name, and that is not a cut.
         /// </summary>
-        private static bool AddCalledTool(JsonArray tools, JsonObject context, string toolName, int maxCharacters, ContentBudget budget)
+        private static string? AddCalledTool(
+            JsonArray tools,
+            JsonObject context,
+            string toolName,
+            int maxCharacters,
+            ContentBudget budget,
+            out JsonObject? found)
         {
             var declared = context["tools"] as JsonArray;
-            var found = declared?.Take(MaxCalledToolScan).OfType<JsonObject>().FirstOrDefault(tool => ReadString(tool["name"]) == toolName);
+            found = declared?.Take(MaxCalledToolScan).OfType<JsonObject>().FirstOrDefault(tool => ReadString(tool["name"]) == toolName);
 
             // An extension namespace may hold any JSON value, so each level's shape is checked before it is read.
-            var source = found ?? (((context["extensions"] as JsonObject)?[A365Extension] as JsonObject)?["tool"] as JsonObject);
+            var source = found
+                ?? (declared is { Count: > 0 } ? null : ((context["extensions"] as JsonObject)?[A365Extension] as JsonObject)?["tool"] as JsonObject);
             var cut = false;
             var declaration = new JsonObject { ["name"] = toolName };
-            budget.Spend(1 + MemberCost("name", toolName));
             if (source?["description"] is JsonValue description && ReadString(description) != null)
             {
                 AddMember(declaration, "description", description, maxCharacters, budget, ref cut);
@@ -538,15 +565,21 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             }
 
             tools.Add(declaration);
-            return cut || (found == null && declared?.Count > MaxCalledToolScan);
+            if (cut)
+            {
+                return TruncatedToolDeclarationError;
+            }
+
+            return found == null && declared?.Count > MaxCalledToolScan ? UnseenToolDeclarationError : null;
         }
 
         /// <summary>
         /// Fills what remains of the budget with the other valid tool declarations (a name, and a string description
-        /// and object schema when present) in the host's order, reading only as many entries as the budget can hold:
-        /// each entry costs its element, and a copied declaration its name and members too.
+        /// and object schema when present) in the host's order, skipping the called tool's, which is declared already.
+        /// Only as many entries as the budget can hold are read: each entry costs its element, and a copied declaration
+        /// its name and members too.
         /// </summary>
-        private static void AddOtherTools(JsonArray tools, JsonObject context, string? toolName, int maxCharacters, ContentBudget budget)
+        private static void AddOtherTools(JsonArray tools, JsonObject context, JsonObject? calledTool, int maxCharacters, ContentBudget budget)
         {
             var cut = false;
             foreach (var entry in context["tools"] as JsonArray ?? new JsonArray())
@@ -556,9 +589,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     break;
                 }
 
-                // An entry Defender would reject, or the called tool's, which is declared already, is skipped, but
-                // reading it still costs its element.
-                if (entry is not JsonObject tool || ReadString(tool["name"]) is not { Length: > 0 } declaredName || declaredName == toolName)
+                // The called tool's entry, or one Defender would reject, is skipped, but reading it still costs its
+                // element.
+                if (ReferenceEquals(entry, calledTool) || entry is not JsonObject tool || ReadString(tool["name"]) is not { Length: > 0 } declaredName)
                 {
                     budget.Spend(1);
                     continue;
@@ -708,15 +741,15 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Posts the context; <paramref name="deadline"/> is the evaluation's one deadline, and
-        /// <paramref name="truncated"/> says whether the content under decision, or the called tool's declaration, was
-        /// cut, so Defender's allow does not cover all of it.
+        /// <paramref name="truncation"/> says why Defender's allow would not cover all of what is under decision, or
+        /// is null when it would.
         /// </summary>
         private async Task<DefenderRtpEvaluationResult> PostAsync(
             JsonObject hook,
             string point,
             string? sessionId,
             string accessToken,
-            bool truncated,
+            string? truncation,
             long started,
             CancellationToken deadline,
             CancellationToken cancellationToken)
@@ -801,10 +834,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 }
 
                 var allowed = verdict.Decision == "allow";
-                if (truncated && allowed)
+                if (truncation != null && allowed)
                 {
-                    // Defender saw only a truncated copy, so its allow does not cover the content that was cut and
-                    // follows the fail mode instead. A deny, or a transform (applied here as a block), stands.
+                    // Defender saw only a truncated copy, so its allow does not cover what it did not see and follows
+                    // the fail mode instead. A deny, or a transform (applied here as a block), stands.
                     return new DefenderRtpEvaluationResult
                     {
                         Allowed = !Options.FailClosed,
@@ -815,10 +848,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         SessionId = sessionId,
                         Verdict = verdict,
                         HttpStatus = status,
-                        Error = TruncatedContentError,
+                        Error = truncation,
                         Latency = _timeProvider.GetElapsedTime(started),
                         BlockReason = Options.FailClosed
-                            ? "The content is longer than Defender evaluates and this agent is configured to fail closed."
+                            ? "Defender could not evaluate all of the content and this agent is configured to fail closed."
                             : null,
                     };
                 }
@@ -827,7 +860,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 {
                     Allowed = allowed,
                     Evaluated = true,
-                    Truncated = truncated,
+                    Truncated = truncation != null,
                     InterceptionPoint = point,
                     CorrelationId = correlationId,
                     SessionId = sessionId,

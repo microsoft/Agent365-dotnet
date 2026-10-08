@@ -51,7 +51,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// than <see cref="DefenderRtpOptions.MaxContentCharacters"/> allowed, or at a tool point the called tool's
         /// declaration had to be cut or was not among the first 10,000 declarations. Its deny stands; an allow does not
         /// cover what Defender did not see, so <see cref="Allowed"/> follows <see cref="DefenderRtpOptions.FailClosed"/>
-        /// and <see cref="Error"/> is <see cref="DefenderRtpClient.TruncatedContentError"/>.
+        /// and <see cref="Error"/> says which: <see cref="DefenderRtpClient.TruncatedContentError"/>,
+        /// <see cref="DefenderRtpClient.TruncatedToolDeclarationError"/> or
+        /// <see cref="DefenderRtpClient.UnseenToolDeclarationError"/>.
         /// </summary>
         public bool Truncated { get; init; }
 

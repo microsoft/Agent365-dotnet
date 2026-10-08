@@ -318,8 +318,7 @@ public class DefenderRtpClientTests
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
         result!.Truncated.Should().BeTrue("the tool result under decision was cut");
-        // The called tool's declaration comes before the arguments, which leaves them no room at this size.
-        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{}}""");
+        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seattle to"}}""");
         body["tool_result"]!["value"]!.GetValue<string>().Should().Be("three resu");
         JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
     }
@@ -448,7 +447,7 @@ public class DefenderRtpClientTests
         DefenderContract.Errors(body).Should().BeEmpty();
         body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage","description":"Reads a page.","schema":{"type":"object"}}""");
         body["tools"]!.AsArray().Select(tool => tool!["name"]!.GetValue<string>()).Should().Equal(
-            new[] { "FetchPage", "Other0", "Other1" },
+            new[] { "FetchPage", "Other0", "Other1", "Other2" },
             "the other declarations fill what remains in the host's order");
     }
 
@@ -467,7 +466,23 @@ public class DefenderRtpClientTests
         result!.Evaluated.Should().BeTrue();
         result.Truncated.Should().BeTrue("the scan stopped before the called tool's declaration");
         result.Allowed.Should().BeFalse("a fail-closed client does not let an allow it cannot verify through");
+        result.Error.Should().Be(DefenderRtpClient.UnseenToolDeclarationError);
         handler.Calls.Single().Body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""");
+    }
+
+    [Theory]
+    [InlineData(10_000, false)]
+    [InlineData(10_001, true)]
+    public async Task TreatsAMissingCalledToolAsTruncatedOnlyWhenTheListOutrunsTheScan(int count, bool truncated)
+    {
+        var (client, _, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(Enumerable.Range(0, count).Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" }).ToArray());
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().Be(truncated);
+        result.Error.Should().Be(truncated ? DefenderRtpClient.UnseenToolDeclarationError : null);
     }
 
     [Fact]
@@ -481,23 +496,42 @@ public class DefenderRtpClientTests
 
         result!.Truncated.Should().BeTrue("Defender saw only part of the called tool's description");
         result.Allowed.Should().BeFalse();
+        result.Error.Should().Be(DefenderRtpClient.TruncatedToolDeclarationError);
         handler.Calls.Single().Body["tools"]![0]!["description"]!.GetValue<string>().Should().EndWith("...[truncated 74 chars]");
+    }
+
+    [Fact]
+    public async Task TreatsACutA365DescriptionAsTruncatedWhenNoToolsAreDeclared()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100, FailClosed = true });
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["extensions"] = new JsonObject { ["a365"] = new JsonObject { ["tool"] = new JsonObject { ["description"] = new string('d', 150) } } };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().BeTrue("without declarations the a365 description is the called tool's, and it was cut");
+        result.Allowed.Should().BeFalse();
+        result.Error.Should().Be(DefenderRtpClient.TruncatedToolDeclarationError);
+        handler.Calls.Single().Body["tools"]![0]!["name"]!.GetValue<string>().Should().Be("FetchPage");
     }
 
     [Fact]
     public async Task DeclaresACalledToolAbsentFromTheListFromItsName()
     {
-        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
         var context = ToolContext("pre_tool_call", "x", null);
         context["tools"] = new JsonArray(Enumerable.Range(0, 100).Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" }).ToArray());
+        context["extensions"] = new JsonObject { ["a365"] = new JsonObject { ["tool"] = new JsonObject { ["description"] = new string('d', 150) } } };
 
         var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
-        result!.Truncated.Should().BeFalse("a tool missing from a list read to the end is not a cut");
+        result!.Truncated.Should().BeFalse("a tool missing from a list read to the end is not a cut, and the a365 description is used only without declarations");
         result.Allowed.Should().BeTrue();
         var tools = handler.Calls.Single().Body["tools"]!.AsArray();
         tools[0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""");
-        tools.Should().HaveCount(101);
+        tools.Skip(1).Take(2).Select(tool => tool!["name"]!.GetValue<string>()).Should().Equal(
+            new[] { "t0", "t1" },
+            "the other declarations follow in the host's order");
     }
 
     [Fact]

@@ -118,17 +118,21 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 | `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each content string sent; ids, names and roles are not truncated (default 20000). See **Content size** |
 
 **Content size.** Each content string longer than `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` (default 20000) is
-truncated before it is sent, and the request as a whole carries at most four times that much content: the content
-under decision at the point (the input, the tool call's arguments, the tool result or the reply) first, then at a
-tool point the called tool's declaration, then the other tool declarations, the newest message history, extensions
-and other members, with the oldest messages dropped first. Names, keys and nulls count toward that too, so a context
-padded with many empty or null items cannot inflate the request, and only as many tool declarations as the budget
-can hold are read. The called tool's declaration is found with a name-only scan of the first 10,000 declarations; a
-tool missing from a list scanned to the end is declared from its name. Content nested more than 32 levels deep is
-cut the same way.
-The agent's own context is not modified. When the content under decision, or the called tool's declaration, was cut
-(or the scan stopped before finding the declaration), Defender has not seen all of it: its deny still blocks, but its
-allow does not cover the rest, so the result follows the fail mode. Fail open
+truncated before it is sent, and the request as a whole carries at most four times that much content, in this order:
+the content under decision at the point (the input, the tool call's arguments, the tool result or the reply); at a
+tool point the called tool's declaration; the tool call's arguments at `post_tool_call`; the other tool declarations
+in the agent's order; the message history, newest first; then extensions and other members. Names, keys and nulls
+count toward that too, so a context padded with many empty or null items cannot inflate the request, and only as
+many tool declarations as the budget can hold are read. Content nested more than 32 levels deep is cut the same way.
+
+The called tool's declaration is found with a name-only scan of the first 10,000 declarations; its name is sent whole,
+and its description and schema count toward the limit. Without any declarations, the `a365` extension's description
+of the tool is used. A tool missing from a list scanned to the end is declared from its name.
+
+The agent's own context is not modified. When the content under decision or the called tool's declaration was cut,
+or the list is longer than the scan and the called tool was not among the declarations scanned, Defender has not
+seen all of it: its deny still blocks, but its allow does not cover the rest, so the result follows the fail mode and
+`Error` says which (`TruncatedContentError`, `TruncatedToolDeclarationError` or `UnseenToolDeclarationError`). Fail open
 allows with a `defender:unverified` warning; fail closed denies with `runtime_error:defender_unverified`. Raise the
 limit for agents that handle long content. Evaluating long content in chunks is a planned follow-up. Lone UTF-16
 surrogates in any string are replaced with U+FFFD, since Defender cannot parse them.
