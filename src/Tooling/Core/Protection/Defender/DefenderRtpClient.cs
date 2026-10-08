@@ -69,17 +69,25 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             "trace", "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
         };
 
-        // Used when the caller passes no HttpClient; pooled connections are recycled so DNS changes are picked up.
-        internal static readonly HttpClient SharedHttpClient = new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
+        // Used when the caller passes no HttpClient. Pooled connections are recycled so DNS changes are picked up, and
+        // redirects are never followed: a 307 or 308 would replay the token, the client assertion or the agent's
+        // content to another host.
+        internal static readonly SocketsHttpHandler SharedHandler = new()
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            AllowAutoRedirect = false,
+        };
+
+        internal static readonly HttpClient SharedHttpClient = new(SharedHandler);
 
         private readonly HttpClient _httpClient;
         private readonly Func<Guid> _idFactory;
         private readonly TimeProvider _timeProvider;
-        private readonly ConcurrentDictionary<string, CachedToken> _tokens = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<TokenCacheKey, CachedToken> _tokens = new();
 
         // Serializes writes to _tokens, so concurrent acquisitions cannot push it past MaxCachedTokens.
         private readonly object _tokenCacheLock = new();
-        private readonly ConcurrentDictionary<string, Lazy<Task<string>>> _inFlightTokens = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<TokenCacheKey, Lazy<Task<string>>> _inFlightTokens = new();
         private readonly ConcurrentDictionary<string, long> _sequences = new(StringComparer.Ordinal);
 
         // The highest sequence given to a session that is no longer tracked; a session that comes back resumes above
@@ -88,7 +96,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>Initializes a new instance of the <see cref="DefenderRtpClient"/> class.</summary>
         /// <param name="options">The Defender configuration, for example <see cref="DefenderRtpOptions.FromEnvironment()"/>.</param>
-        /// <param name="httpClient">The HTTP client, for example from <c>IHttpClientFactory</c>; defaults to a shared client.</param>
+        /// <param name="httpClient">
+        /// The HTTP client, for example from <c>IHttpClientFactory</c>; defaults to a shared client that does not
+        /// follow redirects. A client passed here must not follow them either: a redirected request is treated as a
+        /// failure, since the context has been sent to another host.
+        /// </param>
         /// <param name="idFactory">Creates correlation ids (tests).</param>
         /// <param name="timeProvider">The clock (tests).</param>
         public DefenderRtpClient(
@@ -745,6 +757,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             using (response)
             {
                 var status = (int)response.StatusCode;
+
+                // A client that follows redirects has sent the context to another host; what came back is no verdict.
+                if (request.RequestUri != endpoint)
+                {
+                    return Failure(point, correlationId, sessionId, "request was redirected", status, started);
+                }
+
                 string body;
                 try
                 {
@@ -975,8 +994,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>How many sessions' sequences are tracked; settable for tests, so eviction needs few sessions.</summary>
         internal int MaxTrackedSessions { get; init; } = 1000;
 
-        private static string TokenKey(DefenderRtpAgentContext agent, string scope) =>
-            string.Join(":", agent.TenantId, agent.AgentId, scope);
+        private static TokenCacheKey TokenKey(DefenderRtpAgentContext agent, string scope) =>
+            new(agent.TenantId, agent.AgentId, scope);
 
         /// <summary>Observes the failure of a task no caller awaits, so it is not reported as unobserved.</summary>
         private static void ObserveFailure(Task task) =>
@@ -992,7 +1011,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// completes, so a cancelled caller cannot strand it and a failure is never handed to a later caller.
         /// </summary>
         private Task<string> StartOrJoinAcquisition(
-            string key,
+            TokenCacheKey key,
             DefenderRtpAgentContext agent,
             DefenderRtpTokenResolver tokenResolver,
             string scope)
@@ -1014,7 +1033,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         }
 
         private async Task<string> AcquireTokenAsync(
-            string key,
+            TokenCacheKey key,
             Lazy<Task<string>> acquisition,
             DefenderRtpAgentContext agent,
             DefenderRtpTokenResolver tokenResolver,
@@ -1027,12 +1046,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             finally
             {
                 // Runs before the acquisition's task completes, so no caller joins a finished or failed one.
-                _inFlightTokens.TryRemove(new KeyValuePair<string, Lazy<Task<string>>>(key, acquisition));
+                _inFlightTokens.TryRemove(new KeyValuePair<TokenCacheKey, Lazy<Task<string>>>(key, acquisition));
             }
         }
 
         private async Task<string> ResolveAndCacheTokenAsync(
-            string key,
+            TokenCacheKey key,
             DefenderRtpAgentContext agent,
             DefenderRtpTokenResolver tokenResolver,
             string scope)
@@ -1075,7 +1094,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// closest to expiry. Writers are serialized, so concurrent acquisitions cannot each evict the same entry and
         /// then all insert.
         /// </summary>
-        private void CacheToken(string key, CachedToken token)
+        private void CacheToken(TokenCacheKey key, CachedToken token)
         {
             lock (_tokenCacheLock)
             {
@@ -1087,7 +1106,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                         _tokens.TryRemove(stale, out _);
                     }
 
-                    if (_tokens.Count >= MaxCachedTokens && _tokens.OrderBy(entry => entry.Value.ExpiresAt).FirstOrDefault() is { Key: not null } oldest)
+                    if (_tokens.Count >= MaxCachedTokens && _tokens.OrderBy(entry => entry.Value.ExpiresAt).FirstOrDefault() is { Value: not null } oldest)
                     {
                         _tokens.TryRemove(oldest.Key, out _);
                     }
@@ -1380,6 +1399,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         }
 
         private sealed record CachedToken(string Token, DateTimeOffset ExpiresAt);
+
+        // Identifies an agent identity's token by its parts, so no two identities can share a key.
+        private readonly record struct TokenCacheKey(string TenantId, string AgentId, string Scope);
 
         /// <summary>The characters of content a fitted copy may still carry.</summary>
         private sealed class ContentBudget

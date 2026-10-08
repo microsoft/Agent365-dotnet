@@ -98,6 +98,45 @@ public class DefenderRtpTokenResolversTests
         failure.Which.Message.Should().Contain("HTTP 401").And.NotContain(Assertion).And.NotContain("invalid_client");
     }
 
+    [Fact]
+    public async Task FailsWhenTheTokenRequestIsRedirected()
+    {
+        // What a client that follows redirects does: the request ends at another host, which answers.
+        var endpoint = new TokenEndpoint(request =>
+        {
+            request.RequestUri = new Uri("https://elsewhere.example.test/token");
+            return Json("""{"access_token":"defender-token"}""");
+        });
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient);
+
+        var act = () => resolver(AgentId, TenantId, Scopes, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*redirected*");
+    }
+
+    [Fact]
+    public async Task FailsOnARedirectItDoesNotFollow()
+    {
+        var endpoint = new TokenEndpoint(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.TemporaryRedirect);
+            response.Headers.Location = new Uri("https://elsewhere.example.test/token");
+            return response;
+        });
+        using var httpClient = new HttpClient(endpoint);
+        var resolver = DefenderRtpTokenResolvers.FromAgenticConnection(Connection(Assertion).Object, httpClient);
+
+        var act = () => resolver(AgentId, TenantId, Scopes, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*HTTP 307*");
+        endpoint.Requests.Should().ContainSingle("the assertion is sent only to the token endpoint");
+    }
+
+    [Fact]
+    public void UsesASharedClientThatDoesNotFollowRedirects() =>
+        DefenderRtpClient.SharedHandler.AllowAutoRedirect.Should().BeFalse();
+
     [Theory]
     [InlineData("not json", "*not valid JSON*")]
     [InlineData("""{"token_type":"Bearer"}""", "*no access_token*")]

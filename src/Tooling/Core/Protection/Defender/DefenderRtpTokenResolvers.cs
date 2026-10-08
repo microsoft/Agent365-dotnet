@@ -28,7 +28,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <see cref="IAgenticTokenProvider"/> (MSAL connections implement it).
         /// </param>
         /// <param name="httpClient">
-        /// The HTTP client for the token endpoint, for example from <c>IHttpClientFactory</c>; defaults to a shared client.
+        /// The HTTP client for the token endpoint, for example from <c>IHttpClientFactory</c>; defaults to a shared
+        /// client that does not follow redirects. A client passed here must not follow them either, since a 307 or 308
+        /// would replay the client assertion to another host; a redirected request fails.
         /// </param>
         /// <param name="authority">
         /// The Entra authority, an absolute HTTPS URL; defaults to <c>https://login.microsoftonline.com</c>.
@@ -61,9 +63,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     throw new InvalidOperationException("The agent connection returned no agent identity assertion.");
                 }
 
-                using var request = new HttpRequestMessage(
-                    HttpMethod.Post,
-                    $"{baseAuthority}/{Uri.EscapeDataString(tenantId)}/oauth2/v2.0/token")
+                var tokenUri = new Uri($"{baseAuthority}/{Uri.EscapeDataString(tenantId)}/oauth2/v2.0/token");
+                using var request = new HttpRequestMessage(HttpMethod.Post, tokenUri)
                 {
                     Content = new FormUrlEncodedContent(new Dictionary<string, string>
                     {
@@ -75,6 +76,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     }),
                 };
                 using var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+
+                // A client that follows redirects has sent the assertion to another host; a token from there is never used.
+                if (request.RequestUri != tokenUri)
+                {
+                    throw new InvalidOperationException("The Defender token request was redirected.");
+                }
+
                 // Never surface the response body: it can echo the assertion.
                 if (!response.IsSuccessStatusCode)
                 {

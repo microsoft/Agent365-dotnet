@@ -85,6 +85,10 @@ var record = await emitter.EmitUncheckedAsync(builder.Input(userMessage), cancel
 if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 ```
 
+`httpClient` is optional for both the client and the token resolver; without it they share a client that does not
+follow redirects. A client you pass must not follow them either (for example `AllowAutoRedirect = false`): a 307 or 308
+would replay the context, or the client assertion, to another host, so a redirected request is treated as a failure.
+
 The evaluation callback is for logging and telemetry. It runs on the thread pool once the verdict is decided, outside
 the emitter's interceptor timeout, so neither what it does nor how long it takes changes the verdict; it may run
 after the interceptor returns and alongside later evaluations. An exception it throws is logged (to the optional

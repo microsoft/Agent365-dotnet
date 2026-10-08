@@ -1067,6 +1067,41 @@ public class DefenderRtpClientTests
         handler.Calls.Should().ContainSingle();
     }
 
+    [Fact]
+    public async Task KeepsTheTokensOfIdentitiesWhoseIdsWouldJoinAlike()
+    {
+        var (client, handler, _) = Create(_ => Json(new { decision = "allow" }));
+        var first = new TokenSource();
+        var second = new TokenSource();
+
+        await client.EvaluateHookContextAsync(InputContext("one"), new DefenderRtpAgentContext { TenantId = "a", AgentId = "b:c" }, first.Resolve);
+        await client.EvaluateHookContextAsync(InputContext("two"), new DefenderRtpAgentContext { TenantId = "a:b", AgentId = "c" }, second.Resolve);
+
+        second.Requests.Should().ContainSingle("another identity's token is never reused");
+        handler.Calls[1].Authorization.Should().Be($"Bearer {second.Token}");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TreatsARedirectedRequestAsNoVerdict(bool failClosed)
+    {
+        var (client, _, tokens) = Create(
+            request =>
+            {
+                // What a client that follows redirects does: the request ends at another host, which answers.
+                request.RequestUri = new Uri("https://elsewhere.example.test/v1/protection/evaluate");
+                return Json(new { decision = "allow" });
+            },
+            new DefenderRtpOptions { FailClosed = failClosed });
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeFalse();
+        result.Allowed.Should().Be(!failClosed);
+        result.Error.Should().Be("request was redirected");
+    }
+
     // ─── options ─────────────────────────────────────────────────────────────
 
     [Fact]
