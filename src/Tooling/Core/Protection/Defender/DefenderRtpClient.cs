@@ -350,16 +350,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             AddTools(hook, context, toolName, maxCharacters, budget);
             AddMessages(hook, context, maxCharacters, budget);
             AddExtensions(hook, context, maxCharacters, budget);
-            foreach (var property in context)
+            foreach (var property in context.Where(property => !KnownMembers.Contains(property.Key)))
             {
-                if (budget.Remaining == 0)
+                if (!AddMember(hook, property.Key, property.Value, maxCharacters, budget, ref contextCut))
                 {
                     break;
-                }
-
-                if (!KnownMembers.Contains(property.Key))
-                {
-                    hook[property.Key] = Clamp(property.Value, maxCharacters, budget, ref contextCut);
                 }
             }
 
@@ -487,36 +482,39 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Copies the valid tool declarations (a name, and a string description and object schema when present)
-        /// within the budget, the called tool's first so a short budget never drops it. At a tool point without
-        /// declarations, the called tool is declared from the <c>a365</c> extension.
+        /// within the budget, the called tool's first so a short budget never drops it. Each declaration is charged
+        /// for its element and name as well as its content, so name-only declarations are bounded too. At a tool point
+        /// without declarations, the called tool is declared from the <c>a365</c> extension.
         /// </summary>
         private static void AddTools(JsonObject hook, JsonObject context, string? toolName, int maxCharacters, ContentBudget budget)
         {
             var cut = false;
             var tools = new JsonArray();
             var declared = (context["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
-                .OrderBy(tool => toolName != null && ReadString(tool["name"]) == toolName ? 0 : 1);
-            foreach (var tool in declared)
+                .Where(tool => ReadString(tool["name"]) is { Length: > 0 });
+
+            // One scan finds the called tool; the rest keep their order, and copying stops when the budget runs out.
+            var calledTool = toolName == null ? null : declared.FirstOrDefault(tool => ReadString(tool["name"]) == toolName);
+            var ordered = calledTool == null ? declared : declared.Where(tool => !ReferenceEquals(tool, calledTool)).Prepend(calledTool);
+            foreach (var tool in ordered)
             {
-                if (budget.Remaining == 0)
+                var declaredName = ReadString(tool["name"])!;
+                var cost = 1 + MemberCost("name", declaredName);
+                if (budget.Remaining < cost)
                 {
                     break;
                 }
 
-                if (ReadString(tool["name"]) is not { Length: > 0 } declaredName)
-                {
-                    continue;
-                }
-
+                budget.Spend(cost);
                 var declaration = new JsonObject { ["name"] = declaredName };
                 if (tool["description"] is JsonValue description && ReadString(description) != null)
                 {
-                    declaration["description"] = Clamp(description, maxCharacters, budget, ref cut);
+                    AddMember(declaration, "description", description, maxCharacters, budget, ref cut);
                 }
 
                 if (tool["schema"] is JsonObject schema)
                 {
-                    declaration["schema"] = Clamp(schema, maxCharacters, budget, ref cut);
+                    AddMember(declaration, "schema", schema, maxCharacters, budget, ref cut);
                 }
 
                 tools.Add(declaration);
@@ -527,8 +525,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 var declaration = new JsonObject { ["name"] = toolName };
                 // An extension namespace may hold any JSON value, so each level's shape is checked before it is read.
                 if ((context["extensions"] as JsonObject)?[A365Extension] is JsonObject a365
-                    && a365["tool"] is JsonObject calledTool
-                    && calledTool["description"] is JsonValue description
+                    && a365["tool"] is JsonObject calledToolExtension
+                    && calledToolExtension["description"] is JsonValue description
                     && ReadString(Clamp(description, maxCharacters, budget, ref cut)) is { Length: > 0 } clamped)
                 {
                     declaration["description"] = clamped;
@@ -545,28 +543,46 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Copies the message history within the budget, newest first, so older messages are dropped before newer
-        /// ones. A history with a message lacking a role or content is dropped whole, since Defender rejects it.
+        /// ones. Each message is charged for its element, role and member names as well as its content, so even empty
+        /// messages are bounded. Copying stops at a message without a role or content, which Defender rejects, so
+        /// only the messages after it are sent.
         /// </summary>
         private static void AddMessages(JsonObject hook, JsonObject context, int maxCharacters, ContentBudget budget)
         {
-            if (context["messages"] is not JsonArray messages
-                || !messages.All(message => message is JsonObject item
-                    && ReadString(item["role"]) is { Length: > 0 }
-                    && item.ContainsKey("content")))
+            if (context["messages"] is not JsonArray messages)
             {
                 return;
             }
 
             var cut = false;
             var kept = new List<JsonNode?>();
-            for (var index = messages.Count - 1; index >= 0 && budget.Remaining > 0; index--)
+            for (var index = messages.Count - 1; index >= 0; index--)
             {
-                var copy = new JsonObject();
-                foreach (var property in (JsonObject)messages[index]!)
+                if (messages[index] is not JsonObject message
+                    || ReadString(message["role"]) is not { Length: > 0 } role
+                    || !message.TryGetPropertyValue("content", out var content))
                 {
-                    copy[property.Key] = property.Key == "role"
-                        ? property.Value?.DeepClone()
-                        : Clamp(property.Value, maxCharacters, budget, ref cut);
+                    break;
+                }
+
+                var cost = 1 + MemberCost("role", role) + MemberCost("content", string.Empty);
+                if (budget.Remaining < cost)
+                {
+                    break;
+                }
+
+                budget.Spend(cost);
+                var copy = new JsonObject
+                {
+                    ["role"] = role,
+                    ["content"] = Clamp(content, maxCharacters, budget, ref cut),
+                };
+                foreach (var property in message.Where(property => property.Key is not ("role" or "content")))
+                {
+                    if (!AddMember(copy, property.Key, property.Value, maxCharacters, budget, ref cut))
+                    {
+                        break;
+                    }
                 }
 
                 kept.Add(copy);
@@ -589,16 +605,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             var cut = false;
             var kept = new JsonObject();
-            foreach (var property in extensions)
+            foreach (var property in extensions.Where(property => ExtensionKeyPattern.IsMatch(property.Key)))
             {
-                if (budget.Remaining == 0)
+                if (!AddMember(kept, property.Key, property.Value, maxCharacters, budget, ref cut))
                 {
                     break;
-                }
-
-                if (ExtensionKeyPattern.IsMatch(property.Key))
-                {
-                    kept[property.Key] = Clamp(property.Value, maxCharacters, budget, ref cut);
                 }
             }
 
@@ -607,6 +618,26 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 hook["extensions"] = kept;
             }
         }
+
+        /// <summary>
+        /// Adds a member within the budget: its name is charged as <see cref="Clamp"/> charges an object's property
+        /// names, and its value is clamped. Returns false, setting <paramref name="cut"/>, when the name does not fit.
+        /// </summary>
+        private static bool AddMember(JsonObject target, string name, JsonNode? value, int maxCharacters, ContentBudget budget, ref bool cut)
+        {
+            if (budget.Remaining < name.Length + 1)
+            {
+                cut = true;
+                return false;
+            }
+
+            budget.Spend(name.Length + 1);
+            target[name] = Clamp(value, maxCharacters, budget, ref cut);
+            return true;
+        }
+
+        /// <summary>What a member whose value is never truncated (a name or role) costs: its name, and its value.</summary>
+        private static int MemberCost(string name, string value) => name.Length + 1 + value.Length;
 
         private static JsonObject ToArguments(JsonNode? args, int maxCharacters, ContentBudget budget, ref bool truncated)
         {
@@ -1069,16 +1100,18 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Copies a value with every string clamped to <paramref name="maxCharacters"/> and the whole copy kept within
-        /// <paramref name="budget"/>. Each array element and property also costs at least one character, so the copy
-        /// stays bounded however the value is shaped, and arrays and objects nested deeper than
-        /// <see cref="MaxContentDepth"/> are cut, so the recursion stays shallow. <paramref name="truncated"/> is set
-        /// when anything was cut.
+        /// <paramref name="budget"/>. Strings cost their characters, numbers and Booleans their JSON text, and each
+        /// null, array element and property name at least one character, so the copy stays bounded however the value
+        /// is shaped; arrays and objects nested deeper than <see cref="MaxContentDepth"/> are cut, so the recursion
+        /// stays shallow. <paramref name="truncated"/> is set when anything was cut.
         /// </summary>
         private static JsonNode? Clamp(JsonNode? node, int maxCharacters, ContentBudget budget, ref bool truncated, int depth = 0)
         {
             switch (node)
             {
                 case null:
+                    // A null costs a character like any copied value, so padding with nulls is bounded too.
+                    budget.Spend(1);
                     return null;
                 case JsonValue value when value.TryGetValue<string>(out var text):
                     var limit = Math.Min(maxCharacters, budget.Remaining);
@@ -1120,6 +1153,15 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
                     return properties;
                 default:
+                    // Numbers and Booleans cost their JSON text, as strings cost their characters.
+                    var literal = node.ToJsonString();
+                    if (literal.Length > budget.Remaining)
+                    {
+                        truncated = true;
+                        return null;
+                    }
+
+                    budget.Spend(literal.Length);
                     return node.DeepClone();
             }
         }

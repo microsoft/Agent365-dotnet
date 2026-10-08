@@ -224,6 +224,20 @@ public class A365DefenderInterceptorTests
         harness.Bodies.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task RecordsOnlyTheExceptionTypeWhenTheEvaluationFails()
+    {
+        const string Secret = "client_secret=do-not-leak";
+        var harness = new Harness(_ => Json(new { decision = "allow" }), resolveCall: _ => throw new InvalidOperationException(Secret));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-12");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        AssertFollowsTheFailMode(record, failClosed: false);
+        harness.Evaluations.Should().ContainSingle().Which.Error.Should().Be("evaluation failed (InvalidOperationException)");
+        record.Verdict.Warnings.Should().OnlyContain(warning => warning.Message == null || !warning.Message.Contains(Secret));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

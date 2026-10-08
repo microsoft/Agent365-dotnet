@@ -252,7 +252,8 @@ public class DefenderRtpClientTests
         body["tools"]![0]!["description"]!.GetValue<string>().Should().Be(new string('d', 76) + "...[truncated 74 chars]");
         body["messages"]![0]!["content"]!.GetValue<string>().Should().Be(new string('m', 76) + "...[truncated 74 chars]");
         body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be(new string('e', 76) + "...[truncated 74 chars]");
-        body["metadata"]!.GetValue<string>().Should().Be(new string('h', 64) + "...[truncated 86 chars]", "it gets what the rest left");
+        // Names, roles and keys are charged too, which leaves the last member 21 characters: too few for a marker.
+        body["metadata"]!.GetValue<string>().Should().Be(new string('h', 21), "it gets what the rest left");
         body["messages"]![0]!["role"]!.GetValue<string>().Should().Be("assistant");
         body["tools"]![0]!["name"]!.GetValue<string>().Should().Be("search_web");
         body["trace"]!.ToJsonString().Should().Be("""{"trace_id":"4bf92f3577b34da6a3ce929d0e0e4736","span_id":"00f067aa0ba902b7"}""");
@@ -389,6 +390,42 @@ public class DefenderRtpClientTests
         result.Truncated.Should().BeTrue("the payload lies deeper than the copy Defender is sent");
         result.Allowed.Should().BeFalse("a fail-closed client does not let an allow of a cut copy through");
         DefenderContract.Errors(handler.Calls.Single().Body).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task KeepsTheCopyBoundedHoweverManyEmptyOrNullItemsTheContextHas(bool padTheContentUnderDecision)
+    {
+        const int Count = 50_000;
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 1000 });
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(Enumerable.Range(0, Count)
+            .Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" })
+            .ToArray());
+        context["messages"] = new JsonArray(Enumerable.Range(0, Count)
+            .Select(_ => (JsonNode?)new JsonObject { ["role"] = "user", ["content"] = new JsonObject() })
+            .ToArray());
+        var extensions = new JsonObject();
+        for (var index = 0; index < Count; index++)
+        {
+            extensions[$"x{index}"] = null;
+            context[$"pad{index}"] = (index % 3) switch { 0 => null, 1 => (JsonNode?)true, _ => (JsonNode?)index };
+        }
+
+        context["extensions"] = extensions;
+        if (padTheContentUnderDecision)
+        {
+            context["tool_call"]!["args"] = new JsonObject { ["items"] = new JsonArray(new JsonNode?[Count]) };
+        }
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().Be(padTheContentUnderDecision, "only cutting the content under decision makes an allow unverified");
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body.ToJsonString().Length.Should().BeLessThan(40_000, "every copied element, key and null is charged, however many the context has");
     }
 
     [Fact]

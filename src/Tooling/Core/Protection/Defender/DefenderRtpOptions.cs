@@ -47,8 +47,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// schemas, extensions, and any other member a host adds to the context. Envelope fields such as ids, names
         /// and roles are not truncated, and envelope objects carry only their spec fields. The copy as a whole
         /// carries at most four times this many characters of content: the content under decision first, then the
-        /// rest of the context, with the oldest messages dropped first. Content nested more than 32 levels deep is cut
-        /// the same way.
+        /// rest of the context, with the oldest messages dropped first. Names, keys and nulls count toward it too, and
+        /// content nested more than 32 levels deep is cut the same way.
         /// When the content under decision is cut, Defender evaluates a truncated copy and only its deny stands; an
         /// allow follows <see cref="FailClosed"/>. Raise it for agents with long content.
         /// </summary>

@@ -86,7 +86,9 @@ if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 ```
 
 The evaluation callback is for logging and telemetry. It runs once the verdict is decided and never changes it: an
-exception it throws is logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored.
+exception it throws is logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored. When
+resolving the identity or evaluating throws, the result and verdict record only the exception's type; the exception
+itself goes to the same logger.
 
 Agents built on Microsoft Agent Framework can register the same interceptor with
 `Microsoft.Agents.AI.AgentHooks`, which mediates model and tool calls.
@@ -114,7 +116,8 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 truncated before it is sent, and the request as a whole carries at most four times that much content: the content
 under decision at the point (the input, the tool call's arguments, the tool result or the reply) first, then tool
 declarations, the newest message history, extensions and other members, with the oldest messages dropped first.
-Content nested more than 32 levels deep is cut the same way.
+Names, keys and nulls count toward that too, so a context padded with many empty or null items cannot inflate the
+request. Content nested more than 32 levels deep is cut the same way.
 The agent's own context is not modified. When the content under decision was cut, Defender has not seen all of
 it: its deny still blocks, but its allow does not cover the rest, so the result follows the fail mode. Fail open
 allows with a `defender:unverified` warning; fail closed denies with `runtime_error:defender_unverified`. Raise the

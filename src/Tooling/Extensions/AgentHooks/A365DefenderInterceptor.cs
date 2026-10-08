@@ -66,14 +66,15 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// Returns the agent identity and token resolver for a context, for example from the current turn. It is
         /// invoked only when Defender RTP is enabled and Defender evaluates the context's point. When it returns
         /// null (no agent identity is available) or throws, the context is not sent and the verdict follows the
-        /// fail mode.
+        /// fail mode; the result records only the type of an exception, which is logged to
+        /// <paramref name="logger"/>.
         /// </param>
         /// <param name="onEvaluated">
         /// Receives each evaluation once its verdict is decided, for logging and telemetry (for example the
         /// correlation id). It never changes the verdict: an exception it throws is logged to
         /// <paramref name="logger"/>, when given, and ignored.
         /// </param>
-        /// <param name="logger">Receives failures of <paramref name="onEvaluated"/>.</param>
+        /// <param name="logger">Receives failures of the evaluation and of <paramref name="onEvaluated"/>.</param>
         public A365DefenderInterceptor(
             DefenderRtpClient client,
             Func<AgentContext, A365DefenderCall?> resolveCall,
@@ -107,8 +108,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                // A failure to resolve the identity or to evaluate is never a verdict: it follows the fail mode.
-                result = _client.Unavailable(point, $"{ex.GetType().Name}: {ex.Message}");
+                // A failure to resolve the identity or to evaluate is never a verdict: it follows the fail mode. Only
+                // the exception's type reaches the result, and so the verdict, since its message can carry
+                // credentials or content; the exception itself goes to the logger.
+                _logger?.LogWarning(ex, "The Defender evaluation failed at {InterceptionPoint}; the fail mode applies.", point);
+                result = _client.Unavailable(point, $"evaluation failed ({ex.GetType().Name})");
             }
 
             if (result == null)
