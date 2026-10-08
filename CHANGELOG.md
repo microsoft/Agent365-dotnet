@@ -74,11 +74,14 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
   - `DefenderRtpClient.EvaluateHookContextAsync` sends an agent-hooks/0.1 context to the Defender
     prevention endpoint (`POST .../v1/protection/evaluate`) at the four points Defender evaluates
     (`input`, `pre_tool_call`, `post_tool_call`, `output`) and returns its verdict (`deny` and
-    `transform` block). The context is fitted to Defender's request validation without modifying it.
+    `transform` block). A copy of the context is fitted to Defender's request validation; the host's context is
+    not modified. One deadline (`A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS`) covers token acquisition and the
+    request, and the endpoint and token authority must be absolute HTTPS URLs.
   - Calls carry the agent identity's own app-only token for the Defender API
     (`api://86a21212-634e-4553-b3d6-e477e4c9d9ec`, role `RealtimeProtection.Evaluate.All`), resolved by a
-    `DefenderRtpTokenResolver` and cached per agent and tenant; `DefenderRtpTokenResolvers.FromAgenticConnection`
-    uses the agent's connection (`IAgenticTokenProvider`), the same authority as Observability S2S export.
+    `DefenderRtpTokenResolver`, cached per agent and tenant and refreshed in the background before it expires;
+    `DefenderRtpTokenResolvers.FromAgenticConnection` uses the agent's connection (`IAgenticTokenProvider`), the
+    same authority as Observability S2S export.
   - Every call sends a unique `x-ms-correlation-id`. Failures follow `A365_DEFENDER_RTP_FAIL_MODE`, and a `400`
     reports the failed validation rule.
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** (new, preview) - `A365DefenderInterceptor`, an

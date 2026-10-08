@@ -6,8 +6,10 @@ control contract (AGENT-HOOKS-0.1), using the .NET package
 
 `A365DefenderInterceptor` is an agent-hooks interceptor for Microsoft Defender for AI. Each context the host
 emits at the four points Defender evaluates is sent to the prevention endpoint
-(`POST .../v1/protection/evaluate`) as-is, keeping its session, sequence and tool call ids. Defender's verdict
-decides:
+(`POST .../v1/protection/evaluate`) as a fitted copy: the client clones the context and fits it to Defender's
+request validation (spec version, UTC timestamp, `target`, spec-only tool members, repaired optional fields
+and clamped content), keeping its session, sequence and tool call ids. The host's context is not modified.
+Defender's verdict decides:
 
 | agent-hooks point | When | On `deny` |
 |---|---|---|
@@ -23,11 +25,20 @@ Other points (`agent_startup`, model calls, `agent_shutdown`) are allowed withou
 Calls carry the **agent identity's own app-only token** in the agent's tenant, for the Defender API
 (`api://86a21212-634e-4553-b3d6-e477e4c9d9ec`, role `RealtimeProtection.Evaluate.All`). This is the same
 authority as Observability S2S export: `DefenderRtpTokenResolvers.FromAgenticConnection` asks the agent's
-connection (`IAgenticTokenProvider`) for the agent identity's assertion and exchanges it. `a365 setup all` grants
-the role to the blueprint as an inheritable permission, so every agent identity under it inherits it
-([microsoft/Agent365-devTools#485](https://github.com/microsoft/Agent365-devTools/pull/485)). Defender also
-requires the agent's tenant to be onboarded to Microsoft Defender for AI; otherwise it answers `403`, which
-follows the fail mode.
+connection (`IAgenticTokenProvider`) for the agent identity's assertion and exchanges it.
+
+The agent blueprint needs `RealtimeProtection.Evaluate.All` as an application permission with admin consent.
+[microsoft/Agent365-devTools#485](https://github.com/microsoft/Agent365-devTools/pull/485) adds it to
+`a365 setup all`; until that ships, grant it manually (Global Administrator):
+
+1. In the Entra portal, go to **App registrations** and select your blueprint app.
+2. Go to **API permissions** > **Add a permission** > **APIs my organization uses** and search for
+   `86a21212-634e-4553-b3d6-e477e4c9d9ec`.
+3. Select **Application permissions** > `RealtimeProtection.Evaluate.All` > **Add permissions**.
+4. Click **Grant admin consent** and confirm.
+
+Defender also requires the agent's tenant to be onboarded to Microsoft Defender for AI. Without the permission
+or the onboarding, Defender answers `403`, which follows the fail mode.
 
 ## Usage
 
@@ -64,16 +75,24 @@ if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 Agents built on Microsoft Agent Framework can register the same interceptor with
 `Microsoft.Agents.AI.AgentHooks`, which mediates model and tool calls.
 
+**Interceptor timeout.** The client evaluates within one deadline, `DefenderRtpOptions.Timeout` (default 10 s),
+that covers token acquisition and the request, and applies the fail mode when it passes. The emitter's
+per-interceptor timeout must be longer: when it fires first, agent-hooks records a fail-closed host error even
+if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter` sets it to
+`DefenderRtpOptions.Timeout` plus two seconds. If you register the interceptor on another emitter (for example
+`new InterceptionEmitter()`, whose default is 5 s, or through Agent Framework), set its interceptor timeout above
+`DefenderRtpOptions.Timeout`, or lower `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS`.
+
 ## Configuration
 
 | Variable | Meaning |
 |---|---|
 | `ENABLE_A365_DEFENDER_RTP` | `true` to call Defender |
-| `A365_DEFENDER_RTP_ENDPOINT` | the prevention endpoint, `https://<host>/v1/protection/evaluate` |
+| `A365_DEFENDER_RTP_ENDPOINT` | the prevention endpoint, an absolute HTTPS URL: `https://<host>/v1/protection/evaluate` |
 | `A365_DEFENDER_RTP_FAIL_MODE` | `closed` blocks when no verdict is obtained; default is open |
-| `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS` | per-call timeout (default 10000) |
+| `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS` | the deadline for one evaluation, including token acquisition (default 10000) |
 | `A365_DEFENDER_RTP_AUTHENTICATION_SCOPE` | overrides the Defender API scope |
-| `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each string sent (default 20000) |
+| `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each content string sent; ids, names and roles are not truncated (default 20000) |
 
 Every call sends a unique `x-ms-correlation-id`, returned as `DefenderRtpEvaluationResult.CorrelationId`;
 Defender logs each evaluation under it. A `400` reports the failed validation rule in `Error`.

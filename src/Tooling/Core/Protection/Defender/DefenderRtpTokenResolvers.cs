@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
     using System;
     using System.Collections.Generic;
     using System.Net.Http;
+    using System.Text.Json;
     using System.Text.Json.Nodes;
     using System.Threading;
     using System.Threading.Tasks;
@@ -27,8 +28,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <see cref="IAgenticTokenProvider"/> (MSAL connections implement it).
         /// </param>
         /// <param name="httpClient">The HTTP client for the token endpoint; a pooled client is recommended.</param>
-        /// <param name="authority">The Entra authority; defaults to <c>https://login.microsoftonline.com</c>.</param>
+        /// <param name="authority">
+        /// The Entra authority, an absolute HTTPS URL; defaults to <c>https://login.microsoftonline.com</c>.
+        /// </param>
         /// <returns>A resolver for <see cref="DefenderRtpClient.EvaluateHookContextAsync"/>.</returns>
+        /// <exception cref="ArgumentException">The authority is not an absolute HTTPS URL.</exception>
         public static DefenderRtpTokenResolver FromAgenticConnection(
             IAgenticTokenProvider connection,
             HttpClient? httpClient = null,
@@ -39,8 +43,14 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 throw new ArgumentNullException(nameof(connection));
             }
 
+            // The client assertion and the token must never travel in clear text.
+            if (!Uri.TryCreate(authority, UriKind.Absolute, out var authorityUrl) || !DefenderRtpOptions.IsHttpsUrl(authorityUrl))
+            {
+                throw new ArgumentException("The authority must be an absolute HTTPS URL.", nameof(authority));
+            }
+
             var http = httpClient ?? new HttpClient();
-            var baseAuthority = authority.TrimEnd('/');
+            var baseAuthority = authorityUrl.AbsoluteUri.TrimEnd('/');
             return async (agentId, tenantId, scopes, cancellationToken) =>
             {
                 var assertion = await connection.GetAgenticApplicationTokenAsync(tenantId, agentId, cancellationToken).ConfigureAwait(false);
@@ -69,7 +79,16 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     throw new InvalidOperationException($"The Defender token request failed with HTTP {(int)response.StatusCode}.");
                 }
 
-                var payload = JsonNode.Parse(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+                JsonNode? payload;
+                try
+                {
+                    payload = JsonNode.Parse(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+                }
+                catch (JsonException)
+                {
+                    throw new InvalidOperationException("The Defender token response was not valid JSON.");
+                }
+
                 return payload?["access_token"] is JsonValue token && token.TryGetValue<string>(out var accessToken)
                     ? accessToken
                     : throw new InvalidOperationException("The Defender token response had no access_token.");

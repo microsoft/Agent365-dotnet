@@ -21,13 +21,18 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>Whether Defender real-time protection is enabled (<c>ENABLE_A365_DEFENDER_RTP</c>).</summary>
         public bool Enabled { get; set; }
 
-        /// <summary>The prevention endpoint (<c>A365_DEFENDER_RTP_ENDPOINT</c>). Required when enabled.</summary>
+        /// <summary>
+        /// The prevention endpoint (<c>A365_DEFENDER_RTP_ENDPOINT</c>), an absolute HTTPS URL. Required when enabled.
+        /// </summary>
         public Uri? Endpoint { get; set; }
 
         /// <summary>The token scope (<c>A365_DEFENDER_RTP_AUTHENTICATION_SCOPE</c>); defaults to the Defender API.</summary>
         public string AuthenticationScope { get; set; } = DefaultAuthenticationScope;
 
-        /// <summary>Per-call timeout for token acquisition and evaluation (<c>A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS</c>).</summary>
+        /// <summary>
+        /// The deadline for one evaluation, shared by token acquisition and the request
+        /// (<c>A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS</c>). When it passes, the result follows <see cref="FailClosed"/>.
+        /// </summary>
         public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 
         /// <summary>
@@ -36,7 +41,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// </summary>
         public bool FailClosed { get; set; }
 
-        /// <summary>Maximum characters per string value sent to Defender (<c>A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS</c>).</summary>
+        /// <summary>
+        /// Maximum characters per content string sent to Defender (<c>A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS</c>):
+        /// input and output content, tool arguments and results, message content, tool descriptions and
+        /// schemas, extensions, and any member a host adds. Envelope fields such as ids, names and roles are
+        /// not truncated.
+        /// </summary>
         public int MaxContentCharacters { get; set; } = 20000;
 
         /// <summary>Reads the options from the process environment.</summary>
@@ -70,9 +80,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             if (Read("A365_DEFENDER_RTP_ENDPOINT") is { } endpoint)
             {
-                options.Endpoint = Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
+                options.Endpoint = Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) && IsHttpsUrl(uri)
                     ? uri
-                    : throw new InvalidOperationException("A365_DEFENDER_RTP_ENDPOINT must be an absolute URL.");
+                    : throw new InvalidOperationException("A365_DEFENDER_RTP_ENDPOINT must be an absolute HTTPS URL.");
             }
 
             if (Read("A365_DEFENDER_RTP_AUTHENTICATION_SCOPE") is { } scope)
@@ -102,6 +112,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     "Defender RTP is enabled but no endpoint is configured. Set A365_DEFENDER_RTP_ENDPOINT or DefenderRtpOptions.Endpoint.");
             }
 
+            if (Endpoint != null && !IsHttpsUrl(Endpoint))
+            {
+                throw new InvalidOperationException(
+                    "The Defender RTP endpoint must be an absolute HTTPS URL (A365_DEFENDER_RTP_ENDPOINT or DefenderRtpOptions.Endpoint).");
+            }
+
             if (Timeout <= TimeSpan.Zero)
             {
                 throw new InvalidOperationException("DefenderRtpOptions.Timeout must be positive.");
@@ -117,6 +133,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 throw new InvalidOperationException("DefenderRtpOptions.AuthenticationScope is required.");
             }
         }
+
+        /// <summary>Whether the URL is absolute and uses HTTPS, so tokens and content never travel in clear text.</summary>
+        /// <param name="url">The URL to check.</param>
+        /// <returns>True for an absolute <c>https</c> URL.</returns>
+        internal static bool IsHttpsUrl(Uri? url) =>
+            url is { IsAbsoluteUri: true } && string.Equals(url.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
 
         private static int ParsePositive(string value, string name) =>
             int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0

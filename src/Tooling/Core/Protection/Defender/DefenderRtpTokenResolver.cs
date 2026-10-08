@@ -13,7 +13,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
     /// <remarks>
     /// Use the same authority as Observability S2S export: the blueprint credential obtains the agent
     /// identity's assertion (FMI), and the agent identity exchanges it for the requested scope. The
-    /// client caches the returned token per agent, tenant and scope until shortly before it expires.
+    /// client caches the returned token per agent, tenant and scope until it expires, and refreshes it in the
+    /// background within five minutes of expiry.
     /// </remarks>
     /// <param name="agentId">The agent identity (application) id; the token's <c>appid</c>.</param>
     /// <param name="tenantId">The agent's tenant; the token's <c>tid</c> must equal the context <c>tenant.id</c>.</param>

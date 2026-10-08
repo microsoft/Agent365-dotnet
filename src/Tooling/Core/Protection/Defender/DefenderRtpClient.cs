@@ -46,6 +46,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private static readonly Regex ExtensionKeyPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         private static readonly Regex InvalidFrameworkCharacters = new("[^a-z0-9_-]+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+        // Envelope members and members with dedicated handling; any other member a host adds is content.
+        private static readonly HashSet<string> KnownMembers = new(StringComparer.Ordinal)
+        {
+            "spec", "interception_point", "timestamp", "sequence", "request_id", "session", "agent", "tenant", "actor", "model",
+            "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
+        };
+
         private readonly HttpClient _httpClient;
         private readonly Func<Guid> _idFactory;
         private readonly TimeProvider _timeProvider;
@@ -126,10 +133,21 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             var sessionId = ReadString(hook["session"]?["id"]);
             var started = _timeProvider.GetTimestamp();
 
+            // One deadline covers token acquisition and the request, so the fail mode applies within
+            // Options.Timeout, before an agent-hooks interceptor timeout would.
+            using var timeout = new CancellationTokenSource(Options.Timeout, _timeProvider);
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
             string? token;
+            var tokenError = "entra token unavailable";
             try
             {
-                token = await GetAccessTokenAsync(agent, tokenResolver, cancellationToken).ConfigureAwait(false);
+                token = await GetAccessTokenAsync(agent, tokenResolver, deadline.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                token = null;
+                tokenError = "entra token timeout";
             }
             catch (Exception) when (!cancellationToken.IsCancellationRequested)
             {
@@ -138,16 +156,16 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             if (string.IsNullOrEmpty(token))
             {
-                return Unavailable(point!, "entra token unavailable", sessionId, null, _timeProvider.GetElapsedTime(started));
+                return Unavailable(point!, tokenError, sessionId, null, _timeProvider.GetElapsedTime(started));
             }
 
-            return await PostAsync(hook, point!, sessionId, token!, started, cancellationToken).ConfigureAwait(false);
+            return await PostAsync(hook, point!, sessionId, token!, started, deadline.Token, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Acquires and caches the agent identity's Defender token without evaluating anything, so the
-        /// first evaluation does not wait for Entra. A cached token is reused until five minutes before it
-        /// expires. Throws when no token can be acquired.
+        /// first evaluation does not wait for Entra. A cached token is reused until it expires; within five
+        /// minutes of expiry it is refreshed in the background. Throws when no token can be acquired.
         /// </summary>
         /// <param name="agent">The agent identity and tenant.</param>
         /// <param name="tokenResolver">Resolves the agent identity's Defender token.</param>
@@ -212,8 +230,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// A copy of the context that meets Defender's request validation: <c>target</c> equals the point's
-        /// field, <c>tool_call</c> and <c>tool_result</c> carry only spec members, content is clamped, the
-        /// timestamp is UTC, and loosely filled optional fields are repaired or dropped.
+        /// field, <c>tool_call</c> and <c>tool_result</c> carry only spec members, every content string is
+        /// clamped, the timestamp is UTC, and loosely filled optional fields are repaired or dropped.
         /// </summary>
         private JsonObject Prepare(JsonObject context, DefenderRtpAgentContext agent)
         {
@@ -340,7 +358,42 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     }
             }
 
+            ClampOtherContent(hook, maxCharacters);
             return hook;
+        }
+
+        /// <summary>
+        /// Applies <see cref="DefenderRtpOptions.MaxContentCharacters"/> to the content <see cref="Prepare"/>
+        /// does not already clamp with the point's field: message content, tool descriptions and schemas,
+        /// extensions, and any member a host adds. Envelope fields (ids, names, roles, timestamps) are not
+        /// truncated, so the request still validates and correlates.
+        /// </summary>
+        private static void ClampOtherContent(JsonObject hook, int maxCharacters)
+        {
+            ClampMember(hook, "extensions", maxCharacters);
+            foreach (var message in (hook["messages"] as JsonArray ?? new JsonArray()).OfType<JsonObject>())
+            {
+                ClampMember(message, "content", maxCharacters);
+            }
+
+            foreach (var tool in (hook["tools"] as JsonArray ?? new JsonArray()).OfType<JsonObject>())
+            {
+                ClampMember(tool, "description", maxCharacters);
+                ClampMember(tool, "schema", maxCharacters);
+            }
+
+            foreach (var key in hook.Select(property => property.Key).Where(key => !KnownMembers.Contains(key)).ToList())
+            {
+                ClampMember(hook, key, maxCharacters);
+            }
+        }
+
+        private static void ClampMember(JsonObject owner, string key, int maxCharacters)
+        {
+            if (owner[key] is { } value)
+            {
+                owner[key] = Clamp(value, maxCharacters);
+            }
         }
 
         /// <summary>
@@ -467,15 +520,24 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         // ---- transport -----------------------------------------------------------------------
 
+        /// <summary>Posts the context; <paramref name="deadline"/> is the evaluation's one deadline.</summary>
         private async Task<DefenderRtpEvaluationResult> PostAsync(
             JsonObject hook,
             string point,
             string? sessionId,
             string accessToken,
             long started,
+            CancellationToken deadline,
             CancellationToken cancellationToken)
         {
             var correlationId = _idFactory().ToString();
+
+            // Options is mutable: never send the token or content to an endpoint that is not HTTPS.
+            if (!DefenderRtpOptions.IsHttpsUrl(Options.Endpoint))
+            {
+                return Failure(point, correlationId, sessionId, "endpoint is not an absolute https URL", null, started);
+            }
+
             using var request = new HttpRequestMessage(HttpMethod.Post, Options.Endpoint)
             {
                 Content = new StringContent(hook.ToJsonString(), Encoding.UTF8, "application/json"),
@@ -483,21 +545,20 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             request.Headers.TryAddWithoutValidation(CorrelationIdHeader, correlationId);
 
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(Options.Timeout);
-
             HttpResponseMessage response;
             try
             {
-                response = await _httpClient.SendAsync(request, timeout.Token).ConfigureAwait(false);
+                response = await _httpClient.SendAsync(request, deadline).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 return Failure(point, correlationId, sessionId, "request timeout", null, started);
             }
-            catch (HttpRequestException)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
-                return Failure(point, correlationId, sessionId, "request failed", null, started);
+                // Any transport failure, including resilience handlers' exceptions (for example a broken
+                // circuit), is no verdict and follows the fail mode.
+                return Failure(point, correlationId, sessionId, TransportError("request failed", ex), null, started);
             }
 
             using (response)
@@ -506,15 +567,15 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 string body;
                 try
                 {
-                    body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+                    body = await response.Content.ReadAsStringAsync(deadline).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     return Failure(point, correlationId, sessionId, "request timeout", status, started);
                 }
-                catch (HttpRequestException)
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
-                    return Failure(point, correlationId, sessionId, "response body could not be read", status, started);
+                    return Failure(point, correlationId, sessionId, TransportError("response body could not be read", ex), status, started);
                 }
 
                 if (!response.IsSuccessStatusCode)
@@ -581,6 +642,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     ? "Security validation is unavailable and this agent is configured to fail closed."
                     : null,
             };
+
+        /// <summary>A transport error: the exception type, never its message, which can echo request content.</summary>
+        private static string TransportError(string error, Exception exception) =>
+            exception is HttpRequestException ? error : $"{error} ({exception.GetType().Name})";
 
         private static DefenderRtpVerdict? ParseVerdict(JsonNode? payload)
         {
@@ -673,36 +738,78 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         {
             var scope = Options.AuthenticationScope;
             var key = string.Join(":", agent.TenantId, agent.AgentId, scope);
-            if (_tokens.TryGetValue(key, out var cached) && _timeProvider.GetUtcNow() < cached.ExpiresAt - TokenRefreshSkew)
+            var now = _timeProvider.GetUtcNow();
+            if (_tokens.TryGetValue(key, out var cached) && now < cached.ExpiresAt)
             {
+                if (now >= cached.ExpiresAt - TokenRefreshSkew)
+                {
+                    // Refresh early in the background and keep using the cached token until it actually
+                    // expires, as MSAL and Azure.Identity do; a failed refresh is retried by a later call.
+                    _ = StartOrJoinAcquisition(key, agent, tokenResolver, scope).ContinueWith(
+                        static task => { _ = task.Exception; },
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                }
+
                 return cached.Token;
             }
 
-            // One acquisition per agent, tenant and scope; it is bounded by the configured timeout and
-            // not tied to any single caller's cancellation.
-            var acquisition = _inFlightTokens.GetOrAdd(
-                key,
-                _ => new Lazy<Task<string>>(() => AcquireTokenAsync(key, agent, tokenResolver, scope)));
-            try
+            return await StartOrJoinAcquisition(key, agent, tokenResolver, scope).WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// One acquisition per agent, tenant and scope, shared by concurrent callers. It is bounded by the
+        /// configured timeout rather than by any caller's cancellation, and it leaves the in-flight map as it
+        /// completes, so a cancelled caller cannot strand it and a failure is never handed to a later caller.
+        /// </summary>
+        private Task<string> StartOrJoinAcquisition(
+            string key,
+            DefenderRtpAgentContext agent,
+            DefenderRtpTokenResolver tokenResolver,
+            string scope)
+        {
+            while (true)
             {
-                return await acquisition.Value.WaitAsync(cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                if (acquisition.IsValueCreated && acquisition.Value.IsCompleted)
+                if (_inFlightTokens.TryGetValue(key, out var inFlight))
                 {
-                    _inFlightTokens.TryRemove(new KeyValuePair<string, Lazy<Task<string>>>(key, acquisition));
+                    return inFlight.Value;
+                }
+
+                Lazy<Task<string>>? acquisition = null;
+                acquisition = new Lazy<Task<string>>(() => AcquireTokenAsync(key, acquisition!, agent, tokenResolver, scope));
+                if (_inFlightTokens.TryAdd(key, acquisition))
+                {
+                    return acquisition.Value;
                 }
             }
         }
 
         private async Task<string> AcquireTokenAsync(
             string key,
+            Lazy<Task<string>> acquisition,
             DefenderRtpAgentContext agent,
             DefenderRtpTokenResolver tokenResolver,
             string scope)
         {
-            using var timeout = new CancellationTokenSource(Options.Timeout);
+            try
+            {
+                return await ResolveAndCacheTokenAsync(key, agent, tokenResolver, scope).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Runs before the acquisition's task completes, so no caller joins a finished or failed one.
+                _inFlightTokens.TryRemove(new KeyValuePair<string, Lazy<Task<string>>>(key, acquisition));
+            }
+        }
+
+        private async Task<string> ResolveAndCacheTokenAsync(
+            string key,
+            DefenderRtpAgentContext agent,
+            DefenderRtpTokenResolver tokenResolver,
+            string scope)
+        {
+            using var timeout = new CancellationTokenSource(Options.Timeout, _timeProvider);
             var token = await tokenResolver(agent.AgentId, agent.TenantId, new[] { scope }, timeout.Token).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(token))
             {

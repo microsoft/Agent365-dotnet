@@ -20,14 +20,26 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
 
     /// <summary>
     /// An agent-hooks interceptor for Microsoft Defender for AI real-time protection. Each context the
-    /// host emits at <c>input</c>, <c>pre_tool_call</c>, <c>post_tool_call</c> or <c>output</c> is sent to
-    /// Defender as-is (keeping its session, sequence and tool call ids) and Defender's verdict decides:
-    /// <c>deny</c> blocks the action. Other points are allowed without a call.
+    /// host emits at <c>input</c>, <c>pre_tool_call</c>, <c>post_tool_call</c> or <c>output</c> is evaluated
+    /// by Defender, and Defender's verdict decides: <c>deny</c> blocks the action. Other points are allowed
+    /// without a call.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// Defender receives a copy of the context fitted to its request validation (spec version, UTC
+    /// timestamp, <c>target</c>, spec-only tool members, repaired optional fields and clamped content). The
+    /// copy keeps the context's session, sequence and tool call ids; the host's context is not modified.
+    /// </para>
+    /// <para>
     /// When no verdict is obtained (transport, authentication or validation failure), the verdict follows
     /// <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning, or deny
     /// with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
+    /// </para>
+    /// <para>
+    /// Register it on an emitter whose per-interceptor timeout is longer than
+    /// <see cref="DefenderRtpOptions.Timeout"/>, such as one from <see cref="A365AgentHooks.CreateProtectionEmitter"/>;
+    /// a shorter timeout turns a slow evaluation into a fail-closed agent-hooks host error.
+    /// </para>
     /// </remarks>
     public sealed class A365DefenderInterceptor : IInterceptor
     {
@@ -140,8 +152,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// profile (an action proceeds only when every interceptor allows it).
         /// </summary>
         /// <param name="interceptorTimeout">
-        /// Per-interceptor timeout; defaults to the Defender timeout plus two seconds, so the client's own
-        /// timeout and fail mode apply first.
+        /// Per-interceptor timeout; defaults to the Defender timeout plus two seconds. The client evaluates
+        /// within one deadline, <see cref="DefenderRtpOptions.Timeout"/>, that covers token acquisition and the
+        /// request, so its fail mode applies before this timeout turns into an agent-hooks host error.
         /// </param>
         /// <param name="defender">The Defender options whose timeout sets the default.</param>
         /// <returns>The configured emitter.</returns>

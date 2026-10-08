@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -182,15 +183,51 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
-    public async Task ClampsLongStrings()
+    public async Task ClampsEveryContentStringButNotTheEnvelope()
     {
         var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 4 });
+        var context = InputContext("abcdefgh");
+        context["messages"] = new JsonArray(new JsonObject { ["role"] = "assistant", ["content"] = "previous reply" });
+        context["tools"] = new JsonArray(new JsonObject { ["name"] = "search_web", ["description"] = "Searches the web." });
+        context["extensions"] = new JsonObject { ["custom"] = new JsonObject { ["note"] = "long extension text" } };
+        context["metadata"] = "host-added value";
 
-        await client.EvaluateHookContextAsync(InputContext("abcdefgh"), Agent, tokens.Resolve);
+        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
         body["input"]!["content"]!.GetValue<string>().Should().Be("abcd...[truncated 4 chars]");
+        body["messages"]![0]!["content"]!.GetValue<string>().Should().Be("prev...[truncated 10 chars]");
+        body["tools"]![0]!["description"]!.GetValue<string>().Should().Be("Sear...[truncated 13 chars]");
+        body["extensions"]!["custom"]!["note"]!.GetValue<string>().Should().Be("long...[truncated 15 chars]");
+        body["metadata"]!.GetValue<string>().Should().Be("host...[truncated 12 chars]");
+        body["messages"]![0]!["role"]!.GetValue<string>().Should().Be("assistant");
+        body["tools"]![0]!["name"]!.GetValue<string>().Should().Be("search_web");
+        body["agent"]!["name"]!.GetValue<string>().Should().Be("SampleAgent");
+        body["session"]!["id"]!.GetValue<string>().Should().Be("conversation:activity");
+    }
+
+    [Fact]
+    public async Task ClampsToolContentButNotTheToolIdentity()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 4 });
+        var context = JsonNode.Parse($$"""
+            {
+              "spec": "agent-hooks/0.1", "interception_point": "post_tool_call", "timestamp": "2026-10-07T10:00:00.000Z", "sequence": 4,
+              "agent": { "id": "{{AgentId}}", "framework": "agent365" },
+              "session": { "id": "s-1" },
+              "tool_call": { "id": "call_42", "name": "SearchFlights", "args": { "query": "Seattle to Paris" } },
+              "tool_result": { "value": "three results", "is_error": false }
+            }
+            """)!.AsObject();
+
+        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seat...[truncated 12 chars]"}}""");
+        body["tool_result"]!["value"]!.GetValue<string>().Should().Be("thre...[truncated 9 chars]");
+        JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
     }
 
     [Fact]
@@ -262,7 +299,7 @@ public class DefenderRtpClientTests
     public async Task FollowsTheFailModeOnAnHttpErrorAndKeepsTheServiceDetail(bool failClosed)
     {
         var (client, _, tokens) = Create(
-            _ => Json(new { title = "Forbidden", status = 403, detail = "The calling application is not allowed to use the third-party prevention endpoint." }, HttpStatusCode.Forbidden),
+            _ => Json(new { title = "Forbidden", status = 403, detail = "The caller is not authorized for real-time protection." }, HttpStatusCode.Forbidden),
             new DefenderRtpOptions { FailClosed = failClosed });
 
         var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
@@ -270,7 +307,7 @@ public class DefenderRtpClientTests
         result!.Evaluated.Should().BeFalse();
         result.Allowed.Should().Be(!failClosed);
         result.HttpStatus.Should().Be(403);
-        result.Error.Should().Be("http 403: The calling application is not allowed to use the third-party prevention endpoint.");
+        result.Error.Should().Be("http 403: The caller is not authorized for real-time protection.");
         (result.BlockReason != null).Should().Be(failClosed);
     }
 
@@ -280,7 +317,7 @@ public class DefenderRtpClientTests
         var (client, _, tokens) = Create(_ => Json(new
         {
             errorCode = 40001,
-            message = "The request contains validation errors. Please raise a support ticket.",
+            message = "The request contains validation errors.",
             httpStatus = 400,
             diagnostics = """{"validationErrors":[{"field":"input","message":"The target field must match input."},{"field":"Target","message":"The target field must match input."}]}""",
         }, HttpStatusCode.BadRequest));
@@ -316,6 +353,62 @@ public class DefenderRtpClientTests
 
         result!.Evaluated.Should().BeFalse();
         result.Error.Should().Be("request timeout");
+    }
+
+    [Fact]
+    public async Task SharesOneDeadlineBetweenTokenAcquisitionAndTheRequest()
+    {
+        var requestWait = TimeSpan.Zero;
+        var handler = new RecordingHandler(async (_, cancellationToken) =>
+        {
+            var waiting = Stopwatch.StartNew();
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            finally
+            {
+                requestWait = waiting.Elapsed;
+            }
+
+            return Json(new { decision = "allow" });
+        });
+        var client = new DefenderRtpClient(Options(new DefenderRtpOptions { Timeout = TimeSpan.FromSeconds(1) }), new HttpClient(handler));
+        var tokens = new TokenSource(delay: TimeSpan.FromMilliseconds(700));
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeFalse();
+        result.Allowed.Should().BeTrue();
+        result.Error.Should().BeOneOf("request timeout", "entra token timeout");
+        requestWait.Should().BeLessThan(TimeSpan.FromMilliseconds(700), "the request only gets what is left of the one deadline");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeOnAnyTransportException(bool failClosed)
+    {
+        var (client, _, tokens) = Create(_ => throw new CircuitOpenException(), new DefenderRtpOptions { FailClosed = failClosed });
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeFalse();
+        result.Allowed.Should().Be(!failClosed);
+        result.Error.Should().Be("request failed (CircuitOpenException)");
+    }
+
+    [Fact]
+    public async Task DoesNotSendToAnEndpointChangedToHttpAfterConstruction()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        client.Options.Endpoint = new Uri("http://prevention.example.test/v1/protection/evaluate");
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        result!.Evaluated.Should().BeFalse();
+        result.Error.Should().Be("endpoint is not an absolute https URL");
+        handler.Calls.Should().BeEmpty();
     }
 
     // ─── authentication ──────────────────────────────────────────────────────
@@ -360,6 +453,99 @@ public class DefenderRtpClientTests
         handler.Calls.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task StartsAFreshAcquisitionAfterAnAbandonedOneFails()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var release = new TaskCompletionSource();
+        var attempts = 0;
+        DefenderRtpTokenResolver resolver = async (agentId, tenantId, scopes, cancellationToken) =>
+        {
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                await release.Task.ConfigureAwait(false);
+                throw new InvalidOperationException("transient failure");
+            }
+
+            return await tokens.Resolve(agentId, tenantId, scopes, cancellationToken);
+        };
+        using var caller = new CancellationTokenSource();
+
+        var abandoned = client.EvaluateHookContextAsync(InputContext("one"), Agent, resolver, caller.Token);
+        caller.Cancel();
+        Func<Task> waitForAbandoned = () => abandoned;
+        await waitForAbandoned.Should().ThrowAsync<OperationCanceledException>();
+        release.SetResult();
+        await Task.Delay(50);
+
+        var result = await client.EvaluateHookContextAsync(InputContext("two"), Agent, resolver);
+
+        attempts.Should().Be(2, "the failed acquisition is not handed to the next caller");
+        result!.Evaluated.Should().BeTrue();
+        handler.Calls.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task DoesNotReuseAnAbandonedAcquisitionAfterItsTokenExpires()
+    {
+        var clock = new ManualClock();
+        var handler = new RecordingHandler(_ => Json(new { decision = "allow" }));
+        var client = new DefenderRtpClient(Options(), new HttpClient(handler), timeProvider: clock);
+        var tokens = new TokenSource(() => clock.Now);
+        var release = new TaskCompletionSource();
+        DefenderRtpTokenResolver resolver = async (agentId, tenantId, scopes, cancellationToken) =>
+        {
+            if (tokens.Requests.Count == 0)
+            {
+                await release.Task.ConfigureAwait(false);
+            }
+
+            return await tokens.Resolve(agentId, tenantId, scopes, cancellationToken);
+        };
+        using var caller = new CancellationTokenSource();
+
+        var abandoned = client.EvaluateHookContextAsync(InputContext("one"), Agent, resolver, caller.Token);
+        caller.Cancel();
+        Func<Task> waitForAbandoned = () => abandoned;
+        await waitForAbandoned.Should().ThrowAsync<OperationCanceledException>();
+        release.SetResult();
+        await Task.Delay(50);
+        var expired = tokens.Token;
+        clock.Now += TimeSpan.FromHours(2);
+
+        var result = await client.EvaluateHookContextAsync(InputContext("two"), Agent, resolver);
+
+        result!.Evaluated.Should().BeTrue();
+        tokens.Token.Should().NotBe(expired);
+        handler.Calls.Single().Authorization.Should().Be($"Bearer {tokens.Token}");
+    }
+
+    [Fact]
+    public async Task KeepsTheCachedTokenUntilItExpiresWhenAnEarlyRefreshFails()
+    {
+        var clock = new ManualClock();
+        var handler = new RecordingHandler(_ => Json(new { decision = "allow" }));
+        var client = new DefenderRtpClient(Options(), new HttpClient(handler), timeProvider: clock);
+        var tokens = new TokenSource(() => clock.Now);
+        await client.EvaluateHookContextAsync(InputContext("one"), Agent, tokens.Resolve);
+        var cached = tokens.Token;
+        tokens.Failure = new InvalidOperationException("Entra is unavailable");
+
+        clock.Now += TimeSpan.FromMinutes(57);
+        var withinRefreshWindow = await client.EvaluateHookContextAsync(InputContext("two"), Agent, tokens.Resolve);
+
+        withinRefreshWindow!.Evaluated.Should().BeTrue();
+        handler.Calls[1].Authorization.Should().Be($"Bearer {cached}");
+        tokens.Requests.Should().HaveCount(2, "an early refresh was attempted in the background");
+
+        clock.Now += TimeSpan.FromMinutes(4);
+        var afterExpiry = await client.EvaluateHookContextAsync(InputContext("three"), Agent, tokens.Resolve);
+
+        afterExpiry!.Evaluated.Should().BeFalse();
+        afterExpiry.Error.Should().Be("entra token unavailable");
+        handler.Calls.Should().HaveCount(2);
+    }
+
     // ─── options ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -391,6 +577,18 @@ public class DefenderRtpClientTests
         var act = () => new DefenderRtpClient(new DefenderRtpOptions { Enabled = true });
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*A365_DEFENDER_RTP_ENDPOINT*");
+    }
+
+    [Theory]
+    [InlineData("http://prevention.example.test/v1/protection/evaluate")]
+    [InlineData("v1/protection/evaluate")]
+    public void RejectsAnEndpointThatIsNotAbsoluteHttps(string endpoint)
+    {
+        var act = () => new DefenderRtpClient(new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(endpoint, UriKind.RelativeOrAbsolute) });
+        var fromEnvironment = () => DefenderRtpOptions.FromEnvironment(name => name == "A365_DEFENDER_RTP_ENDPOINT" ? endpoint : null);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*absolute HTTPS URL*");
+        fromEnvironment.Should().Throw<InvalidOperationException>().WithMessage("*absolute HTTPS URL*");
     }
 
     // ─── helpers ─────────────────────────────────────────────────────────────
@@ -427,25 +625,67 @@ public class DefenderRtpClientTests
     };
 }
 
-/// <summary>Resolves a JWT with an hour of lifetime and records each request.</summary>
+/// <summary>
+/// Resolves a distinct JWT with an hour of lifetime from the given clock, optionally after a delay or by
+/// throwing <see cref="Failure"/>, and records each request.
+/// </summary>
 internal sealed class TokenSource
 {
-    public string Token { get; } = CreateToken();
+    private readonly Func<DateTimeOffset> _now;
+    private readonly TimeSpan _delay;
+
+    public TokenSource(Func<DateTimeOffset>? now = null, TimeSpan delay = default)
+    {
+        _now = now ?? (() => DateTimeOffset.UtcNow);
+        _delay = delay;
+        Token = CreateToken(_now());
+    }
+
+    /// <summary>The last token issued.</summary>
+    public string Token { get; private set; }
 
     public List<string> Requests { get; } = new();
 
-    public Task<string?> Resolve(string agentId, string tenantId, string[] scopes, CancellationToken cancellationToken)
+    /// <summary>When set, each resolution throws this instead of issuing a token.</summary>
+    public Exception? Failure { get; set; }
+
+    public async Task<string?> Resolve(string agentId, string tenantId, string[] scopes, CancellationToken cancellationToken)
     {
         Requests.Add($"{agentId}|{tenantId}|{string.Join(" ", scopes)}");
-        return Task.FromResult<string?>(Token);
+        if (_delay > TimeSpan.Zero)
+        {
+            await Task.Delay(_delay, cancellationToken);
+        }
+
+        if (Failure is { } failure)
+        {
+            throw failure;
+        }
+
+        Token = CreateToken(_now());
+        return Token;
     }
 
-    private static string CreateToken()
+    private static string CreateToken(DateTimeOffset now)
     {
         static string Encode(string json) => Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-        var exp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
-        return $"{Encode("""{"alg":"none"}""")}.{Encode($$"""{"exp":{{exp}},"roles":["RealtimeProtection.Evaluate.All"]}""")}.signature";
+        var exp = now.AddHours(1).ToUnixTimeSeconds();
+        var id = Guid.NewGuid().ToString("N");
+        return $"{Encode("""{"alg":"none"}""")}.{Encode($$"""{"exp":{{exp}},"jti":"{{id}}","roles":["RealtimeProtection.Evaluate.All"]}""")}.signature";
     }
+}
+
+/// <summary>A clock the test moves by hand; timers still run in real time.</summary>
+internal sealed class ManualClock : TimeProvider
+{
+    public DateTimeOffset Now { get; set; } = DateTimeOffset.UtcNow;
+
+    public override DateTimeOffset GetUtcNow() => Now;
+}
+
+/// <summary>Stands in for a resilience handler's exception, such as an open circuit.</summary>
+internal sealed class CircuitOpenException : Exception
+{
 }
 
 /// <summary>Captures each request (headers and body are read before the client disposes the request).</summary>

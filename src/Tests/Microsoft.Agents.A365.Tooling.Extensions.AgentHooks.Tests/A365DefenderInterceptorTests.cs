@@ -87,14 +87,37 @@ public class A365DefenderInterceptorTests
     [Fact]
     public async Task AllowsWithAWarningWhenFailOpenDefenderIsUnavailable()
     {
-        var harness = new Harness(_ => Json(new { title = "Forbidden", detail = "The calling application is not allowed to use the third-party prevention endpoint." }, HttpStatusCode.Forbidden));
+        var harness = new Harness(_ => Json(new { title = "Forbidden", detail = "The caller is not authorized for real-time protection." }, HttpStatusCode.Forbidden));
         var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-2");
 
         var record = await harness.Emitter.EmitUncheckedAsync(builder.Output(JsonValue.Create("Here are three flights.")!), CancellationToken.None);
 
         record.Proceeds.Should().BeTrue();
         record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "defender:unverified"
-            && warning.Message != null && warning.Message.Contains("not allowed to use the third-party prevention endpoint"));
+            && warning.Message != null && warning.Message.Contains("not authorized for real-time protection"));
+    }
+
+    [Fact]
+    public async Task AppliesTheFailModeBeforeTheInterceptorTimeout()
+    {
+        var options = new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(Endpoint), Timeout = TimeSpan.FromSeconds(1) };
+        var client = new DefenderRtpClient(options, new HttpClient(new HangingEndpoint()));
+        DefenderRtpTokenResolver slowToken = async (_, _, _, cancellationToken) =>
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken);
+            return Token;
+        };
+        var agent = new DefenderRtpAgentContext { AgentId = AgentId, TenantId = TenantId };
+
+        // 0.9 s for the token plus a fresh 1 s for the request would outlast this 1.6 s interceptor timeout.
+        var emitter = A365AgentHooks.CreateProtectionEmitter(TimeSpan.FromMilliseconds(1600), options)
+            .AddA365Defender(new A365DefenderInterceptor(client, _ => new A365DefenderCall(agent, slowToken)));
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-7");
+
+        var record = await emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        record.Proceeds.Should().BeTrue("Defender is configured to fail open");
+        record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "defender:unverified");
     }
 
     [Fact]
@@ -150,6 +173,15 @@ public class A365DefenderInterceptorTests
         harness.Bodies.Should().BeEmpty();
     }
 
+    private static string Token
+    {
+        get
+        {
+            static string Encode(string json) => Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+            return $"{Encode("""{"alg":"none"}""")}.{Encode($$"""{"exp":{{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()}}}""")}.sig";
+        }
+    }
+
     private static HttpResponseMessage Json(object body, HttpStatusCode status = HttpStatusCode.OK) => new(status)
     {
         Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
@@ -182,14 +214,15 @@ public class A365DefenderInterceptorTests
         public List<string> CorrelationIds { get; } = new();
 
         public List<DefenderRtpEvaluationResult> Evaluations { get; } = new();
+    }
 
-        private static string Token
+    /// <summary>An endpoint that never answers, so only a deadline ends the request.</summary>
+    private sealed class HangingEndpoint : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            get
-            {
-                static string Encode(string json) => Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-                return $"{Encode("""{"alg":"none"}""")}.{Encode($$"""{"exp":{{DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds()}}}""")}.sig";
-            }
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }
     }
 
