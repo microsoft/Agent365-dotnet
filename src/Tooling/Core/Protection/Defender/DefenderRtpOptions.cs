@@ -37,7 +37,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// When true, an evaluation that returns no verdict blocks (<c>A365_DEFENDER_RTP_FAIL_MODE=closed</c>);
-        /// otherwise it is allowed and reported as not evaluated.
+        /// otherwise (<c>open</c>, the default) it is allowed and reported as not evaluated.
         /// </summary>
         public bool FailClosed { get; set; }
 
@@ -54,11 +54,17 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>Reads the options from the process environment.</summary>
         /// <returns>The configured options.</returns>
+        /// <exception cref="InvalidOperationException">A variable is set to a value it does not accept.</exception>
         public static DefenderRtpOptions FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable);
 
-        /// <summary>Reads the options from the given variable lookup.</summary>
+        /// <summary>
+        /// Reads the options from the given variable lookup. A value a variable does not accept fails rather than
+        /// falling back to a default; in particular, <c>A365_DEFENDER_RTP_FAIL_MODE</c> must be <c>open</c> or
+        /// <c>closed</c>, so a typo cannot quietly weaken enforcement.
+        /// </summary>
         /// <param name="getVariable">Returns the value of an environment variable, or null.</param>
         /// <returns>The configured options.</returns>
+        /// <exception cref="InvalidOperationException">A variable is set to a value it does not accept.</exception>
         public static DefenderRtpOptions FromEnvironment(Func<string, string?> getVariable)
         {
             if (getVariable == null)
@@ -78,7 +84,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     && (enabled.Equals("true", StringComparison.OrdinalIgnoreCase)
                         || enabled == "1"
                         || enabled.Equals("yes", StringComparison.OrdinalIgnoreCase)),
-                FailClosed = string.Equals(Read("A365_DEFENDER_RTP_FAIL_MODE"), "closed", StringComparison.OrdinalIgnoreCase),
+                FailClosed = ParseFailMode(Read("A365_DEFENDER_RTP_FAIL_MODE")),
             };
 
             if (Read("A365_DEFENDER_RTP_ENDPOINT") is { } endpoint)
@@ -147,5 +153,21 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0
                 ? parsed
                 : throw new InvalidOperationException($"{name} must be a positive integer.");
+
+        /// <summary>Whether the fail mode is closed. Unset means open; any value but open or closed is rejected.</summary>
+        private static bool ParseFailMode(string? value)
+        {
+            if (value == null || value.Equals("open", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (value.Equals("closed", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            throw new InvalidOperationException("A365_DEFENDER_RTP_FAIL_MODE must be \"open\" or \"closed\".");
+        }
     }
 }

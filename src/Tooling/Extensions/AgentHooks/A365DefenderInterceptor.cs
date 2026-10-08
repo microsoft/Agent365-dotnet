@@ -41,7 +41,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// Register it on an emitter whose per-interceptor timeout is longer than
     /// <see cref="DefenderRtpOptions.Timeout"/>, such as one from <see cref="A365AgentHooks.CreateProtectionEmitter"/>;
     /// a shorter timeout turns a slow evaluation into a fail-closed agent-hooks host error. The evaluation
-    /// callback never changes the verdict: an exception it throws is logged and ignored.
+    /// callback runs once the verdict is decided and never changes it: an exception it throws is logged and ignored.
     /// </para>
     /// </remarks>
     public sealed class A365DefenderInterceptor : IInterceptor
@@ -65,8 +65,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// fail mode.
         /// </param>
         /// <param name="onEvaluated">
-        /// Receives each evaluation, for logging and telemetry (for example the correlation id). It never changes
-        /// the verdict: an exception it throws is logged to <paramref name="logger"/>, when given, and ignored.
+        /// Receives each evaluation once its verdict is decided, for logging and telemetry (for example the
+        /// correlation id). It never changes the verdict: an exception it throws is logged to
+        /// <paramref name="logger"/>, when given, and ignored.
         /// </param>
         /// <param name="logger">Receives failures of <paramref name="onEvaluated"/>.</param>
         public A365DefenderInterceptor(
@@ -111,8 +112,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 return new Verdict(Decision.Allow);
             }
 
+            // The verdict is decided before the callback sees the result, so nothing the callback does changes it.
+            var verdict = ToVerdict(result);
             NotifyEvaluated(result);
-            return ToVerdict(result);
+            return verdict;
         }
 
         /// <summary>
@@ -155,7 +158,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             var authoritative = result.Evaluated && !(result.Truncated && result.Verdict?.Decision == "allow");
             if (authoritative)
             {
-                var labels = result.Verdict?.ResultLabels is { Count: > 0 } resultLabels ? resultLabels : null;
+                // Copied, so the verdict never shares a list with the result.
+                var labels = result.Verdict?.ResultLabels is { Count: > 0 } resultLabels ? resultLabels.ToList() : null;
                 if (result.Allowed)
                 {
                     var warnings = result.Verdict?.Warnings

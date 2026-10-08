@@ -86,6 +86,48 @@ public class A365DefenderInterceptorTests
     }
 
     [Fact]
+    public void MapsToAVerdictThatDoesNotShareTheResultsLabels()
+    {
+        var labels = new List<string> { "PromptInjection" };
+        var verdict = A365DefenderInterceptor.ToVerdict(new DefenderRtpEvaluationResult
+        {
+            Allowed = false,
+            Evaluated = true,
+            InterceptionPoint = "input",
+            CorrelationId = "cid-2",
+            Verdict = new DefenderRtpVerdict { Decision = "deny", ResultLabels = labels },
+        });
+
+        labels.Clear();
+
+        verdict.ResultLabels.Should().Equal("PromptInjection");
+    }
+
+    [Fact]
+    public async Task KeepsTheVerdictWhenTheEvaluationCallbackChangesTheResult()
+    {
+        var harness = new Harness(
+            _ => Json(new
+            {
+                decision = "allow",
+                warnings = new[] { new { reason = "prevention_annotated", message = "Suspicious but allowed." } },
+                result_labels = new[] { "MaliciousContentPropagation" },
+            }),
+            onEvaluated: result =>
+            {
+                ((IList<DefenderRtpWarning>)result.Verdict!.Warnings).Clear();
+                ((IList<string>)result.Verdict.ResultLabels).Clear();
+            });
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-9");
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        record.Proceeds.Should().BeTrue();
+        record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "prevention_annotated");
+        record.Verdict.ResultLabels.Should().Equal("MaliciousContentPropagation");
+    }
+
+    [Fact]
     public async Task AllowsWithAWarningWhenFailOpenDefenderIsUnavailable()
     {
         var harness = new Harness(_ => Json(new { title = "Forbidden", detail = "The caller is not authorized for real-time protection." }, HttpStatusCode.Forbidden));

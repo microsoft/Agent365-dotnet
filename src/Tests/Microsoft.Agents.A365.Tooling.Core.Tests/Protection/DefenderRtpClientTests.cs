@@ -448,6 +448,24 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
+    public async Task ReturnsAVerdictThatCannotBeChanged()
+    {
+        var (client, _, tokens) = Create(_ => Json(new
+        {
+            decision = "allow",
+            warnings = new[] { new { reason = "prevention_annotated", message = "Suspicious but allowed." } },
+            result_labels = new[] { "MaliciousContentPropagation" },
+        }));
+
+        var result = await client.EvaluateHookContextAsync(InputContext("hello"), Agent, tokens.Resolve);
+
+        var warnings = (IList<DefenderRtpWarning>)result!.Verdict!.Warnings;
+        var labels = (IList<string>)result.Verdict.ResultLabels;
+        warnings.Invoking(list => list.Clear()).Should().Throw<NotSupportedException>();
+        labels.Invoking(list => list.Clear()).Should().Throw<NotSupportedException>();
+    }
+
+    [Fact]
     public async Task TreatsTransformAsABlock()
     {
         var (client, _, tokens) = Create(_ => Json(new { decision = "transform", transform = new { path = "/target", value = "[redacted]" } }));
@@ -736,7 +754,7 @@ public class DefenderRtpClientTests
         Func<Task> waitForAbandoned = () => abandoned;
         await waitForAbandoned.Should().ThrowAsync<OperationCanceledException>();
         release.SetResult();
-        await Task.Delay(50);
+        await WaitForTheAcquisition(client);
 
         var result = await client.EvaluateHookContextAsync(InputContext("two"), Agent, resolver);
 
@@ -770,7 +788,7 @@ public class DefenderRtpClientTests
         Func<Task> waitForAbandoned = () => abandoned;
         await waitForAbandoned.Should().ThrowAsync<OperationCanceledException>();
         release.SetResult();
-        await Task.Delay(50);
+        await WaitForTheAcquisition(client);
         var expired = tokens.Token;
         clock.Now += TimeSpan.FromHours(2);
 
@@ -819,6 +837,30 @@ public class DefenderRtpClientTests
         handler.Calls.Should().ContainSingle();
     }
 
+    [Fact]
+    public async Task KeepsTheTokenCacheBoundedUnderConcurrentAcquisitions()
+    {
+        var (client, _, _) = Create(_ => Json(new { decision = "allow" }));
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var evaluations = Enumerable.Range(0, 300).Select(index =>
+        {
+            var tokens = new TokenSource();
+            DefenderRtpTokenResolver resolver = async (agentId, tenantId, scopes, cancellationToken) =>
+            {
+                await release.Task.ConfigureAwait(false);
+                return await tokens.Resolve(agentId, tenantId, scopes, cancellationToken).ConfigureAwait(false);
+            };
+            var agent = new DefenderRtpAgentContext { AgentId = $"agent-{index}", TenantId = TenantId };
+            return client.EvaluateHookContextAsync(InputContext("hello"), agent, resolver);
+        }).ToList();
+
+        release.SetResult();
+        var results = await Task.WhenAll(evaluations);
+
+        results.Should().OnlyContain(result => result!.Evaluated);
+        client.CachedTokenCount.Should().BeLessThanOrEqualTo(100, "the cache holds at most 100 tokens however acquisitions interleave");
+    }
+
     // ─── options ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -864,6 +906,31 @@ public class DefenderRtpClientTests
         fromEnvironment.Should().Throw<InvalidOperationException>().WithMessage("*absolute HTTPS URL*");
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("open", false)]
+    [InlineData(" Open ", false)]
+    [InlineData("closed", true)]
+    [InlineData("CLOSED", true)]
+    public void ReadsTheFailMode(string? value, bool failClosed)
+    {
+        var options = DefenderRtpOptions.FromEnvironment(name => name == "A365_DEFENDER_RTP_FAIL_MODE" ? value : null);
+
+        options.FailClosed.Should().Be(failClosed);
+    }
+
+    [Theory]
+    [InlineData("close")]
+    [InlineData("fail-closed")]
+    [InlineData("true")]
+    public void RejectsAnUnknownFailModeRatherThanFailingOpen(string value)
+    {
+        var act = () => DefenderRtpOptions.FromEnvironment(name => name == "A365_DEFENDER_RTP_FAIL_MODE" ? value : null);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*A365_DEFENDER_RTP_FAIL_MODE*");
+    }
+
     // ─── helpers ─────────────────────────────────────────────────────────────
 
     internal static JsonObject InputContext(string text) => JsonNode.Parse($$"""
@@ -889,6 +956,20 @@ public class DefenderRtpClientTests
         (await request.Content!.ReadAsStringAsync(cancellationToken)).Contains(Payload, StringComparison.Ordinal)
             ? Json(new { decision = "deny", reason = "prevention_blocked", message = "Blocked payload." })
             : Json(new { decision = "allow" }));
+
+    /// <summary>
+    /// Waits until the agent's in-flight token acquisition has finished, whether it failed or not. An acquisition
+    /// leaves the in-flight map before its task completes, so a call made afterwards cannot join it.
+    /// </summary>
+    private static async Task WaitForTheAcquisition(DefenderRtpClient client)
+    {
+        if (client.PendingTokenAcquisition(Agent) is { } pending)
+        {
+            await Task.WhenAny(pending);
+        }
+
+        client.PendingTokenAcquisition(Agent).Should().BeNull("an acquisition leaves the in-flight map as it completes");
+    }
 
     private static bool ContainsLoneSurrogate(JsonNode? node) => node switch
     {
@@ -1032,12 +1113,19 @@ internal sealed class RecordingHandler : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content == null ? "{}" : await request.Content.ReadAsStringAsync(cancellationToken);
-        Calls.Add(new RecordedCall(
+        var call = new RecordedCall(
             request.Method,
             request.RequestUri!,
             request.Headers.Authorization?.ToString(),
             request.Headers.TryGetValues("x-ms-correlation-id", out var values) ? values.Single() : null,
-            JsonNode.Parse(body)!.AsObject()));
+            JsonNode.Parse(body)!.AsObject());
+
+        // Some tests send concurrently.
+        lock (Calls)
+        {
+            Calls.Add(call);
+        }
+
         return await _respond(request, cancellationToken);
     }
 }

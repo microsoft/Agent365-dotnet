@@ -82,11 +82,12 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
     `DefenderRtpTokenResolver`, cached per agent and tenant and refreshed in the background before it expires;
     `DefenderRtpTokenResolvers.FromAgenticConnection` uses the agent's connection (`IAgenticTokenProvider`), the
     same authority as Observability S2S export.
-  - Every call sends a unique `x-ms-correlation-id`. Failures follow `A365_DEFENDER_RTP_FAIL_MODE`, and a `400`
-    reports the failed validation rule. Each string is clamped to `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS`, and
-    the copy carries at most four times that in all: the content under decision first, the oldest history dropped
-    first. When the content under decision had to be cut, Defender's deny stands and its allow follows the fail
-    mode (`DefenderRtpEvaluationResult.Truncated`). Lone surrogates are sent as U+FFFD.
+  - Every call sends a unique `x-ms-correlation-id`. Failures follow `A365_DEFENDER_RTP_FAIL_MODE` (`open` or
+    `closed`; any other value is rejected), and a `400` reports the failed validation rule. Each string is clamped
+    to `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS`, and the copy carries at most four times that in all: the content
+    under decision first, the oldest history dropped first. When the content under decision had to be cut,
+    Defender's deny stands and its allow follows the fail mode (`DefenderRtpEvaluationResult.Truncated`). Lone
+    surrogates are sent as U+FFFD.
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** (new, preview) - `A365DefenderInterceptor`, an
   agent-hooks interceptor (`ResponsibleAI.AgentHooks` 0.1.0-beta.1) for Defender, and
   `A365AgentHooks.CreateProtectionEmitter` (`parallel/strictest`). When no agent identity is resolved, or resolving

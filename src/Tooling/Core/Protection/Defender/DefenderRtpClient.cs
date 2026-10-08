@@ -76,6 +76,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private readonly Func<Guid> _idFactory;
         private readonly TimeProvider _timeProvider;
         private readonly ConcurrentDictionary<string, CachedToken> _tokens = new(StringComparer.Ordinal);
+
+        // Serializes writes to _tokens, so concurrent acquisitions cannot push it past MaxCachedTokens.
+        private readonly object _tokenCacheLock = new();
         private readonly ConcurrentDictionary<string, Lazy<Task<string>>> _inFlightTokens = new(StringComparer.Ordinal);
         private readonly ConcurrentDictionary<string, long> _sequences = new(StringComparer.Ordinal);
 
@@ -764,6 +767,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             static string? Text(JsonNode? node) => ReadString(node) is { Length: > 0 } text ? text : null;
 
+            // Read-only, so no observer of the result can change what the verdict says.
             return new DefenderRtpVerdict
             {
                 Decision = ReadString(verdict["decision"])!,
@@ -772,11 +776,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 Warnings = (verdict["warnings"] as JsonArray ?? new JsonArray())
                     .OfType<JsonObject>()
                     .Select(warning => new DefenderRtpWarning(Text(warning["reason"]), Text(warning["message"])))
-                    .ToList(),
+                    .ToList()
+                    .AsReadOnly(),
                 ResultLabels = (verdict["result_labels"] as JsonArray ?? new JsonArray())
                     .Select(Text)
                     .OfType<string>()
-                    .ToList(),
+                    .ToList()
+                    .AsReadOnly(),
                 // Read only from an object, so unexpected transform metadata never costs Defender its decision.
                 TransformPath = Text((verdict["transform"] as JsonObject)?["path"]),
             };
@@ -846,7 +852,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             CancellationToken cancellationToken)
         {
             var scope = Options.AuthenticationScope;
-            var key = string.Join(":", agent.TenantId, agent.AgentId, scope);
+            var key = TokenKey(agent, scope);
             var now = _timeProvider.GetUtcNow();
             if (_tokens.TryGetValue(key, out var cached) && now < cached.ExpiresAt)
             {
@@ -866,6 +872,19 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             return await StartOrJoinAcquisition(key, agent, tokenResolver, scope).WaitAsync(cancellationToken).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// The token acquisition in flight for the agent, if any; for tests. Its task completes only after the
+        /// acquisition has left the in-flight map, so awaiting it orders a later call after it.
+        /// </summary>
+        internal Task? PendingTokenAcquisition(DefenderRtpAgentContext agent) =>
+            _inFlightTokens.TryGetValue(TokenKey(agent, Options.AuthenticationScope), out var acquisition) ? acquisition.Value : null;
+
+        /// <summary>The number of cached tokens; for tests.</summary>
+        internal int CachedTokenCount => _tokens.Count;
+
+        private static string TokenKey(DefenderRtpAgentContext agent, string scope) =>
+            string.Join(":", agent.TenantId, agent.AgentId, scope);
 
         /// <summary>
         /// One acquisition per agent, tenant and scope, shared by concurrent callers. It is bounded by the
@@ -932,6 +951,21 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     throw new InvalidOperationException("The Defender token resolver returned an expired token.");
                 }
 
+                CacheToken(key, new CachedToken(token!, expiresAt));
+            }
+
+            return token!;
+        }
+
+        /// <summary>
+        /// Caches a token within <see cref="MaxCachedTokens"/>: at capacity, expired tokens go first, then the one
+        /// closest to expiry. Writers are serialized, so concurrent acquisitions cannot each evict the same entry and
+        /// then all insert.
+        /// </summary>
+        private void CacheToken(string key, CachedToken token)
+        {
+            lock (_tokenCacheLock)
+            {
                 if (_tokens.Count >= MaxCachedTokens)
                 {
                     var now = _timeProvider.GetUtcNow();
@@ -946,10 +980,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                     }
                 }
 
-                _tokens[key] = new CachedToken(token!, expiresAt);
+                _tokens[key] = token;
             }
-
-            return token!;
         }
 
         private static DateTimeOffset? ReadExpiry(string token)

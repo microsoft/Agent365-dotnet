@@ -82,8 +82,8 @@ var record = await emitter.EmitUncheckedAsync(builder.Input(userMessage), cancel
 if (!record.Proceeds) { /* blocked: record.Verdict.Message */ }
 ```
 
-The evaluation callback is for logging and telemetry and never changes the verdict: an exception it throws is
-logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored.
+The evaluation callback is for logging and telemetry. It runs once the verdict is decided and never changes it: an
+exception it throws is logged (to the optional `ILogger` passed to `A365DefenderInterceptor`) and ignored.
 
 Agents built on Microsoft Agent Framework can register the same interceptor with
 `Microsoft.Agents.AI.AgentHooks`, which mediates model and tool calls.
@@ -102,7 +102,7 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 |---|---|
 | `ENABLE_A365_DEFENDER_RTP` | `true` to call Defender |
 | `A365_DEFENDER_RTP_ENDPOINT` | the prevention endpoint, an absolute HTTPS URL: `https://<host>/v1/protection/evaluate` |
-| `A365_DEFENDER_RTP_FAIL_MODE` | `closed` blocks when no verdict is obtained; default is open |
+| `A365_DEFENDER_RTP_FAIL_MODE` | `open` (default) or `closed`, which blocks when no verdict is obtained; any other value is rejected |
 | `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS` | the deadline for one evaluation, including token acquisition (default 10000) |
 | `A365_DEFENDER_RTP_AUTHENTICATION_SCOPE` | overrides the Defender API scope |
 | `A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS` | clamps each content string sent; ids, names and roles are not truncated (default 20000). See **Content size** |
