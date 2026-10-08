@@ -1328,22 +1328,27 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
                     return items;
                 case JsonObject obj:
-                    // Keys that are valid UTF-16 keep their names; only the renamed ones can need a suffix.
+                    // Keys that are valid UTF-16 keep their names; only the renamed ones can need a suffix. Each name
+                    // remembers its next suffix, so many keys that collide on it cost linear, not quadratic, work.
                     var taken = new HashSet<string>(
                         obj.Select(property => property.Key).Where(key => ReplaceLoneSurrogates(key) == key),
                         StringComparer.Ordinal);
+                    var nextSuffix = new Dictionary<string, int>(StringComparer.Ordinal);
                     var properties = new JsonObject();
                     foreach (var property in obj)
                     {
                         var name = ReplaceLoneSurrogates(property.Key);
-                        if (name != property.Key)
+                        if (name != property.Key && !taken.Add(name))
                         {
-                            var unique = name;
-                            for (var suffix = 2; !taken.Add(unique); suffix++)
+                            var suffix = nextSuffix.TryGetValue(name, out var next) ? next : 2;
+                            string unique;
+                            do
                             {
-                                unique = $"{name}~{suffix}";
+                                unique = $"{name}~{suffix++}";
                             }
+                            while (!taken.Add(unique));
 
+                            nextSuffix[name] = suffix;
                             name = unique;
                         }
 

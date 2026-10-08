@@ -110,7 +110,7 @@ if Defender is configured to fail open. `A365AgentHooks.CreateProtectionEmitter`
 
 | Variable | Meaning |
 |---|---|
-| `ENABLE_A365_DEFENDER_RTP` | `true` to call Defender |
+| `ENABLE_A365_DEFENDER_RTP` | `true` to call Defender; `false` or unset leaves it off (`1`/`0`, `yes`/`no` and `on`/`off` also work); any other value is rejected |
 | `A365_DEFENDER_RTP_ENDPOINT` | the prevention endpoint, an absolute HTTPS URL: `https://<host>/v1/protection/evaluate` |
 | `A365_DEFENDER_RTP_FAIL_MODE` | `open` (default) or `closed`, which blocks when no verdict is obtained; any other value is rejected |
 | `A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS` | the deadline for one evaluation, including token acquisition (default 10000) |

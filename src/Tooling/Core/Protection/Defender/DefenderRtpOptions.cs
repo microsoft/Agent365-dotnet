@@ -5,6 +5,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 {
     using System;
     using System.Globalization;
+    using System.Linq;
 
     /// <summary>
     /// Configuration for Microsoft Defender for AI real-time protection (the prevention endpoint
@@ -18,7 +19,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>Default token scope: the Defender API.</summary>
         public const string DefaultAuthenticationScope = "api://" + DefenderApiAppId + "/.default";
 
-        /// <summary>Whether Defender real-time protection is enabled (<c>ENABLE_A365_DEFENDER_RTP</c>).</summary>
+        private static readonly string[] EnabledValues = { "true", "1", "yes", "on" };
+        private static readonly string[] DisabledValues = { "false", "0", "no", "off" };
+
+        /// <summary>
+        /// Whether Defender real-time protection is enabled (<c>ENABLE_A365_DEFENDER_RTP</c>: <c>true</c> or
+        /// <c>false</c>, or <c>1</c>/<c>0</c>, <c>yes</c>/<c>no</c>, <c>on</c>/<c>off</c>; unset means disabled).
+        /// </summary>
         public bool Enabled { get; set; }
 
         /// <summary>
@@ -62,8 +69,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Reads the options from the given variable lookup. A value a variable does not accept fails rather than
-        /// falling back to a default; in particular, <c>A365_DEFENDER_RTP_FAIL_MODE</c> must be <c>open</c> or
-        /// <c>closed</c>, so a typo cannot quietly weaken enforcement.
+        /// falling back to a default, so a typo cannot quietly weaken protection: in particular,
+        /// <c>ENABLE_A365_DEFENDER_RTP</c> must say true or false and <c>A365_DEFENDER_RTP_FAIL_MODE</c> must be
+        /// <c>open</c> or <c>closed</c>.
         /// </summary>
         /// <param name="getVariable">Returns the value of an environment variable, or null.</param>
         /// <returns>The configured options.</returns>
@@ -83,10 +91,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
             var options = new DefenderRtpOptions
             {
-                Enabled = Read("ENABLE_A365_DEFENDER_RTP") is { } enabled
-                    && (enabled.Equals("true", StringComparison.OrdinalIgnoreCase)
-                        || enabled == "1"
-                        || enabled.Equals("yes", StringComparison.OrdinalIgnoreCase)),
+                Enabled = ParseEnabled(Read("ENABLE_A365_DEFENDER_RTP")),
                 FailClosed = ParseFailMode(Read("A365_DEFENDER_RTP_FAIL_MODE")),
             };
 
@@ -156,6 +161,25 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0
                 ? parsed
                 : throw new InvalidOperationException($"{name} must be a positive integer.");
+
+        /// <summary>
+        /// Whether Defender RTP is enabled. Unset means disabled; a value that is not a recognized way of saying true
+        /// or false is rejected, so a typo cannot quietly turn protection off.
+        /// </summary>
+        private static bool ParseEnabled(string? value)
+        {
+            if (value == null || DisabledValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (EnabledValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            throw new InvalidOperationException("ENABLE_A365_DEFENDER_RTP must be true or false.");
+        }
 
         /// <summary>Whether the fail mode is closed. Unset means open; any value but open or closed is rejected.</summary>
         private static bool ParseFailMode(string? value)

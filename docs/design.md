@@ -337,7 +337,7 @@ else if (EnvironmentUtils.IsDevelopmentEnvironment())
 | `EnableAgent365Exporter` | Enable Agent365 telemetry exporter | `false` |
 | `ASPNETCORE_ENVIRONMENT` | Environment name (Development, Production) | - |
 | `SuppressInvokeAgentInput` | Suppress input messages in invoke_agent spans | `false` |
-| `ENABLE_A365_DEFENDER_RTP` | Enable Microsoft Defender for AI real-time protection (`DefenderRtpOptions.FromEnvironment`) | `false` |
+| `ENABLE_A365_DEFENDER_RTP` | Enable Microsoft Defender for AI real-time protection (`DefenderRtpOptions.FromEnvironment`); a value that is not true or false is rejected | `false` |
 | `A365_DEFENDER_RTP_ENDPOINT` | Defender prevention endpoint, `https://<host>/v1/protection/evaluate` | - |
 | `A365_DEFENDER_RTP_FAIL_MODE` | `open` or `closed` (blocks when Defender returns no verdict); any other value is rejected | open |
 

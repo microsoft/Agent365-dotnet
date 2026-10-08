@@ -609,6 +609,28 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
+    public async Task KeepsEveryValueWhenManyKeysCollideOnOneName()
+    {
+        const int Count = 1024;
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = ToolContext("pre_tool_call", "x", null);
+        var args = new JsonObject();
+        for (var index = 0; index < Count; index++)
+        {
+            args["q" + (char)(0xD800 + index)] = $"v{index}";
+        }
+
+        context["tool_call"]!["args"] = args;
+
+        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        var sent = handler.Calls.Single().Body["tool_call"]!["args"]!.AsObject();
+        sent.Select(property => property.Value!.GetValue<string>()).Should().Equal(Enumerable.Range(0, Count).Select(index => $"v{index}"));
+        sent.Select(property => property.Key).Should().Equal(
+            new[] { "q\uFFFD" }.Concat(Enumerable.Range(2, Count - 1).Select(suffix => $"q\uFFFD~{suffix}")));
+    }
+
+    [Fact]
     public async Task RejectsAContextWithoutAnAgentId()
     {
         var (client, _, tokens) = Create(_ => Json(new { decision = "allow" }));
@@ -1179,6 +1201,36 @@ public class DefenderRtpClientTests
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*absolute HTTPS URL*");
         fromEnvironment.Should().Throw<InvalidOperationException>().WithMessage("*absolute HTTPS URL*");
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("true", true)]
+    [InlineData("TRUE", true)]
+    [InlineData("1", true)]
+    [InlineData("yes", true)]
+    [InlineData("on", true)]
+    [InlineData("false", false)]
+    [InlineData("0", false)]
+    [InlineData("no", false)]
+    [InlineData("off", false)]
+    public void ReadsWhetherDefenderIsEnabled(string? value, bool enabled)
+    {
+        var options = DefenderRtpOptions.FromEnvironment(name => name == "ENABLE_A365_DEFENDER_RTP" ? value : null);
+
+        options.Enabled.Should().Be(enabled);
+    }
+
+    [Theory]
+    [InlineData("ture")]
+    [InlineData("enabled")]
+    [InlineData("2")]
+    public void RejectsAnUnknownEnabledValueRatherThanTurningProtectionOff(string value)
+    {
+        var act = () => DefenderRtpOptions.FromEnvironment(name => name == "ENABLE_A365_DEFENDER_RTP" ? value : null);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*ENABLE_A365_DEFENDER_RTP*");
     }
 
     [Theory]
