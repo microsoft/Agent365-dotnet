@@ -49,8 +49,9 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// carries at most four times this many characters of content: the content under decision first, then the
         /// rest of the context, with the oldest messages dropped first. Names, keys and nulls count toward it too, and
         /// content nested more than 32 levels deep is cut the same way.
-        /// When the content under decision is cut, Defender evaluates a truncated copy and only its deny stands; an
-        /// allow follows <see cref="FailClosed"/>. Raise it for agents with long content.
+        /// When the content under decision, or at a tool point the called tool's declaration, is cut, Defender
+        /// evaluates a truncated copy and only its deny stands; an allow follows <see cref="FailClosed"/>. Raise it for
+        /// agents with long content or long tool declarations.
         /// </summary>
         public int MaxContentCharacters { get; set; } = 20000;
 

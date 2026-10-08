@@ -318,7 +318,8 @@ public class DefenderRtpClientTests
         var body = handler.Calls.Single().Body;
         DefenderContract.Errors(body).Should().BeEmpty();
         result!.Truncated.Should().BeTrue("the tool result under decision was cut");
-        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{"query":"Seattle to"}}""");
+        // The called tool's declaration comes before the arguments, which leaves them no room at this size.
+        body["tool_call"]!.ToJsonString().Should().Be("""{"id":"call_42","name":"SearchFlights","args":{}}""");
         body["tool_result"]!["value"]!.GetValue<string>().Should().Be("three resu");
         JsonNode.DeepEquals(body["target"], body["tool_result"]!["value"]).Should().BeTrue();
     }
@@ -402,6 +403,7 @@ public class DefenderRtpClientTests
         var context = ToolContext("pre_tool_call", "x", null);
         context["tools"] = new JsonArray(Enumerable.Range(0, Count)
             .Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" })
+            .Prepend(new JsonObject { ["name"] = "FetchPage" })
             .ToArray());
         context["messages"] = new JsonArray(Enumerable.Range(0, Count)
             .Select(_ => (JsonNode?)new JsonObject { ["role"] = "user", ["content"] = new JsonObject() })
@@ -429,23 +431,73 @@ public class DefenderRtpClientTests
     }
 
     [Fact]
-    public async Task DeclaresTheCalledToolFromItsNameWhenItsDeclarationIsBeyondTheBudget()
+    public async Task CopiesTheCalledToolsDeclarationFirstWhateverPrecedesIt()
     {
-        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 20 });
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 40 });
         var context = ToolContext("pre_tool_call", "x", null);
         context["tools"] = new JsonArray(Enumerable.Range(0, 4)
             .Select(index => (JsonNode?)new JsonObject { ["name"] = $"Other{index}", ["description"] = new string('d', 20) })
+            .Append(new JsonObject { ["name"] = "FetchPage", ["description"] = "Reads a page.", ["schema"] = new JsonObject { ["type"] = "object" } })
+            .ToArray());
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().BeFalse("Defender sees the called tool's whole declaration");
+        result.Allowed.Should().BeTrue();
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage","description":"Reads a page.","schema":{"type":"object"}}""");
+        body["tools"]!.AsArray().Select(tool => tool!["name"]!.GetValue<string>()).Should().Equal(
+            new[] { "FetchPage", "Other0", "Other1" },
+            "the other declarations fill what remains in the host's order");
+    }
+
+    [Fact]
+    public async Task TreatsACalledToolBeyondTheScanAsTruncated()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { FailClosed = true });
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(Enumerable.Range(0, 10_000)
+            .Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" })
             .Append(new JsonObject { ["name"] = "FetchPage", ["description"] = "Reads a page." })
             .ToArray());
 
-        await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
 
-        var body = handler.Calls.Single().Body;
-        DefenderContract.Errors(body).Should().BeEmpty();
-        body["tools"]!.AsArray().Select(tool => tool!["name"]!.GetValue<string>()).Should().Equal(
-            new[] { "FetchPage", "Other0", "Other1" },
-            "only the entries the budget holds are read");
-        body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""", "a called tool beyond them is declared from its name");
+        result!.Evaluated.Should().BeTrue();
+        result.Truncated.Should().BeTrue("the scan stopped before the called tool's declaration");
+        result.Allowed.Should().BeFalse("a fail-closed client does not let an allow it cannot verify through");
+        handler.Calls.Single().Body["tools"]![0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""");
+    }
+
+    [Fact]
+    public async Task TreatsACalledToolWhoseDeclarationIsCutAsTruncated()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100, FailClosed = true });
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(new JsonObject { ["name"] = "FetchPage", ["description"] = new string('d', 150) });
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().BeTrue("Defender saw only part of the called tool's description");
+        result.Allowed.Should().BeFalse();
+        handler.Calls.Single().Body["tools"]![0]!["description"]!.GetValue<string>().Should().EndWith("...[truncated 74 chars]");
+    }
+
+    [Fact]
+    public async Task DeclaresACalledToolAbsentFromTheListFromItsName()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }));
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tools"] = new JsonArray(Enumerable.Range(0, 100).Select(index => (JsonNode?)new JsonObject { ["name"] = $"t{index}" }).ToArray());
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().BeFalse("a tool missing from a list read to the end is not a cut");
+        result.Allowed.Should().BeTrue();
+        var tools = handler.Calls.Single().Body["tools"]!.AsArray();
+        tools[0]!.ToJsonString().Should().Be("""{"name":"FetchPage"}""");
+        tools.Should().HaveCount(101);
     }
 
     [Fact]

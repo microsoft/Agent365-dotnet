@@ -34,7 +34,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// </para>
     /// <para>
     /// When no verdict is obtained (no agent identity, identity resolution, transport, authentication or validation
-    /// failure), or Defender allowed a copy truncated to <see cref="DefenderRtpOptions.MaxContentCharacters"/>, the
+    /// failure), or Defender allowed a truncated copy of what is under decision
+    /// (<see cref="DefenderRtpEvaluationResult.Truncated"/>), the
     /// verdict follows <see cref="DefenderRtpOptions.FailClosed"/>: allow with a <c>defender:unverified</c> warning,
     /// or deny with reason <c>runtime_error:defender_unverified</c>, which is never reported as a detection.
     /// </para>
