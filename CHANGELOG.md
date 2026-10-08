@@ -70,6 +70,20 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
   `IExporterTokenCache<AgenticTokenStruct>`.
 
 ### Added
+- **Microsoft.Agents.A365.Tooling** - Microsoft Defender for AI real-time protection client
+  - `DefenderRtpClient.EvaluateHookContextAsync` sends an agent-hooks/0.1 context to the Defender
+    prevention endpoint (`POST .../v1/protection/evaluate`) at the four points Defender evaluates
+    (`input`, `pre_tool_call`, `post_tool_call`, `output`) and returns its verdict (`deny` and
+    `transform` block). The context is fitted to Defender's request validation without modifying it.
+  - Calls carry the agent identity's own app-only token for the Defender API
+    (`api://86a21212-634e-4553-b3d6-e477e4c9d9ec`, role `RealtimeProtection.Evaluate.All`), resolved by a
+    `DefenderRtpTokenResolver` and cached per agent and tenant; `DefenderRtpTokenResolvers.FromAgenticConnection`
+    uses the agent's connection (`IAgenticTokenProvider`), the same authority as Observability S2S export.
+  - Every call sends a unique `x-ms-correlation-id`. Failures follow `A365_DEFENDER_RTP_FAIL_MODE`, and a `400`
+    reports the failed validation rule.
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** (new, preview) - `A365DefenderInterceptor`, an
+  agent-hooks interceptor (`ResponsibleAI.AgentHooks` 0.1.0-beta.1) for Defender, and
+  `A365AgentHooks.CreateProtectionEmitter` (`parallel/strictest`).
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
   - `IMcpTokenProvider` interface for pluggable OAuth token acquisition

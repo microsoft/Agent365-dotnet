@@ -378,6 +378,13 @@ src/Tooling/Core/
 │   ├── BearerTokenHandler.cs                  # Auth handler
 │   ├── HttpContextHeadersHandler.cs           # Header propagation
 │   └── HttpLoggingHandler.cs                  # Logging handler
+├── Protection/
+│   └── Defender/
+│       ├── DefenderRtpClient.cs               # Defender prevention endpoint client
+│       ├── DefenderRtpOptions.cs              # Configuration (environment variables)
+│       ├── DefenderRtpEvaluationResult.cs     # Verdict and evaluation result
+│       ├── DefenderRtpTokenResolver.cs        # Token resolver delegate, agent context
+│       └── DefenderRtpTokenResolvers.cs       # Agent identity token exchange
 ├── Constants.cs                               # Constants
 ├── Utility.cs                                 # Helper methods
 ├── Microsoft.Agents.A365.Tooling.csproj
@@ -477,6 +484,30 @@ public async Task ProcessMessageAsync(ITurnContext turnContext)
         _logger.LogWarning("Threat protection check failed: {Errors}",
             string.Join(", ", result.Errors.Select(e => e.Message)));
     }
+}
+```
+
+### Real-Time Protection (Microsoft Defender for AI)
+
+`DefenderRtpClient` evaluates an agent-hooks/0.1 context with the Defender prevention endpoint at the four
+points Defender evaluates (`input`, `pre_tool_call`, `post_tool_call`, `output`), as the agent identity, and
+returns Defender's verdict. Agent-hooks hosts register it through `A365DefenderInterceptor` in
+`Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` (see its [README](../../Extensions/AgentHooks/README.md)).
+
+```csharp
+var defender = new DefenderRtpClient(DefenderRtpOptions.FromEnvironment(), httpClient);
+var tokens = DefenderRtpTokenResolvers.FromAgenticConnection(
+    (IAgenticTokenProvider)connections.GetDefaultConnection(), httpClient);
+
+var result = await defender.EvaluateHookContextAsync(
+    context, // the agent-hooks/0.1 AgentContext as a JsonObject
+    new DefenderRtpAgentContext { AgentId = agentAppId, TenantId = tenantId },
+    tokens,
+    cancellationToken);
+
+if (result is { Allowed: false })
+{
+    // Blocked: result.BlockReason; Defender logs the evaluation under result.CorrelationId.
 }
 ```
 

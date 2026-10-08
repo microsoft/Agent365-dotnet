@@ -35,7 +35,8 @@ src/
 │   └── Extensions/
 │       ├── SemanticKernel/                      # SK tool registration
 │       ├── AgentFramework/                      # AF tool registration
-│       └── AzureAIFoundry/                      # Azure AI Foundry integration
+│       ├── AzureAIFoundry/                      # Azure AI Foundry integration
+│       └── AgentHooks/                          # agent-hooks Defender interceptor (preview)
 └── Tests/                                       # Test projects
 docs/
 └── design.md                                    # This file
@@ -52,10 +53,11 @@ docs/
 | `Microsoft.Agents.A365.Observability.Extensions.SemanticKernel` | Semantic Kernel telemetry integration | [design.md](../src/Observability/Extensions/SemanticKernel/docs/design.md) |
 | `Microsoft.Agents.A365.Observability.Extensions.OpenAI` | OpenAI SDK telemetry integration | [design.md](../src/Observability/Extensions/OpenAI/docs/design.md) |
 | `Microsoft.Agents.A365.Notifications` | Microsoft 365 notification handling | [design.md](../src/Notification/Microsoft.Agents.A365.Notifications/docs/design.md) |
-| `Microsoft.Agents.A365.Tooling` | MCP server discovery and configuration | [design.md](../src/Tooling/Core/docs/design.md) |
+| `Microsoft.Agents.A365.Tooling` | MCP server discovery and configuration; Microsoft Defender for AI real-time protection client | [design.md](../src/Tooling/Core/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel` | Semantic Kernel MCP tool registration | [design.md](../src/Tooling/Extensions/SemanticKernel/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.AgentFramework` | Agent Framework MCP tool registration | [design.md](../src/Tooling/Extensions/AgentFramework/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry` | Azure AI Foundry MCP tool registration | [design.md](../src/Tooling/Extensions/AzureAIFoundry/docs/design.md) |
+| `Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` | Microsoft Defender for AI interceptor for agent-hooks hosts (preview) | [README.md](../src/Tooling/Extensions/AgentHooks/README.md) |
 
 ## Core Package Documentation
 
@@ -335,6 +337,9 @@ else if (EnvironmentUtils.IsDevelopmentEnvironment())
 | `EnableAgent365Exporter` | Enable Agent365 telemetry exporter | `false` |
 | `ASPNETCORE_ENVIRONMENT` | Environment name (Development, Production) | - |
 | `SuppressInvokeAgentInput` | Suppress input messages in invoke_agent spans | `false` |
+| `ENABLE_A365_DEFENDER_RTP` | Enable Microsoft Defender for AI real-time protection (`DefenderRtpOptions.FromEnvironment`) | `false` |
+| `A365_DEFENDER_RTP_ENDPOINT` | Defender prevention endpoint, `https://<host>/v1/protection/evaluate` | - |
+| `A365_DEFENDER_RTP_FAIL_MODE` | `closed` blocks when Defender returns no verdict | open |
 
 ## Testing
 
@@ -349,9 +354,11 @@ src/Tests/
 ├── Microsoft.Agents.A365.Observability.Extension.Tests/
 ├── Microsoft.Agents.A365.Notifications.Tests/
 ├── Microsoft.Agents.A365.Tooling.Tests/
+├── Microsoft.Agents.A365.Tooling.Core.Tests/
 ├── Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests/
 ├── Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.Tests/
-└── Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests/
+├── Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry.Tests/
+└── Microsoft.Agents.A365.Tooling.Extensions.AgentHooks.Tests/
 ```
 
 Run tests with:
