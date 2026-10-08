@@ -92,6 +92,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Observability.Extensions.IntegrationTests", "Tests\Microsoft.Agents.A365.Observability.Extensions.IntegrationTests\Microsoft.Agents.A365.Observability.Extensions.IntegrationTests.csproj", "{260338F1-ABA4-4617-81F3-B84AAEA43D52}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AgentHooks", "AgentHooks", "{4DDE42EC-71AD-50C7-6FC1-462738096C58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AgentHooks", "Tooling\Extensions\AgentHooks\Microsoft.Agents.A365.Tooling.Extensions.AgentHooks.csproj", "{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Agents.A365.Tooling.Extensions.AgentHooks.Tests", "Tests\Microsoft.Agents.A365.Tooling.Extensions.AgentHooks.Tests\Microsoft.Agents.A365.Tooling.Extensions.AgentHooks.Tests.csproj", "{1F86A247-7BA3-4C49-A0BA-20F979849ED7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -378,6 +384,30 @@ Global
 		{260338F1-ABA4-4617-81F3-B84AAEA43D52}.Release|x64.Build.0 = Release|Any CPU
 		{260338F1-ABA4-4617-81F3-B84AAEA43D52}.Release|x86.ActiveCfg = Release|Any CPU
 		{260338F1-ABA4-4617-81F3-B84AAEA43D52}.Release|x86.Build.0 = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|x64.Build.0 = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Debug|x86.Build.0 = Debug|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|x64.ActiveCfg = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|x64.Build.0 = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|x86.ActiveCfg = Release|Any CPU
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0}.Release|x86.Build.0 = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|x64.Build.0 = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Debug|x86.Build.0 = Debug|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|x64.ActiveCfg = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|x64.Build.0 = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|x86.ActiveCfg = Release|Any CPU
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -417,6 +447,9 @@ Global
 		{0CBC637E-EC70-66CD-FE99-EB46F5448A6D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{5322E121-710E-4CBD-A5C4-0AC9E85F7164} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 		{260338F1-ABA4-4617-81F3-B84AAEA43D52} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
+		{4DDE42EC-71AD-50C7-6FC1-462738096C58} = {89AD1AA2-300A-483A-832E-9047201DD2BC}
+		{3FEFA18B-FFD8-4CE0-8AC8-37AD209789F0} = {4DDE42EC-71AD-50C7-6FC1-462738096C58}
+		{1F86A247-7BA3-4C49-A0BA-20F979849ED7} = {2150E333-8FDC-42A3-9474-1A3956D46DE8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0B20062E-2453-4E32-B8A2-85A6013F83A0}

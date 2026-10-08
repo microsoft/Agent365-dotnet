@@ -1,0 +1,200 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Microsoft.Agents.A365.Tooling.Protection.Defender
+{
+    using System;
+    using System.Globalization;
+    using System.Linq;
+
+    /// <summary>
+    /// Configuration for Microsoft Defender for AI real-time protection (the prevention endpoint
+    /// <c>POST .../v1/protection/evaluate</c>, agent-hooks/0.1 contract).
+    /// </summary>
+    public sealed class DefenderRtpOptions
+    {
+        /// <summary>Application id of the Defender API that grants <c>RealtimeProtection.Evaluate.All</c>.</summary>
+        public const string DefenderApiAppId = "86a21212-634e-4553-b3d6-e477e4c9d9ec";
+
+        /// <summary>Default token scope: the Defender API.</summary>
+        public const string DefaultAuthenticationScope = "api://" + DefenderApiAppId + "/.default";
+
+        private static readonly string[] EnabledValues = { "true", "1", "yes", "on" };
+        private static readonly string[] DisabledValues = { "false", "0", "no", "off" };
+
+        /// <summary>
+        /// Whether Defender real-time protection is enabled (<c>ENABLE_A365_DEFENDER_RTP</c>: <c>true</c> or
+        /// <c>false</c>, or <c>1</c>/<c>0</c>, <c>yes</c>/<c>no</c>, <c>on</c>/<c>off</c>; unset means disabled).
+        /// </summary>
+        public bool Enabled { get; set; }
+
+        /// <summary>
+        /// The prevention endpoint (<c>A365_DEFENDER_RTP_ENDPOINT</c>), an absolute HTTPS URL. Required when enabled.
+        /// </summary>
+        public Uri? Endpoint { get; set; }
+
+        /// <summary>The token scope (<c>A365_DEFENDER_RTP_AUTHENTICATION_SCOPE</c>); defaults to the Defender API.</summary>
+        public string AuthenticationScope { get; set; } = DefaultAuthenticationScope;
+
+        /// <summary>
+        /// The deadline for one evaluation, shared by token acquisition and the request
+        /// (<c>A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS</c>). When it passes, the result follows <see cref="FailClosed"/>.
+        /// </summary>
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
+
+        /// <summary>
+        /// When true, an evaluation that returns no verdict blocks (<c>A365_DEFENDER_RTP_FAIL_MODE=closed</c>);
+        /// otherwise (<c>open</c>, the default) it is allowed and reported as not evaluated.
+        /// </summary>
+        public bool FailClosed { get; set; }
+
+        /// <summary>
+        /// Maximum characters per content string sent to Defender (<c>A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS</c>):
+        /// input and output content, tool arguments and results, message content, tool descriptions and
+        /// schemas, extensions, and any other member a host adds to the context. Envelope fields such as ids, names
+        /// and roles are not truncated, and envelope objects carry only their spec fields. The copy as a whole
+        /// carries at most four times this many characters of content: the content under decision first, then the
+        /// rest of the context, with the oldest messages dropped first. Names, keys and nulls count toward it too, and
+        /// content nested more than 32 levels deep is cut the same way.
+        /// When the content under decision, or at a tool point the called tool's declaration, is cut, Defender
+        /// evaluates a truncated copy and only its deny stands; an allow follows <see cref="FailClosed"/>. Raise it for
+        /// agents with long content or long tool declarations.
+        /// </summary>
+        public int MaxContentCharacters { get; set; } = 20000;
+
+        /// <summary>Reads the options from the process environment.</summary>
+        /// <returns>The configured options.</returns>
+        /// <exception cref="InvalidOperationException">A variable is set to a value it does not accept.</exception>
+        public static DefenderRtpOptions FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable);
+
+        /// <summary>
+        /// Reads the options from the given variable lookup. A value a variable does not accept fails rather than
+        /// falling back to a default, so a typo cannot quietly weaken protection: in particular,
+        /// <c>ENABLE_A365_DEFENDER_RTP</c> must say true or false and <c>A365_DEFENDER_RTP_FAIL_MODE</c> must be
+        /// <c>open</c> or <c>closed</c>.
+        /// </summary>
+        /// <param name="getVariable">Returns the value of an environment variable, or null.</param>
+        /// <returns>The configured options.</returns>
+        /// <exception cref="InvalidOperationException">A variable is set to a value it does not accept.</exception>
+        public static DefenderRtpOptions FromEnvironment(Func<string, string?> getVariable)
+        {
+            if (getVariable == null)
+            {
+                throw new ArgumentNullException(nameof(getVariable));
+            }
+
+            string? Read(string name)
+            {
+                var value = getVariable(name)?.Trim();
+                return string.IsNullOrEmpty(value) ? null : value;
+            }
+
+            var options = new DefenderRtpOptions
+            {
+                Enabled = ParseEnabled(Read("ENABLE_A365_DEFENDER_RTP")),
+                FailClosed = ParseFailMode(Read("A365_DEFENDER_RTP_FAIL_MODE")),
+            };
+
+            if (Read("A365_DEFENDER_RTP_ENDPOINT") is { } endpoint)
+            {
+                options.Endpoint = Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) && IsHttpsUrl(uri)
+                    ? uri
+                    : throw new InvalidOperationException("A365_DEFENDER_RTP_ENDPOINT must be an absolute HTTPS URL.");
+            }
+
+            if (Read("A365_DEFENDER_RTP_AUTHENTICATION_SCOPE") is { } scope)
+            {
+                options.AuthenticationScope = scope;
+            }
+
+            if (Read("A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS") is { } timeout)
+            {
+                options.Timeout = TimeSpan.FromMilliseconds(ParsePositive(timeout, "A365_DEFENDER_RTP_TIMEOUT_MILLISECONDS"));
+            }
+
+            if (Read("A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS") is { } maximum)
+            {
+                options.MaxContentCharacters = ParsePositive(maximum, "A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS");
+            }
+
+            return options;
+        }
+
+        /// <summary>Throws when the options cannot be used for an enabled client.</summary>
+        internal void Validate()
+        {
+            if (Enabled && Endpoint == null)
+            {
+                throw new InvalidOperationException(
+                    "Defender RTP is enabled but no endpoint is configured. Set A365_DEFENDER_RTP_ENDPOINT or DefenderRtpOptions.Endpoint.");
+            }
+
+            if (Endpoint != null && !IsHttpsUrl(Endpoint))
+            {
+                throw new InvalidOperationException(
+                    "The Defender RTP endpoint must be an absolute HTTPS URL (A365_DEFENDER_RTP_ENDPOINT or DefenderRtpOptions.Endpoint).");
+            }
+
+            if (Timeout <= TimeSpan.Zero)
+            {
+                throw new InvalidOperationException("DefenderRtpOptions.Timeout must be positive.");
+            }
+
+            if (MaxContentCharacters <= 0)
+            {
+                throw new InvalidOperationException("DefenderRtpOptions.MaxContentCharacters must be positive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(AuthenticationScope))
+            {
+                throw new InvalidOperationException("DefenderRtpOptions.AuthenticationScope is required.");
+            }
+        }
+
+        /// <summary>Whether the URL is absolute and uses HTTPS, so tokens and content never travel in clear text.</summary>
+        /// <param name="url">The URL to check.</param>
+        /// <returns>True for an absolute <c>https</c> URL.</returns>
+        internal static bool IsHttpsUrl(Uri? url) =>
+            url is { IsAbsoluteUri: true } && string.Equals(url.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+
+        private static int ParsePositive(string value, string name) =>
+            int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+                ? parsed
+                : throw new InvalidOperationException($"{name} must be a positive integer.");
+
+        /// <summary>
+        /// Whether Defender RTP is enabled. Unset means disabled; a value that is not a recognized way of saying true
+        /// or false is rejected, so a typo cannot quietly turn protection off.
+        /// </summary>
+        private static bool ParseEnabled(string? value)
+        {
+            if (value == null || DisabledValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (EnabledValues.Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            throw new InvalidOperationException("ENABLE_A365_DEFENDER_RTP must be true or false.");
+        }
+
+        /// <summary>Whether the fail mode is closed. Unset means open; any value but open or closed is rejected.</summary>
+        private static bool ParseFailMode(string? value)
+        {
+            if (value == null || value.Equals("open", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (value.Equals("closed", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            throw new InvalidOperationException("A365_DEFENDER_RTP_FAIL_MODE must be \"open\" or \"closed\".");
+        }
+    }
+}

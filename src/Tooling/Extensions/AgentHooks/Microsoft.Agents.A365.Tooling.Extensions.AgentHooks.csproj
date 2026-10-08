@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Microsoft.Agents.A365.Tooling.Extensions.AgentHooks</AssemblyName>
+    <RootNamespace>Microsoft.Agents.A365.Tooling.Extensions.AgentHooks</RootNamespace>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Package Properties -->
+    <PackageId>Microsoft.Agents.A365.Tooling.Extensions.AgentHooks</PackageId>
+    <Title>Microsoft Agent 365 agent-hooks protection</Title>
+    <Description>Microsoft Agent 365 real-time protection on the agent-hooks control contract (AGENT-HOOKS-0.1): a Microsoft Defender for AI interceptor for any agent-hooks host.</Description>
+    <Summary>Microsoft Agent 365 agent-hooks protection - Microsoft Defender for AI interceptor</Summary>
+    <Product>Microsoft Agent 365 Tooling SDK</Product>
+    <PackageTags>Microsoft;Agent365;A365;AgentHooks;Defender;Security;AI;Agents</PackageTags>
+    <!-- Suppress NU5104: ResponsibleAI.AgentHooks has no stable release yet (0.1.0 prerelease) -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ResponsibleAI.AgentHooks" />
+    <!-- Source Link Support -->
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Microsoft.Agents.A365.Tooling.csproj" />
+  </ItemGroup>
+</Project>
