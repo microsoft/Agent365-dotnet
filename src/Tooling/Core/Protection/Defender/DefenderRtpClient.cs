@@ -63,12 +63,6 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
             "trace", "input", "output", "target", "tool_call", "tool_result", "messages", "tools", "extensions",
         };
 
-        // Envelope members: copied and repaired, never treated as content.
-        private static readonly string[] EnvelopeMembers =
-        {
-            "interception_point", "timestamp", "sequence", "request_id", "session", "agent", "tenant", "actor", "model", "trace",
-        };
-
         // Used when the caller passes no HttpClient; pooled connections are recycled so DNS changes are picked up.
         internal static readonly HttpClient SharedHttpClient = new(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) });
 
@@ -258,8 +252,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
         /// <summary>
         /// Builds the copy of the context Defender evaluates without cloning the host's content. The envelope is
-        /// copied and repaired so the request meets Defender's validation; the content under decision at the point
-        /// (the field <c>target</c> mirrors) is clamped first, and then the tool call's arguments at
+        /// rebuilt from its spec fields so the request meets Defender's validation; the content under decision at the
+        /// point (the field <c>target</c> mirrors) is clamped first, and then the tool call's arguments at
         /// <c>post_tool_call</c>, tool declarations, the newest message history, extensions and any other member
         /// share what remains of <see cref="ContentBudgetFactor"/> times
         /// <see cref="DefenderRtpOptions.MaxContentCharacters"/>. Lone surrogates are replaced, since Defender cannot
@@ -270,70 +264,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         {
             var maxCharacters = Options.MaxContentCharacters;
             var budget = new ContentBudget((int)Math.Min(int.MaxValue, (long)ContentBudgetFactor * maxCharacters));
-            var hook = new JsonObject { ["spec"] = AgentHooksSpec };
-            foreach (var member in EnvelopeMembers)
-            {
-                if (context[member] is { } value)
-                {
-                    hook[member] = value.DeepClone();
-                }
-            }
-
-            hook["timestamp"] = UtcTimestamp(hook["timestamp"]);
-
-            var agentNode = hook["agent"] as JsonObject;
-            var agentId = FirstNonEmpty(agent.AgentObjectId, ReadString(agentNode?["id"]), agent.AgentId);
-            RequireString(agentId, "agent.id");
-            var sessionId = ReadString((hook["session"] as JsonObject)?["id"]);
-            RequireString(sessionId, "session.id");
-            if (!IsNonNegativeInteger(hook["sequence"]))
-            {
-                hook["sequence"] = NextSequence(sessionId!);
-            }
-
-            var preparedAgent = new JsonObject
-            {
-                ["id"] = agentId,
-                ["framework"] = SanitizeFramework(FirstNonEmpty(ReadString(agentNode?["framework"]), agent.Framework)),
-            };
-            if (FirstNonEmpty(ReadString(agentNode?["name"]), agent.AgentName) is { } name)
-            {
-                preparedAgent["name"] = name;
-            }
-
-            if (ReadString(agentNode?["version"]) is { Length: > 0 } version)
-            {
-                preparedAgent["version"] = version;
-            }
-
-            hook["agent"] = preparedAgent;
-
-            // Defender requires tenant.id to equal the token's tid, and the token is always acquired for the
-            // agent's tenant, so a host-supplied value is never trusted over it.
-            var tenant = hook["tenant"] as JsonObject ?? new JsonObject();
-            tenant["id"] = agent.TenantId;
-            hook["tenant"] = tenant;
-
-            if (hook["actor"] == null && !string.IsNullOrEmpty(agent.UserId))
-            {
-                hook["actor"] = new JsonObject { ["id"] = agent.UserId, ["kind"] = agent.ActorKind ?? "human" };
-            }
-
-            if (hook["request_id"] == null && !string.IsNullOrEmpty(agent.RequestId))
-            {
-                hook["request_id"] = agent.RequestId;
-            }
-
-            if (hook["model"] == null && !string.IsNullOrEmpty(agent.ModelName))
-            {
-                hook["model"] = new JsonObject { ["id"] = agent.ModelName };
-            }
-
-            FitModelAndActor(hook);
+            var point = ReadString(context["interception_point"]);
+            var hook = PrepareEnvelope(context, agent, point);
 
             // The content under decision is sent twice, as the point's field and as target, so it may use half of
             // the budget; the rest of the context shares what it leaves.
-            var point = ReadString(hook["interception_point"]);
             var decisionBudget = new ContentBudget(budget.Remaining / 2);
             var decisionTruncated = false;
             string? toolName = null;
@@ -429,45 +364,121 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         }
 
         /// <summary>
-        /// Repairs <c>model</c> and <c>actor</c>, which a host may fill loosely but Defender validates strictly (a
-        /// 400 would leave the call unverified).
+        /// Builds the envelope from its spec fields alone, repairing what a host may fill loosely but Defender
+        /// validates strictly (a 400 would leave the call unverified). Nothing else a host puts in an envelope object
+        /// is copied, so it cannot escape the content budget; ids and names are not truncated.
         /// </summary>
-        private static void FitModelAndActor(JsonObject hook)
+        private JsonObject PrepareEnvelope(JsonObject context, DefenderRtpAgentContext agent, string? point)
         {
-            if (hook.TryGetPropertyValue("model", out var model))
+            var agentNode = context["agent"] as JsonObject;
+            var agentId = FirstNonEmpty(agent.AgentObjectId, ReadString(agentNode?["id"]), agent.AgentId);
+            RequireString(agentId, "agent.id");
+            var sessionNode = context["session"] as JsonObject;
+            var sessionId = ReadString(sessionNode?["id"]);
+            RequireString(sessionId, "session.id");
+
+            var hook = new JsonObject
             {
-                if (ReadString((model as JsonObject)?["id"]) is { Length: > 0 } modelId)
+                ["spec"] = AgentHooksSpec,
+                ["interception_point"] = point,
+                ["timestamp"] = UtcTimestamp(context["timestamp"]),
+                ["sequence"] = IsNonNegativeInteger(context["sequence"])
+                    ? context["sequence"]!.DeepClone()
+                    : JsonValue.Create(NextSequence(sessionId!)),
+            };
+
+            if (FirstNonEmpty(ReadString(context["request_id"]), agent.RequestId) is { } requestId)
+            {
+                hook["request_id"] = requestId;
+            }
+
+            var session = new JsonObject { ["id"] = sessionId };
+            if (ReadString(sessionNode?["started_at"]) is { } startedAt
+                && DateTimeOffset.TryParse(startedAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var started))
+            {
+                session["started_at"] = FormatUtc(started);
+            }
+
+            if (sessionNode?["turn"] is { } turn && IsNonNegativeInteger(turn))
+            {
+                session["turn"] = turn.DeepClone();
+            }
+
+            hook["session"] = session;
+
+            var preparedAgent = new JsonObject
+            {
+                ["id"] = agentId,
+                ["framework"] = SanitizeFramework(FirstNonEmpty(ReadString(agentNode?["framework"]), agent.Framework)),
+            };
+            if (FirstNonEmpty(ReadString(agentNode?["name"]), agent.AgentName) is { } name)
+            {
+                preparedAgent["name"] = name;
+            }
+
+            if (ReadString(agentNode?["version"]) is { Length: > 0 } version)
+            {
+                preparedAgent["version"] = version;
+            }
+
+            hook["agent"] = preparedAgent;
+
+            // Defender requires tenant.id to equal the token's tid, and the token is always acquired for the
+            // agent's tenant, so a host-supplied value is never trusted over it.
+            var tenant = new JsonObject { ["id"] = agent.TenantId };
+            if (ReadString((context["tenant"] as JsonObject)?["name"]) is { Length: > 0 } tenantName)
+            {
+                tenant["name"] = tenantName;
+            }
+
+            hook["tenant"] = tenant;
+
+            // An actor or model the host set is repaired rather than replaced by the turn's.
+            var actorNode = context["actor"] ?? (string.IsNullOrEmpty(agent.UserId)
+                ? null
+                : new JsonObject { ["id"] = agent.UserId, ["kind"] = agent.ActorKind ?? "human" });
+            if (actorNode is JsonObject actor)
+            {
+                var preparedActor = new JsonObject();
+                if (ReadString(actor["id"]) is { Length: > 0 } actorId)
                 {
-                    hook["model"] = new JsonObject { ["id"] = modelId };
+                    preparedActor["id"] = actorId;
                 }
-                else
+
+                if (ReadString(actor["kind"]) is { } kind && ActorKinds.Contains(kind))
                 {
-                    hook.Remove("model");
+                    preparedActor["kind"] = kind;
+                }
+
+                hook["actor"] = preparedActor;
+            }
+
+            var modelId = context["model"] is { } model ? ReadString((model as JsonObject)?["id"]) : agent.ModelName;
+            if (!string.IsNullOrEmpty(modelId))
+            {
+                hook["model"] = new JsonObject { ["id"] = modelId };
+            }
+
+            if (context["trace"] is JsonObject traceNode)
+            {
+                var trace = new JsonObject();
+                if (ReadString(traceNode["trace_id"]) is { Length: > 0 } traceId)
+                {
+                    trace["trace_id"] = traceId;
+                }
+
+                if (ReadString(traceNode["span_id"]) is { Length: > 0 } spanId)
+                {
+                    trace["span_id"] = spanId;
+                }
+
+                if (trace.Count > 0)
+                {
+                    hook["trace"] = trace;
                 }
             }
 
-            if (hook.TryGetPropertyValue("actor", out var actorNode))
-            {
-                if (actorNode is JsonObject actor)
-                {
-                    var prepared = new JsonObject();
-                    if (ReadString(actor["id"]) is { Length: > 0 } actorId)
-                    {
-                        prepared["id"] = actorId;
-                    }
-
-                    if (ReadString(actor["kind"]) is { } kind && ActorKinds.Contains(kind))
-                    {
-                        prepared["kind"] = kind;
-                    }
-
-                    hook["actor"] = prepared;
-                }
-                else
-                {
-                    hook.Remove("actor");
-                }
-            }
+            return hook;
         }
 
         /// <summary>
@@ -1040,8 +1051,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
                 && DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var timestamp)
                     ? timestamp
                     : _timeProvider.GetUtcNow();
-            return parsed.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
+            return FormatUtc(parsed);
         }
+
+        private static string FormatUtc(DateTimeOffset value) =>
+            value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
 
         private static string SanitizeFramework(string? framework)
         {
@@ -1104,6 +1118,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>
         /// A copy of the value with lone surrogates replaced by U+FFFD in every string and property name: they are
         /// not valid UTF-16, so Defender cannot parse a request that carries them. Valid surrogate pairs are kept.
+        /// Keys stay distinct, so no value is dropped: a renamed key that would collide with another gets a numbered
+        /// suffix.
         /// </summary>
         private static JsonNode? ReplaceLoneSurrogates(JsonNode? node)
         {
@@ -1122,10 +1138,26 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
 
                     return items;
                 case JsonObject obj:
+                    // Keys that are valid UTF-16 keep their names; only the renamed ones can need a suffix.
+                    var taken = new HashSet<string>(
+                        obj.Select(property => property.Key).Where(key => ReplaceLoneSurrogates(key) == key),
+                        StringComparer.Ordinal);
                     var properties = new JsonObject();
                     foreach (var property in obj)
                     {
-                        properties[ReplaceLoneSurrogates(property.Key)] = ReplaceLoneSurrogates(property.Value);
+                        var name = ReplaceLoneSurrogates(property.Key);
+                        if (name != property.Key)
+                        {
+                            var unique = name;
+                            for (var suffix = 2; !taken.Add(unique); suffix++)
+                            {
+                                unique = $"{name}~{suffix}";
+                            }
+
+                            name = unique;
+                        }
+
+                        properties[name] = ReplaceLoneSurrogates(property.Value);
                     }
 
                     return properties;
@@ -1192,8 +1224,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         private static string? ReadString(JsonNode? node) =>
             node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
+        // Reads the number's JSON text, so a value a host built from any integer type counts, not only a long.
         private static bool IsNonNegativeInteger(JsonNode? node) =>
-            node is JsonValue value && value.TryGetValue<long>(out var number) && number >= 0;
+            node is JsonValue value
+            && value.GetValueKind() == JsonValueKind.Number
+            && long.TryParse(value.ToJsonString(), NumberStyles.None, CultureInfo.InvariantCulture, out _);
 
         private static string? FirstNonEmpty(params string?[] values) =>
             values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));

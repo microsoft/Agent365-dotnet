@@ -44,9 +44,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Defender
         /// <summary>
         /// Maximum characters per content string sent to Defender (<c>A365_DEFENDER_RTP_MAX_CONTENT_CHARACTERS</c>):
         /// input and output content, tool arguments and results, message content, tool descriptions and
-        /// schemas, extensions, and any member a host adds. Envelope fields such as ids, names and roles are
-        /// not truncated. The copy as a whole carries at most four times this many characters of content: the
-        /// content under decision first, then the rest of the context, with the oldest messages dropped first.
+        /// schemas, extensions, and any other member a host adds to the context. Envelope fields such as ids, names
+        /// and roles are not truncated, and envelope objects carry only their spec fields. The copy as a whole
+        /// carries at most four times this many characters of content: the content under decision first, then the
+        /// rest of the context, with the oldest messages dropped first.
         /// When the content under decision is cut, Defender evaluates a truncated copy and only its deny stands; an
         /// allow follows <see cref="FailClosed"/>. Raise it for agents with long content.
         /// </summary>

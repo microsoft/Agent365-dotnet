@@ -6,9 +6,10 @@ control contract (AGENT-HOOKS-0.1), using the .NET package
 
 `A365DefenderInterceptor` is an agent-hooks interceptor for Microsoft Defender for AI. Each context the host
 emits at the four points Defender evaluates is sent to the prevention endpoint
-(`POST .../v1/protection/evaluate`) as a fitted copy: the client clones the context and fits it to Defender's
-request validation (spec version, UTC timestamp, `target`, spec-only tool members, repaired optional fields
-and clamped content), keeping its session, sequence and tool call ids. The host's context is not modified.
+(`POST .../v1/protection/evaluate`) as a fitted copy: the client builds a copy of the context that meets
+Defender's request validation (spec version, UTC timestamp, `target`, envelope and tool objects with only their
+spec members, repaired optional fields and clamped content), keeping its session, sequence and tool call ids. The
+host's context is not modified.
 Defender's verdict decides:
 
 | agent-hooks point | When | On `deny` |

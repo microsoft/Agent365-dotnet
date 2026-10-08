@@ -183,6 +183,35 @@ public class DefenderRtpClientTests
         body["actor"]!.ToJsonString().Should().Be("""{"id":"user"}""");
     }
 
+    [Fact]
+    public async Task SendsOnlyTheSpecFieldsOfEnvelopeObjects()
+    {
+        var (client, handler, tokens) = Create(_ => Json(new { decision = "allow" }), new DefenderRtpOptions { MaxContentCharacters = 100 });
+        var context = InputContext("hello");
+        var bulk = new string('x', 10000);
+        context["sequence"] = 9;
+        context["session"] = new JsonObject { ["id"] = "s-1", ["started_at"] = "2026-10-07T12:00:00+02:00", ["turn"] = 2, ["metadata"] = bulk };
+        context["tenant"] = new JsonObject { ["id"] = TenantId, ["name"] = "Contoso", ["notes"] = bulk };
+        context["trace"] = new JsonObject { ["trace_id"] = "trace-1", ["span_id"] = "span-1", ["baggage"] = bulk };
+        context["request_id"] = new JsonObject { ["blob"] = bulk };
+        context["actor"] = new JsonObject { ["id"] = "user", ["kind"] = "human", ["profile"] = bulk };
+        context["model"] = new JsonObject { ["id"] = "gpt-4o", ["params"] = new JsonObject { ["system"] = bulk } };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, tokens.Resolve);
+
+        result!.Truncated.Should().BeFalse("nothing under decision was cut");
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body["sequence"]!.GetValue<long>().Should().Be(9, "an int sequence is kept, not renumbered");
+        body["session"]!.ToJsonString().Should().Be("""{"id":"s-1","started_at":"2026-10-07T10:00:00.000Z","turn":2}""");
+        body["tenant"]!.ToJsonString().Should().Be($$"""{"id":"{{TenantId}}","name":"Contoso"}""");
+        body["trace"]!.ToJsonString().Should().Be("""{"trace_id":"trace-1","span_id":"span-1"}""");
+        body["request_id"]!.GetValue<string>().Should().Be("activity-id", "a request id that is not a string is replaced by the turn's");
+        body["actor"]!.ToJsonString().Should().Be("""{"id":"user","kind":"human"}""");
+        body["model"]!.ToJsonString().Should().Be("""{"id":"gpt-4o"}""");
+        body.ToJsonString().Length.Should().BeLessThan(2000, "no envelope member escapes the content budget");
+    }
+
     [Theory]
     [InlineData("\"metadata\"")]
     [InlineData("""{ "tool": "metadata" }""")]
@@ -383,6 +412,24 @@ public class DefenderRtpClientTests
         var body = handler.Calls.Single().Body;
         body["input"]!["content"]!.GetValue<string>().Should().Be("\uFFFD" + Payload);
         body["extensions"]!["custom"]!.AsObject().Select(property => property.Key).Should().Equal("key\uFFFD");
+    }
+
+    [Fact]
+    public async Task KeepsEveryValueWhenReplacingLoneSurrogatesInKeysWouldCollide()
+    {
+        var handler = DeniesThePayload();
+        using var httpClient = new HttpClient(handler);
+        var client = new DefenderRtpClient(Options(), httpClient);
+        var context = ToolContext("pre_tool_call", "x", null);
+        context["tool_call"]!["args"] = new JsonObject { ["q\uD800"] = Payload, ["q\uFFFD"] = "harmless" };
+
+        var result = await client.EvaluateHookContextAsync(context, Agent, new TokenSource().Resolve);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Allowed.Should().BeFalse("the value under the renamed key still reached Defender");
+        var body = handler.Calls.Single().Body;
+        DefenderContract.Errors(body).Should().BeEmpty();
+        body["tool_call"]!["args"]!.ToJsonString().Should().Be(new JsonObject { ["q\uFFFD~2"] = Payload, ["q\uFFFD"] = "harmless" }.ToJsonString());
     }
 
     [Fact]

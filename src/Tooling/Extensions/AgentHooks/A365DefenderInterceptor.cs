@@ -28,8 +28,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// <remarks>
     /// <para>
     /// Defender receives a copy of the context fitted to its request validation (spec version, UTC
-    /// timestamp, <c>target</c>, spec-only tool members, repaired optional fields and clamped content). The
-    /// copy keeps the context's session, sequence and tool call ids; the host's context is not modified.
+    /// timestamp, <c>target</c>, envelope and tool objects with only their spec members, repaired optional fields
+    /// and clamped content). The copy keeps the context's session, sequence and tool call ids; the host's context is
+    /// not modified.
     /// </para>
     /// <para>
     /// When no verdict is obtained (no agent identity, identity resolution, transport, authentication or validation
