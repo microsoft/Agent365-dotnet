@@ -390,7 +390,8 @@ src/Tooling/Core/
 │       ├── PurviewDlpOptions.cs               # Configuration (environment variables), response mode
 │       ├── PurviewDlpEvaluationResult.cs      # Activity, policy actions and evaluation result
 │       ├── PurviewDlpTokenResolver.cs         # Token resolver delegate, token, agent context
-│       └── PurviewDlpTokenResolvers.cs        # Agentic user and host-supplied tokens
+│       ├── PurviewDlpTokenResolvers.cs        # Agentic user and host-supplied tokens
+│       └── AgenticUserTokenCache.cs           # Agentic user token cache (internal)
 ├── Constants.cs                               # Constants
 ├── Utility.cs                                 # Helper methods
 ├── Microsoft.Agents.A365.Tooling.csproj
@@ -521,8 +522,9 @@ if (result is { Allowed: false })
 
 `PurviewDlpClient` sends a text to the Microsoft Graph `processContent` API, which applies the Purview DLP policies
 scoped to the agent's application and writes the Purview audit record: `UploadText` for content entering the agent,
-such as the user's prompt, and `DownloadText` for its reply. A policy action restricted with `block` blocks. The
-agentic user's delegated token (`Content.Process.User`) evaluates as `/me`. Agent-hooks hosts register it through
+such as the user's prompt, and `DownloadText` for its reply. A policy action restricted with `block`, or whose action
+is `blockAccess`, blocks. The agentic user's delegated token (`Content.Process.User`) evaluates as `/me`. Agent-hooks
+hosts register it through
 `A365PurviewInterceptor` in `Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` (see its
 [README](../../Extensions/AgentHooks/README.md)).
 

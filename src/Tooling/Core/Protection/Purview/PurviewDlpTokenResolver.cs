@@ -11,10 +11,11 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
     /// Resolves the Microsoft Graph token for a Purview evaluation, and whose behalf the content is evaluated on.
     /// </summary>
     /// <remarks>
-    /// The client does not cache what the resolver returns: the resolver owns caching. The resolvers in
-    /// <see cref="PurviewDlpTokenResolvers"/> use the agent's connection, whose MSAL implementation caches every token
-    /// of the agentic chain, or a host-supplied provider, which should cache its tokens. The resolver is called within
-    /// the evaluation's deadline (<see cref="PurviewDlpOptions.Timeout"/>).
+    /// The client does not cache what the resolver returns: the resolver owns caching.
+    /// <see cref="PurviewDlpTokenResolvers.FromAgenticUser"/> caches the agentic user's tokens;
+    /// <see cref="PurviewDlpTokenResolvers.FromAccessTokenProvider"/> never caches, since its tokens may be for a user the
+    /// agent context does not identify. The resolver is called within the evaluation's deadline
+    /// (<see cref="PurviewDlpOptions.Timeout"/>), on the thread pool.
     /// </remarks>
     /// <param name="agent">The agent and turn being evaluated.</param>
     /// <param name="scope">The scope to request, <see cref="PurviewDlpOptions.AuthenticationScope"/>.</param>
@@ -88,7 +89,10 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
         /// </summary>
         public string? ApplicationId { get; set; }
 
-        /// <summary>The agent's display name, which names the app and the content in Purview; defaults to <c>agent365-agent</c>.</summary>
+        /// <summary>
+        /// The agent's display name, which names the app and the content in Purview; defaults to <see cref="AgentId"/>,
+        /// then the application id, since Purview needs a name.
+        /// </summary>
         public string? AgentName { get; set; }
 
         /// <summary>

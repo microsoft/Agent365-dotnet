@@ -18,10 +18,13 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
     /// <summary>The policy actions Purview returned for an evaluation.</summary>
     public sealed class PurviewDlpDecision
     {
-        /// <summary>Whether a policy action's <c>restrictionAction</c> is <c>block</c>.</summary>
+        /// <summary>
+        /// Whether a policy action blocks: its <c>restrictionAction</c> is <c>block</c> or its <c>action</c> is
+        /// <c>blockAccess</c>.
+        /// </summary>
         public bool BlockAction { get; init; }
 
-        /// <summary>The <c>restrictionAction</c> of the blocking action, when one blocked.</summary>
+        /// <summary>The <c>restrictionAction</c> of the blocking action, when it has one.</summary>
         public string? RestrictionAction { get; init; }
 
         /// <summary>How many policy actions Purview returned, blocking or not (for example <c>audit</c> or <c>warn</c>).</summary>

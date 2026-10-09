@@ -320,6 +320,88 @@ public class A365PurviewInterceptorTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task ReadsStructuredContentOnlyUpToTheLimit(bool failClosed)
+    {
+        var harness = new Harness(BlocksThePayload, failClosed: failClosed, maxContentCharacters: 100);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-21");
+        var parts = new JsonArray(Enumerable.Range(0, 5000).Select(_ => (JsonNode?)JsonValue.Create("abcdefghi")).ToArray());
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(parts), CancellationToken.None);
+
+        var entry = Entry(harness.Bodies.Single());
+        entry["content"]!["data"]!.GetValue<string>().Should().HaveLength(100);
+        entry["isTruncated"]!.GetValue<bool>().Should().BeTrue();
+        AssertFollowsTheFailMode(record, failClosed);
+        record.Verdict.Warnings.Should().Contain(warning => warning.Message == PurviewDlpClient.TruncatedContentError);
+    }
+
+    [Fact]
+    public async Task BlocksWhatItReadOfStructuredContentCutAtTheLimit()
+    {
+        var harness = new Harness(BlocksThePayload, maxContentCharacters: 100);
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-22");
+        var parts = new JsonArray(new JsonNode?[] { JsonValue.Create($"card {Payload}") }.Concat(Enumerable.Range(0, 500).Select(_ => (JsonNode?)null)).ToArray());
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(parts), CancellationToken.None);
+
+        Entry(harness.Bodies.Single())["isTruncated"]!.GetValue<bool>().Should().BeTrue("reading stopped at the limit of values");
+        record.Proceeds.Should().BeFalse("a block of what was read stands");
+        record.Verdict.Reason.Should().Be("purview:block");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeWhenReadingStopsBeforeAnyText(bool failClosed)
+    {
+        var resolved = 0;
+        var harness = new Harness(_ => Graph(Clean), failClosed: failClosed, maxContentCharacters: 100, resolveCall: _ =>
+        {
+            resolved++;
+            return new A365PurviewCall(Agent(), Tokens);
+        });
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-23");
+        var padding = new JsonArray(Enumerable.Range(0, 500).Select(index => (JsonNode?)(index % 2 == 0 ? JsonValue.Create(" ") : null)).ToArray());
+
+        var record = await harness.Emitter.EmitUncheckedAsync(builder.Input(padding), CancellationToken.None);
+
+        AssertFollowsTheFailMode(record, failClosed);
+        harness.Bodies.Should().BeEmpty();
+        resolved.Should().Be(0);
+        (await harness.EvaluationsAsync()).Should().ContainSingle().Which.Error.Should().Be(PurviewDlpClient.UnreadContentError);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeForContentThatCannotBeRead(bool failClosed)
+    {
+        var evaluations = new List<PurviewDlpEvaluationResult>();
+        var client = new PurviewDlpClient(
+            new PurviewDlpOptions { Enabled = true, GraphBaseUrl = new Uri(GraphBase), FailClosed = failClosed },
+            new HttpClient(new FakeGraph((_, _) => Task.FromResult(Graph(Clean)), new List<JsonObject>(), new List<(Uri Uri, string RequestId)>())));
+        var interceptor = new A365PurviewInterceptor(client, _ => new A365PurviewCall(Agent(), Tokens), evaluations.Add);
+        var context = new AgentContextBuilder(AgentId, "agent-framework", "s-24").Input(JsonValue.Create("placeholder")!);
+
+        // A parsed object whose property appears twice throws only when it is read.
+        context.Json["input"]!["content"] = JsonNode.Parse("""{"text":"one","text":"two"}""");
+        var verdict = await interceptor.InterceptAsync(context, CancellationToken.None);
+
+        if (failClosed)
+        {
+            verdict.Decision.Should().Be(Decision.Deny);
+            verdict.Reason.Should().Be("runtime_error:purview_unverified");
+        }
+        else
+        {
+            verdict.Decision.Should().Be(Decision.Allow);
+            verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "purview:unverified" && warning.Message == "content could not be read (ArgumentException)");
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task FollowsTheFailModeWhenPurviewAllowsATruncatedCopy(bool failClosed)
     {
         var harness = new Harness(BlocksThePayload, failClosed: failClosed, maxContentCharacters: 100);
@@ -445,6 +527,22 @@ public class A365PurviewInterceptorTests
 
         record.Proceeds.Should().BeTrue("Purview's own deadline applies its fail-open mode before the interceptor timeout");
         record.Verdict.Warnings.Should().ContainSingle(warning => warning.Reason == "purview:unverified" && warning.Message == "request timeout");
+    }
+
+    [Fact]
+    public async Task SizesTheInterceptorTimeoutWithoutDisabledPurviewOptions()
+    {
+        var defender = new DefenderRtpOptions { Enabled = true, Endpoint = new Uri(DefenderEndpoint), Timeout = TimeSpan.FromMilliseconds(100) };
+        var purview = new PurviewDlpOptions { Enabled = false, GraphBaseUrl = new Uri(GraphBase), Timeout = TimeSpan.FromSeconds(10) };
+
+        // Counted while disabled, Purview's timeout would stretch the emitter's to 12 s and let this 3 s interceptor finish.
+        var emitter = A365AgentHooks.CreateProtectionEmitter(defender: defender, purview: purview)
+            .Register(new SlowInterceptor(TimeSpan.FromSeconds(3)), "slow");
+        var builder = new AgentContextBuilder(AgentId, "agent-framework", "s-25");
+
+        var record = await emitter.EmitUncheckedAsync(builder.Input(JsonValue.Create("hello")!), CancellationToken.None);
+
+        record.Proceeds.Should().BeFalse("a Defender-only emitter keeps Defender's timeout plus two seconds");
     }
 
     [Fact]
@@ -651,6 +749,23 @@ public class A365PurviewInterceptorTests
         {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK);
+        }
+    }
+
+    /// <summary>An interceptor that takes a while and then allows.</summary>
+    private sealed class SlowInterceptor : IInterceptor
+    {
+        private readonly TimeSpan _delay;
+
+        public SlowInterceptor(TimeSpan delay)
+        {
+            _delay = delay;
+        }
+
+        public async ValueTask<Verdict> InterceptAsync(AgentContext context, CancellationToken ct)
+        {
+            await Task.Delay(_delay, CancellationToken.None);
+            return new Verdict(Decision.Allow);
         }
     }
 

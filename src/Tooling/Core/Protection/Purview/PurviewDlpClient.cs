@@ -25,7 +25,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
     /// Each evaluation sends one text to <c>POST {GraphBaseUrl}/me/dataSecurityAndGovernance/processContent</c> (or
     /// <c>/users/{id}/...</c> when the token resolver names a user). Purview applies the DLP policies scoped to the
     /// agent's application and writes the audit record. A policy action whose <c>restrictionAction</c> is
-    /// <c>block</c> blocks; other actions allow. Each call carries a unique <c>client-request-id</c>, returned as
+    /// <c>block</c>, or whose <c>action</c> is <c>blockAccess</c>, blocks; other actions allow. Each call carries a
+    /// unique <c>client-request-id</c>, also the identifier of its content entry, returned as
     /// <see cref="PurviewDlpEvaluationResult.CorrelationId"/>.
     /// </remarks>
     public sealed class PurviewDlpClient
@@ -40,8 +41,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
         /// </summary>
         public const string TruncatedContentError = "content exceeded MaxContentCharacters; Purview evaluated a truncated copy";
 
-        /// <summary>The agent name used when <see cref="PurviewDlpAgentContext.AgentName"/> is not set.</summary>
-        public const string DefaultAgentName = "agent365-agent";
+        /// <summary>
+        /// The <see cref="PurviewDlpEvaluationResult.Error"/> of a result for structured content whose reading stopped at
+        /// <see cref="PurviewDlpOptions.MaxContentCharacters"/> before any text was found: what was not read could hold
+        /// text, so Purview is not skipped silently and the result follows <see cref="PurviewDlpOptions.FailClosed"/>.
+        /// </summary>
+        public const string UnreadContentError = "content exceeded MaxContentCharacters before any text was read";
 
         private const string ProcessContentPath = "/dataSecurityAndGovernance/processContent";
         private const string AppVersion = "1.0";
@@ -126,9 +131,24 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
         /// <param name="cancellationToken">Cancels the evaluation.</param>
         /// <returns>The result, or null (and no call) when Purview DLP is disabled or the text is empty.</returns>
         /// <exception cref="ArgumentException">The agent context has no session id or application id.</exception>
-        public async Task<PurviewDlpEvaluationResult?> EvaluateAsync(
+        public Task<PurviewDlpEvaluationResult?> EvaluateAsync(
             PurviewDlpActivity activity,
             string? text,
+            PurviewDlpAgentContext agent,
+            PurviewDlpTokenResolver tokenResolver,
+            CancellationToken cancellationToken = default) =>
+            EvaluateTextAsync(activity, text, false, agent, tokenResolver, cancellationToken);
+
+        /// <summary>
+        /// Evaluates a text that may already be a truncated copy of the content, for example the text read from
+        /// structured content within <see cref="PurviewDlpOptions.MaxContentCharacters"/>. A truncated copy is sent with
+        /// <c>isTruncated</c> and Purview's allow of it follows the fail mode, as for text cut here; a blank one cannot
+        /// be evaluated and follows the fail mode too (<see cref="UnreadContentError"/>).
+        /// </summary>
+        internal async Task<PurviewDlpEvaluationResult?> EvaluateTextAsync(
+            PurviewDlpActivity activity,
+            string? text,
+            bool truncatedCopy,
             PurviewDlpAgentContext agent,
             PurviewDlpTokenResolver tokenResolver,
             CancellationToken cancellationToken = default)
@@ -153,7 +173,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
                 throw new ArgumentOutOfRangeException(nameof(activity));
             }
 
-            if (string.IsNullOrWhiteSpace(text))
+            var blank = string.IsNullOrWhiteSpace(text);
+            if (blank && !truncatedCopy)
             {
                 return null;
             }
@@ -163,13 +184,21 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
             var applicationId = FirstNonEmpty(agent.ApplicationId, agent.BlueprintId, agent.AgentId)
                 ?? throw new ArgumentException("The agent context's ApplicationId, BlueprintId or AgentId is required.", nameof(agent));
             var started = _timeProvider.GetTimestamp();
+
+            // One id per evaluation: the client-request-id of its call, and the identifier of its content entry.
             var correlationId = _idFactory().ToString();
+            if (blank)
+            {
+                return Failure(activity, correlationId, sessionId, UnreadContentError, null, started);
+            }
+
             var sequence = agent.SequenceNumber is long given && given >= 0 ? given : NextSequence(sessionId);
 
             // Text over the limit is cut, never split inside a surrogate pair, and sent with isTruncated set.
             var maxCharacters = Options.MaxContentCharacters;
-            var truncated = text.Length > maxCharacters;
-            var data = ReplaceLoneSurrogates(truncated ? text.Substring(0, KeepSurrogatePairs(text, maxCharacters)) : text);
+            var cut = text!.Length > maxCharacters;
+            var truncated = truncatedCopy || cut;
+            var data = ReplaceLoneSurrogates(cut ? text.Substring(0, KeepSurrogatePairs(text, maxCharacters)) : text);
 
             // One deadline covers token acquisition and the request, so the fail mode applies within Options.Timeout,
             // before an agent-hooks interceptor timeout would.
@@ -204,7 +233,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
                 return Failure(activity, correlationId, sessionId, "entra token timeout", null, started);
             }
 
-            var body = BuildBody(activity, data, truncated, agent, applicationId, sessionId, sequence);
+            var body = BuildBody(activity, data, truncated, agent, applicationId, sessionId, sequence, correlationId);
             return await PostAsync(activity, body, token, correlationId, sessionId, truncated, started, deadline.Token, cancellationToken).ConfigureAwait(false);
         }
 
@@ -271,7 +300,8 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
 
         /// <summary>
         /// The <c>processContent</c> request: one conversation entry with the text, the agent, the session and its
-        /// sequence, and the application the DLP policies are scoped to.
+        /// sequence, and the application the DLP policies are scoped to. The entry's identifier is the call's
+        /// <c>client-request-id</c>.
         /// </summary>
         private JsonObject BuildBody(
             PurviewDlpActivity activity,
@@ -280,11 +310,12 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
             PurviewDlpAgentContext agent,
             string applicationId,
             string sessionId,
-            long sequence)
+            long sequence,
+            string correlationId)
         {
             // Graph reports an entry without a name as a permanent BadRequest in processingErrors, with HTTP 200 and no
-            // policy actions, so the name is never empty.
-            var agentName = ReplaceLoneSurrogates(FirstNonEmpty(agent.AgentName) ?? DefaultAgentName);
+            // policy actions, so the name is never empty: it defaults to the agent identity, then the application.
+            var agentName = ReplaceLoneSurrogates(FirstNonEmpty(agent.AgentName, agent.AgentId) ?? applicationId);
             var activityName = ActivityName(activity);
             var timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
             var agentInfo = new JsonObject { ["@odata.type"] = "microsoft.graph.aiAgentInfo" };
@@ -304,7 +335,7 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
                     ["contentEntries"] = new JsonArray(new JsonObject
                     {
                         ["@odata.type"] = "microsoft.graph.processConversationMetadata",
-                        ["identifier"] = _idFactory().ToString(),
+                        ["identifier"] = correlationId,
                         ["content"] = new JsonObject
                         {
                             ["@odata.type"] = "microsoft.graph.textContent",
@@ -499,57 +530,64 @@ namespace Microsoft.Agents.A365.Tooling.Protection.Purview
         }
 
         /// <summary>
-        /// The policy actions. Any action restricted with <c>block</c> blocks, whatever shape the other actions have;
-        /// <paramref name="malformed"/> is set when an action is not an object whose <c>restrictionAction</c>, when
-        /// present, is a string.
+        /// The policy actions. An action blocks when its <c>restrictionAction</c> is <c>block</c> or its <c>action</c> is
+        /// <c>blockAccess</c>, in any case, whatever shape the rest of it or the other actions have;
+        /// <paramref name="malformed"/> is set when an action is not an object whose <c>action</c> and
+        /// <c>restrictionAction</c>, when present, are strings.
         /// </summary>
         private static PurviewDlpDecision ReadDecision(JsonArray actions, out bool malformed)
         {
             malformed = false;
-            string? blocking = null;
+            var blocks = false;
+            string? blockingRestriction = null;
             foreach (var entry in actions)
             {
-                if (!TryReadRestriction(entry, out var restriction))
+                malformed |= !TryReadAction(entry, out var action, out var restriction);
+                if (!blocks && (Matches(restriction, "block") || Matches(action, "blockAccess")))
                 {
-                    malformed = true;
-                }
-                else if (blocking == null && restriction != null && restriction.Equals("block", StringComparison.OrdinalIgnoreCase))
-                {
-                    blocking = restriction;
+                    blocks = true;
+                    blockingRestriction = restriction;
                 }
             }
 
             return new PurviewDlpDecision
             {
-                BlockAction = blocking != null,
-                RestrictionAction = blocking,
+                BlockAction = blocks,
+                RestrictionAction = blockingRestriction,
                 ActionCount = actions.Count,
             };
         }
 
         /// <summary>
-        /// An action's <c>restrictionAction</c>, and whether the action has the expected shape: an object whose
-        /// <c>restrictionAction</c>, when present, is a string, and whose properties each appear once.
+        /// An action's <c>action</c> and <c>restrictionAction</c>, each when it is a string, and whether the action has
+        /// the expected shape: an object whose <c>action</c> and <c>restrictionAction</c>, when present, are strings,
+        /// and whose properties each appear once.
         /// </summary>
-        private static bool TryReadRestriction(JsonNode? entry, out string? restriction)
+        private static bool TryReadAction(JsonNode? entry, out string? action, out string? restriction)
         {
+            action = null;
             restriction = null;
-            if (entry is not JsonObject action)
+            if (entry is not JsonObject value)
             {
                 return false;
             }
 
             try
             {
-                var value = action["restrictionAction"];
-                restriction = ReadString(value);
-                return value == null || restriction != null;
+                var actionNode = value["action"];
+                var restrictionNode = value["restrictionAction"];
+                action = ReadString(actionNode);
+                restriction = ReadString(restrictionNode);
+                return (actionNode == null || action != null) && (restrictionNode == null || restriction != null);
             }
             catch (ArgumentException)
             {
                 return false;
             }
         }
+
+        private static bool Matches(string? value, string expected) =>
+            value != null && value.Equals(expected, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>The processing errors as a count, with the codes and error types that look like identifiers.</summary>
         private static string ProcessingErrors(JsonArray errors)

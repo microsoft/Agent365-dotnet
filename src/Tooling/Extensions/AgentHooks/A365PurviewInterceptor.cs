@@ -34,9 +34,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The text is the content's string, or every string and number in structured content, one per line. Empty content
-    /// is allowed without a call. Each evaluation uses the context's session id as the content's
-    /// <c>correlationId</c> and its sequence as <c>sequenceNumber</c>.
+    /// The text is the content's string, or every string and number in structured content, one per line, read within
+    /// <see cref="PurviewDlpOptions.MaxContentCharacters"/>. Content without text is allowed without a call, unless
+    /// reading stopped at the limit before any text was found: then the verdict follows the fail mode
+    /// (<see cref="PurviewDlpClient.UnreadContentError"/>). Text cut at the limit is sent as a truncated copy. Each
+    /// evaluation uses the context's session id as the content's <c>correlationId</c> and its sequence as
+    /// <c>sequenceNumber</c>.
     /// </para>
     /// <para>
     /// When no verdict is obtained (no agent identity, identity resolution, token, transport or HTTP failure, or
@@ -120,18 +123,36 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                     return new Verdict(Decision.Allow);
             }
 
-            // Content without text has nothing for Purview to inspect.
-            var text = ContentText(content);
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return new Verdict(Decision.Allow);
-            }
-
             var sessionId = ReadString((context.Json["session"] as JsonObject)?["id"]);
             var sequence = ReadSequence(context.Json["sequence"]);
-            if (activity == PurviewDlpActivity.DownloadText && _client.Options.ResponseMode == PurviewDlpResponseMode.Audit)
+            var audit = activity == PurviewDlpActivity.DownloadText && _client.Options.ResponseMode == PurviewDlpResponseMode.Audit;
+
+            string text;
+            bool cut;
+            try
             {
-                AuditInBackground(context, point, text, sessionId, sequence);
+                text = ContentText(content, _client.Options.MaxContentCharacters, out cut);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // Content that cannot be read, for example a parsed object whose property appears twice, is not
+                // skipped silently: like any missing verdict, it follows the fail mode.
+                _logger?.LogWarning(ex, "The content at {InterceptionPoint} could not be read; the fail mode applies.", point);
+                return Decide(audit, _client.Unavailable(activity, $"content could not be read ({ex.GetType().Name})", sessionId));
+            }
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                // Content without text has nothing for Purview to inspect, unless reading stopped at the limit before any
+                // text was found: what was not read could hold some.
+                return cut
+                    ? Decide(audit, _client.Unavailable(activity, PurviewDlpClient.UnreadContentError, sessionId))
+                    : new Verdict(Decision.Allow);
+            }
+
+            if (audit)
+            {
+                AuditInBackground(context, point, text, cut, sessionId, sequence);
                 return new Verdict(Decision.Allow);
             }
 
@@ -141,7 +162,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 // Without an agent identity Purview cannot be called; like any missing verdict, that follows the fail
                 // mode rather than allowing silently.
                 result = ResolveCall(context, sessionId, sequence) is { } call
-                    ? await _client.EvaluateAsync(activity, text, call.Agent, call.TokenResolver, cancellationToken).ConfigureAwait(false)
+                    ? await _client.EvaluateTextAsync(activity, text, cut, call.Agent, call.TokenResolver, cancellationToken).ConfigureAwait(false)
                     : _client.Unavailable(activity, NoIdentity, sessionId);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -202,63 +223,109 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         }
 
         /// <summary>
-        /// The text Purview inspects in input or output content: a string as it is; otherwise every string and number in
-        /// the content, in document order, one per line. Property names are structure, not content, and are left out.
-        /// The walk keeps its own stack, so content of any depth is read in full.
+        /// The text Purview inspects in input or output content: a string as it is (the client cuts a long one);
+        /// otherwise every string and number in the content, in document order, one per line, with property names left
+        /// out as structure. Reading structured content is bounded: at most <paramref name="maxCharacters"/> values and
+        /// containers, and one character more of text than the limit, so neither long text nor a large structure of
+        /// empty values is read past it; <paramref name="cut"/> says that reading stopped early. The walk keeps its own
+        /// stack, so deep content cannot exhaust the call stack.
         /// </summary>
-        internal static string ContentText(JsonNode? content)
+        internal static string ContentText(JsonNode? content, int maxCharacters, out bool cut)
         {
+            cut = false;
             if (content is JsonValue single && single.TryGetValue<string>(out var only))
             {
                 return only;
             }
 
+            // One character past the limit tells the client the text is longer than it may send.
+            var textLimit = (int)Math.Min(int.MaxValue, (long)maxCharacters + 1);
+            var nodes = 0;
             var builder = new StringBuilder();
-            var pending = new Stack<JsonNode?>();
-            pending.Push(content);
-            while (pending.Count > 0)
+            var pending = new Stack<IEnumerator<JsonNode?>>();
+            try
             {
-                switch (pending.Pop())
+                var node = content;
+                while (true)
                 {
-                    case JsonArray array:
-                        for (var index = array.Count - 1; index >= 0; index--)
-                        {
-                            pending.Push(array[index]);
-                        }
+                    if (++nodes > maxCharacters)
+                    {
+                        cut = true;
+                        break;
+                    }
 
-                        break;
-                    case JsonObject obj:
-                        foreach (var property in obj.Reverse())
-                        {
-                            pending.Push(property.Value);
-                        }
+                    switch (node)
+                    {
+                        case JsonArray array:
+                            pending.Push(array.GetEnumerator());
+                            break;
+                        case JsonObject obj:
+                            pending.Push(obj.Select(property => property.Value).GetEnumerator());
+                            break;
+                        case JsonValue value when value.TryGetValue<string>(out var text):
+                            cut = !AppendLine(builder, text, textLimit);
+                            break;
+                        case JsonValue value when value.GetValueKind() == JsonValueKind.Number:
+                            cut = !AppendLine(builder, value.ToJsonString(), textLimit);
+                            break;
+                    }
 
+                    // The next node is the next child of the innermost container that has one.
+                    while (!cut && pending.Count > 0 && !pending.Peek().MoveNext())
+                    {
+                        pending.Pop().Dispose();
+                    }
+
+                    if (cut || pending.Count == 0)
+                    {
                         break;
-                    case JsonValue value when value.TryGetValue<string>(out var text):
-                        AppendLine(builder, text);
-                        break;
-                    case JsonValue value when value.GetValueKind() == JsonValueKind.Number:
-                        AppendLine(builder, value.ToJsonString());
-                        break;
+                    }
+
+                    node = pending.Peek().Current;
+                }
+            }
+            finally
+            {
+                while (pending.Count > 0)
+                {
+                    pending.Pop().Dispose();
                 }
             }
 
             return builder.ToString();
         }
 
-        private static void AppendLine(StringBuilder builder, string text)
+        /// <summary>Appends a line of text while the text stays within the limit; false when it was cut.</summary>
+        private static bool AppendLine(StringBuilder builder, string text, int limit)
         {
             if (text.Length == 0)
             {
-                return;
+                return true;
             }
 
             if (builder.Length > 0)
             {
+                if (builder.Length >= limit)
+                {
+                    return false;
+                }
+
                 builder.Append('\n');
             }
 
-            builder.Append(text);
+            var kept = Math.Min(limit - builder.Length, text.Length);
+            builder.Append(text, 0, kept);
+            return kept == text.Length;
+        }
+
+        /// <summary>
+        /// The verdict for a result decided without a call: it goes to the callback, and a reply audited in the
+        /// background is never blocked.
+        /// </summary>
+        private Verdict Decide(bool audit, PurviewDlpEvaluationResult result)
+        {
+            Report(result);
+            return audit ? new Verdict(Decision.Allow) : ToVerdict(result);
         }
 
         /// <summary>
@@ -266,7 +333,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// is at hand, and the evaluation runs on the thread pool, bounded by the client's own deadline rather than the
         /// emitter's token. Its outcome, or a failure, goes only to the callback.
         /// </summary>
-        private void AuditInBackground(AgentContext context, string point, string text, string? sessionId, long? sequence)
+        private void AuditInBackground(AgentContext context, string point, string text, bool cut, string? sessionId, long? sequence)
         {
             (PurviewDlpAgentContext Agent, PurviewDlpTokenResolver TokenResolver)? call;
             try
@@ -292,7 +359,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
                 try
                 {
                     result = await _client
-                        .EvaluateAsync(PurviewDlpActivity.DownloadText, text, resolved.Agent, resolved.TokenResolver, CancellationToken.None)
+                        .EvaluateTextAsync(PurviewDlpActivity.DownloadText, text, cut, resolved.Agent, resolved.TokenResolver, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
                 catch (Exception ex)

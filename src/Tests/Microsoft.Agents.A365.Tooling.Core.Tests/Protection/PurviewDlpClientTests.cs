@@ -90,8 +90,7 @@ public class PurviewDlpClientTests
         second!.CorrelationId.Should().Be(handler.Calls[1].ClientRequestId);
 
         var entry = call.Entry;
-        Guid.TryParse(entry["identifier"]!.GetValue<string>(), out _).Should().BeTrue();
-        entry["identifier"]!.GetValue<string>().Should().NotBe(call.ClientRequestId);
+        entry["identifier"]!.GetValue<string>().Should().Be(call.ClientRequestId, "one id per call identifies the request and its content entry");
         var expected = JsonNode.Parse($$"""
             {
               "contentToProcess": {
@@ -183,19 +182,21 @@ public class PurviewDlpClientTests
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("  ")]
-    public async Task NamesTheEntryEvenWithoutAnAgentName(string? agentName)
+    [InlineData(null, AgentId, AgentId)]
+    [InlineData("  ", AgentId, AgentId)]
+    [InlineData(null, null, BlueprintId)]
+    public async Task NamesTheEntryEvenWithoutAnAgentName(string? agentName, string? agentId, string expected)
     {
         var (client, handler) = Create(_ => Graph(Clean));
         var agent = Agent();
         agent.AgentName = agentName;
+        agent.AgentId = agentId;
 
         await client.EvaluateAsync(PurviewDlpActivity.UploadText, "hello", agent, Tokens);
 
         var body = handler.Calls.Single().Body;
-        body["contentToProcess"]!["contentEntries"]![0]!["name"]!.GetValue<string>().Should().Be("agent365-agent uploadText", "Graph rejects an entry without a name");
-        body["contentToProcess"]!["protectedAppMetadata"]!["name"]!.GetValue<string>().Should().Be(PurviewDlpClient.DefaultAgentName);
+        body["contentToProcess"]!["contentEntries"]![0]!["name"]!.GetValue<string>().Should().Be($"{expected} uploadText", "Graph rejects an entry without a name");
+        body["contentToProcess"]!["protectedAppMetadata"]!["name"]!.GetValue<string>().Should().Be(expected);
     }
 
     [Fact]
@@ -334,6 +335,22 @@ public class PurviewDlpClientTests
         result.Decision.Should().BeEquivalentTo(new { BlockAction = true, RestrictionAction = "BLOCK", ActionCount = 2 });
     }
 
+    [Theory]
+    [InlineData("""{"policyActions":[{"@odata.type":"#microsoft.graph.blockAccessAction","action":"blockAccess"}]}""", null)]
+    [InlineData("""{"policyActions":[{"action":"BLOCKACCESS","restrictionAction":"warn"}]}""", "warn")]
+    [InlineData("""{"policyActions":[{"action":7,"restrictionAction":"block"}]}""", "block")]
+    [InlineData("""{"policyActions":[{"action":"blockAccess","restrictionAction":{"mode":"audit"}}]}""", null)]
+    public async Task BlocksOnABlockAccessActionToo(string body, string? restrictionAction)
+    {
+        var (client, _) = Create(_ => Graph(body));
+
+        var result = await client.EvaluateAsync(PurviewDlpActivity.UploadText, "hello", Agent(), Tokens);
+
+        result!.Evaluated.Should().BeTrue();
+        result.Allowed.Should().BeFalse("an action blocks when its action is blockAccess or its restrictionAction is block");
+        result.Decision.Should().BeEquivalentTo(new { BlockAction = true, RestrictionAction = restrictionAction, ActionCount = 1 });
+    }
+
     [Fact]
     public async Task AllowsActionsThatDoNotBlockAndCountsThem()
     {
@@ -451,6 +468,7 @@ public class PurviewDlpClientTests
     [InlineData("""{"policyActions":["block"]}""", "response contained unexpected policyActions")]
     [InlineData("""{"policyActions":[{"restrictionAction":{"value":"block"}}]}""", "response contained unexpected policyActions")]
     [InlineData("""{"policyActions":[{"restrictionAction":"audit","restrictionAction":"block"}]}""", "response contained unexpected policyActions")]
+    [InlineData("""{"policyActions":[{"action":7,"restrictionAction":"audit"}]}""", "response contained unexpected policyActions")]
     [InlineData("""{"policyActions":[],"processingErrors":{"code":"BadRequest"}}""", "response contained unexpected processingErrors")]
     [InlineData("""{"policyActions":[{"restrictionAction":"block"}],"policyActions":[]}""", "response contained duplicate properties")]
     [InlineData("not json", "non-JSON response")]
@@ -531,6 +549,44 @@ public class PurviewDlpClientTests
         await client.EvaluateAsync(PurviewDlpActivity.UploadText, "abc\uD83D\uDE00def", Agent(), Tokens);
 
         handler.Calls.Single().Text.Should().Be("abc");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TreatsAnAllowOfATextAlreadyCutAsNotCoveringTheContent(bool failClosed)
+    {
+        var (client, handler) = Create(DeniesThePayload, new PurviewDlpOptions { FailClosed = failClosed });
+
+        var allowed = await client.EvaluateTextAsync(PurviewDlpActivity.UploadText, "the first part", true, Agent(), Tokens);
+        var blocked = await client.EvaluateTextAsync(PurviewDlpActivity.UploadText, "the first part " + Payload, true, Agent(), Tokens);
+
+        handler.Calls.Should().OnlyContain(call => call.Entry["isTruncated"]!.GetValue<bool>());
+        allowed!.Truncated.Should().BeTrue();
+        allowed.Allowed.Should().Be(!failClosed);
+        allowed.Error.Should().Be(PurviewDlpClient.TruncatedContentError);
+        blocked!.Allowed.Should().BeFalse("a block of a cut text stands");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FollowsTheFailModeForABlankTextAlreadyCut(bool failClosed)
+    {
+        var (client, handler) = Create(_ => Graph(Clean), new PurviewDlpOptions { FailClosed = failClosed });
+        var resolved = 0;
+
+        var result = await client.EvaluateTextAsync(PurviewDlpActivity.UploadText, " \n ", true, Agent(), (_, _, _) =>
+        {
+            resolved++;
+            return Task.FromResult<PurviewDlpToken?>(new PurviewDlpToken(AccessToken));
+        });
+
+        result!.Evaluated.Should().BeFalse("what was not read could hold text");
+        result.Allowed.Should().Be(!failClosed);
+        result.Error.Should().Be(PurviewDlpClient.UnreadContentError);
+        handler.Calls.Should().BeEmpty();
+        resolved.Should().Be(0);
     }
 
     // ─── transport and deadline ──────────────────────────────────────────────

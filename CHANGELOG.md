@@ -97,12 +97,14 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
     (`POST {base}/me/dataSecurityAndGovernance/processContent`) as `uploadText` (content entering the agent) or
     `downloadText` (its reply): one conversation entry with the agent, the session (`correlationId`) and its
     sequence, scoped to the agent's application (the blueprint id by default). A policy action whose
-    `restrictionAction` is `block` blocks; other actions allow and are counted. Each call sends a new
-    `client-request-id`, returned as `PurviewDlpEvaluationResult.CorrelationId`.
+    `restrictionAction` is `block`, or whose `action` is `blockAccess`, blocks; other actions allow and are counted.
+    Each call sends a new `client-request-id`, which also identifies its content entry and is returned as
+    `PurviewDlpEvaluationResult.CorrelationId`.
   - Tokens come from a `PurviewDlpTokenResolver`: `PurviewDlpTokenResolvers.FromAgenticUser` uses the agent's
     connection (`IAgenticTokenProvider.GetAgenticUserTokenAsync`) for the agentic user's delegated Microsoft Graph
-    token (`Content.Process.User`) and evaluates as `/me`; `FromAccessTokenProvider` takes a host-supplied token, for
-    `/me` or for a given user (`/users/{id}`).
+    token (`Content.Process.User`), evaluates as `/me`, and caches the token per tenant, agent, agentic user and scope
+    until it expires (refreshed in the background before it does; failures never cached); `FromAccessTokenProvider`
+    takes a host-supplied token, never cached, for `/me` or for a given user (`/users/{id}`).
   - Configured with `ENABLE_A365_PURVIEW_DLP`, `A365_PURVIEW_DLP_GRAPH_BASE_URL` (default
     `https://graph.microsoft.com/v1.0`, absolute HTTPS only), `A365_PURVIEW_DLP_AUTHENTICATION_SCOPE`,
     `A365_PURVIEW_DLP_FAIL_MODE` (`open` or `closed`), `A365_PURVIEW_DLP_TIMEOUT_MILLISECONDS` (one deadline for token
@@ -114,10 +116,11 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** - `A365PurviewInterceptor` (`AddA365Purview`), an
   agent-hooks interceptor for Purview DLP: the user's message at `input` is evaluated as `uploadText` and a block
   denies it (`purview:block`); the reply at `output` is evaluated as `downloadText`, for audit in the background by
-  default or waiting for the verdict with `A365_PURVIEW_DLP_RESPONSE_MODE=enforce`. Missing verdicts follow the fail
-  mode (`purview:unverified` or `runtime_error:purview_unverified`). `A365AgentHooks.CreateProtectionEmitter` takes
-  optional `PurviewDlpOptions`, so Defender and Purview compose on one emitter whose interceptor timeout exceeds
-  the longer of their timeouts.
+  default or waiting for the verdict with `A365_PURVIEW_DLP_RESPONSE_MODE=enforce`. Structured content is read only up
+  to `A365_PURVIEW_DLP_MAX_CONTENT_CHARACTERS`. Missing verdicts follow the fail mode (`purview:unverified` or
+  `runtime_error:purview_unverified`). `A365AgentHooks.CreateProtectionEmitter` takes optional `PurviewDlpOptions`,
+  so Defender and Purview compose on one emitter whose interceptor timeout exceeds the longer of their timeouts
+  (Purview's counts only when Purview DLP is enabled).
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
   - `IMcpTokenProvider` interface for pluggable OAuth token acquisition

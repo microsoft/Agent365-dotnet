@@ -224,13 +224,14 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
         /// emitter and a deny from either wins.
         /// </summary>
         /// <param name="interceptorTimeout">
-        /// Per-interceptor timeout; defaults to the longest timeout of the given Defender and Purview options plus two
-        /// seconds (ten seconds plus two when neither is given). Each client evaluates within one deadline, its
-        /// options' <c>Timeout</c>, that covers token acquisition and the request, so its fail mode applies before this
-        /// timeout turns into an agent-hooks host error.
+        /// Per-interceptor timeout; defaults to the longest timeout of the given Defender options and, when Purview DLP
+        /// is enabled, Purview options, plus two seconds (ten seconds plus two when neither counts), so an emitter for
+        /// Defender alone is sized as before. Each client evaluates within one deadline, its options' <c>Timeout</c>,
+        /// that covers token acquisition and the request, so its fail mode applies before this timeout turns into an
+        /// agent-hooks host error.
         /// </param>
         /// <param name="defender">The Defender options, whose timeout sets the default.</param>
-        /// <param name="purview">The Purview options, whose timeout sets the default.</param>
+        /// <param name="purview">The Purview options, whose timeout sets the default when Purview DLP is enabled.</param>
         /// <returns>The configured emitter.</returns>
         public static InterceptionEmitter CreateProtectionEmitter(
             TimeSpan? interceptorTimeout = null,
@@ -238,7 +239,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             PurviewDlpOptions? purview = null)
         {
             var slowest = defender?.Timeout;
-            if (purview != null && (slowest == null || purview.Timeout > slowest))
+            if (purview is { Enabled: true } && (slowest == null || purview.Timeout > slowest))
             {
                 slowest = purview.Timeout;
             }
