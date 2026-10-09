@@ -92,6 +92,32 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
   agent-hooks interceptor (`ResponsibleAI.AgentHooks` 0.1.0-beta.1) for Defender, and
   `A365AgentHooks.CreateProtectionEmitter` (`parallel/strictest`). When no agent identity is resolved, or resolving
   it fails, the interceptor follows the fail mode.
+- **Microsoft.Agents.A365.Tooling** - Microsoft Purview data loss prevention (DLP) and audit client
+  - `PurviewDlpClient.EvaluateAsync` sends a text to the Microsoft Graph `processContent` API
+    (`POST {base}/me/dataSecurityAndGovernance/processContent`) as `uploadText` (content entering the agent) or
+    `downloadText` (its reply): one conversation entry with the agent, the session (`correlationId`) and its
+    sequence, scoped to the agent's application (the blueprint id by default). A policy action whose
+    `restrictionAction` is `block` blocks; other actions allow and are counted. Each call sends a new
+    `client-request-id`, returned as `PurviewDlpEvaluationResult.CorrelationId`.
+  - Tokens come from a `PurviewDlpTokenResolver`: `PurviewDlpTokenResolvers.FromAgenticUser` uses the agent's
+    connection (`IAgenticTokenProvider.GetAgenticUserTokenAsync`) for the agentic user's delegated Microsoft Graph
+    token (`Content.Process.User`) and evaluates as `/me`; `FromAccessTokenProvider` takes a host-supplied token, for
+    `/me` or for a given user (`/users/{id}`).
+  - Configured with `ENABLE_A365_PURVIEW_DLP`, `A365_PURVIEW_DLP_GRAPH_BASE_URL` (default
+    `https://graph.microsoft.com/v1.0`, absolute HTTPS only), `A365_PURVIEW_DLP_AUTHENTICATION_SCOPE`,
+    `A365_PURVIEW_DLP_FAIL_MODE` (`open` or `closed`), `A365_PURVIEW_DLP_TIMEOUT_MILLISECONDS` (one deadline for token
+    acquisition and the request), `A365_PURVIEW_DLP_MAX_CONTENT_CHARACTERS` (default 100000) and
+    `A365_PURVIEW_DLP_RESPONSE_MODE` (`audit` or `enforce`); any other value is rejected. Failures, and processing
+    errors Graph reports inline, follow the fail mode, recording only the exception type or status, never a response
+    body. Longer text is cut and sent with `isTruncated`: Purview's block stands and its allow follows the fail mode.
+    Redirects are not followed, and lone surrogates are sent as U+FFFD.
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentHooks** - `A365PurviewInterceptor` (`AddA365Purview`), an
+  agent-hooks interceptor for Purview DLP: the user's message at `input` is evaluated as `uploadText` and a block
+  denies it (`purview:block`); the reply at `output` is evaluated as `downloadText`, for audit in the background by
+  default or waiting for the verdict with `A365_PURVIEW_DLP_RESPONSE_MODE=enforce`. Missing verdicts follow the fail
+  mode (`purview:unverified` or `runtime_error:purview_unverified`). `A365AgentHooks.CreateProtectionEmitter` takes
+  optional `PurviewDlpOptions`, so Defender and Purview compose on one emitter whose interceptor timeout exceeds
+  the longer of their timeouts.
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
   - `IMcpTokenProvider` interface for pluggable OAuth token acquisition

@@ -379,12 +379,18 @@ src/Tooling/Core/
 │   ├── HttpContextHeadersHandler.cs           # Header propagation
 │   └── HttpLoggingHandler.cs                  # Logging handler
 ├── Protection/
-│   └── Defender/
-│       ├── DefenderRtpClient.cs               # Defender prevention endpoint client
-│       ├── DefenderRtpOptions.cs              # Configuration (environment variables)
-│       ├── DefenderRtpEvaluationResult.cs     # Verdict and evaluation result
-│       ├── DefenderRtpTokenResolver.cs        # Token resolver delegate, agent context
-│       └── DefenderRtpTokenResolvers.cs       # Agent identity token exchange
+│   ├── Defender/
+│   │   ├── DefenderRtpClient.cs               # Defender prevention endpoint client
+│   │   ├── DefenderRtpOptions.cs              # Configuration (environment variables)
+│   │   ├── DefenderRtpEvaluationResult.cs     # Verdict and evaluation result
+│   │   ├── DefenderRtpTokenResolver.cs        # Token resolver delegate, agent context
+│   │   └── DefenderRtpTokenResolvers.cs       # Agent identity token exchange
+│   └── Purview/
+│       ├── PurviewDlpClient.cs                # Microsoft Graph processContent client
+│       ├── PurviewDlpOptions.cs               # Configuration (environment variables), response mode
+│       ├── PurviewDlpEvaluationResult.cs      # Activity, policy actions and evaluation result
+│       ├── PurviewDlpTokenResolver.cs         # Token resolver delegate, token, agent context
+│       └── PurviewDlpTokenResolvers.cs        # Agentic user and host-supplied tokens
 ├── Constants.cs                               # Constants
 ├── Utility.cs                                 # Helper methods
 ├── Microsoft.Agents.A365.Tooling.csproj
@@ -508,6 +514,40 @@ var result = await defender.EvaluateHookContextAsync(
 if (result is { Allowed: false })
 {
     // Blocked: result.BlockReason; Defender logs the evaluation under result.CorrelationId.
+}
+```
+
+### Data Loss Prevention (Microsoft Purview)
+
+`PurviewDlpClient` sends a text to the Microsoft Graph `processContent` API, which applies the Purview DLP policies
+scoped to the agent's application and writes the Purview audit record: `UploadText` for content entering the agent,
+such as the user's prompt, and `DownloadText` for its reply. A policy action restricted with `block` blocks. The
+agentic user's delegated token (`Content.Process.User`) evaluates as `/me`. Agent-hooks hosts register it through
+`A365PurviewInterceptor` in `Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` (see its
+[README](../../Extensions/AgentHooks/README.md)).
+
+```csharp
+var purview = new PurviewDlpClient(PurviewDlpOptions.FromEnvironment(), httpClient);
+var tokens = PurviewDlpTokenResolvers.FromAgenticUser(
+    (IAgenticTokenProvider)connections.GetDefaultConnection());
+
+var result = await purview.EvaluateAsync(
+    PurviewDlpActivity.UploadText,
+    userMessage,
+    new PurviewDlpAgentContext
+    {
+        AgentId = turnContext.Activity.GetAgenticInstanceId(),
+        TenantId = turnContext.Activity.GetAgenticTenantId(),
+        AgenticUserId = turnContext.Activity.GetAgenticUser(),
+        BlueprintId = blueprintId, // the agent blueprint's application id, which DLP policies are scoped to
+        SessionId = turnContext.Activity.Conversation.Id,
+    },
+    tokens,
+    cancellationToken);
+
+if (result is { Allowed: false })
+{
+    // Blocked: result.BlockReason; Graph logs the call under result.CorrelationId (client-request-id).
 }
 ```
 
