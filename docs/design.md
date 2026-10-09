@@ -36,7 +36,7 @@ src/
 │       ├── SemanticKernel/                      # SK tool registration
 │       ├── AgentFramework/                      # AF tool registration
 │       ├── AzureAIFoundry/                      # Azure AI Foundry integration
-│       └── AgentHooks/                          # agent-hooks Defender interceptor (preview)
+│       └── AgentHooks/                          # agent-hooks Defender and Purview interceptors (preview)
 └── Tests/                                       # Test projects
 docs/
 └── design.md                                    # This file
@@ -53,11 +53,11 @@ docs/
 | `Microsoft.Agents.A365.Observability.Extensions.SemanticKernel` | Semantic Kernel telemetry integration | [design.md](../src/Observability/Extensions/SemanticKernel/docs/design.md) |
 | `Microsoft.Agents.A365.Observability.Extensions.OpenAI` | OpenAI SDK telemetry integration | [design.md](../src/Observability/Extensions/OpenAI/docs/design.md) |
 | `Microsoft.Agents.A365.Notifications` | Microsoft 365 notification handling | [design.md](../src/Notification/Microsoft.Agents.A365.Notifications/docs/design.md) |
-| `Microsoft.Agents.A365.Tooling` | MCP server discovery and configuration; Microsoft Defender for AI real-time protection client | [design.md](../src/Tooling/Core/docs/design.md) |
+| `Microsoft.Agents.A365.Tooling` | MCP server discovery and configuration; Microsoft Defender for AI real-time protection and Microsoft Purview DLP clients | [design.md](../src/Tooling/Core/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel` | Semantic Kernel MCP tool registration | [design.md](../src/Tooling/Extensions/SemanticKernel/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.AgentFramework` | Agent Framework MCP tool registration | [design.md](../src/Tooling/Extensions/AgentFramework/docs/design.md) |
 | `Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry` | Azure AI Foundry MCP tool registration | [design.md](../src/Tooling/Extensions/AzureAIFoundry/docs/design.md) |
-| `Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` | Microsoft Defender for AI interceptor for agent-hooks hosts (preview) | [README.md](../src/Tooling/Extensions/AgentHooks/README.md) |
+| `Microsoft.Agents.A365.Tooling.Extensions.AgentHooks` | Microsoft Defender for AI and Microsoft Purview DLP interceptors for agent-hooks hosts (preview) | [README.md](../src/Tooling/Extensions/AgentHooks/README.md) |
 
 ## Core Package Documentation
 
@@ -340,6 +340,10 @@ else if (EnvironmentUtils.IsDevelopmentEnvironment())
 | `ENABLE_A365_DEFENDER_RTP` | Enable Microsoft Defender for AI real-time protection (`DefenderRtpOptions.FromEnvironment`); a value that is not true or false is rejected | `false` |
 | `A365_DEFENDER_RTP_ENDPOINT` | Defender prevention endpoint, `https://<host>/v1/protection/evaluate` | - |
 | `A365_DEFENDER_RTP_FAIL_MODE` | `open` or `closed` (blocks when Defender returns no verdict); any other value is rejected | open |
+| `ENABLE_A365_PURVIEW_DLP` | Enable Microsoft Purview DLP and audit (`PurviewDlpOptions.FromEnvironment`); a value that is not true or false is rejected | `false` |
+| `A365_PURVIEW_DLP_GRAPH_BASE_URL` | Microsoft Graph base URL for `processContent`, an absolute HTTPS URL | `https://graph.microsoft.com/v1.0` |
+| `A365_PURVIEW_DLP_FAIL_MODE` | `open` or `closed` (blocks when Purview returns no verdict); any other value is rejected | open |
+| `A365_PURVIEW_DLP_RESPONSE_MODE` | `audit` (replies are sent to Purview without waiting) or `enforce` (replies wait for the verdict); any other value is rejected | audit |
 
 ## Testing
 

@@ -11,6 +11,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     using System.Threading.Tasks;
     using global::AgentHooks;
     using Microsoft.Agents.A365.Tooling.Protection.Defender;
+    using Microsoft.Agents.A365.Tooling.Protection.Purview;
     using Microsoft.Extensions.Logging;
 
     /// <summary>The agent identity and credentials for the Defender call of one emitted context.</summary>
@@ -219,21 +220,36 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
     {
         /// <summary>
         /// Creates an emitter for Agent 365 protection: enforce mode and the <c>parallel/strictest</c>
-        /// profile (an action proceeds only when every interceptor allows it).
+        /// profile (an action proceeds only when every interceptor allows it), so Defender and Purview compose on one
+        /// emitter and a deny from either wins.
         /// </summary>
         /// <param name="interceptorTimeout">
-        /// Per-interceptor timeout; defaults to the Defender timeout plus two seconds. The client evaluates
-        /// within one deadline, <see cref="DefenderRtpOptions.Timeout"/>, that covers token acquisition and the
-        /// request, so its fail mode applies before this timeout turns into an agent-hooks host error.
+        /// Per-interceptor timeout; defaults to the longest timeout of the given Defender options and, when Purview DLP
+        /// is enabled, Purview options, plus two seconds (ten seconds plus two when neither counts), so an emitter for
+        /// Defender alone is sized as before. Each client evaluates within one deadline, its options' <c>Timeout</c>,
+        /// that covers token acquisition and the request, so its fail mode applies before this timeout turns into an
+        /// agent-hooks host error.
         /// </param>
-        /// <param name="defender">The Defender options whose timeout sets the default.</param>
+        /// <param name="defender">The Defender options, whose timeout sets the default.</param>
+        /// <param name="purview">The Purview options, whose timeout sets the default when Purview DLP is enabled.</param>
         /// <returns>The configured emitter.</returns>
-        public static InterceptionEmitter CreateProtectionEmitter(TimeSpan? interceptorTimeout = null, DefenderRtpOptions? defender = null) =>
-            new InterceptionEmitter(
+        public static InterceptionEmitter CreateProtectionEmitter(
+            TimeSpan? interceptorTimeout = null,
+            DefenderRtpOptions? defender = null,
+            PurviewDlpOptions? purview = null)
+        {
+            var slowest = defender?.Timeout;
+            if (purview is { Enabled: true } && (slowest == null || purview.Timeout > slowest))
+            {
+                slowest = purview.Timeout;
+            }
+
+            return new InterceptionEmitter(
                 EnforcementMode.Enforce,
                 null,
-                interceptorTimeout ?? (defender?.Timeout ?? TimeSpan.FromSeconds(10)) + TimeSpan.FromSeconds(2))
+                interceptorTimeout ?? (slowest ?? TimeSpan.FromSeconds(10)) + TimeSpan.FromSeconds(2))
                 .SetComposition(CompositionConfig.Strictest(SynthesisPolicy.Deny));
+        }
 
         /// <summary>Registers the Defender interceptor under the name <c>defender</c>.</summary>
         /// <param name="emitter">The emitter.</param>
@@ -247,6 +263,20 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.AgentHooks
             }
 
             return emitter.Register(interceptor ?? throw new ArgumentNullException(nameof(interceptor)), A365DefenderInterceptor.Name);
+        }
+
+        /// <summary>Registers the Purview interceptor under the name <c>purview</c>.</summary>
+        /// <param name="emitter">The emitter.</param>
+        /// <param name="interceptor">The Purview interceptor.</param>
+        /// <returns>The emitter.</returns>
+        public static InterceptionEmitter AddA365Purview(this InterceptionEmitter emitter, A365PurviewInterceptor interceptor)
+        {
+            if (emitter == null)
+            {
+                throw new ArgumentNullException(nameof(emitter));
+            }
+
+            return emitter.Register(interceptor ?? throw new ArgumentNullException(nameof(interceptor)), A365PurviewInterceptor.Name);
         }
     }
 }
