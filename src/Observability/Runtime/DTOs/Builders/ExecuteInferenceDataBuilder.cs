@@ -115,10 +115,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             AddIfNotNull(attributes, GenAiRequestModelKey, inferenceCallDetails.Model);
             AddIfNotNull(attributes, GenAiResponseModelKey, inferenceCallDetails.ResponseModel);
             AddIfNotNull(attributes, GenAiProviderNameKey, inferenceCallDetails.ProviderName);
-            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inferenceCallDetails.InputTokens?.ToString());
-            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, inferenceCallDetails.OutputTokens?.ToString());
-            AddIfNotNull(attributes, GenAiUsageCacheReadInputTokensKey, inferenceCallDetails.CacheReadInputTokens?.ToString());
-            AddIfNotNull(attributes, GenAiUsageCacheWriteInputTokensKey, inferenceCallDetails.CacheWriteInputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiUsageInputTokensKey, inferenceCallDetails.InputTokens);
+            AddIfNotNull(attributes, GenAiUsageOutputTokensKey, inferenceCallDetails.OutputTokens);
+            AddIfNotNull(attributes, GenAiUsageCacheReadInputTokensKey, inferenceCallDetails.CacheReadInputTokens);
+            AddIfNotNull(attributes, GenAiUsageCacheWriteInputTokensKey, inferenceCallDetails.CacheWriteInputTokens);
             AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, inferenceCallDetails.FinishReasons != null ? string.Join(",", inferenceCallDetails.FinishReasons) : null);
             if (inferenceCallDetails.Endpoint != null)
             {

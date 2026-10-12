@@ -50,7 +50,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithTokensAndFinishReasons_IncludesUsageAndReasons()
         {
             // Arrange
-            var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 10, 20, new[]{"stop"}, "resp-1");
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 10, 20, new[] { "stop" }, "resp-1");
             var agent = new AgentDetails("agent-2");
             var conversationId = "conv-tokens";
 
@@ -85,8 +85,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes[OpenTelemetryConstants.GenAiProviderNameKey].Should().Be("anthropic");
             data.Attributes[OpenTelemetryConstants.GenAiAgentIdKey].Should().Be("agent-2");
             data.Attributes[OpenTelemetryConstants.GenAiAgentTypeKey].Should().Be("Foundry");
-            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheReadInputTokensKey].Should().Be("12");
-            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheWriteInputTokensKey].Should().Be("8");
+            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheReadInputTokensKey].Should().Be(12);
+            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheWriteInputTokensKey].Should().Be(8);
             data.Attributes[OpenTelemetryConstants.ServerAddressKey].Should().Be("models.example.com");
             data.Attributes[OpenTelemetryConstants.ServerPortKey].Should().Be(9443);
         }
@@ -97,8 +97,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             // Arrange
             var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai");
             var agent = new AgentDetails("agent-3");
-            var input = new[]{"Hello"};
-            var output = new[]{"Hi"};
+            var input = new[] { "Hello" };
+            var output = new[] { "Hi" };
             var conversationId = "conv-msg";
 
             // Act
@@ -183,11 +183,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         public void Build_WithAllParameters_SetsAllExpectedAttributes()
         {
             // Arrange
-            var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 33, 44, new[]{"length","stop"}, "resp-all");
+            var details = new InferenceCallDetails(InferenceOperationType.Chat, "gpt-4o", "openai", 33, 44, new[] { "length", "stop" }, "resp-all");
             var agent = new AgentDetails("agent-8", "AgentEight", "Desc", agenticUserId: "auid8", agenticUserEmail: "upn8@example.com", agentBlueprintId: "bp-8");
             var conversationId = "conv-all";
-            var input = new[]{"Hello"};
-            var output = new[]{"World"};
+            var input = new[] { "Hello" };
+            var output = new[] { "World" };
             var start = DateTimeOffset.UtcNow.AddSeconds(-10);
             var end = DateTimeOffset.UtcNow;
             var spanId = "span-all-inf";

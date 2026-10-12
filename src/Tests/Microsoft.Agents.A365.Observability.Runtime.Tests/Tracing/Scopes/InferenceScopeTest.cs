@@ -32,8 +32,8 @@ public sealed class InferenceScopeTest : ActivityTest
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, "chat");
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiRequestModelKey, details.Model!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiProviderNameKey, details.ProviderName);
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, details.InputTokens!.Value.ToString());
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, details.OutputTokens!.Value.ToString());
+        activity.GetTagItem(OpenTelemetryConstants.GenAiUsageInputTokensKey).Should().Be(details.InputTokens);
+        activity.GetTagItem(OpenTelemetryConstants.GenAiUsageOutputTokensKey).Should().Be(details.OutputTokens);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseFinishReasonsKey, string.Join(",", details.FinishReasons!));
     }
 
@@ -63,10 +63,10 @@ public sealed class InferenceScopeTest : ActivityTest
         activity.ShouldHaveTag(GenAiProviderNameKey, "openai");
         activity.ShouldHaveTag(GenAiAgentIdKey, "agent-1");
         activity.ShouldHaveTag(GenAiAgentTypeKey, "Foundry");
-        activity.ShouldHaveTag(GenAiUsageInputTokensKey, "123");
-        activity.ShouldHaveTag(GenAiUsageOutputTokensKey, "45");
-        activity.ShouldHaveTag(GenAiUsageCacheReadInputTokensKey, "20");
-        activity.ShouldHaveTag(GenAiUsageCacheWriteInputTokensKey, "10");
+        activity.GetTagItem(GenAiUsageInputTokensKey).Should().Be(123);
+        activity.GetTagItem(GenAiUsageOutputTokensKey).Should().Be(45);
+        activity.GetTagItem(GenAiUsageCacheReadInputTokensKey).Should().Be(20);
+        activity.GetTagItem(GenAiUsageCacheWriteInputTokensKey).Should().Be(10);
         activity.ShouldHaveTag(ServerAddressKey, "models.example.com");
         activity.GetTagItem(ServerPortKey).Should().Be(8443);
     }
@@ -127,7 +127,7 @@ public sealed class InferenceScopeTest : ActivityTest
             InferenceOperationType.Chat,
             "gpt-4o",
             "openai");
-        
+
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
@@ -249,13 +249,13 @@ public sealed class InferenceScopeTest : ActivityTest
             InferenceOperationType.Chat,
             "gpt-4o",
             "openai");
-        
+
         var activity = ListenForActivity(() =>
         {
             using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordThoughtProcess(thoughtProcess);
         });
-        
+
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiAgentThoughtProcessKey, thoughtProcess);
     }
 
