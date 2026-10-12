@@ -44,19 +44,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         private InferenceScope(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                operationName: details.OperationName.ToString(),
-                activityName: $"{details.OperationName} {details.Model}",
+                operationName: "chat",
+                activityName: $"chat {details.Model ?? details.ResponseModel}",
                 agentDetails: agentDetails,
                 spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
                 userDetails: userDetails)
         {
-            SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
+            SetTagMaybe(GenAiOperationNameKey, "chat");
             SetTagMaybe(GenAiRequestModelKey, details.Model);
+            SetTagMaybe(GenAiResponseModelKey, details.ResponseModel);
             SetTagMaybe(GenAiProviderNameKey, details.ProviderName);
             SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
             SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
+            SetTagMaybe(GenAiUsageCacheReadInputTokensKey, details.CacheReadInputTokens?.ToString());
+            SetTagMaybe(GenAiUsageCacheWriteInputTokensKey, details.CacheWriteInputTokens?.ToString());
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
             SetTagMaybe(GenAiConversationIdKey, request?.ConversationId);
+
+            if (details.Endpoint != null)
+            {
+                SetTagMaybe(ServerAddressKey, details.Endpoint.Host);
+                SetTagMaybe(ServerPortKey, details.Endpoint.Port);
+            }
 
             if (request?.InputContent != null)
             {

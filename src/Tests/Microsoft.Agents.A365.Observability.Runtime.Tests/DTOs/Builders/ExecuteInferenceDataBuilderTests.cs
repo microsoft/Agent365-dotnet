@@ -65,6 +65,33 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
         }
 
         [TestMethod]
+        public void Build_WithModelObservationDetails_IncludesSchemaAttributes()
+        {
+            var details = new InferenceCallDetails(
+                InferenceOperationType.Chat,
+                model: null,
+                providerName: "anthropic",
+                responseModel: "claude-sonnet",
+                cacheReadInputTokens: 12,
+                cacheWriteInputTokens: 8,
+                endpoint: new Uri("https://models.example.com:9443/v1/messages"));
+            var agent = new AgentDetails("agent-2", agentType: AgentType.Foundry);
+
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, "conv-model");
+
+            data.Attributes[OpenTelemetryConstants.GenAiOperationNameKey].Should().Be("chat");
+            data.Attributes.Should().NotContainKey(OpenTelemetryConstants.GenAiRequestModelKey);
+            data.Attributes[OpenTelemetryConstants.GenAiResponseModelKey].Should().Be("claude-sonnet");
+            data.Attributes[OpenTelemetryConstants.GenAiProviderNameKey].Should().Be("anthropic");
+            data.Attributes[OpenTelemetryConstants.GenAiAgentIdKey].Should().Be("agent-2");
+            data.Attributes[OpenTelemetryConstants.GenAiAgentTypeKey].Should().Be("Foundry");
+            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheReadInputTokensKey].Should().Be("12");
+            data.Attributes[OpenTelemetryConstants.GenAiUsageCacheWriteInputTokensKey].Should().Be("8");
+            data.Attributes[OpenTelemetryConstants.ServerAddressKey].Should().Be("models.example.com");
+            data.Attributes[OpenTelemetryConstants.ServerPortKey].Should().Be(9443);
+        }
+
+        [TestMethod]
         public void Build_WithMessages_IncludesInputAndOutput()
         {
             // Arrange

@@ -63,6 +63,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             if (agentDetails == null) return;
 
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentIdKey, agentDetails.AgentId);
+            AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentTypeKey, agentDetails.AgentType?.ToString());
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentNameKey, agentDetails.AgentName);
             AddIfNotNull(attributes, OpenTelemetryConstants.GenAiAgentDescriptionKey, agentDetails.AgentDescription);
             AddIfNotNull(attributes, OpenTelemetryConstants.AgentAUIDKey, agentDetails.AgenticUserId);

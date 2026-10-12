@@ -111,12 +111,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?> attributes,
             InferenceCallDetails inferenceCallDetails)
         {
-            AddIfNotNull(attributes, GenAiOperationNameKey, inferenceCallDetails.OperationName.ToString().ToLowerInvariant());
+            AddIfNotNull(attributes, GenAiOperationNameKey, "chat");
             AddIfNotNull(attributes, GenAiRequestModelKey, inferenceCallDetails.Model);
+            AddIfNotNull(attributes, GenAiResponseModelKey, inferenceCallDetails.ResponseModel);
             AddIfNotNull(attributes, GenAiProviderNameKey, inferenceCallDetails.ProviderName);
             AddIfNotNull(attributes, GenAiUsageInputTokensKey, inferenceCallDetails.InputTokens?.ToString());
             AddIfNotNull(attributes, GenAiUsageOutputTokensKey, inferenceCallDetails.OutputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiUsageCacheReadInputTokensKey, inferenceCallDetails.CacheReadInputTokens?.ToString());
+            AddIfNotNull(attributes, GenAiUsageCacheWriteInputTokensKey, inferenceCallDetails.CacheWriteInputTokens?.ToString());
             AddIfNotNull(attributes, GenAiResponseFinishReasonsKey, inferenceCallDetails.FinishReasons != null ? string.Join(",", inferenceCallDetails.FinishReasons) : null);
+            if (inferenceCallDetails.Endpoint != null)
+            {
+                AddIfNotNull(attributes, ServerAddressKey, inferenceCallDetails.Endpoint.Host);
+                AddIfNotNull(attributes, ServerPortKey, inferenceCallDetails.Endpoint.Port);
+            }
         }
     }
 }

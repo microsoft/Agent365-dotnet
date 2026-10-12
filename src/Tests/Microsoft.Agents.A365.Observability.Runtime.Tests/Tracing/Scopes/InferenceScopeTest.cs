@@ -29,12 +29,62 @@ public sealed class InferenceScopeTest : ActivityTest
             using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails());
         });
 
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, details.OperationName.ToString());
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiRequestModelKey, details.Model);
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, "chat");
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiRequestModelKey, details.Model!);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiProviderNameKey, details.ProviderName);
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, details.InputTokens!.Value.ToString());
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, details.OutputTokens!.Value.ToString());
         activity.ShouldHaveTag(OpenTelemetryConstants.GenAiResponseFinishReasonsKey, string.Join(",", details.FinishReasons!));
+    }
+
+    [TestMethod]
+    public void Start_SetsModelObservationSchemaAttributes()
+    {
+        var details = new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            model: null,
+            providerName: "openai",
+            inputTokens: 123,
+            outputTokens: 45,
+            responseModel: "gpt-4o-2024-08-06",
+            cacheReadInputTokens: 20,
+            cacheWriteInputTokens: 10,
+            endpoint: new Uri("https://models.example.com:8443/v1/chat"));
+        var agent = new AgentDetails("agent-1", agentType: AgentType.Foundry);
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, agent);
+        });
+
+        activity.ShouldHaveTag(GenAiOperationNameKey, "chat");
+        activity.GetTagItem(GenAiRequestModelKey).Should().BeNull();
+        activity.ShouldHaveTag(GenAiResponseModelKey, "gpt-4o-2024-08-06");
+        activity.ShouldHaveTag(GenAiProviderNameKey, "openai");
+        activity.ShouldHaveTag(GenAiAgentIdKey, "agent-1");
+        activity.ShouldHaveTag(GenAiAgentTypeKey, "Foundry");
+        activity.ShouldHaveTag(GenAiUsageInputTokensKey, "123");
+        activity.ShouldHaveTag(GenAiUsageOutputTokensKey, "45");
+        activity.ShouldHaveTag(GenAiUsageCacheReadInputTokensKey, "20");
+        activity.ShouldHaveTag(GenAiUsageCacheWriteInputTokensKey, "10");
+        activity.ShouldHaveTag(ServerAddressKey, "models.example.com");
+        activity.GetTagItem(ServerPortKey).Should().Be(8443);
+    }
+
+    [TestMethod]
+    public void Constructor_RequiresModelIdentityAndProvider()
+    {
+        var missingModel = () => new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            model: null,
+            providerName: "openai");
+        var missingProvider = () => new InferenceCallDetails(
+            InferenceOperationType.Chat,
+            model: "gpt-4o",
+            providerName: "");
+
+        missingModel.Should().Throw<ArgumentException>();
+        missingProvider.Should().Throw<ArgumentException>();
     }
 
     [TestMethod]

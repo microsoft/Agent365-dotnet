@@ -15,21 +15,44 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// Initializes a new instance of the <see cref="InferenceCallDetails"/> class.
         /// </summary>
         /// <param name="operationName">Telemetry identifier for the inference operation.</param>
-        /// <param name="model">Model name used to satisfy the inference request.</param>
+        /// <param name="model">Optional model name requested for the inference call. A request or response model is required.</param>
         /// <param name="providerName">Provider responsible for the inference call.</param>
         /// <param name="inputTokens">Optional count of tokens provided as input.</param>
         /// <param name="outputTokens">Optional count of tokens produced by the model.</param>
         /// <param name="finishReasons">Optional set of finish reasons supplied by the model.</param>
         /// <param name="responseId">Optional identifier for the model response.</param>
+        /// <param name="responseModel">Optional model name reported by the inference response.</param>
+        /// <param name="cacheReadInputTokens">Optional count of input tokens read from cache.</param>
+        /// <param name="cacheWriteInputTokens">Optional count of input tokens written to cache.</param>
+        /// <param name="endpoint">Optional inference service endpoint.</param>
         public InferenceCallDetails(
             InferenceOperationType operationName,
-            string model,
+            string? model,
             string providerName,
             int? inputTokens = null,
             int? outputTokens = null,
             string[]? finishReasons = null,
-            string? responseId = null)
+            string? responseId = null,
+            string? responseModel = null,
+            int? cacheReadInputTokens = null,
+            int? cacheWriteInputTokens = null,
+            Uri? endpoint = null)
         {
+            if (string.IsNullOrWhiteSpace(model) && string.IsNullOrWhiteSpace(responseModel))
+            {
+                throw new ArgumentException("At least one of model or responseModel must be provided.");
+            }
+
+            if (string.IsNullOrWhiteSpace(providerName))
+            {
+                throw new ArgumentException("Provider name must be provided.", nameof(providerName));
+            }
+
+            if (endpoint != null && !endpoint.IsAbsoluteUri)
+            {
+                throw new ArgumentException("Endpoint must be an absolute URI.", nameof(endpoint));
+            }
+
             OperationName = operationName;
             Model = model;
             ProviderName = providerName;
@@ -37,6 +60,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             OutputTokens = outputTokens;
             FinishReasons = finishReasons;
             ResponseId = responseId;
+            ResponseModel = responseModel;
+            CacheReadInputTokens = cacheReadInputTokens;
+            CacheWriteInputTokens = cacheWriteInputTokens;
+            Endpoint = endpoint;
         }
 
         /// <summary>
@@ -47,7 +74,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <summary>
         /// Gets the language model name used by the call.
         /// </summary>
-        public string Model { get; }
+        public string? Model { get; }
 
         /// <summary>
         /// Gets the provider responsible for servicing the inference request.
@@ -75,6 +102,26 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         public string? ResponseId { get; }
 
         /// <summary>
+        /// Gets the model name reported by the inference response.
+        /// </summary>
+        public string? ResponseModel { get; }
+
+        /// <summary>
+        /// Gets the number of input tokens read from cache, when available.
+        /// </summary>
+        public int? CacheReadInputTokens { get; }
+
+        /// <summary>
+        /// Gets the number of input tokens written to cache, when available.
+        /// </summary>
+        public int? CacheWriteInputTokens { get; }
+
+        /// <summary>
+        /// Gets the inference service endpoint, when available.
+        /// </summary>
+        public Uri? Endpoint { get; }
+
+        /// <summary>
         /// Deconstructs this instance into individual components.
         /// </summary>
         /// <param name="operationName">Receives the operation name.</param>
@@ -86,7 +133,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// <param name="responseId">Receives the response identifier.</param>
         public void Deconstruct(
             out InferenceOperationType operationName,
-            out string model,
+            out string? model,
             out string providerName,
             out int? inputTokens,
             out int? outputTokens,
@@ -116,7 +163,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                    InputTokens == other.InputTokens &&
                    OutputTokens == other.OutputTokens &&
                    Equals(FinishReasons, other.FinishReasons) &&
-                   string.Equals(ResponseId, other.ResponseId, StringComparison.Ordinal);
+                   string.Equals(ResponseId, other.ResponseId, StringComparison.Ordinal) &&
+                   string.Equals(ResponseModel, other.ResponseModel, StringComparison.Ordinal) &&
+                   CacheReadInputTokens == other.CacheReadInputTokens &&
+                   CacheWriteInputTokens == other.CacheWriteInputTokens &&
+                   Equals(Endpoint, other.Endpoint);
         }
 
         /// <inheritdoc/>
@@ -138,6 +189,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
                 hash = (hash * 31) + (OutputTokens?.GetHashCode() ?? 0);
                 hash = (hash * 31) + EqualityComparer<string[]?>.Default.GetHashCode(FinishReasons);
                 hash = (hash * 31) + (ResponseId != null ? StringComparer.Ordinal.GetHashCode(ResponseId) : 0);
+                hash = (hash * 31) + (ResponseModel != null ? StringComparer.Ordinal.GetHashCode(ResponseModel) : 0);
+                hash = (hash * 31) + (CacheReadInputTokens?.GetHashCode() ?? 0);
+                hash = (hash * 31) + (CacheWriteInputTokens?.GetHashCode() ?? 0);
+                hash = (hash * 31) + (Endpoint?.GetHashCode() ?? 0);
                 return hash;
             }
         }

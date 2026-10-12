@@ -22,12 +22,15 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         public const string GenAiClientOperationDurationMetricName = "gen_ai.client.operation.duration";
         public const string GenAiRequestModelKey = "gen_ai.request.model";
+        public const string GenAiResponseModelKey = "gen_ai.response.model";
         public const string GenAiResponseFinishReasonsKey = "gen_ai.response.finish_reasons";
 
         public const string GenAiConversationIdKey = "gen_ai.conversation.id";
         public const string GenAiConversationItemLinkKey = "microsoft.conversation.item.link";
         public const string GenAiUsageInputTokensKey = "gen_ai.usage.input_tokens";
         public const string GenAiUsageOutputTokensKey = "gen_ai.usage.output_tokens";
+        public const string GenAiUsageCacheReadInputTokensKey = "gen_ai.usage.cache_read.input_tokens";
+        public const string GenAiUsageCacheWriteInputTokensKey = "gen_ai.usage.cache_write.input_tokens";
         public const string GenAiProviderNameKey = "gen_ai.provider.name";
         public const string GenAiInputMessagesKey = "gen_ai.input.messages";
         public const string GenAiOutputMessagesKey = "gen_ai.output.messages";
@@ -66,6 +69,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         // Target agent dimensions
         public const string GenAiAgentIdKey = "gen_ai.agent.id";
+        public const string GenAiAgentTypeKey = "gen_ai.agent.type";
         public const string GenAiAgentNameKey = "gen_ai.agent.name";
         public const string GenAiAgentDescriptionKey = "gen_ai.agent.description";
         public const string GenAiAgentVersionKey = "gen_ai.agent.version";
