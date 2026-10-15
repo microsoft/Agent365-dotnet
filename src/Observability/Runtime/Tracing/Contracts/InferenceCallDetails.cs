@@ -15,6 +15,35 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
         /// Initializes a new instance of the <see cref="InferenceCallDetails"/> class.
         /// </summary>
         /// <param name="operationName">Telemetry identifier for the inference operation.</param>
+        /// <param name="model">Model name used to satisfy the inference request.</param>
+        /// <param name="providerName">Provider responsible for the inference call.</param>
+        /// <param name="inputTokens">Optional count of tokens provided as input.</param>
+        /// <param name="outputTokens">Optional count of tokens produced by the model.</param>
+        /// <param name="finishReasons">Optional set of finish reasons supplied by the model.</param>
+        /// <param name="responseId">Optional identifier for the model response.</param>
+        /// <remarks>
+        /// This overload preserves the original seven-parameter CLR signature so that
+        /// assemblies compiled against earlier versions of this type continue to bind
+        /// correctly at runtime. Do not change its parameter list; add new optional
+        /// data (response model, cache token counts, endpoint) through the newer
+        /// constructor overload instead.
+        /// </remarks>
+        public InferenceCallDetails(
+            InferenceOperationType operationName,
+            string model,
+            string providerName,
+            int? inputTokens = null,
+            int? outputTokens = null,
+            string[]? finishReasons = null,
+            string? responseId = null)
+            : this(operationName, model, providerName, inputTokens, outputTokens, finishReasons, responseId, null, null, null, null)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InferenceCallDetails"/> class.
+        /// </summary>
+        /// <param name="operationName">Telemetry identifier for the inference operation.</param>
         /// <param name="model">Optional model name requested for the inference call. A request or response model is required.</param>
         /// <param name="providerName">Provider responsible for the inference call.</param>
         /// <param name="inputTokens">Optional count of tokens provided as input.</param>
@@ -29,16 +58,19 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             InferenceOperationType operationName,
             string? model,
             string providerName,
-            int? inputTokens = null,
-            int? outputTokens = null,
-            string[]? finishReasons = null,
-            string? responseId = null,
-            string? responseModel = null,
+            int? inputTokens,
+            int? outputTokens,
+            string[]? finishReasons,
+            string? responseId,
+            string? responseModel,
             int? cacheReadInputTokens = null,
             int? cacheWriteInputTokens = null,
             Uri? endpoint = null)
         {
-            if (string.IsNullOrWhiteSpace(model) && string.IsNullOrWhiteSpace(responseModel))
+            string? normalizedModel = string.IsNullOrWhiteSpace(model) ? null : model;
+            string? normalizedResponseModel = string.IsNullOrWhiteSpace(responseModel) ? null : responseModel;
+
+            if (normalizedModel == null && normalizedResponseModel == null)
             {
                 throw new ArgumentException("At least one of model or responseModel must be provided.");
             }
@@ -54,13 +86,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts
             }
 
             OperationName = operationName;
-            Model = model;
+            Model = normalizedModel;
             ProviderName = providerName;
             InputTokens = inputTokens;
             OutputTokens = outputTokens;
             FinishReasons = finishReasons;
             ResponseId = responseId;
-            ResponseModel = responseModel;
+            ResponseModel = normalizedResponseModel;
             CacheReadInputTokens = cacheReadInputTokens;
             CacheWriteInputTokens = cacheWriteInputTokens;
             Endpoint = endpoint;

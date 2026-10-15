@@ -72,6 +72,26 @@ public sealed class InferenceScopeTest : ActivityTest
     }
 
     [TestMethod]
+    [DataRow(InferenceOperationType.Chat, "chat")]
+    [DataRow(InferenceOperationType.TextCompletion, "text_completion")]
+    [DataRow(InferenceOperationType.GenerateContent, "generate_content")]
+    public void Start_UsesCanonicalOperationNameForEachOperationType(InferenceOperationType operationType, string expectedOperationName)
+    {
+        var details = new InferenceCallDetails(
+            operationType,
+            "gpt-4o",
+            "openai");
+
+        var activity = ListenForActivity(() =>
+        {
+            using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails());
+        });
+
+        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiOperationNameKey, expectedOperationName);
+        activity!.OperationName.Should().Be($"{expectedOperationName} gpt-4o");
+    }
+
+    [TestMethod]
     public void Constructor_RequiresModelIdentityAndProvider()
     {
         var missingModel = () => new InferenceCallDetails(

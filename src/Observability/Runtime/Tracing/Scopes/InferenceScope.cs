@@ -44,13 +44,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         private InferenceScope(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                operationName: "chat",
-                activityName: $"chat {details.Model ?? details.ResponseModel}",
+                operationName: GetCanonicalOperationName(details.OperationName),
+                activityName: $"{GetCanonicalOperationName(details.OperationName)} {details.Model ?? details.ResponseModel}",
                 agentDetails: agentDetails,
                 spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
                 userDetails: userDetails)
         {
-            SetTagMaybe(GenAiOperationNameKey, "chat");
+            SetTagMaybe(GenAiOperationNameKey, GetCanonicalOperationName(details.OperationName));
             SetTagMaybe(GenAiRequestModelKey, details.Model);
             SetTagMaybe(GenAiResponseModelKey, details.ResponseModel);
             SetTagMaybe(GenAiProviderNameKey, details.ProviderName);
@@ -82,6 +82,18 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
                 SetTagMaybe(ChannelLinkKey, request.Channel.Link);
             }
         }
+
+        /// <summary>
+        /// Maps an <see cref="InferenceOperationType"/> to its canonical lowercase
+        /// GenAI semantic-convention operation name (e.g. "chat", "text_completion", "generate_content").
+        /// </summary>
+        private static string GetCanonicalOperationName(InferenceOperationType operationName) => operationName switch
+        {
+            InferenceOperationType.Chat => "chat",
+            InferenceOperationType.TextCompletion => "text_completion",
+            InferenceOperationType.GenerateContent => "generate_content",
+            _ => operationName.ToString(),
+        };
 
         /// <summary>
         /// Records the input messages for telemetry tracking.
