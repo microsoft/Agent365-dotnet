@@ -147,18 +147,22 @@ Tracing scope for LLM inference operations.
 
 ```csharp
 using var scope = InferenceScope.Start(
-    details: new InferenceCallDetails
-    {
-        OperationName = InferenceOperationType.Chat,
-        Model = "gpt-4",
-        ProviderName = "Azure OpenAI",
-        InputTokens = 150,
-        OutputTokens = 200,
-        FinishReasons = new[] { "stop" },
-        ResponseId = "chatcmpl-123"
-    },
-    agentDetails: new AgentDetails { AgentName = "MyAgent" },
-    tenantDetails: new TenantDetails { TenantId = "tenant-789" }
+    request: new Request(conversationId: "conversation-123"),
+    details: new InferenceCallDetails(
+        InferenceOperationType.Chat,
+        model: "gpt-4",
+        providerName: "openai",
+        inputTokens: 150,
+        outputTokens: 200,
+        finishReasons: new[] { "stop" },
+        responseModel: "gpt-4-2024-08-06",
+        cacheReadInputTokens: 25,
+        endpoint: new Uri("https://models.example.com:8443")),
+    agentDetails: new AgentDetails(
+        agentId: "agent-456",
+        agentName: "MyAgent",
+        tenantId: "tenant-789",
+        agentType: AgentType.Foundry)
 );
 
 // Record additional metrics
@@ -167,6 +171,21 @@ scope.RecordOutputMessages(new[] { "Assistant: Hi there!" });
 scope.RecordInputTokens(150);
 scope.RecordOutputTokens(200);
 ```
+
+Inference spans use the model-observation OpenTelemetry schema:
+
+| Attribute | Behavior |
+|-----------|----------|
+| `gen_ai.operation.name` | Always `chat` |
+| `gen_ai.provider.name` | Required and sourced from `InferenceCallDetails.ProviderName` |
+| `gen_ai.request.model` / `gen_ai.response.model` | At least one is required |
+| `gen_ai.agent.id` | Emitted when the agent ID is available |
+| `gen_ai.agent.type` | Emitted when the agent type is available |
+| `server.address` / `server.port` | Emitted from the optional endpoint; port is an integer |
+| `gen_ai.usage.input_tokens` / `gen_ai.usage.output_tokens` | Emitted when usage is available |
+| `gen_ai.usage.cache_read.input_tokens` / `gen_ai.usage.cache_write.input_tokens` | Emitted when cache usage is available |
+
+Framework processors normalize legacy `gen_ai.system` provider values and string-valued server ports when those values are supplied by the framework. They do not synthesize model, endpoint, agent, or usage data that the source framework did not report.
 
 ### ExecuteToolScope
 
@@ -234,7 +253,7 @@ public static class OpenTelemetryConstants
     // GenAI semantic conventions
     public const string GenAiOperationNameKey = "gen_ai.operation.name";
     public const string GenAiRequestModelKey = "gen_ai.request.model";
-    public const string GenAiProviderNameKey = "gen_ai.system";
+    public const string GenAiProviderNameKey = "gen_ai.provider.name";
     public const string GenAiUsageInputTokensKey = "gen_ai.usage.input_tokens";
     public const string GenAiUsageOutputTokensKey = "gen_ai.usage.output_tokens";
 

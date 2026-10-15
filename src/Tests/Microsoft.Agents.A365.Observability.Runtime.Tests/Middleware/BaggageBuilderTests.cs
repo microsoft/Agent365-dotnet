@@ -6,6 +6,7 @@ namespace Microsoft.Agents.A365.Observability.Tests.Middleware;
 using System.Net;
 using FluentAssertions;
 using Microsoft.Agents.A365.Observability.Runtime.Common;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenTelemetry;
 
@@ -36,6 +37,7 @@ public sealed class BaggageBuilderTest
         using (new BaggageBuilder()
             .TenantId(tenant)
             .AgentId(agent)
+            .AgentType(AgentType.Foundry)
             .SessionId(session)
             .SessionDescription(sessionDescription)
             .UserClientIp(callerClientIp)
@@ -45,6 +47,7 @@ public sealed class BaggageBuilderTest
             // Assert inside scope
             Baggage.Current.GetBaggage(TenantIdKey).Should().Be(tenant);
             Baggage.Current.GetBaggage(GenAiAgentIdKey).Should().Be(agent);
+            Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().Be("Foundry");
             Baggage.Current.GetBaggage(SessionIdKey).Should().Be(session);
             Baggage.Current.GetBaggage(SessionDescriptionKey).Should().Be(sessionDescription);
             Baggage.Current.GetBaggage(CallerClientIpKey).Should().Be(callerClientIp.ToString());
@@ -54,6 +57,7 @@ public sealed class BaggageBuilderTest
         // Assert after dispose (restored -> no values)
         Baggage.Current.GetBaggage(TenantIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(GenAiAgentIdKey).Should().BeNull();
+        Baggage.Current.GetBaggage(GenAiAgentTypeKey).Should().BeNull();
         Baggage.Current.GetBaggage(SessionIdKey).Should().BeNull();
         Baggage.Current.GetBaggage(SessionDescriptionKey).Should().BeNull();
         Baggage.Current.GetBaggage(CallerClientIpKey).Should().BeNull();

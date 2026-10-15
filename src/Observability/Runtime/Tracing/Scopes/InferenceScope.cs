@@ -44,19 +44,28 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
 
         private InferenceScope(Request request, InferenceCallDetails details, AgentDetails agentDetails, UserDetails? userDetails, SpanDetails? spanDetails)
             : base(
-                operationName: details.OperationName.ToString(),
-                activityName: $"{details.OperationName} {details.Model}",
+                operationName: details.OperationName.ToCanonicalName(),
+                activityName: $"{details.OperationName.ToCanonicalName()} {details.Model ?? details.ResponseModel}",
                 agentDetails: agentDetails,
                 spanDetails: spanDetails ?? new SpanDetails(ActivityKind.Client),
                 userDetails: userDetails)
         {
-            SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToString());
+            SetTagMaybe(GenAiOperationNameKey, details.OperationName.ToCanonicalName());
             SetTagMaybe(GenAiRequestModelKey, details.Model);
+            SetTagMaybe(GenAiResponseModelKey, details.ResponseModel);
             SetTagMaybe(GenAiProviderNameKey, details.ProviderName);
-            SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens?.ToString());
-            SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens?.ToString());
+            SetTagMaybe(GenAiUsageInputTokensKey, details.InputTokens);
+            SetTagMaybe(GenAiUsageOutputTokensKey, details.OutputTokens);
+            SetTagMaybe(GenAiUsageCacheReadInputTokensKey, details.CacheReadInputTokens);
+            SetTagMaybe(GenAiUsageCacheWriteInputTokensKey, details.CacheWriteInputTokens);
             SetTagMaybe(GenAiResponseFinishReasonsKey, details.FinishReasons != null ? string.Join(",", details.FinishReasons) : null);
             SetTagMaybe(GenAiConversationIdKey, request?.ConversationId);
+
+            if (details.Endpoint != null)
+            {
+                SetTagMaybe(ServerAddressKey, details.Endpoint.Host);
+                SetTagMaybe(ServerPortKey, details.Endpoint.Port);
+            }
 
             if (request?.InputContent != null)
             {
@@ -117,7 +126,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordInputTokens(int inputTokens)
         {
-            SetTagMaybe(GenAiUsageInputTokensKey, inputTokens.ToString());
+            SetTagMaybe(GenAiUsageInputTokensKey, inputTokens);
         }
 
         /// <summary>
@@ -125,7 +134,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes
         /// </summary>
         public void RecordOutputTokens(int outputTokens)
         {
-            SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens.ToString());
+            SetTagMaybe(GenAiUsageOutputTokensKey, outputTokens);
         }
 
         /// <summary>

@@ -50,10 +50,10 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 
                     case SemanticKernelTelemetryConstants.ChatCompletionsOperation:
                     case SemanticKernelTelemetryConstants.ChatOperation:
-                        activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
+                        ModelObservationSchema.NormalizeChatSpan(activity);
                         activity.DisplayName = activity.DisplayName
-                            .Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString())
-                            .Replace(SemanticKernelTelemetryConstants.ChatOperation, InferenceOperationType.Chat.ToString());
+                            .Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, SemanticKernelTelemetryConstants.ChatOperation)
+                            .Replace(InferenceOperationType.Chat.ToString(), SemanticKernelTelemetryConstants.ChatOperation);
 
                         var inputMessages = SemanticKernelMessageMapper.MapInputMessages(activity);
                         if (inputMessages != null)

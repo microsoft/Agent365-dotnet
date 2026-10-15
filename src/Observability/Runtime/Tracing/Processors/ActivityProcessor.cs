@@ -15,6 +15,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors
         private static readonly string[] AttributeKeys = new[]
         {
             OpenTelemetryConstants.GenAiAgentIdKey,
+            OpenTelemetryConstants.GenAiAgentTypeKey,
             OpenTelemetryConstants.GenAiAgentNameKey,
             OpenTelemetryConstants.GenAiAgentDescriptionKey,
             OpenTelemetryConstants.GenAiAgentVersionKey,
