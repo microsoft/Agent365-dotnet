@@ -29,6 +29,24 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
 
+        [DataTestMethod]
+        [DataRow(InferenceOperationType.Chat, "chat")]
+        [DataRow(InferenceOperationType.TextCompletion, "text_completion")]
+        [DataRow(InferenceOperationType.GenerateContent, "generate_content")]
+        public void Build_UsesCanonicalOperationNameForEachOperationType(InferenceOperationType operationType, string expectedOperationName)
+        {
+            // Arrange
+            var details = new InferenceCallDetails(operationType, "gpt-4o", "openai");
+            var agent = new AgentDetails("agent-op");
+            var conversationId = "conv-op";
+
+            // Act
+            var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
+
+            // Assert
+            data.Attributes[OpenTelemetryConstants.GenAiOperationNameKey].Should().Be(expectedOperationName);
+        }
+
         [TestMethod]
         public void Build_WithChannel_IncludesChannelAttributes()
         {
@@ -58,8 +76,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
             var data = ExecuteInferenceDataBuilder.Build(details, agent, conversationId);
 
             // Assert
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be("10");
-            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be("20");
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageInputTokensKey).WhoseValue.Should().Be(10);
+            data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiUsageOutputTokensKey).WhoseValue.Should().Be(20);
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiResponseFinishReasonsKey).WhoseValue.Should().Be("stop");
             data.Attributes.Should().ContainKey(OpenTelemetryConstants.GenAiConversationIdKey).WhoseValue.Should().Be(conversationId);
         }
@@ -71,6 +89,10 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs.Builders
                 InferenceOperationType.Chat,
                 model: null,
                 providerName: "anthropic",
+                inputTokens: null,
+                outputTokens: null,
+                finishReasons: null,
+                responseId: null,
                 responseModel: "claude-sonnet",
                 cacheReadInputTokens: 12,
                 cacheWriteInputTokens: 8,

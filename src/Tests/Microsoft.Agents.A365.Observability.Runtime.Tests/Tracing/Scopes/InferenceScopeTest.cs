@@ -46,6 +46,8 @@ public sealed class InferenceScopeTest : ActivityTest
             providerName: "openai",
             inputTokens: 123,
             outputTokens: 45,
+            finishReasons: null,
+            responseId: null,
             responseModel: "gpt-4o-2024-08-06",
             cacheReadInputTokens: 20,
             cacheWriteInputTokens: 10,
@@ -96,7 +98,7 @@ public sealed class InferenceScopeTest : ActivityTest
     {
         var missingModel = () => new InferenceCallDetails(
             InferenceOperationType.Chat,
-            model: null,
+            model: null!,
             providerName: "openai");
         var missingProvider = () => new InferenceCallDetails(
             InferenceOperationType.Chat,
@@ -120,7 +122,7 @@ public sealed class InferenceScopeTest : ActivityTest
             using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordInputTokens(inputTokens);
         });
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageInputTokensKey, inputTokens.ToString());
+        activity.GetTagItem(OpenTelemetryConstants.GenAiUsageInputTokensKey).Should().Be(inputTokens);
     }
 
     [TestMethod]
@@ -136,7 +138,7 @@ public sealed class InferenceScopeTest : ActivityTest
             using var scope = InferenceScope.Start(Util.GetDefaultRequest(), details, Util.GetAgentDetails())!;
             scope.RecordOutputTokens(outputTokens);
         });
-        activity.ShouldHaveTag(OpenTelemetryConstants.GenAiUsageOutputTokensKey, outputTokens.ToString());
+        activity.GetTagItem(OpenTelemetryConstants.GenAiUsageOutputTokensKey).Should().Be(outputTokens);
     }
 
     [TestMethod]

@@ -111,7 +111,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?> attributes,
             InferenceCallDetails inferenceCallDetails)
         {
-            AddIfNotNull(attributes, GenAiOperationNameKey, "chat");
+            AddIfNotNull(attributes, GenAiOperationNameKey, inferenceCallDetails.OperationName.ToCanonicalName());
             AddIfNotNull(attributes, GenAiRequestModelKey, inferenceCallDetails.Model);
             AddIfNotNull(attributes, GenAiResponseModelKey, inferenceCallDetails.ResponseModel);
             AddIfNotNull(attributes, GenAiProviderNameKey, inferenceCallDetails.ProviderName);
