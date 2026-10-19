@@ -155,6 +155,7 @@ using var scope = InferenceScope.Start(
         inputTokens: 150,
         outputTokens: 200,
         finishReasons: new[] { "stop" },
+        responseId: "chatcmpl-123",
         responseModel: "gpt-4-2024-08-06",
         cacheReadInputTokens: 25,
         endpoint: new Uri("https://models.example.com:8443")),
@@ -176,7 +177,7 @@ Inference spans use the model-observation OpenTelemetry schema:
 
 | Attribute | Behavior |
 |-----------|----------|
-| `gen_ai.operation.name` | Always `chat` |
+| `gen_ai.operation.name` | Canonical lowercase operation name (`chat`, `text_completion`, `generate_content`) |
 | `gen_ai.provider.name` | Required and sourced from `InferenceCallDetails.ProviderName` |
 | `gen_ai.request.model` / `gen_ai.response.model` | At least one is required |
 | `gen_ai.agent.id` | Emitted when the agent ID is available |

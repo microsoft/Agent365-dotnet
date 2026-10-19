@@ -200,14 +200,16 @@ public class SemanticKernelSpanProcessorTests
 
         lastChatSpan.Should().NotBeNull("the tool round trip should emit a canonical chat span");
         var lastTags = GetTags(lastChatSpan!);
-        var lastInput = lastTags["gen_ai.input.messages"] as string;
+        lastTags.Should().ContainKey("gen_ai.input.messages");
+        var lastInput = lastTags["gen_ai.input.messages"].Should().BeOfType<string>().Subject;
         lastInput.Should().Contain("\"type\":\"tool_call\"",
             "assistant tool call request should be mapped as ToolCallRequestPart");
         lastInput.Should().Contain("\"type\":\"tool_call_response\"",
             "tool response should be mapped as ToolCallResponsePart");
         lastInput.Should().Contain("GetWeather", "should contain function name");
 
-        var lastOutput = lastTags["gen_ai.output.messages"] as string;
+        lastTags.Should().ContainKey("gen_ai.output.messages");
+        var lastOutput = lastTags["gen_ai.output.messages"].Should().BeOfType<string>().Subject;
         lastOutput.Should().StartWith("[");
         lastOutput.Should().Contain("\"finish_reason\":\"stop\"");
 

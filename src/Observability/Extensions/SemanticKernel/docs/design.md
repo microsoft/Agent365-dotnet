@@ -121,9 +121,15 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
                     break;
 
                 case "chat.completions":
+                case "chat":
                     // Transform to standard "chat" operation
-                    activity.SetTag(GenAiOperationNameKey, "Chat");
-                    activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
+                    activity.SetTag(GenAiOperationNameKey, "chat");
+                    const string operationPrefix = "chat.completions";
+                    if (activity.DisplayName.Equals(operationPrefix, StringComparison.Ordinal) ||
+                        activity.DisplayName.StartsWith(operationPrefix + " ", StringComparison.Ordinal))
+                    {
+                        activity.DisplayName = "chat" + activity.DisplayName.Substring(operationPrefix.Length);
+                    }
 
                     // Extract user and choice messages from events
                     var messages = GetGenAiUserAndChoiceMessageContent(activity);
@@ -288,10 +294,18 @@ Transforms Semantic Kernel spans to Agent365 schema:
 
 ```csharp
 // SK emits: gen_ai.operation.name = "chat.completions"
-// Transform to: gen_ai.operation.name = "Chat"
-activity.SetTag(GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
-activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
+// Transform to: gen_ai.operation.name = "chat"
+activity.SetTag(GenAiOperationNameKey, "chat");
+const string operationPrefix = "chat.completions";
+if (activity.DisplayName.Equals(operationPrefix, StringComparison.Ordinal) ||
+    activity.DisplayName.StartsWith(operationPrefix + " ", StringComparison.Ordinal))
+{
+    activity.DisplayName = "chat" + activity.DisplayName.Substring(operationPrefix.Length);
+}
 ```
+
+Only the leading operation token is rewritten; model and deployment identifiers
+such as `MyChatDeployment` or `deployment-chat.completions-Chat` remain unchanged.
 
 ## Data Flow
 
@@ -322,7 +336,7 @@ activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
 │ 1. Check if SK source       │
 │ 2. Get operation name       │
 │ 3. Transform:               │
-│    - chat.completions→Chat  │
+│    - chat.completions→chat  │
 │    - Extract user/choice    │
 │    - Process input/output   │
 └──────────────┬──────────────┘
@@ -342,7 +356,7 @@ activity.DisplayName = activity.DisplayName.Replace("chat.completions", "Chat");
 
 | Source | Target |
 |--------|--------|
-| `gen_ai.operation.name = "chat.completions"` | `gen_ai.operation.name = "Chat"` |
+| `gen_ai.operation.name = "chat.completions"` | `gen_ai.operation.name = "chat"` |
 | `gen_ai.user` events | `gen_ai.input_messages` |
 | `gen_ai.choice` events | `gen_ai.output_messages` |
 
