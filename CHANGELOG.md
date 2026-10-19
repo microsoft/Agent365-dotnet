@@ -45,6 +45,12 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve Semantic Kernel model and deployment names when normalizing the
+  `chat.completions` span-name prefix to `chat`; operation-name substrings
+  inside the model or deployment identifier are left unchanged.
+
 ### Breaking Changes
 
 - **OBS exports always use `/observabilityService`** — `Microsoft.Agents.A365.Observability.Runtime`

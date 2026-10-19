@@ -53,6 +53,29 @@ public class ModelObservationSchemaTests
     }
 
     [TestMethod]
+    [DataRow("chat.completions", "chat.completions MyChatDeployment", "chat MyChatDeployment")]
+    [DataRow("chat.completions", "chat.completions ChatGPT-4o", "chat ChatGPT-4o")]
+    [DataRow("chat.completions", "chat.completions mychat.completionsDeployment", "chat mychat.completionsDeployment")]
+    [DataRow("chat.completions", "chat.completions", "chat")]
+    [DataRow("chat", "chat MyChatDeployment", "chat MyChatDeployment")]
+    [DataRow("chat", "chat mychat.completionsDeployment", "chat mychat.completionsDeployment")]
+    public void SemanticKernelProcessor_NormalizesOnlyTheOperationPrefix(
+        string operationName,
+        string displayName,
+        string expectedDisplayName)
+    {
+        using var activity = CreateActivity(
+            "Microsoft.SemanticKernel",
+            ("gen_ai.operation.name", operationName));
+        activity.DisplayName = displayName;
+
+        new SemanticKernelSpanProcessor().OnEnd(activity);
+
+        activity.GetTagItem("gen_ai.operation.name").Should().Be("chat");
+        activity.DisplayName.Should().Be(expectedDisplayName);
+    }
+
+    [TestMethod]
     public void AgentFrameworkProcessor_PreservesCanonicalCacheUsage()
     {
         using var activity = CreateActivity(
