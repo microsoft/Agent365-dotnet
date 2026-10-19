@@ -4,11 +4,11 @@
 namespace Microsoft.Agents.A365.Observability.Extensions.SemanticKernel;
 
 using Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.Utils;
-using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
+using System;
 using System.Diagnostics;
 
 internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
@@ -50,10 +50,14 @@ internal class SemanticKernelSpanProcessor : BaseProcessor<Activity>
 
                     case SemanticKernelTelemetryConstants.ChatCompletionsOperation:
                     case SemanticKernelTelemetryConstants.ChatOperation:
-                        activity.SetTag(OpenTelemetryConstants.GenAiOperationNameKey, InferenceOperationType.Chat.ToString());
-                        activity.DisplayName = activity.DisplayName
-                            .Replace(SemanticKernelTelemetryConstants.ChatCompletionsOperation, InferenceOperationType.Chat.ToString())
-                            .Replace(SemanticKernelTelemetryConstants.ChatOperation, InferenceOperationType.Chat.ToString());
+                        ModelObservationSchema.NormalizeChatSpan(activity);
+                        var chatCompletionsOperation = SemanticKernelTelemetryConstants.ChatCompletionsOperation;
+                        if (activity.DisplayName.Equals(chatCompletionsOperation, StringComparison.Ordinal) ||
+                            activity.DisplayName.StartsWith(chatCompletionsOperation + " ", StringComparison.Ordinal))
+                        {
+                            activity.DisplayName = SemanticKernelTelemetryConstants.ChatOperation +
+                                activity.DisplayName.Substring(chatCompletionsOperation.Length);
+                        }
 
                         var inputMessages = SemanticKernelMessageMapper.MapInputMessages(activity);
                         if (inputMessages != null)

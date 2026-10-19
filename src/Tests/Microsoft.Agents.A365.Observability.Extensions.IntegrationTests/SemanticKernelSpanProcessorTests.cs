@@ -97,8 +97,7 @@ public class SemanticKernelSpanProcessorTests
 
         var tags = GetTags(chatSpan!);
 
-        // Processor should rename operation to "Chat"
-        tags.Should().ContainKey("gen_ai.operation.name");
+        tags.Should().ContainKey("gen_ai.operation.name").WhoseValue.Should().Be("chat");
 
         // Processor should produce versioned A365 input messages
         tags.Should().ContainKey("gen_ai.input.messages",
@@ -196,23 +195,23 @@ public class SemanticKernelSpanProcessorTests
         var lastChatSpan = _exportedActivities.LastOrDefault(a =>
         {
             var op = a.GetTagItem(OpenTelemetryConstants.GenAiOperationNameKey) as string;
-            return op == "Chat";
+            return op == "chat";
         });
 
-        if (lastChatSpan != null)
-        {
-            var lastTags = GetTags(lastChatSpan);
-            var lastInput = lastTags["gen_ai.input.messages"] as string;
-            lastInput.Should().Contain("\"type\":\"tool_call\"",
-                "assistant tool call request should be mapped as ToolCallRequestPart");
-            lastInput.Should().Contain("\"type\":\"tool_call_response\"",
-                "tool response should be mapped as ToolCallResponsePart");
-            lastInput.Should().Contain("GetWeather", "should contain function name");
+        lastChatSpan.Should().NotBeNull("the tool round trip should emit a canonical chat span");
+        var lastTags = GetTags(lastChatSpan!);
+        lastTags.Should().ContainKey("gen_ai.input.messages");
+        var lastInput = lastTags["gen_ai.input.messages"].Should().BeOfType<string>().Subject;
+        lastInput.Should().Contain("\"type\":\"tool_call\"",
+            "assistant tool call request should be mapped as ToolCallRequestPart");
+        lastInput.Should().Contain("\"type\":\"tool_call_response\"",
+            "tool response should be mapped as ToolCallResponsePart");
+        lastInput.Should().Contain("GetWeather", "should contain function name");
 
-            var lastOutput = lastTags["gen_ai.output.messages"] as string;
-            lastOutput.Should().StartWith("[");
-            lastOutput.Should().Contain("\"finish_reason\":\"stop\"");
-        }
+        lastTags.Should().ContainKey("gen_ai.output.messages");
+        var lastOutput = lastTags["gen_ai.output.messages"].Should().BeOfType<string>().Subject;
+        lastOutput.Should().StartWith("[");
+        lastOutput.Should().Contain("\"finish_reason\":\"stop\"");
 
         tags.Should().ContainKey("gen_ai.usage.input_tokens");
     }

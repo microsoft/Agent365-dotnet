@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 using Microsoft.Agents.A365.Observability.Extensions.AgentFramework.Utils;
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using OpenTelemetry;
 using System.Diagnostics;
 
@@ -39,6 +40,11 @@ namespace Microsoft.Agents.A365.Observability.Extensions.AgentFramework
                     {
                         case InvokeAgentOperation:
                         case ChatOperation:
+                            if (opName == ChatOperation)
+                            {
+                                ModelObservationSchema.NormalizeChatSpan(activity);
+                            }
+
                             var inputMessages = AgentFrameworkMessageMapper.MapInputMessages(activity);
                             if (inputMessages != null)
                             {

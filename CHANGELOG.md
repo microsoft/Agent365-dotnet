@@ -45,8 +45,27 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve Semantic Kernel model and deployment names when normalizing the
+  `chat.completions` span-name prefix to `chat`; operation-name substrings
+  inside the model or deployment identifier are left unchanged.
+
 ### Breaking Changes
 
+- **Canonical inference operation names** - `gen_ai.operation.name` and inference span
+  names now use `chat`, `text_completion`, and `generate_content` instead of `Chat`,
+  `TextCompletion`, and `GenerateContent`. Update dashboards and queries that match
+  the previous casing or span-name prefixes.
+- **Numeric inference token counts** - `gen_ai.usage.input_tokens` and
+  `gen_ai.usage.output_tokens` are now integers instead of strings, including numeric
+  values in exported OTLP JSON. Update consumers that expect string-valued counts.
+- **Inference call validation** - Both `InferenceCallDetails` constructors now throw
+  `ArgumentException` when `providerName` is blank or no nonblank model identity is
+  available. The legacy seven-parameter overload requires a nonblank `model`; the
+  extended overload accepts either `model` or `responseModel` and also rejects a
+  relative `endpoint`. `Model` is now nullable. Validate inputs before constructing
+  telemetry details and handle a missing request model when only a served model is known.
 - **OBS exports always use `/observabilityService`** — `Microsoft.Agents.A365.Observability.Runtime`
   now sends every Agent 365 telemetry export to the S2S OTLP route
   `/observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces?api-version=1`.
@@ -70,6 +89,16 @@ Both `Agent365.Observability.OtelWrite` (Delegated) and `Agent365.Observability.
   `IExporterTokenCache<AgenticTokenStruct>`.
 
 ### Added
+- Model-observation attributes: `gen_ai.agent.type`, `gen_ai.response.model`,
+  `gen_ai.usage.cache_read.input_tokens`, `gen_ai.usage.cache_write.input_tokens`,
+  `server.address`, and integer-valued `server.port`, when the corresponding data is available.
+- Public APIs: `BaggageBuilder.AgentType(...)`,
+  `InferenceOperationTypeExtensions.ToCanonicalName()`, and the extended
+  `InferenceCallDetails` constructor with `ResponseModel`, `CacheReadInputTokens`,
+  `CacheWriteInputTokens`, and `Endpoint` properties.
+- OpenAI and Agent Framework processors populate a missing `gen_ai.provider.name`
+  from legacy `gen_ai.system` and normalize string-valued `server.port` to an integer
+  when valid source values are available.
 - **Microsoft.Agents.A365.Tooling** - V1/V2 per-audience token support for MCP servers
   - `MCPServerConfig` extended with `audience`, `scope`, `publisher`, and `Headers` fields
   - `IMcpTokenProvider` interface for pluggable OAuth token acquisition

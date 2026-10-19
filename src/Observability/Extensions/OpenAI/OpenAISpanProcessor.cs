@@ -4,6 +4,7 @@
 namespace Microsoft.Agents.A365.Observability.Extensions.OpenAI;
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Scopes;
+using Microsoft.Agents.A365.Observability.Runtime.Tracing.Processors;
 using OpenTelemetry;
 using System.Diagnostics;
 using System.Linq;
@@ -26,8 +27,7 @@ internal class OpenAISpanProcessor : BaseProcessor<Activity>
                 switch (operationName)
                 {
                     case OpenAITelemetryConstants.ChatOperation:
-                        // Span emitted by OpenAI SDK follows Microsoft Agent 365 schema, so no modification needed.
-                        // Placeholder for any plumbing if needed in the future.
+                        ModelObservationSchema.NormalizeChatSpan(activity);
                         break;
                 }
             }
