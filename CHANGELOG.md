@@ -44,6 +44,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `gen_ai.tool.call.arguments` (`OpenTelemetryConstants.GenAiToolArgumentsKey`), aligning with the
   OpenTelemetry gen-AI semantic conventions. Update any queries or dashboards that rely on the old
   attribute name.
+- **`authToken` no longer authenticates MCP servers** — In the Semantic Kernel, Agent Framework,
+  and Azure AI Foundry Tooling extensions, when `UserAuthorization` and `authHandlerName` aren't
+  supplied, the caller's `authToken` is used only for MCP server discovery through the tooling
+  gateway. MCP servers then authenticate only with tokens from the `BEARER_TOKEN_<SERVERNAME>` /
+  `BEARER_TOKEN` environment variables. Servers without one are skipped and logged, so the
+  "simple auth token" workflow can silently return no MCP tools. This affects Azure AI Foundry's
+  sync `AddToolServersToAgent` and `GetMcpToolDefinitionsAndResourcesAsync(agentInstanceId,
+  authToken, turnContext)`, which always take this path, and any other call that passes `null`
+  authorization context. **Migration:** pass `UserAuthorization` and `authHandlerName` so tokens
+  are acquired through the agentic OBO flow, or set the `BEARER_TOKEN_<SERVERNAME>` /
+  `BEARER_TOKEN` environment variables.
 
 ### Added
 
@@ -72,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fallback to the agentic OBO flow when authorization context is supplied. MCP servers whose token
   acquisition fails are skipped and logged as a warning instead of failing tool registration for
   all servers. Applies to the Semantic Kernel, Agent Framework, and Azure AI Foundry extensions.
+  See the `authToken` breaking change above.
 
 ### Fixed
 

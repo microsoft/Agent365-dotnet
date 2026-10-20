@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2026-10-20
 
+### Breaking Changes
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - `authToken` no longer authenticates MCP servers
+  - When `UserAuthorization` and `authHandlerName` aren't supplied, `authToken` is used only for MCP server discovery through the tooling gateway; MCP servers authenticate only with tokens from the `BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN` environment variables, and servers without one are skipped and logged, so the call can silently return no MCP tools
+  - Affects `AddToolServersToAgentAsync` when called with `null` `UserAuthorization` / `authHandlerName`
+  - **Migration:** pass `UserAuthorization` and `authHandlerName` so tokens are acquired through the agentic OBO flow, or set the `BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN` environment variables
+
 ### Changed
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - MCP token provider chaining
   - `AddToolServersToAgentAsync` now tries tokens from environment variables (`BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN`) first and falls back to the agentic OBO flow when `UserAuthorization` and `authHandlerName` are supplied
