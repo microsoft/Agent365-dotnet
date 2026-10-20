@@ -7,12 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-20
+
+### Changed
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - MCP token provider chaining
+  - `AddToolServersToAgentAsync` now tries tokens from environment variables (`BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN`) first and falls back to the agentic OBO flow when `UserAuthorization` and `authHandlerName` are supplied
+  - MCP servers whose token acquisition fails are skipped and logged as a warning instead of failing registration for all servers
+
+## [1.0.0] - 2026-04-30
+
 ### Changed
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - V2 per-audience token support
   - `McpToolRegistrationService.AddToolServersToAgentAsync` now instantiates `AgenticMcpTokenProvider` and uses the V2-aware `GetMcpToolDefinitionsAndResourcesAsync` overload; each V2 MCP server's `MCPToolResource` is populated with its audience-scoped Bearer token instead of the shared ATG token
 
 ### Added
-- **Microsoft.Agents.A365.Tooling.AzureFoundry** - Azure Foundry integration tooling for MCP server management
+- Initial release of Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry
+- Azure AI Foundry integration tooling for MCP server management
   - `IMcpToolRegistrationService` interface for managing MCP tool server registrations
   - `McpToolRegistrationService` implementation for Foundry (Persistent Agents) scenarios
   - Support for both simple auth token and full authentication context workflows
@@ -25,46 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Comprehensive error handling and logging for MCP server operations
   - Support for MCP tool definitions and tool resources management
 
-
-## [1.0.0] - 2025-01-16
-
-### Added
-- Initial release of Microsoft Agent 365 SDK
-- OpenTelemetry integration for comprehensive telemetry and tracing
-- `Agent 365` extension methods for `IHostApplicationBuilder` configuration
-- `A365SpanProcessor` for custom span processing with agent-specific metadata
-- Specialized tracing scopes:
-  - `InvokeAgentScope` for tracking AI agent invocations
-  - `ExecuteToolScope` for tracking tool executions
-  - `A365OpenTelemetryScope` base class for extensible tracing
-- Support for Azure Monitor integration via connection string configuration
-- Built-in instrumentation for:
-  - HTTP client requests
-  - ASP.NET Core applications
-  - Azure AI Inference operations
-  - Microsoft Semantic Kernel operations
-- Comprehensive telemetry constants and standardized attribute keys
-- Agent and conversation tracking with telemetry metadata
-- Tool execution monitoring with detailed trace information
-
 ### Dependencies
 - .NET 8.0 target framework
-- Azure.AI.Agents.Persistent SDK for Azure Foundry integration
+- Azure.AI.Agents.Persistent SDK for Azure AI Foundry integration
 - ModelContextProtocol.Core for MCP client functionality
 - Microsoft.Agents.Authentication.Msal for authentication
 - Microsoft.Agents.Hosting.AspNetCore for ASP.NET Core integration
-- OpenTelemetry
-- Azure Monitor OpenTelemetry Exporter
-- OpenTelemetry instrumentation packages for HTTP, ASP.NET Core, and Runtime
-
-### Documentation
-- Complete README with installation and usage instructions
-- Code examples for common scenarios
-- API documentation via XML comments
-
-## [1.0.0-preview] - 2025-01-15
-
-### Added
-- Preview release with core functionality
-- Basic OpenTelemetry setup and configuration
-- Initial tracing scope implementations

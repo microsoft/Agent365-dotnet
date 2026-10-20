@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-20
+
+### Changed
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - MCP token provider chaining
+  - `AddToolServersToAgent` and `GetMcpToolsAsync` now try tokens from environment variables (`BEARER_TOKEN_<SERVERNAME>` / `BEARER_TOKEN`) first and fall back to the agentic OBO flow when `UserAuthorization` and `authHandlerName` are supplied
+  - MCP servers whose token acquisition fails are skipped and logged as a warning instead of failing registration for all servers
+
+## [1.0.0] - 2026-04-30
+
 ### Changed
 - **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - V2 per-audience token support
   - `McpToolRegistrationService.AddToolServersToAgent` and `GetMcpToolsAsync` now instantiate `AgenticMcpTokenProvider` and use the V2-aware `EnumerateToolsFromServersAsync` overload, so each V2 MCP server receives its own audience-scoped Bearer token instead of the shared ATG token
-
-
-## [1.0.0] - 2025-01-16
 
 ### Added
 - Initial release of Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
