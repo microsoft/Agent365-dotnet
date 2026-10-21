@@ -93,6 +93,13 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
         public string? StatusMessage { get; set; }
 
         /// <summary>
+        /// Gets the span events for the operation. Each event is a dictionary with OTLP-style keys
+        /// (<c>timeUnixNano</c>, <c>name</c>, <c>attributes</c>), matching the Activity export path.
+        /// Empty by default; populated by builders that emit events (e.g. apply_guardrail findings).
+        /// </summary>
+        public List<Dictionary<string, object?>> Events { get; } = new List<Dictionary<string, object?>>();
+
+        /// <summary>
         /// Gets the duration of the operation if both start and end times are provided.
         /// </summary>
         public TimeSpan Duration => StartTime.HasValue && EndTime.HasValue
@@ -123,6 +130,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs
                     }
                 }
             };
+
+            if (Events.Count > 0)
+            {
+                dict["Events"] = Events;
+            }
 
             return dict;
         }

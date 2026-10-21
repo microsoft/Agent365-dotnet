@@ -230,5 +230,40 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.DTOs
             status["code"].Should().Be(2);
             status["message"].Should().Be("kaboom");
         }
+
+        [TestMethod]
+        public void Events_DefaultsToEmpty()
+        {
+            var data = new TestData();
+            data.Events.Should().BeEmpty();
+        }
+
+        [TestMethod]
+        public void Events_NotIncludedInToDictionary_WhenEmpty()
+        {
+            var data = new TestData();
+            var dict = data.ToDictionary();
+            dict.Should().NotContainKey("Events");
+        }
+
+        [TestMethod]
+        public void Events_IncludedInToDictionary_WhenPopulated()
+        {
+            var data = new TestData();
+            var evt = new Dictionary<string, object?>
+            {
+                { "timeUnixNano", 123UL },
+                { "name", "finding" },
+                { "attributes", new Dictionary<string, object?> { { "k", "v" } } }
+            };
+            data.Events.Add(evt);
+
+            var dict = data.ToDictionary();
+
+            dict.Should().ContainKey("Events");
+            var events = dict["Events"].Should().BeAssignableTo<IReadOnlyList<Dictionary<string, object?>>>().Subject;
+            events.Should().HaveCount(1);
+            events[0].Should().BeSameAs(evt);
+        }
     }
 }

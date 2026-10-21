@@ -169,6 +169,17 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         }
 
         /// <summary>
+        /// Converts a timestamp to Unix epoch nanoseconds, matching the Activity export path's
+        /// conversion in <c>ExportFormatter</c>. Used to stamp span events on the ETW DTO path.
+        /// </summary>
+        protected static ulong ToUnixNanos(DateTimeOffset timestamp)
+        {
+            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var ns = (timestamp.UtcDateTime - unixEpoch).Ticks * 100;
+            return (ulong)ns;
+        }
+
+        /// <summary>
         /// Adds extra attributes to the attributes dictionary.
         /// Extra attributes cannot override keys already set by the builder on this span.
         /// </summary>

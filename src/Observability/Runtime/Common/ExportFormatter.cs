@@ -152,7 +152,8 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
                 Kind = data.TryGetValue("SpanKind", out var spanKindObj) && spanKindObj != null ? spanKindObj : SpanKindConstants.Client,
                 Status = data.TryGetValue("Status", out var statusObj) && statusObj != null
                     ? statusObj
-                    : new Dictionary<string, object> { { "code", 0 }, { "message", "" } }
+                    : new Dictionary<string, object> { { "code", 0 }, { "message", "" } },
+                Events = data.TryGetValue("Events", out var eventsObj) ? eventsObj : null
             };
 
             return SerializePayload(payload);
@@ -367,7 +368,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("resource")]
         public OtlpResource? Resource { get; set; }
-        
+
         [JsonPropertyName("scopeSpan")]
         public EtwScopeSpan ScopeSpan { get; set; } = new EtwScopeSpan();
     }
@@ -376,7 +377,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     {
         [JsonPropertyName("scope")]
         public InstrumentationScope? Scope { get; set; }
-     
+
         [JsonPropertyName("span")]
         public OtlpSpan Span { get; set; } = new OtlpSpan();
     }

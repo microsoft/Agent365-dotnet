@@ -118,5 +118,67 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.Etw
             var root = JsonDocument.Parse(payloadStr!).RootElement;
             Assert.AreEqual(OpenTelemetryConstants.OperationNames.OutputMessages.ToString(), root.GetProperty("Name").GetString());
         }
+
+        [TestMethod]
+        public void Logs_ApplyGuardrail_Event_WithFindings()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            using var provider = BuildProvider();
+            var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var guardrailDetails = new GuardrailDetails(
+                targetType: GuardrailTargetType.LlmInput,
+                decisionType: GuardrailDecisionType.Deny);
+            var findings = new[]
+            {
+                new GuardrailFinding("prompt_injection", GuardrailRiskSeverity.High, policyDecisionType: "deny")
+            };
+
+            // Act
+            etwLogger.LogApplyGuardrail(guardrailDetails, agentDetails, "conv-guardrail-1", "parent-1", findings: findings);
+
+            // Assert
+            var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
+            Assert.IsNotNull(evt);
+            var payloadStr = evt!.Payload![0] as string;
+            Assert.IsNotNull(payloadStr);
+            var root = JsonDocument.Parse(payloadStr!).RootElement;
+            Assert.AreEqual(OpenTelemetryConstants.OperationNames.ApplyGuardrail.ToString(), root.GetProperty("Name").GetString());
+
+            var events = root.GetProperty("Events");
+            Assert.AreEqual(1, events.GetArrayLength());
+            var finding = events[0];
+            Assert.AreEqual(OpenTelemetryConstants.GenAiSecurityFindingEventName, finding.GetProperty("name").GetString());
+            var attrs = finding.GetProperty("attributes");
+            Assert.AreEqual("prompt_injection", attrs.GetProperty(OpenTelemetryConstants.GenAiSecurityRiskCategoryKey).GetString());
+            Assert.AreEqual("high", attrs.GetProperty(OpenTelemetryConstants.GenAiSecurityRiskSeverityKey).GetString());
+        }
+
+        [TestMethod]
+        public void Logs_ApplyGuardrail_Event_NoFindings_OmitsEvents()
+        {
+            // Arrange
+            using var listener = new TestEventListener();
+            listener.EnableEvents(EtwEventSource.Log, EventLevel.Informational);
+            using var provider = BuildProvider();
+            var etwLogger = provider.GetRequiredService<IA365EtwLogger<EtwLoggingBuilderTests>>();
+            var agentDetails = new AgentDetails("agent-id", agentName: "agent-name");
+            var guardrailDetails = new GuardrailDetails(
+                targetType: GuardrailTargetType.LlmInput,
+                decisionType: GuardrailDecisionType.Allow);
+
+            // Act
+            etwLogger.LogApplyGuardrail(guardrailDetails, agentDetails, "conv-guardrail-2", "parent-1");
+
+            // Assert
+            var evt = listener.Events.FirstOrDefault(e => e.EventId == 2000);
+            Assert.IsNotNull(evt);
+            var payloadStr = evt!.Payload![0] as string;
+            Assert.IsNotNull(payloadStr);
+            var root = JsonDocument.Parse(payloadStr!).RootElement;
+            Assert.IsFalse(root.TryGetProperty("Events", out _));
+        }
     }
 }

@@ -3,6 +3,7 @@
 
 using Microsoft.Agents.A365.Observability.Runtime.Tracing.Contracts;
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Etw
 {
@@ -143,6 +144,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
         /// <param name="callerDetails">Optional details of the caller.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
+        /// <param name="findings">Optional security findings to emit as span events on the apply_guardrail span.</param>
         public void LogApplyGuardrail(
             GuardrailDetails guardrailDetails,
             AgentDetails agentDetails,
@@ -154,6 +156,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Etw
             Channel? channel = null,
             CallerDetails? callerDetails = null,
             string? traceId = null,
-            Exception? error = null);
+            Exception? error = null,
+            IEnumerable<GuardrailFinding>? findings = null);
     }
 }
