@@ -57,7 +57,16 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <inheritdoc/>
         public virtual async Task<List<MCPServerConfig>> ListToolServersAsync(string agentInstanceId, string authToken, ToolOptions toolOptions)
         {
-            return IsDevScenario() ? GetMCPServersFromManifest() : await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
+            if (!bool.TryParse(this._configuration["A365_USE_TOOLING_SERVICE"], out var useToolingService) || !useToolingService)
+            {
+                var servers = GetMCPServersFromManifest();
+                if (servers != null)
+                {
+                    return servers;
+                }
+            }
+
+            return await GetMCPServerFromToolingGatewayAsync(agentInstanceId, authToken, toolOptions);
         }
 
         /// <summary>
@@ -406,8 +415,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
         ///   ]
         /// }
         /// </summary>
-        /// <returns>List of MCP server configurations</returns>
-        private List<MCPServerConfig> GetMCPServersFromManifest()
+        /// <returns>List of MCP server configurations, or null if no manifest exists.</returns>
+        private List<MCPServerConfig>? GetMCPServersFromManifest()
         {
             var mcpServers = new List<MCPServerConfig>();
 
@@ -440,7 +449,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
 
                 if (File.Exists(manifestPath))
                 {
-                    this._logger.LogInformation($"Loading MCP servers from: {manifestPath}");
+                    this._logger.LogWarning("Loading MCP servers from ToolingManifest.json at {ManifestPath} instead of the tooling service. Set A365_USE_TOOLING_SERVICE=true to use the tooling service.", manifestPath);
 
                     var jsonContent = File.ReadAllText(manifestPath);
                     var manifestData = JsonSerializer.Deserialize<JsonElement>(jsonContent);
@@ -465,8 +474,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 }
                 else
                 {
-                    this._logger.LogInformation($"ToolingManifest.json not found. Expected location: {manifestPath}");
-                    this._logger.LogInformation("Please ensure ToolingManifest.json exists in your project's output directory and is set to 'Copy to Output Directory'.");
+                    this._logger.LogInformation("ToolingManifest.json not found at {ManifestPath}. Using the tooling service.", manifestPath);
+                    return null;
                 }
             }
             catch (Exception ex)
