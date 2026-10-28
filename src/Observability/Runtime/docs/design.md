@@ -81,6 +81,30 @@ new Builder(services, configuration, useOpenTelemetryBuilder: false)
 |----------|-------------|
 | `EnableAgent365Exporter` | Set to `true` to enable Agent365 exporter |
 
+### Agent365Exporter
+
+The Agent 365 exporter is S2S-only. It always builds
+`/observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces?api-version=1`
+and ignores the obsolete `UseS2SEndpoint` compatibility property. Domain override and
+custom tenant domain resolution still control only the host, not the path.
+
+Exporter authentication comes only from the configured `TokenResolver` or
+`ContextualTokenResolver`. Both resolvers must return an app-only OBS token for the
+exporting agent identity; the default app-only OBS scope is
+`api://9b975845-388f-4429-889e-eab1ef63949c/.default`. The exporter never reads
+per-request delegated tokens, never performs OBO/user_fic token exchange, and never retries
+401/403/404 on the delegated `/observability` route. A missing resolver fails
+configuration, and a null/empty token or resolver exception fails the export batch before
+sending data.
+
+Resolvers are invoked once per tenant/agent identity group in each export batch, so a batch
+that contains several identities invokes them several times; cache tokens per agent and
+tenant. They must validate
+the final token before returning it: accept `idtyp=app`, or, when `idtyp` is absent, a
+non-empty `roles` array or a non-empty `oid` equal to `sub`; reject any other `idtyp` and
+any `scp` claim. Also verify the OBS audience
+(`api://9b975845-388f-4429-889e-eab1ef63949c`) and token lifetime.
+
 ### InvokeAgentScope
 
 **Source**: [InvokeAgentScope.cs](../Tracing/Scopes/InvokeAgentScope.cs)

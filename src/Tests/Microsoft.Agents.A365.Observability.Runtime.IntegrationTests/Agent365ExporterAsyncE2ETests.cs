@@ -10,6 +10,8 @@ using Microsoft.Extensions.Hosting;
 using System.Net;
 using System.Text.Json;
 
+#pragma warning disable CS0618 // Tests intentionally pass the ignored legacy S2S compatibility switch.
+
 namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
 {
     [TestClass]
@@ -394,7 +396,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tests.IntegrationTests
                     TokenResolver = (_, _) => Task.FromResult<string?>("test-token")
                 };
             });
-            
+
             builder.AddA365Tracing(useOpenTelemetryBuilder: false, agent365ExporterType: Agent365ExporterType.Agent365ExporterAsync);
             return builder.Services.BuildServiceProvider();
         }

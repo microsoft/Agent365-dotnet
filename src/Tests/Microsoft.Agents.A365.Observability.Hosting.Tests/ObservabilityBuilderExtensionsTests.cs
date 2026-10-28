@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Trace;
 
+#pragma warning disable CS0618 // Tests intentionally pass the ignored legacy S2S compatibility switch.
+
 namespace Microsoft.Agents.A365.Observability.Hosting.Tests
 {
     [TestClass]

@@ -21,4 +21,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Hosting" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Agents.A365.Observability.Hosting.Tests" />
+  </ItemGroup>
 </Project>

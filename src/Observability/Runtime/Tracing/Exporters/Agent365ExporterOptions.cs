@@ -1,23 +1,24 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 
 namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 {
     /// <summary>
-    /// Async delegate used by the exporter to obtain an auth token for a specific agent + tenant.
-    /// Must be fast and non-blocking (use internal caching elsewhere).
-    /// Return null/empty to omit the Authorization header.
+    /// Async delegate used by the exporter to obtain an app-only OBS auth token for a specific agent and tenant.
+    /// Must be fast and non-blocking; cache tokens in the resolver and refresh only near expiry.
+    /// Return null or empty to fail the export batch without sending a request.
     /// </summary>
     public delegate Task<string?> AsyncAuthTokenResolver(string agentId, string tenantId);
 
     /// <summary>
-    /// Async delegate used by the exporter to obtain an auth token using rich context.
+    /// Async delegate used by the exporter to obtain an app-only OBS auth token using rich context.
     /// Provides additional fields (e.g. <see cref="TokenResolverContext.Identity"/>)
     /// beyond what <see cref="AsyncAuthTokenResolver"/> offers.
-    /// Must be fast and non-blocking (use internal caching elsewhere).
-    /// Return null/empty to omit the Authorization header.
+    /// Must be fast and non-blocking; cache tokens in the resolver and refresh only near expiry.
+    /// Return null or empty to fail the export batch without sending a request.
     /// </summary>
     public delegate Task<string?> AsyncContextualTokenResolver(TokenResolverContext context);
 
@@ -30,7 +31,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
 
     /// <summary>
     /// Configuration for Agent365Exporter.
-    /// Only TokenResolver is required for core operation.
+    /// A configured app-only token resolver is required for core operation.
     /// </summary>
     public sealed class Agent365ExporterOptions
     {
@@ -55,17 +56,20 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public string ClusterCategory { get; set; } = "production";
 
         /// <summary>
-        /// Async delegate used to resolve the auth token.
+        /// Async delegate used to resolve the app-only OBS auth token.
         /// Either this or <see cref="ContextualTokenResolver"/> must be set.
         /// When both are set, <see cref="ContextualTokenResolver"/> takes precedence.
+        /// The exporter invokes this resolver once per tenant/agent identity group in each export batch, so a batch
+        /// that contains several identities invokes it several times. It never falls back to a delegated token.
         /// </summary>
         public AsyncAuthTokenResolver? TokenResolver { get; set; }
 
         /// <summary>
-        /// Async delegate used to resolve the auth token with rich context, which may include the
-        /// agentic user ID associated with the export batch context.
+        /// Async delegate used to resolve the app-only OBS auth token with rich context, which may include the
+        /// agentic user ID associated with the export batch context for cache selection or diagnostics.
         /// Takes precedence over <see cref="TokenResolver"/> when set.
         /// The exporter does not guarantee separate batching or resolver invocation per agentic user ID.
+        /// This resolver must not perform delegated, OBO, or user_fic authentication for OBS export.
         /// </summary>
         public AsyncContextualTokenResolver? ContextualTokenResolver { get; set; }
 
@@ -76,10 +80,11 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Tracing.Exporters
         public TenantDomainResolver DomainResolver { get; set; }
 
         /// <summary>
-        /// When true, uses the service-to-service (S2S) endpoint path: /observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces
-        /// When false (default), uses the standard endpoint path: /observability/tenants/{tenantId}/otlp/agents/{agentId}/traces
-        /// Default is false.
+        /// OBS export always uses the service-to-service (S2S) OTLP endpoint path:
+        /// /observabilityService/tenants/{tenantId}/otlp/agents/{agentId}/traces.
+        /// This compatibility switch is ignored even when set to <c>false</c>.
         /// </summary>
+        [Obsolete("Agent 365 OBS export always uses the service-to-service /observabilityService OTLP endpoint; this option is ignored.", false)]
         public bool UseS2SEndpoint { get; set; } = false;
 
         /// <summary>

@@ -9,12 +9,12 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
     /// </summary>
     public class EnvironmentUtils
     {
-        private const string ProdObservabilityScope = "api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite";
+        private const string ProdObservabilityScope = "api://9b975845-388f-4429-889e-eab1ef63949c/.default";
         private const string ProdObservabilityClusterCategory = "prod";
         private const string DevelopmentEnvironmentName = "development";
 
         /// <summary>
-        /// Returns the scope for authenticating to the observability service based on the current environment.
+        /// Returns the app-only OBS resource scope for authenticating to the observability service.
         /// </summary>
         /// <returns>The authentication scope.</returns>
         public static string[] GetObservabilityAuthenticationScope()
@@ -24,7 +24,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
 
         /// <summary>
-        /// [Deprecated] Returns the scope for authenticating to the observability service based on the cluster category.
+        /// [Deprecated] Returns the app-only OBS resource scope for authenticating to the observability service.
         /// </summary>
         /// <param name="clusterCategory">Cluster category (deprecated, defaults to production).</param>
         /// <returns>The authentication scope.</returns>
@@ -77,5 +77,3 @@ namespace Microsoft.Agents.A365.Observability.Runtime.Common
         }
     }
 }
-
-

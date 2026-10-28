@@ -10,6 +10,10 @@
 
 The Microsoft Agent 365 Observability SDK provides comprehensive monitoring, tracing, and diagnostics capabilities for AI agent applications. This module enables developers to gain deep insights into agent behavior, performance, and execution patterns through industry-standard observability tools.
 
+Agent 365 OBS export uses the S2S OTLP endpoint only and requires an app-only OBS token for
+the exporting agent identity. The SDK does not acquire delegated OBS tokens or fall back to
+the delegated `/observability` route.
+
 ## Overview
 
 Building production-ready AI agents requires robust observability to understand agent behavior, diagnose issues, and optimize performance. This module provides:

@@ -22,9 +22,12 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        var tokenCache = serviceProvider.GetService<IExporterTokenCache<AgenticTokenStruct>>();
+        var tokenCache = serviceProvider.GetService<IExporterTokenCache<ObservabilityTokenResolver>>();
         tokenCache.Should().NotBeNull();
         tokenCache.Should().BeOfType<AgenticTokenCache>();
+
+        serviceProvider.GetService<IExporterTokenCache<AgenticTokenStruct>>()
+            .Should().BeNull("the delegated AgenticTokenStruct cache contract was removed");
 
         var options = serviceProvider.GetService<Agent365ExporterOptions>();
         options.Should().NotBeNull();
@@ -47,7 +50,7 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
     }
 
     [TestMethod]
-    public void AddAgenticTracingExporter_UseS2SEndpoint_IsFalse()
+    public void AddAgenticTracingExporter_UsesIgnoredLegacyEndpointFlag()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -58,7 +61,9 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
 
         // Assert
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-        options.UseS2SEndpoint.Should().BeFalse("agentic exporter uses standard endpoint");
+#pragma warning disable CS0618
+        options.UseS2SEndpoint.Should().BeFalse("the compatibility property default is preserved but ignored");
+#pragma warning restore CS0618
     }
 
     [TestMethod]
@@ -97,18 +102,20 @@ public sealed class ObservabilityServiceCollectionExtensionsTests
     }
 
     [TestMethod]
-    public void AddServiceTracingExporter_UseS2SEndpoint_IsTrue()
+    public void AddServiceTracingExporter_UsesIgnoredLegacyEndpointFlag()
     {
         // Arrange
         var services = new ServiceCollection();
 
         // Act
-        services.AddServiceTracingExporter( );
+        services.AddServiceTracingExporter();
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
         var options = serviceProvider.GetRequiredService<Agent365ExporterOptions>();
-        options.UseS2SEndpoint.Should().BeTrue("service tracing exporter uses S2S endpoint");
+#pragma warning disable CS0618
+        options.UseS2SEndpoint.Should().BeFalse("OBS export always routes to S2S regardless of this compatibility property");
+#pragma warning restore CS0618
     }
 
     [TestMethod]
