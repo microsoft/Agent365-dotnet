@@ -14,11 +14,6 @@
 # Define package types and their styling
 $packageTypes = @{
     'Microsoft.Agents.A365.Notifications' = @{ Type = 'Notifications'; Fill = '#ffcdd2'; Stroke = '#c62828'; Color = '#280505' }
-    'Microsoft.Agents.A365.Observability.Runtime' = @{ Type = 'Observability'; Fill = '#c8e6c9'; Stroke = '#2e7d32'; Color = '#142a14' }
-    'Microsoft.Agents.A365.Observability.Hosting' = @{ Type = 'Observability Extensions'; Fill = '#e8f5e9'; Stroke = '#66bb6a'; Color = '#1f3d1f' }
-    'Microsoft.Agents.A365.Observability.Extensions.AgentFramework' = @{ Type = 'Observability Extensions'; Fill = '#e8f5e9'; Stroke = '#66bb6a'; Color = '#1f3d1f' }
-    'Microsoft.Agents.A365.Observability.Extensions.OpenAI' = @{ Type = 'Observability Extensions'; Fill = '#e8f5e9'; Stroke = '#66bb6a'; Color = '#1f3d1f' }
-    'Microsoft.Agents.A365.Observability.Extensions.SemanticKernel' = @{ Type = 'Observability Extensions'; Fill = '#e8f5e9'; Stroke = '#66bb6a'; Color = '#1f3d1f' }
     'Microsoft.Agents.A365.Runtime' = @{ Type = 'Runtime'; Fill = '#bbdefb'; Stroke = '#1565c0'; Color = '#0d1a26' }
     'Microsoft.Agents.A365.Tooling' = @{ Type = 'Tooling'; Fill = '#ffe0b2'; Stroke = '#e65100'; Color = '#331a00' }
     'Microsoft.Agents.A365.Tooling.Extensions.AgentFramework' = @{ Type = 'Tooling Extensions'; Fill = '#fff3e0'; Stroke = '#fb8c00'; Color = '#4d2600' }
@@ -88,11 +83,6 @@ function Get-AllProjects {
     # Define the specific projects we want to include
     $projectPaths = @(
         'src\Notification\Microsoft.Agents.A365.Notifications\Microsoft.Agents.A365.Notifications.csproj',
-        'src\Observability\Runtime\Microsoft.Agents.A365.Observability.Runtime.csproj',
-        'src\Observability\Hosting\Microsoft.Agents.A365.Observability.Hosting.csproj',
-        'src\Observability\Extensions\AgentFramework\Microsoft.Agents.A365.Observability.Extensions.AgentFramework.csproj',
-        'src\Observability\Extensions\OpenAI\Microsoft.Agents.A365.Observability.Extensions.OpenAI.csproj',
-        'src\Observability\Extensions\SemanticKernel\Microsoft.Agents.A365.Observability.Extensions.SemanticKernel.csproj',
         'src\Runtime\Core\Microsoft.Agents.A365.Runtime.csproj',
         'src\Tooling\Core\Microsoft.Agents.A365.Tooling.csproj',
         'src\Tooling\Extensions\AgentFramework\Microsoft.Agents.A365.Tooling.Extensions.AgentFramework.csproj',
@@ -205,8 +195,6 @@ $mermaidContent += "`r`n``````"
 $mermaidContent += "`r`n`r`n## Package Types`r`n"
 $mermaidContent += "`r`n- **Notifications** (Red): Notification and messaging extensions"
 $mermaidContent += "`r`n- **Runtime** (Blue): Core runtime components"
-$mermaidContent += "`r`n- **Observability** (Green): Telemetry and monitoring core"
-$mermaidContent += "`r`n- **Observability Extensions** (Light Green): Framework-specific observability integrations"
 $mermaidContent += "`r`n- **Tooling** (Orange): Agent tooling SDK core"
 $mermaidContent += "`r`n- **Tooling Extensions** (Light Orange): Framework-specific tooling integrations"
 

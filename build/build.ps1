@@ -57,8 +57,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# Set working directory to script location
-Set-Location $PSScriptRoot
+# Traversal projects and SDK configuration live under src.
+Set-Location (Join-Path $PSScriptRoot '..\src')
 
 Write-Host "🔧 Building Microsoft Agents A365 SDK..." -ForegroundColor Green
 Write-Host "Configuration: $Configuration" -ForegroundColor Cyan
@@ -89,17 +89,23 @@ try {
     if ($Pack) {
         Write-Host "📦 Creating packages..." -ForegroundColor Yellow
         
-        # Ensure output directory exists
-        $outputPath = "../NuGetPackages"
-        if (!(Test-Path $outputPath)) {
-            New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-        }
+        # Isolate this run from packages left by earlier builds or branches.
+        $outputPath = Join-Path (Split-Path $PSScriptRoot -Parent) "NuGetPackages\$([guid]::NewGuid().ToString('N'))"
+        New-Item -ItemType Directory -Path $outputPath | Out-Null
         
         dotnet pack dirs.proj --configuration $Configuration --verbosity $Verbosity --no-build --output $outputPath
         if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
+
+        if (Get-ChildItem -LiteralPath $outputPath -Filter 'Microsoft.Agents.A365.Observability.*' -File) {
+            throw "Retired Observability packages must not be released."
+        }
+        if (-not (Get-ChildItem -LiteralPath $outputPath -Filter '*.nupkg' -File)) {
+            throw "Pack produced no NuGet packages."
+        }
         
         # List created packages
         Write-Host "📦 Created packages:" -ForegroundColor Green
+        Write-Host "Output: $outputPath" -ForegroundColor Cyan
         Get-ChildItem -Path $outputPath -Filter "*.nupkg" | ForEach-Object {
             Write-Host "  - $($_.Name)" -ForegroundColor Cyan
         }

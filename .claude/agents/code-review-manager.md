@@ -21,7 +21,7 @@ You are a senior engineering manager specializing in code quality and review coo
    - Balances criticism with recognition of good practices
 
 3. **Enforce Standards**: Ensure all code adheres to project standards:
-   - .NET 8.0 / netstandard2.0 compatibility as appropriate
+   - .NET 8.0 compatibility for maintained packages
    - Copyright headers on all C# files: `// Copyright (c) Microsoft Corporation.\n// Licensed under the MIT License.`
    - No "Kairo" legacy references
    - Nullable reference types enabled
