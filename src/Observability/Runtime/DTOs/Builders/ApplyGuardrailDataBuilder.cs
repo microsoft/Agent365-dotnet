@@ -30,6 +30,7 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
         /// <param name="spanKind">Optional span kind override.</param>
         /// <param name="traceId">Optional trace ID for distributed tracing.</param>
         /// <param name="error">Optional exception describing a failure; sets an OTel error status and the <c>error.type</c> attribute.</param>
+        /// <param name="findings">Optional security findings to emit as span events on the apply_guardrail span.</param>
         /// <returns>An ApplyGuardrailData object containing all telemetry data.</returns>
         public static ApplyGuardrailData Build(
             GuardrailDetails guardrailDetails,
@@ -44,11 +45,55 @@ namespace Microsoft.Agents.A365.Observability.Runtime.DTOs.Builders
             IDictionary<string, object?>? extraAttributes = null,
             string? spanKind = null,
             string? traceId = null,
-            Exception? error = null)
+            Exception? error = null,
+            IEnumerable<GuardrailFinding>? findings = null)
         {
             var attributes = BuildAttributes(guardrailDetails, agentDetails, conversationId, channel, callerDetails, extraAttributes);
 
-            return ApplyStatus(new ApplyGuardrailData(parentSpanId, attributes, startTime, endTime, spanId, spanKind, traceId), error);
+            var data = ApplyStatus(new ApplyGuardrailData(parentSpanId, attributes, startTime, endTime, spanId, spanKind, traceId), error);
+
+            AddFindingEvents(data, findings);
+
+            return data;
+        }
+
+        private static void AddFindingEvents(ApplyGuardrailData data, IEnumerable<GuardrailFinding>? findings)
+        {
+            if (findings == null)
+            {
+                return;
+            }
+
+            foreach (var finding in findings)
+            {
+                if (finding == null)
+                {
+                    continue;
+                }
+
+                var eventAttributes = new Dictionary<string, object?>
+                {
+                    { OpenTelemetryConstants.GenAiSecurityRiskCategoryKey, finding.RiskCategory },
+                    { OpenTelemetryConstants.GenAiSecurityRiskSeverityKey, finding.RiskSeverity }
+                };
+
+                AddIfNotNull(eventAttributes, OpenTelemetryConstants.GenAiSecurityPolicyDecisionTypeKey, finding.PolicyDecisionType);
+                AddIfNotNull(eventAttributes, OpenTelemetryConstants.GenAiSecurityPolicyIdKey, finding.PolicyId);
+                AddIfNotNull(eventAttributes, OpenTelemetryConstants.GenAiSecurityPolicyNameKey, finding.PolicyName);
+                AddIfNotNull(eventAttributes, OpenTelemetryConstants.GenAiSecurityPolicyVersionKey, finding.PolicyVersion);
+                if (finding.RiskScore.HasValue)
+                {
+                    eventAttributes[OpenTelemetryConstants.GenAiSecurityRiskScoreKey] = finding.RiskScore.Value;
+                }
+                AddIfNotNull(eventAttributes, OpenTelemetryConstants.GenAiSecurityRiskMetadataKey, finding.RiskMetadata);
+
+                data.Events.Add(new Dictionary<string, object?>
+                {
+                    { "timeUnixNano", ToUnixNanos(DateTimeOffset.UtcNow) },
+                    { "name", OpenTelemetryConstants.GenAiSecurityFindingEventName },
+                    { "attributes", eventAttributes }
+                });
+            }
         }
 
         private static Dictionary<string, object?> BuildAttributes(
