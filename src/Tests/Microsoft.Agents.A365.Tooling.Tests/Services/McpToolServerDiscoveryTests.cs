@@ -22,7 +22,7 @@ public class ToolDiscoveryCollection
 public class McpToolServerDiscoveryTests : IDisposable
 {
     private readonly string _originalDirectory = Directory.GetCurrentDirectory();
-    private readonly string _manifestDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+    private readonly string _manifestDirectory = Path.Combine(Path.GetTempPath(), Path.GetFileName(Guid.NewGuid().ToString()));
     private readonly Mock<ILogger<IMcpToolServerConfigurationService>> _logger = new();
     private readonly Mock<HttpMessageHandler> _handler = new();
     private readonly HttpClient _httpClient;
@@ -85,7 +85,7 @@ public class McpToolServerDiscoveryTests : IDisposable
     public async Task ListToolServersAsync_UseToolingService_BypassesExistingManifest(
         string environmentKey, string environment, string useToolingService)
     {
-        File.WriteAllText(Path.Combine(_manifestDirectory, "ToolingManifest.json"), "invalid json");
+        File.WriteAllText(Path.Join(_manifestDirectory, "ToolingManifest.json"), "invalid json");
         var service = CreateService(environmentKey, environment, useToolingService);
 
         var servers = await service.ListToolServersAsync("agent-id", "test-token");
@@ -98,7 +98,7 @@ public class McpToolServerDiscoveryTests : IDisposable
     [Fact]
     public async Task ListToolServersAsync_EmptyManifest_DoesNotFallBackToToolingService()
     {
-        File.WriteAllText(Path.Combine(_manifestDirectory, "ToolingManifest.json"), """{"mcpServers":[]}""");
+        File.WriteAllText(Path.Join(_manifestDirectory, "ToolingManifest.json"), """{"mcpServers":[]}""");
         var service = CreateService("ASPNETCORE_ENVIRONMENT", "Development", null);
 
         var servers = await service.ListToolServersAsync("agent-id", "test-token");
