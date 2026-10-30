@@ -7,28 +7,16 @@
     <!-- Azure packages -->
     <PackageVersion Include="Azure.Core" Version="1.50.0" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
-    <PackageVersion Include="Azure.Monitor.Ingestion" Version="1.2.0" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.7.0-beta.2" />
-    
-    <!-- OpenTelemetry packages -->
-    <PackageVersion Include="OpenTelemetry" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+
     <!-- ASP.NET Core packages -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Hosting" Version="2.3.0" />
     <!-- Other packages -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="System.Security.Claims" Version="4.3.0" />
     <!-- Semantic Kernel packages -->
     <PackageVersion Include="Microsoft.SemanticKernel.Agents.Core" Version="1.71.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.71.0" />
     <PackageVersion Include="Microsoft.SemanticKernel.Abstractions" Version="1.71.0" />
     <!-- OpenAI packages -->
     <PackageVersion Include="OpenAI" Version="2.7.0" />
@@ -85,6 +73,5 @@
     <!-- MSTest Framework packages -->
     <PackageVersion Include="MSTest.TestAdapter" Version="3.8.0" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.8.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.12" />
   </ItemGroup>
 </Project>

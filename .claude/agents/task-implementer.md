@@ -112,15 +112,13 @@ Before submitting code, verify:
 ## Package-Specific Guidelines
 
 ### Runtime (`Microsoft.Agents.A365.Runtime`)
-- Target: `netstandard2.0` for broad compatibility
+- Target: `net8.0`
 - Use `OperationResult` pattern for method returns
 - Follow `TenantContextHelper` patterns for context extraction
 
-### Observability (`Microsoft.Agents.A365.Observability.*`)
-- Use `IDisposable` pattern for scope classes
-- Follow `InvokeAgentScope`, `InferenceScope`, `ExecuteToolScope` patterns
-- Integrate with OpenTelemetry's `Activity` and `ActivitySource`
-- Use `BaggageBuilder` for context propagation
+### External Observability
+- Observability source and releases are maintained in the Microsoft OpenTelemetry .NET distro.
+- Do not reintroduce retired projects or packages; use `docs/observability-migration.md` for application integrations.
 
 ### Notifications (`Microsoft.Agents.A365.Notifications`)
 - Target: `net8.0`

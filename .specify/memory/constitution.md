@@ -28,10 +28,10 @@ Follow-up TODOs: None
 ## Core Principles
 
 ### I. Core + Extensions Architecture
-Every capability MUST follow the Core + Extensions pattern. Core packages provide framework-agnostic base functionality. Extension packages integrate with specific frameworks (Semantic Kernel, Agent Framework, Azure AI Foundry, OpenAI). This separation ensures loose coupling, independent versioning, and allows consumers to adopt only what they need. New features MUST NOT add framework-specific code to core packages.
+Every capability MUST follow the Core + Extensions pattern. Core packages provide framework-agnostic base functionality. Extension packages integrate with specific frameworks (Semantic Kernel, Agent Framework, Azure AI Foundry). This separation ensures loose coupling, independent versioning, and allows consumers to adopt only what they need. New features MUST NOT add framework-specific code to core packages.
 
 ### II. Multi-Tenant First
-All components MUST support multi-tenant scenarios from the ground up. Tenant context extraction via `TenantContextHelper` MUST be used consistently for all tenant/worker ID retrieval. Hard-coded tenant identifiers are forbidden. Tenant context MUST propagate through OpenTelemetry baggage in distributed tracing scenarios.
+All components MUST support multi-tenant scenarios from the ground up. Tenant context extraction via `TenantContextHelper` MUST be used consistently for all tenant/worker ID retrieval. Hard-coded tenant identifiers are forbidden. Applications integrating external tracing MUST preserve tenant isolation during context propagation.
 
 ### III. Strict Code Quality (NON-NEGOTIABLE)
 - All compiler warnings MUST be treated as errors (`TreatWarningsAsErrors=true`)
@@ -44,7 +44,7 @@ All components MUST support multi-tenant scenarios from the ground up. Tenant co
 All service operations that can fail MUST use the `OperationResult` pattern. Return `OperationResult.Success` for success cases. Return `OperationResult.Failed(OperationError)` with appropriate HTTP status codes for failures. Exceptions MUST NOT be thrown for expected business logic failures.
 
 ### V. Disposable Scope Pattern
-All tracing scopes (`InvokeAgentScope`, `InferenceScope`, `ExecuteToolScope`) MUST implement `IDisposable`. Consumers MUST use `using` statements or blocks to ensure proper span lifecycle management. Spans are automatically ended on dispose. New scope types MUST follow this pattern.
+Consumers of disposable resources MUST use `using` statements or blocks to ensure proper lifecycle management. Observability scope implementations are maintained outside this repository in the Microsoft OpenTelemetry .NET distro, not in new SDK projects. See `docs/observability-migration.md` for the supported application integration.
 
 ### VI. Test Coverage Required
 Every package MUST have a corresponding test project in `src/Tests/`. Tests MUST cover happy path scenarios, error conditions, edge cases, and framework-specific extension behavior. Pre-commit validation MUST pass: solution builds without warnings and all tests pass.
@@ -52,8 +52,7 @@ Every package MUST have a corresponding test project in `src/Tests/`. Tests MUST
 ## Architecture Constraints
 
 ### Target Frameworks
-- **Primary packages**: `net8.0`
-- **Runtime/Hosting packages**: `netstandard2.0` (for broader ASP.NET Core compatibility)
+- **Maintained packages**: `net8.0`
 - **Test projects**: `net8.0`
 
 ### Package Management
@@ -81,8 +80,7 @@ Before committing any changes, developers MUST verify:
 ### Design Patterns
 | Pattern | When to Use | Example |
 |---------|-------------|---------|
-| Builder | Complex configuration | `Builder.WithAgentFramework().Build()` |
-| Disposable | Resource/span lifecycle | `using var scope = InvokeAgentScope.Start(...)` |
+| Disposable | Resource lifecycle | Dispose owned clients and streams using `using` |
 | Result | Operation outcomes | `OperationResult.Success`, `OperationResult.Failed(...)` |
 | Extension Methods | Framework integration | `app.OnAgenticEmailNotification(...)` |
 
