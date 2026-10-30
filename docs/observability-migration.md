@@ -9,7 +9,7 @@ Observability development and releases are maintained in the [Microsoft OpenTele
 - [Microsoft.OpenTelemetry on NuGet](https://www.nuget.org/packages/Microsoft.OpenTelemetry): the application onboarding package.
 - [Official Agent365 migration guide](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/docs/agent365-migration.md): API differences, middleware, framework instrumentation, and troubleshooting.
 - [Agent365 getting started](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/docs/agent365-getting-started.md): exporter configuration, credentials, permissions, and deployment requirements.
-- [Migration testing checklist](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/docs/testing-agent365.md).
+- [Migration validation checklist](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/skills/microsoft-opentelemetry-migration/references/validation-checklist.md).
 - [Customization guide](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/docs/customization.md).
 
 [`Microsoft.OpenTelemetry.A365.Contracts`](https://www.nuget.org/packages/Microsoft.OpenTelemetry.A365.Contracts) is a shared transitive dependency brought in by the distro. **Do not install it as a standalone replacement.** Some compatible types retain `Microsoft.Agents.A365.Observability.*` namespaces even though their assemblies now come from the distro. Namespace names are not package identities.
@@ -103,7 +103,7 @@ Review exporter differences as well: Agent365 exports traces, not all metrics/lo
 4. Verify custom source subscriptions, privacy/sensitive-content controls, error reporting, graceful shutdown, and any offline replay behavior.
 5. Test at least two tenant/agent identities and token refresh/failure cases before production rollout.
 
-Use Console export only for controlled development with non-sensitive data, not production. Follow the distro's migration testing checklist for framework-specific cases.
+Use Console export only for controlled development with non-sensitive data, not production. Follow the distro's [migration validation checklist](https://github.com/microsoft/opentelemetry-distro-dotnet/blob/main/skills/microsoft-opentelemetry-migration/references/validation-checklist.md) where applicable to your selected authentication flow; its `RegisterObservability()` checks apply to OBO, not S2S.
 
 ## Maintainer checklist: existing NuGet packages
 
