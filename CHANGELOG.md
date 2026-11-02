@@ -5,7 +5,23 @@ All notable changes to the Microsoft Agent 365 SDK will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [3.0.0] - Unreleased
+
+### Breaking Changes
+
+- **Observability packages retired** - This repository no longer builds or releases
+  `Microsoft.Agents.A365.Observability.Runtime`,
+  `Microsoft.Agents.A365.Observability.Hosting`,
+  `Microsoft.Agents.A365.Observability.Extensions.AgentFramework`,
+  `Microsoft.Agents.A365.Observability.Extensions.SemanticKernel`, or
+  `Microsoft.Agents.A365.Observability.Extensions.OpenAI`.
+  Notifications, Runtime, Tooling, and the Tooling extensions remain maintained.
+- **Application migration required** - Use
+  [`Microsoft.OpenTelemetry`](https://www.nuget.org/packages/Microsoft.OpenTelemetry)
+  from the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main).
+  This is not a drop-in replacement or an automatic dependency redirect; follow the
+  [Observability migration guide](docs/observability-migration.md) for package replacement,
+  configuration, authentication, context propagation, and framework instrumentation.
 
 ## [2.0.0] - 2026-10-20
 
