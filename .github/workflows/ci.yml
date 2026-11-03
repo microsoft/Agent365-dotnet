@@ -1,4 +1,4 @@
-name: CI - Build, Test, and Publish
+name: CI - Build, Test, and Pack
 
 permissions:
   contents: read
@@ -48,14 +48,23 @@ jobs:
           AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
 
       - name: Pack
-        run: dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output ../NuGetPackages
-        
-      - name: Copy NuGet packages
+        shell: pwsh
         run: |
-          mkdir -p ~/drop/dotnet/NuGetPackages && cp -v ../NuGetPackages/*.nupkg $_
+          $outputPath = Join-Path $env:RUNNER_TEMP "agent365-packages-$([guid]::NewGuid().ToString('N'))"
+          New-Item -ItemType Directory -Path $outputPath | Out-Null
+          dotnet pack Microsoft.Agents.A365.Sdk.sln --no-build --configuration Release --output $outputPath
+          if ($LASTEXITCODE -ne 0) { throw "Pack failed" }
+          if (Get-ChildItem -LiteralPath $outputPath -Filter 'Microsoft.Agents.A365.Observability.*' -File) {
+            throw "Retired Observability packages must not be released."
+          }
+          if (-not (Get-ChildItem -LiteralPath $outputPath -Filter '*.nupkg' -File)) {
+            throw "Pack produced no NuGet packages."
+          }
+          "PACKAGE_OUTPUT=$outputPath" >> $env:GITHUB_ENV
 
       - name: Upload NuGet packages as artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: dotnet-packages-${{ github.run_number }}
-          path: ~/drop/dotnet/NuGetPackages/*
+          path: ${{ env.PACKAGE_OUTPUT }}/*
+          if-no-files-found: error

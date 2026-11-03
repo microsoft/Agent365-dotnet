@@ -94,7 +94,7 @@ Reviewer:            architecture-reviewer
 ## Files Reviewed
 
 - List each file included in the PR with its full path
-- Example: `src/Observability/Runtime/Scopes/InvokeAgentScope.cs`
+- Example: `src/Tooling/Core/Services/McpToolServerConfigurationService.cs`
 
 ---
 

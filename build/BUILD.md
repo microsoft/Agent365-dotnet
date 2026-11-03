@@ -1,163 +1,73 @@
 # Centralized Build and Package Management
 
-This solution has been configured with centralized package management and build traversal for efficient building and dependency management.
+The SDK uses central dependency versions and traversal builds for Notifications, Runtime, and Tooling. Observability is no longer built here; see the [migration guide](../docs/observability-migration.md).
 
-## Overview
+## Build files
 
-The solution uses:
-- **global.json**: Defines the .NET SDK version and MSBuild SDK versions
-- **Directory.Packages.props**: Centralized NuGet package version management
-- **Directory.Build.props**: Common build properties for all projects
-- **dirs.proj**: Build traversal projects for organized building
+| File | Purpose |
+|---|---|
+| `src/global.json` | .NET SDK selection and traversal SDK version |
+| `src/Directory.Packages.props` | Central NuGet dependency versions and transitive pins |
+| `src/Directory.Build.props` | Shared compiler and package settings |
+| `src/dirs.proj` | Source traversal through the three maintained modules |
+| `src/tests.proj` | Test traversal |
+| `src/Microsoft.Agents.A365.Sdk.sln` | Explicit solution project list |
+| `build/build.ps1` | PowerShell build/test/pack entry point |
+| `build/build.cmd` | Windows wrapper for the PowerShell script |
 
-## File Structure
+## Build commands
 
-```
-├── global.json                    # SDK version management
-├── Directory.Packages.props       # Centralized package versions
-├── Directory.Build.props          # Common build properties
-├── dirs.proj                      # Main build traversal
-├── tests.proj                     # Test projects traversal
-├── build.ps1                      # Main build script
-├── build.cmd                      # Windows build wrapper
-└── [folders]/
-    └── dirs.proj                  # Folder-specific build traversal
-```
-
-## Building the Solution
-
-### Using PowerShell (Recommended)
+Run from the repository root:
 
 ```powershell
-# Basic build
-./build.ps1
-
-# Build with tests
-./build.ps1 -Test
-
-# Build with packages
-./build.ps1 -Pack
-
-# Full build (clean, restore, build, test, pack)
-./build.ps1 -Clean -Restore -Test -Pack
-
-# Debug build with tests
-./build.ps1 -Configuration Debug -Test
+.\build\build.ps1 -Restore
+.\build\build.ps1 -Test
+.\build\build.ps1 -Pack
+.\build\build.ps1 -Clean -Restore -Test -Pack
+.\build\build.ps1 -Configuration Debug -Test
 ```
 
-### Using Command Line
+The script switches to `src` to use the traversal projects and SDK configuration. `-Restore` explicitly restores dependencies; otherwise the build uses existing assets. Configuration defaults to Release. Any failed build, test, or pack command fails the script.
 
-```cmd
-# Basic build
-build.cmd
+Direct solution commands are also supported:
 
-# Build with parameters
-build.cmd -Test -Pack
+```powershell
+dotnet restore src\Microsoft.Agents.A365.Sdk.sln
+dotnet build src\Microsoft.Agents.A365.Sdk.sln --configuration Release --no-restore
+dotnet test src\Microsoft.Agents.A365.Sdk.sln --configuration Release --no-build
+dotnet format src\Microsoft.Agents.A365.Sdk.sln --verify-no-changes
 ```
 
-### Using dotnet CLI directly
+For direct traversal operations, use `dotnet build src\dirs.proj` and `dotnet test src\tests.proj`. Individual module traversal files discover projects with wildcards while excluding build-output directories.
 
-```bash
-# Build all projects
-dotnet build dirs.proj
+## Central package management
 
-# Run all tests
-dotnet test tests.proj
-
-# Create packages
-dotnet pack dirs.proj --output ../NuGetPackages
-```
-
-## Centralized Package Management
-
-All package versions are managed in `Directory.Packages.props`. To add a new package:
-
-1. Add the package version to `Directory.Packages.props`:
-   ```xml
-   <PackageVersion Include="MyPackage" Version="1.0.0" />
-   ```
-
-2. Reference it in your project without version:
-   ```xml
-   <PackageReference Include="MyPackage" />
-   ```
-
-### Version Conflict Resolution
-
-The centralized package management automatically resolves version conflicts by using the highest version specified in `Directory.Packages.props`.
-
-## Build Traversal
-
-The `dirs.proj` files use wildcards to automatically discover and build projects:
+Add dependency versions to `src/Directory.Packages.props`:
 
 ```xml
-<ProjectReference Include="**\*.csproj" Exclude="**\*.Tests\*.csproj;**\bin\**;**\obj\**" />
+<PackageVersion Include="MyPackage" Version="1.0.0" />
 ```
 
-This means:
-- ✅ Automatically finds all `.csproj` files in subdirectories
-- ✅ Excludes test projects (built separately)
-- ✅ Excludes bin/obj folders
-- ✅ No need to manually maintain project lists
+Reference the package without a version in the project:
 
-## Project Structure Benefits
-
-### For Developers
-- **Single command builds**: `./build.ps1` builds everything
-- **Automatic project discovery**: No need to manually add projects to solution
-- **Consistent dependencies**: All projects use the same package versions
-- **Fast builds**: Only builds what's needed
-
-### For CI/CD
-- **Reliable builds**: Centralized versions prevent conflicts
-- **Easy scripting**: Simple build commands
-- **Test separation**: Tests can be run independently
-- **Package creation**: Automatic NuGet package generation
-
-## Common Tasks
-
-### Adding a New Project
-1. Create your `.csproj` file
-2. It will automatically be discovered by the build system
-3. No need to modify solution files or build scripts
-
-### Adding Dependencies
-1. Add package version to `Directory.Packages.props`
-2. Reference without version in your project
-3. The build system handles the rest
-
-### Running Tests
-```powershell
-# Run all tests
-./build.ps1 -Test
-
-# Run tests for specific configuration
-./build.ps1 -Configuration Debug -Test
+```xml
+<PackageReference Include="MyPackage" />
 ```
 
-### Creating Packages
-```powershell
-# Create packages for all projects
-./build.ps1 -Pack
+Central versions must satisfy all projects' requirements; dependency resolution can still fail on incompatible constraints. Preserve transitive/security pins used by remaining modules. Package release versions are derived by Nerdbank.GitVersioning, not dependency-version declarations.
 
-# Packages will be created in ../NuGetPackages/
-```
+## Adding or removing projects
+
+Update the relevant traversal inputs and **also** update `src/Microsoft.Agents.A365.Sdk.sln`. Automatic traversal discovery does not maintain the solution file. Add corresponding tests under `src/Tests/`, and regenerate `DEPENDENCIES.md` using `.\generate-dependencies.ps1` when package relationships change.
+
+## Package isolation and release controls
+
+`-Pack` creates a new `NuGetPackages\<run-id>` directory for every invocation and prints that exact path. It rejects retired `Microsoft.Agents.A365.Observability.*` filenames. Old package files are not included or silently deleted.
+
+CI similarly packs into a new temporary directory and uploads only that run's output, failing if no packages were produced. See [package setup](../src/PACKAGE-SETUP.md) for package IDs and content checks.
+
+External signing/publishing jobs must consume only this verified run-specific directory and allow only maintained IDs. These repository safeguards do not disable old-branch pipelines or prevent publishing previously cached artifacts; release owners must update those systems separately. No checked-in workflow pushes to nuget.org.
 
 ## Troubleshooting
 
-### Build Errors
-1. Ensure you have the correct .NET SDK version (specified in `global.json`)
-2. Run with `-Clean -Restore` to reset state
-3. Check `Directory.Packages.props` for version conflicts
-
-### Missing Projects
-The build system automatically discovers projects. If a project isn't building:
-1. Ensure it has a `.csproj` extension
-2. Check it's not in `bin/` or `obj/` folders
-3. Verify the `dirs.proj` patterns match your structure
-
-### Package Conflicts
-All package versions are centralized. If you need a different version:
-1. Update `Directory.Packages.props`
-2. The new version will be used across all projects
-3. Test thoroughly to ensure compatibility
+If a project is missing, verify both the solution entry and module traversal patterns. For dependency failures, inspect restore errors and central versions; do not disable audit or warnings-as-errors in repository configuration to hide errors. For compiler failures, address nullable and XML documentation diagnostics, which are warnings-as-errors.

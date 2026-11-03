@@ -4,14 +4,14 @@
     <RootNamespace>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</RootNamespace>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    
+
     <!-- NuGet Package Properties -->
     <PackageId>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</PackageId>
     <Title>Microsoft Agent 365 Semantic Kernel Tooling SDK</Title>
     <Description>A .NET SDK that integrates Microsoft Agent 365 with Semantic Kernel, providing tooling functionalities.</Description>
     <Summary>Microsoft Agent 365 Semantic Kernel Tooling Integration - Provides a way to add Agent 365 MCP Servers</Summary>
     <Product>Microsoft Agent 365 Semantic Kernel Tooling SDK</Product>
-    <PackageTags>Microsoft;A365SemanticKernel;OpenTelemetry;AI;Agents;Tooling</PackageTags>
+    <PackageTags>Microsoft;A365SemanticKernel;AI;Agents;Tooling</PackageTags>
     <!-- Suppress NU5104: ModelContextProtocol.Core 1.2.0 stable exists but requires MCP 1.x API migration; deferring to post-GA -->
     <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
@@ -30,5 +30,3 @@
   </ItemGroup>
 
 </Project>
-
-

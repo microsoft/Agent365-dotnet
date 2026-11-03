@@ -55,11 +55,9 @@ The Microsoft Agent 365 SDK for .NET uses:
 ```
 src/Tests/
 ├── Runtime.Tests/
-├── Microsoft.Agents.A365.Observability.Runtime.Tests/
-├── Microsoft.Agents.A365.Observability.Runtime.IntegrationTests/
-├── Microsoft.Agents.A365.Observability.Hosting.Tests/
 ├── Microsoft.Agents.A365.Notifications.Tests/
 ├── Microsoft.Agents.A365.Tooling.Tests/
+├── Microsoft.Agents.A365.Tooling.Core.Tests/
 └── Microsoft.Agents.A365.Tooling.Extensions.*.Tests/
 ```
 

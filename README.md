@@ -1,7 +1,7 @@
 # Microsoft Agent 365 SDK - C# /.NET
 
-[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Observability.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Observability.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
+[![NuGet](https://img.shields.io/nuget/v/Microsoft.Agents.A365.Runtime.svg?label=NuGet&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Runtime.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/microsoft/Agent365-dotnet/.github/workflows/ci.yml?branch=main&label=Build&logo=github)](https://github.com/microsoft/Agent365-dotnet/actions)
 [![License](https://img.shields.io/github/license/microsoft/Agent365-dotnet?label=License)](LICENSE.md)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
@@ -10,11 +10,12 @@
 > #### Note:
 > Use the information in this README to contribute to this open-source project. To learn about using this SDK in your projects, refer to the [Microsoft Agent 365 Developer documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/).
 
-The Microsoft Agent 365 SDK extends the Microsoft 365 Agents SDK with enterprise-grade capabilities for building sophisticated agents. This SDK provides comprehensive tooling for observability, notifications, runtime utilities, and development tools that help developers create production-ready agents for platforms including M365, Teams, Copilot Studio, and Webchat.
+> **Observability has moved:** This repository no longer builds or releases `Microsoft.Agents.A365.Observability.*` packages. Use [Microsoft.OpenTelemetry on NuGet](https://www.nuget.org/packages/Microsoft.OpenTelemetry) from the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main). See the [Observability migration guide](docs/observability-migration.md) for package and code changes.
 
-The Microsoft Agent 365 SDK focuses on four core areas:
+The Microsoft Agent 365 SDK extends the Microsoft 365 Agents SDK with enterprise-grade capabilities for building sophisticated agents. This SDK provides notifications, runtime utilities, and tooling that help developers create production-ready agents for platforms including M365, Teams, Copilot Studio, and Webchat.
 
-- **Observability**: Comprehensive tracing, caching, and monitoring capabilities for agent applications
+The Microsoft Agent 365 SDK focuses on three core areas:
+
 - **Notifications**: Agent notification services and models for handling user notifications
 - **Runtime**: Core utilities and extensions for agent runtime operations
 - **Tooling**: Developer tools and utilities for building sophisticated agent applications
@@ -66,11 +67,6 @@ For more detailed build instructions, see the [build documentation](build/BUILD.
 
 - **src/DevTools**: Microsoft Agent 365 Developer Tools - Development tools and code analyzers
 - **src/Notification**: Microsoft Agent 365 Notifications - Agent notification services and models
-- **src/Observability**: Microsoft Agent 365 Observability - Tracing, caching, and monitoring capabilities
-  - Core: Core observability functionality
-  - Extensions: Framework-specific extensions for various AI platforms
-  - Hosting: ETW and hosting support
-  - Runtime: Runtime observability services
 - **src/Runtime**: Microsoft Agent 365 Runtime - Core runtime utilities and extensions
   - Core: Core runtime functionality
   - Extensions: Runtime extensions for various AI frameworks
@@ -106,10 +102,10 @@ The core SDK for building conversational AI agents for Microsoft 365 platforms.
 
 ### Microsoft Agent 365 SDK
 
-Enterprise-grade extensions for observability, notifications, runtime utilities, and developer tools.
+Enterprise-grade extensions for notifications, runtime utilities, and developer tools. Observability is maintained in the separate Microsoft OpenTelemetry distro linked above.
 
 - [Microsoft Agent 365 SDK - C# /.NET repository](https://github.com/microsoft/Agent365-dotnet) - You are here
-- [Microsoft Agent 365 SDK - Python repository](https://github.com/microsoft/Agent365-python) 
+- [Microsoft Agent 365 SDK - Python repository](https://github.com/microsoft/Agent365-python)
 - [Microsoft Agent 365 SDK - Node.js/TypeScript repository](https://github.com/microsoft/Agent365-nodejs)
 - [Microsoft Agent 365 SDK Samples repository](https://github.com/microsoft/Agent365-Samples)
 - [Microsoft Agent 365 developer documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/)
@@ -127,5 +123,3 @@ Enterprise-grade extensions for observability, notifications, runtime utilities,
 Copyright (c) Microsoft Corporation. All rights reserved.
 
 Licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
-
-

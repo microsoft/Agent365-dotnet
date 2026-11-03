@@ -5,10 +5,8 @@
 
   <ItemGroup>
     <ProjectReference Include="Notification\dirs.proj" />
-    <ProjectReference Include="Observability\dirs.proj" />
     <ProjectReference Include="Runtime\dirs.proj" />
     <ProjectReference Include="Tooling\dirs.proj" />
   </ItemGroup>
 </Project>
-
 

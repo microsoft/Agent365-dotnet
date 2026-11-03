@@ -59,17 +59,9 @@ Exceptions:
 ### Legacy References
 - **Never** use the keyword "Kairo" in any code - this is legacy terminology that must be replaced
 
-### Observability Export Configuration — Coordinated Review Required
+### Retired Observability Packages
 
-The following three constants must stay in sync. If a PR changes **any one** of them, the reviewer (human or Copilot) **must** ask the author to confirm the other two are still correct:
-
-| Constant | Location |
-|---|---|
-| `ProdObservabilityScope` | `src/Observability/Runtime/Common/EnvironmentUtils.cs` (accessed via `GetObservabilityAuthenticationScope()`) |
-| `DefaultEndpointHost` | `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterOptions.cs` |
-| Export URL path pattern | `BuildEndpointPath()` in `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterCore.cs` |
-
-Snapshot tests in `src/Tests/Microsoft.Agents.A365.Observability.Runtime.Tests/Tracing/Exporters/ExportConfigConsistencyTests.cs` will fail if any value drifts, but the developer must also verify the values are correct for the target environment — the tests only catch accidental drift, not intentional-but-incomplete updates.
+Observability is maintained in the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main), not this repository. Do not reintroduce `Microsoft.Agents.A365.Observability.*` projects or package output. See [migration guidance](docs/observability-migration.md) for application onboarding with `Microsoft.OpenTelemetry` and package-owner release actions.
 
 ### Pre-Commit Requirements
 Before committing changes, ensure:
@@ -79,29 +71,22 @@ Before committing changes, ensure:
 
 ## Architecture Overview
 
-### Four Core Modules
+### Three Core Modules
 
-This SDK extends the Microsoft 365 Agents SDK with four main areas:
+This SDK extends the Microsoft 365 Agents SDK with three main areas:
 
 **1. Runtime** (`Microsoft.Agents.A365.Runtime`)
 - Multi-tenant context extraction via `TenantContextHelper` (claims, headers, items)
 - Standardized result handling with `OperationResult` and `OperationError`
 - Authorization services for agentic operations
 
-**2. Observability** (6 packages under `Microsoft.Agents.A365.Observability.*`)
-- OpenTelemetry-based distributed tracing with custom span processors
-- Scope classes: `InvokeAgentScope`, `InferenceScope`, `ExecuteToolScope`
-- Framework extensions for Agent Framework, Semantic Kernel, and OpenAI SDK
-- ETW (Event Tracing for Windows) support via Hosting package
-- Configuration via fluent `Builder` API
-
-**3. Notifications** (`Microsoft.Agents.A365.Notifications`)
+**2. Notifications** (`Microsoft.Agents.A365.Notifications`)
 - Event-driven notification handling for M365 (Teams, email, Office apps)
 - Support for `agents:email`, `agents:word`, `agents:excel`, `agents:powerpoint` sub-channels
 - Type-safe models: `EmailReference`, `EmailResponse`, `WpxComment`
 - Lifecycle notifications (user identity created, auto sign-in)
 
-**4. Tooling** (4 packages under `Microsoft.Agents.A365.Tooling.*`)
+**3. Tooling** (4 packages under `Microsoft.Agents.A365.Tooling.*`)
 - Model Context Protocol (MCP) server discovery and integration
 - `IMcpToolServerConfigurationService` for server discovery and tool registration
 - Framework-specific registration for Semantic Kernel, Agent Framework, Azure AI Foundry
@@ -110,25 +95,10 @@ This SDK extends the Microsoft 365 Agents SDK with four main areas:
 ### Extension Pattern
 The SDK uses a consistent **Core + Extensions** pattern:
 - Core packages provide base functionality
-- Extension packages integrate with specific frameworks (SemanticKernel, AgentFramework, AzureAIFoundry, OpenAI)
-- Example: `Observability/Runtime` (core) → `Observability/Extensions/SemanticKernel` (framework-specific)
+- Extension packages integrate with specific frameworks (SemanticKernel, AgentFramework, AzureAIFoundry)
+- Example: `Tooling/Core` (core) → `Tooling/Extensions/SemanticKernel` (framework-specific)
 
 ### Key Design Patterns
-
-**Builder Pattern**: Fluent API for observability configuration
-```csharp
-new Builder(services, configuration)
-    .WithAgentFramework()
-    .WithSemanticKernel()
-    .Build();
-```
-
-**Disposable Pattern**: Automatic span lifecycle management
-```csharp
-using var scope = InvokeAgentScope.Start(details, tenantDetails, request);
-scope.RecordResponse(response);
-// Span automatically ends on dispose
-```
 
 **Result Pattern**: Consistent success/failure handling
 ```csharp
@@ -139,13 +109,12 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 ## Project Organization
 
 ### Target Frameworks
-- Most packages: `net8.0`
-- Runtime/Hosting packages: `netstandard2.0` (broader compatibility)
+- All maintained packages: `net8.0`
 
 ### Build System
 - **SDK Version**: .NET 8.0.100 (defined in `src/global.json`)
 - **Build Traversal**: Microsoft.Build.Traversal (v3.4.0) via `src/dirs.proj`
-- **Automatic Discovery**: Projects are auto-discovered via wildcards; no manual solution maintenance needed
+- **Automatic Discovery**: Traversal projects use wildcards; the solution file must still be maintained explicitly
 - **Versioning**: Nerdbank.GitVersioning (nbgv) - semantic versioning from git history
 
 ### Configuration Files
@@ -167,8 +136,7 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 |---------|---------|---------|
 | `Microsoft.Agents.Builder` | 1.3.163-beta | Core Agents SDK |
 | `Microsoft.Agents.AI` | 1.0.0-preview.251016.1 | Agent Framework |
-| `OpenTelemetry` | 1.11.2 | Distributed tracing foundation |
-| `Microsoft.SemanticKernel` | 1.65.0 | Semantic Kernel orchestration |
+| `Microsoft.SemanticKernel.Agents.Core` | See central versions | Semantic Kernel orchestration |
 | `Azure.AI.OpenAI` | 2.3.0-beta.2 | Azure OpenAI SDK |
 | `ModelContextProtocol.Core` | 0.2.0-preview.3 | MCP client SDK |
 | `Azure.AI.Agents.Persistent` | 1.2.0-beta.4 | Azure AI Foundry |
@@ -179,11 +147,6 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 - `TenantContextHelper` - Extract tenant/worker ID from HttpContext
 - `AgenticAuthorizationService` - Authorization for agent operations
 
-### Observability (`src/Observability/`)
-- `Builder` (Runtime) - Fluent OpenTelemetry configuration API
-- `InvokeAgentScope`, `InferenceScope`, `ExecuteToolScope` - Tracing scopes
-- `BaggageBuilder` - OpenTelemetry baggage context management
-
 ### Notifications (`src/Notification/`)
 - `AgentNotification` - AgentExtension for routing notifications
 - `AgentNotificationActivity` - Activity wrapper for notification data
@@ -193,19 +156,10 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 - `McpToolServerConfigurationService` - Implementation
 - `MCPServerConfig` - Server configuration model
 
-## Environment Variables
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `EnableAgent365Exporter` | Enable Agent365 telemetry exporter | `false` |
-| `ASPNETCORE_ENVIRONMENT` | Environment (Development, Production) | - |
-| `SuppressInvokeAgentInput` | Suppress input in invoke_agent spans | `false` |
-
 ## Testing Structure
 
 Tests mirror the source structure in `src/Tests/`:
 - Unit tests for each package (e.g., `Microsoft.Agents.A365.Runtime.Tests`)
-- Integration tests (e.g., `Microsoft.Agents.A365.Observability.Runtime.IntegrationTests`)
 - Framework-specific extension tests
 
 Testing frameworks: xUnit (primary), MSTest, with Moq for mocking and FluentAssertions for assertions.
@@ -219,18 +173,10 @@ Microsoft.Agents.A365.<Module>[.Extensions.<Framework>]
 
 Examples:
 - `Microsoft.Agents.A365.Runtime`
-- `Microsoft.Agents.A365.Observability.Extensions.SemanticKernel`
+- `Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel`
 - `Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry`
 
 ## Data Flow Examples
-
-### Agent Invocation Tracing
-1. HTTP request enters via middleware
-2. `BaggageMiddleware` sets tenant/agent context in OpenTelemetry baggage
-3. `InvokeAgentScope` creates root span for agent invocation
-4. `InferenceScope` creates child span for LLM inference
-5. `ExecuteToolScope` creates child spans for tool executions
-6. Span processors add tags and export to Agent365 Exporter or Console
 
 ### MCP Tool Discovery
 1. Agent receives user message requiring tools

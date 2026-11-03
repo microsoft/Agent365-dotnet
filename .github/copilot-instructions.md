@@ -1,6 +1,8 @@
 # GitHub Copilot Instructions for Agent365-dotnet
 
-The Microsoft Agent 365 SDK (C#/.NET) extends the Microsoft 365 Agents SDK with enterprise capabilities across four modules: **Observability**, **Notifications**, **Runtime**, and **Tooling**. Packages publish to NuGet under the `Microsoft.Agents.A365.*` prefix.
+The Microsoft Agent 365 SDK (C#/.NET) extends the Microsoft 365 Agents SDK with enterprise capabilities across three modules: **Notifications**, **Runtime**, and **Tooling**. Packages publish to NuGet under the `Microsoft.Agents.A365.*` prefix.
+
+Observability is maintained in the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main). Do not reintroduce retired Observability projects or packages here; see [migration guidance](../docs/observability-migration.md).
 
 ## Build, Test, and Lint
 
@@ -17,7 +19,7 @@ dotnet test  src/Microsoft.Agents.A365.Sdk.sln
 ./build/build.ps1 -Pack                              # produce NuGet packages
 
 # Run all tests in ONE project
-dotnet test src/Tests/Microsoft.Agents.A365.Runtime.Tests/Microsoft.Agents.A365.Runtime.Tests.csproj
+dotnet test src/Tests/Runtime.Tests/Microsoft.Agents.A365.Runtime.Tests.csproj
 
 # Run a SINGLE test or test class (xUnit primary; some MSTest)
 dotnet test src/Microsoft.Agents.A365.Sdk.sln --filter "FullyQualifiedName~TenantContextHelperTests"
@@ -27,16 +29,15 @@ dotnet test src/Microsoft.Agents.A365.Sdk.sln --filter "Name=Extract_Returns_Ten
 dotnet format src/Microsoft.Agents.A365.Sdk.sln --verify-no-changes
 ```
 
-CI (`.github/workflows/ci.yml`) builds and tests in **Release** with `--no-restore`/`--no-build`, then packs. Some Observability/Tooling tests read `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and `AZURE_OPENAI_DEPLOYMENT` from the environment.
+CI (`.github/workflows/ci.yml`) builds and tests in **Release** with `--no-restore`/`--no-build`, then packs into a fresh per-run directory and rejects retired Observability filenames before uploading. It does not publish to nuget.org.
 
 Pre-commit hooks (`.pre-commit-config.yaml`, install with `pip install pre-commit && pre-commit install`) run gitleaks (secret scanning), whitespace/EOL fixers, and `dotnet format`.
 
 ## Architecture
 
-The SDK follows a consistent **Core + Extensions** pattern. Each module has a `Core`/`Runtime` package with base functionality and per-framework extension packages (SemanticKernel, AgentFramework, AzureAIFoundry, OpenAI). Source lives under `src/<Module>/`:
+The SDK follows a **Core + Extensions** pattern for framework integrations, with Tooling extension packages for SemanticKernel, AgentFramework, and AzureAIFoundry. Source lives under `src/<Module>/`:
 
 - **Runtime** (`src/Runtime/`) — multi-tenant context extraction (`TenantContextHelper` pulls tenant/worker IDs from `HttpContext` claims/headers/items) and the result pattern (`OperationResult` / `OperationError`).
-- **Observability** (`src/Observability/`) — OpenTelemetry distributed tracing. Configured via a fluent `Builder` API; tracing uses disposable scope classes (`InvokeAgentScope`, `InferenceScope`, `ExecuteToolScope`) that auto-end spans on dispose. `BaggageMiddleware` seeds tenant/agent context into OTel baggage. A custom `Agent365Exporter` (gated by the `EnableAgent365Exporter` env var) exports spans.
 - **Notifications** (`src/Notification/`) — event routing for M365 (Teams, email, Office) via `AgentNotification`; sub-channels like `agents:email`, `agents:word`, `agents:excel`, `agents:powerpoint`.
 - **Tooling** (`src/Tooling/`) — Model Context Protocol (MCP) server discovery and tool registration via `IMcpToolServerConfigurationService`, with framework-specific registration extensions.
 
@@ -48,14 +49,7 @@ Detailed design docs: `docs/design.md`; build internals: `build/BUILD.md`.
 
 - **Central package management**: ALL NuGet versions live in `src/Directory.Packages.props`. Add a version there, then reference the package without a `Version` attribute in the `.csproj`. Never put versions in project files.
 - **Common build props** (`src/Directory.Build.props`): `TreatWarningsAsErrors=true`, `Nullable=enable`, and `GenerateDocumentationFile=true` are global. Warnings — including invalid XML-doc `cref`s (CS1574) — fail the build. Write valid XML doc comments.
-- **Target frameworks**: most packages target `net8.0`; some Runtime/Hosting packages target `netstandard2.0` (no implicit usings; `LangVersion` 8.0). Guard framework-specific code accordingly.
-- **Observability export config — coordinated change required**: these three must stay in sync. If you change ONE, verify the other two:
-  | Constant | Location |
-  |---|---|
-  | `ProdObservabilityScope` (via `GetObservabilityAuthenticationScope()`) | `src/Observability/Runtime/Common/EnvironmentUtils.cs` |
-  | `DefaultEndpointHost` | `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterOptions.cs` |
-  | Export URL path (`BuildEndpointPath()`) | `src/Observability/Runtime/Tracing/Exporters/Agent365ExporterCore.cs` |
-  Snapshot tests in `src/Tests/Microsoft.Agents.A365.Observability.Runtime.Tests/Tracing/Exporters/ExportConfigConsistencyTests.cs` catch accidental drift but not intentional-but-incomplete updates — confirm values are correct for the target environment.
+- **Target frameworks**: all maintained packages target `net8.0`.
 - **Tests** mirror source under `src/Tests/` (e.g. `Microsoft.Agents.A365.Runtime.Tests`). xUnit is primary (some MSTest), with Moq for mocking and FluentAssertions for assertions.
 
 ## Coding agent rules
@@ -178,4 +172,3 @@ When Copilot detects violations:
 - Project files (`.csproj`, `.sln`), configuration files (`.json`, `.xml`, `.yaml`, `.md`) do not require copyright headers
 - Build output directories (`bin/`, `obj/`)
 - AssemblyInfo.cs files that are auto-generated
-

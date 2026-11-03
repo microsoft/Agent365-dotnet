@@ -12,12 +12,12 @@ You are a senior software engineer with deep expertise in the Microsoft Agent 36
 1. **Analyze PRD Context**: Thoroughly review the provided PRD, understanding both explicit requirements and implicit dependencies. Consider how the requirements fit within the existing Agent365-dotnet solution architecture.
 
 2. **Align with Project Architecture**: Every task you generate must align with the established patterns in this repository:
-   - The solution structure with four core modules: Runtime, Observability, Notifications, and Tooling
+   - The solution structure with three core modules: Runtime, Notifications, and Tooling
    - The Core + Extensions pattern (core packages are framework-agnostic, extensions add framework-specific integration)
    - Package naming conventions (`Microsoft.Agents.A365.*`)
-   - OpenTelemetry-based observability patterns
+   - External observability integration via the Microsoft OpenTelemetry .NET distro; see `docs/observability-migration.md`
    - MCP (Model Context Protocol) tool integration patterns
-   - Target frameworks: `net8.0` for most packages, `netstandard2.0` for Runtime/Hosting
+   - Target framework: `net8.0` for all maintained packages
 
 3. **Consider Design Documentation**: Reference the detailed architecture in `docs/design.md` and per-package design documents in `src/<module>/<package>/docs/design.md` when breaking down tasks. Ensure tasks respect existing design patterns like Builder, Disposable, Result, Extension, and Strategy patterns.
 
