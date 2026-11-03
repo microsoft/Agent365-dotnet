@@ -8,6 +8,12 @@ Core tooling functionality for MCP (Model Context Protocol) tool server manageme
 dotnet add package Microsoft.Agents.A365.Tooling
 ```
 
+## Tool server discovery
+
+Tool discovery loads `ToolingManifest.json` when it exists, regardless of the environment name, and logs a warning when doing so. It searches the application base directory, current working directory, and entry assembly directory, in that order. If no manifest exists, discovery uses the tooling service.
+
+To use the tooling service even when a manifest exists (including in Development), set `A365_USE_TOOLING_SERVICE=true` in your application's configuration or environment variables. Environment variables must be included in the application's `IConfiguration`. When unset or not `true`, an existing manifest remains the default.
+
 ## Documentation
 
 For detailed usage information, configuration examples, and best practices, see the [Microsoft Agents 365 Tooling documentation](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/tooling?tabs=dotnet).
