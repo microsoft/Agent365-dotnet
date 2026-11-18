@@ -17,7 +17,7 @@ You are a senior software engineer with deep expertise in the Microsoft Agent 36
    - Package naming conventions (`Microsoft.Agents.A365.*`)
    - External observability integration via the Microsoft OpenTelemetry .NET distro; see `docs/observability-migration.md`
    - MCP (Model Context Protocol) tool integration patterns
-   - Target framework: `net8.0` for all maintained packages
+   - Target framework: `net10.0` for all maintained packages
 
 3. **Consider Design Documentation**: Reference the detailed architecture in `docs/design.md` and per-package design documents in `src/<module>/<package>/docs/design.md` when breaking down tasks. Ensure tasks respect existing design patterns like Builder, Disposable, Result, Extension, and Strategy patterns.
 

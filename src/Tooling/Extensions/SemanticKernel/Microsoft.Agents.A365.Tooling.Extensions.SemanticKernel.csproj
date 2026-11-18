@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</AssemblyName>
     <RootNamespace>Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel</RootNamespace>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <LangVersion>latest</LangVersion>
 
     <!-- NuGet Package Properties -->

@@ -12,6 +12,9 @@
     <!-- ASP.NET Core packages -->
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http" Version="2.3.0" />
+    <!-- Transitive pin: patches CVE-2026-118750 (GHSA-6527-9fp8-r4x6) DoS in Microsoft.AspNetCore.WebUtilities <= 2.3.13, pulled in via Microsoft.AspNetCore.Http.
+         net10.0 projects audit transitive packages by default (NuGetAuditMode=all). Remove this pin once Microsoft.AspNetCore.Http references a patched version. -->
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" />
     <!-- Other packages -->
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="System.Security.Claims" Version="4.3.0" />
@@ -33,8 +36,8 @@
     <!-- Transitive pin: patches CVE-2026-26127 (GHSA-73j8-2gch-69rq) DoS in Microsoft.Bcl.Memory <= 10.0.3, pulled in via Microsoft.Agents.Connector.
          TODO: Remove this pin once the Microsoft.Agents.* packages are upgraded to >= 1.6.150, which already reference a patched Microsoft.Bcl.Memory (>= 10.0.7). -->
     <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.4" />
-    <!-- Source Link Support -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <!-- Source Link Support: 10.0.404 includes a patched Microsoft.Build.Tasks.Git (CVE-2026-62900, GHSA-23fw-v26w-5fgq) -->
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.404" />
     <!-- Versioning -->
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.146" />
     <!-- Testing packages -->
@@ -47,10 +50,8 @@
     <PackageVersion Include="Moq" Version="4.20.72" />
     <!-- Build and Analysis packages -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
-    <PackageVersion Include="System.Composition" Version="8.0.0" />
     <!-- Microsoft Extensions packages - using highest versions to avoid conflicts -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.4" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.4" />

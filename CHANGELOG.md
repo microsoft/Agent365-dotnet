@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+- **.NET 10 required; `net8.0` dropped** - `Microsoft.Agents.A365.Runtime`,
+  `Microsoft.Agents.A365.Notifications`, `Microsoft.Agents.A365.Tooling`, and the
+  Agent Framework, Semantic Kernel, and Azure AI Foundry Tooling extensions now target
+  only `net10.0` (the current LTS). .NET 8 reached end of support on November 10, 2026,
+  and the packages no longer include a `net8.0` build. Applications that target `net8.0`
+  or `net9.0` can't reference these packages. **Migration:** retarget applications to
+  `net10.0` or later. Building this repository requires the .NET 10 SDK.
 - **Observability packages retired** - This repository no longer builds or releases
   `Microsoft.Agents.A365.Observability.Runtime`,
   `Microsoft.Agents.A365.Observability.Hosting`,

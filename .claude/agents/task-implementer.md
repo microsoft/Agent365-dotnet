@@ -112,7 +112,7 @@ Before submitting code, verify:
 ## Package-Specific Guidelines
 
 ### Runtime (`Microsoft.Agents.A365.Runtime`)
-- Target: `net8.0`
+- Target: `net10.0`
 - Use `OperationResult` pattern for method returns
 - Follow `TenantContextHelper` patterns for context extraction
 
@@ -121,7 +121,7 @@ Before submitting code, verify:
 - Do not reintroduce retired projects or packages; use `docs/observability-migration.md` for application integrations.
 
 ### Notifications (`Microsoft.Agents.A365.Notifications`)
-- Target: `net8.0`
+- Target: `net10.0`
 - Use `AgentExtension` base class for notification handlers
 - Follow entity models like `EmailReference`, `WpxComment`
 

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>Microsoft.Agents.A365.Runtime.Common.Tests</AssemblyName>
     <RootNamespace>Microsoft.Agents.A365.Runtime.Common.Tests</RootNamespace>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>

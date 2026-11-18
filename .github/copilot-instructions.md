@@ -6,7 +6,7 @@ Observability is maintained in the [Microsoft OpenTelemetry .NET distro](https:/
 
 ## Build, Test, and Lint
 
-All commands run from the repository root unless noted. Requires the .NET 8.0.100 SDK (pinned in `src/global.json`).
+All commands run from the repository root unless noted. Requires the .NET 10 SDK (10.0.100 or later; minimum pinned in `src/global.json`).
 
 ```bash
 # Build / test the whole solution
@@ -49,7 +49,7 @@ Detailed design docs: `docs/design.md`; build internals: `build/BUILD.md`.
 
 - **Central package management**: ALL NuGet versions live in `src/Directory.Packages.props`. Add a version there, then reference the package without a `Version` attribute in the `.csproj`. Never put versions in project files.
 - **Common build props** (`src/Directory.Build.props`): `TreatWarningsAsErrors=true`, `Nullable=enable`, and `GenerateDocumentationFile=true` are global. Warnings — including invalid XML-doc `cref`s (CS1574) — fail the build. Write valid XML doc comments.
-- **Target frameworks**: all maintained packages target `net8.0`.
+- **Target frameworks**: all maintained packages target `net10.0`.
 - **Tests** mirror source under `src/Tests/` (e.g. `Microsoft.Agents.A365.Runtime.Tests`). xUnit is primary (some MSTest), with Moq for mocking and FluentAssertions for assertions.
 
 ## Coding agent rules
