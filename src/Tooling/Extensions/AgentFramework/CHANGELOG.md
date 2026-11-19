@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - Targets `net10.0` only
+  - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
+  - **Migration:** retarget applications to `net10.0` or later
+
 ## [2.0.0] - 2026-10-20
 
 ### Breaking Changes

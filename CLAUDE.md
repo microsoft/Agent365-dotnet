@@ -109,10 +109,10 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 ## Project Organization
 
 ### Target Frameworks
-- All maintained packages: `net8.0`
+- All maintained packages: `net10.0`
 
 ### Build System
-- **SDK Version**: .NET 8.0.100 (defined in `src/global.json`)
+- **SDK Version**: .NET 10.0.100 or later (minimum defined in `src/global.json`)
 - **Build Traversal**: Microsoft.Build.Traversal (v3.4.0) via `src/dirs.proj`
 - **Automatic Discovery**: Traversal projects use wildcards; the solution file must still be maintained explicitly
 - **Versioning**: Nerdbank.GitVersioning (nbgv) - semantic versioning from git history
@@ -127,7 +127,7 @@ return OperationResult.Failed(new OperationError("Message", HttpStatusCode.NotFo
 - Warnings treated as errors
 - Nullable reference types enabled
 - XML documentation generation enabled
-- Implicit usings enabled (net6.0+)
+- Implicit usings enabled
 - Source Link embedded for debugging
 
 ## Key Dependencies

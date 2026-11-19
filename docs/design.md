@@ -8,7 +8,7 @@ The SDK extends the Microsoft 365 Agents SDK with three maintained modules:
 - **Runtime**: Core utilities for multi-tenant agent applications.
 - **Tooling**: MCP (Model Context Protocol) server discovery and framework-specific tool registration.
 
-All remaining packages target `net8.0`. Observability has moved to the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main); see the [migration guide](observability-migration.md). This repository no longer builds or publishes Observability packages.
+All remaining packages target `net10.0`. Observability has moved to the [Microsoft OpenTelemetry .NET distro](https://github.com/microsoft/opentelemetry-distro-dotnet/tree/main); see the [migration guide](observability-migration.md). This repository no longer builds or publishes Observability packages.
 
 ## Repository structure
 

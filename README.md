@@ -4,7 +4,7 @@
 [![NuGet Downloads](https://img.shields.io/nuget/dt/Microsoft.Agents.A365.Runtime.svg?label=Downloads&logo=nuget)](https://www.nuget.org/packages?q=Microsoft.Agents.A365)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/microsoft/Agent365-dotnet/.github/workflows/ci.yml?branch=main&label=Build&logo=github)](https://github.com/microsoft/Agent365-dotnet/actions)
 [![License](https://img.shields.io/github/license/microsoft/Agent365-dotnet?label=License)](LICENSE.md)
-[![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Contributors](https://img.shields.io/github/contributors/microsoft/Agent365-dotnet?label=Contributors&logo=github)](https://github.com/microsoft/Agent365-dotnet/graphs/contributors)
 
 > #### Note:
@@ -36,8 +36,8 @@ The best way to consume this SDK is via our NuGet packages found here: [nuget.or
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
-- Visual Studio 2022 (recommended) or Visual Studio Code
+- .NET 10.0 SDK or later
+- Visual Studio 2026 (recommended; required to target `net10.0` in Visual Studio) or Visual Studio Code
 - Git
 
 ### Building the project

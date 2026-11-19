@@ -52,8 +52,8 @@ Every package MUST have a corresponding test project in `src/Tests/`. Tests MUST
 ## Architecture Constraints
 
 ### Target Frameworks
-- **Maintained packages**: `net8.0`
-- **Test projects**: `net8.0`
+- **Maintained packages**: `net10.0`
+- **Test projects**: `net10.0`
 
 ### Package Management
 - All NuGet package versions MUST be defined in `src/Directory.Packages.props` (centralized)

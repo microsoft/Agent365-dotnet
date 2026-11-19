@@ -4,7 +4,7 @@ This document provides step-by-step instructions for running the streamlined uni
 
 ## 📋 Prerequisites
 
-- .NET 8.0 SDK installed
+- .NET 10.0 SDK installed
 - Visual Studio Code or Visual Studio (optional)
 - Git (for cloning the repository)
 - `reportgenerator` tool (for coverage reports): `dotnet tool install -g dotnet-reportgenerator-globaltool`

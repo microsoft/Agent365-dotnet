@@ -14,10 +14,7 @@
     <!-- Package properties -->
     <PackageOutputPath>$(RepositoryRoot)/NuGetPackages</PackageOutputPath>
 
-    <!-- ImplicitUsings not supported in netstandard2.0, only enable for net6.0+ -->
-    <ImplicitUsings Condition="'$(TargetFramework)' != 'netstandard2.0'">enable</ImplicitUsings>
-    <!-- Nullable reference types require C# 8.0+, set LangVersion for netstandard2.0 -->
-    <LangVersion Condition="'$(TargetFramework)' == 'netstandard2.0'">8.0</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Microsoft</Authors>
 

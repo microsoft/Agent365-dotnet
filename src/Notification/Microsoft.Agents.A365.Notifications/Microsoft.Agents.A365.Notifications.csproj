@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Microsoft.Agents.A365.Notifications</AssemblyName>
     <RootNamespace>Microsoft.Agents.A365.Notifications</RootNamespace>
     <!-- NuGet Package Properties -->

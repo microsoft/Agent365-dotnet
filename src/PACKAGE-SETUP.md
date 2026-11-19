@@ -2,7 +2,7 @@
 
 ## Maintained packages
 
-This repository produces six .NET 8 packages:
+This repository produces six .NET 10 packages:
 
 - `Microsoft.Agents.A365.Runtime`
 - `Microsoft.Agents.A365.Notifications`
@@ -42,7 +42,7 @@ dotnet pack src\Microsoft.Agents.A365.Sdk.sln --configuration Release --no-build
 Inspect the fresh output before signing or publishing:
 
 1. Verify the six package IDs above and their git-derived versions in the `.nuspec` metadata.
-2. Verify each package's assembly and XML documentation under `lib/net8.0`, README, license metadata, and symbols where enabled.
+2. Verify each package's assembly and XML documentation under `lib/net10.0`, README, license metadata, and symbols where enabled.
 3. Check package dependencies and assemblies for references to retired Observability packages.
 4. Reject any `Microsoft.Agents.A365.Observability.*` package, including symbol packages.
 
