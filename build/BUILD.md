@@ -60,6 +60,16 @@ Central versions must satisfy all projects' requirements; dependency resolution 
 
 Update the relevant traversal inputs and **also** update `src/Microsoft.Agents.A365.Sdk.sln`. Automatic traversal discovery does not maintain the solution file. Add corresponding tests under `src/Tests/`, and regenerate `DEPENDENCIES.md` using `.\generate-dependencies.ps1` when package relationships change.
 
+## Package versioning
+
+Nerdbank.GitVersioning computes package versions from `src/version.json` and git history. Builds from `main` and `release/v*` branches are public releases. Builds from other branches add the commit ID, such as `3.0.0-preview.1.g<commit>`.
+
+- Between releases, set `version` to the next release followed by `-preview.{height}`, such as `3.0.0-preview.{height}`. Packages are versioned `3.0.0-preview.1`, `3.0.0-preview.2`, and so on, and sort below the `3.0.0` release.
+- Don't use a two-part preview version such as `3.0-preview`. Nerdbank.GitVersioning puts the git height in the patch number and produces versions such as `3.0.2-preview`, which sort above `3.0.0`.
+- To release, set `version` to the stable version, such as `3.0.0`. After the release, move `main` to the next preview, such as `3.1.0-preview.{height}`.
+
+`nugetPackageVersion.semVer` is `2` so that NuGet package versions keep the numeric `.N` suffix. Run `nbgv get-version -p src --public-release` to check the version a public build produces.
+
 ## Package isolation and release controls
 
 `-Pack` creates a new `NuGetPackages\<run-id>` directory for every invocation and prints that exact path. It rejects retired `Microsoft.Agents.A365.Observability.*` filenames. Old package files are not included or silently deleted.
