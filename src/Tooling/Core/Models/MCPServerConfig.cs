@@ -43,6 +43,13 @@ namespace Microsoft.Agents.A365.Tooling.Models
         public string? publisher { get; set; }
 
         /// <summary>
+        /// Gets or sets optional natural-language instructions describing how an agent should use
+        /// this server's tools. Surfaced by the discovery response when the server declares them;
+        /// null when the server provides no instructions.
+        /// </summary>
+        public string? instructions { get; set; }
+
+        /// <summary>
         /// Gets or sets per-server HTTP headers, including the Authorization header populated
         /// by <c>AttachPerAudienceTokensAsync</c> before tool connections are established.
         /// Null until token attachment has run; callers should treat a missing Authorization

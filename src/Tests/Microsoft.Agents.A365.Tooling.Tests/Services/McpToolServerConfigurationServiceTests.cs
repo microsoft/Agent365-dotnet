@@ -833,6 +833,116 @@ namespace Microsoft.Agents.A365.Tooling.Tests.Services
             httpEx.Should().NotBeNull();
             httpEx!.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         }
+
+        [Fact]
+        public async Task ListToolServersAsync_GatewayResponseWithInstructions_PopulatesInstructions()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            const string expectedInstructions = "Use these tools to interact with Salesforce data. Always call GetTables first.";
+            var responseJson = JsonSerializer.Serialize(new
+            {
+                mcpServers = new[]
+                {
+                    new
+                    {
+                        mcpServerName = "mcp_SalesforceServer",
+                        url = "https://test.example.com/agents/servers/mcp_SalesforceServer",
+                        id = "sf-1",
+                        scope = "api://audience/Tools.ListInvoke.All",
+                        audience = "api://audience",
+                        publisher = "Microsoft",
+                        instructions = expectedInstructions
+                    }
+                }
+            });
+
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(() => new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+                });
+
+            using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            // Act
+            var servers = await service.ListToolServersAsync("agent-123", "token-456");
+
+            // Assert
+            servers.Should().ContainSingle();
+            servers[0].mcpServerName.Should().Be("mcp_SalesforceServer");
+            servers[0].instructions.Should().Be(expectedInstructions);
+        }
+
+        [Fact]
+        public async Task ListToolServersAsync_GatewayResponseWithoutInstructions_LeavesInstructionsNull()
+        {
+            // Arrange
+            var configMock = new Mock<IConfiguration>();
+            configMock.Setup(c => c["MCP_PLATFORM_ENDPOINT"]).Returns("https://test.example.com");
+
+            var responseJson = JsonSerializer.Serialize(new
+            {
+                mcpServers = new[]
+                {
+                    new
+                    {
+                        mcpServerName = "mcp_MailServer",
+                        url = "https://test.example.com/agents/servers/mcp_MailServer",
+                        id = "mail-1"
+                    }
+                }
+            });
+
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(() => new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+                });
+
+            using var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+            var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+            httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
+                .Returns(httpClient);
+
+            var service = new McpToolServerConfigurationService(
+                _loggerMock.Object,
+                configMock.Object,
+                _serviceProviderMock.Object,
+                httpClientFactoryMock.Object);
+
+            // Act
+            var servers = await service.ListToolServersAsync("agent-123", "token-456");
+
+            // Assert
+            servers.Should().ContainSingle();
+            servers[0].instructions.Should().BeNull();
+        }
     }
 }
 
