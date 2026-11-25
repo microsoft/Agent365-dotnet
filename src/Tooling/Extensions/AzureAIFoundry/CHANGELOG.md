@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - Targets `net10.0` only
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - `AddToolServersToAgent`, `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` load MCP tools through `IMcpToolServerConfigurationService.GetMcpToolSetAsync` instead of `EnumerateToolsFromServersAsync`, so that they can dispose the MCP clients they create
+  - Implementations of the interface that don't derive from `McpToolServerConfigurationService` get a default `GetMcpToolSetAsync` that calls their `EnumerateToolsFromServersAsync`; the `EnumerateToolsFromServersAsync` or `GetMcpClientToolsAsync` overrides of a class derived from `McpToolServerConfigurationService` are no longer called
+  - **Migration:** a derived class that overrides those methods should also override `GetMcpToolSetAsync`; tests that mock `IMcpToolServerConfigurationService` should set up `GetMcpToolSetAsync`
 
 ### Fixed
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - MCP clients created to list tools are disposed

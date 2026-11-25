@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This is not a drop-in replacement or an automatic dependency redirect; follow the
   [Observability migration guide](docs/observability-migration.md) for package replacement,
   configuration, authentication, context propagation, and framework instrumentation.
+- **Semantic Kernel and Azure AI Foundry Tooling extensions load MCP tools through `GetMcpToolSetAsync`** - They
+  now call `IMcpToolServerConfigurationService.GetMcpToolSetAsync` instead of `EnumerateToolsFromServersAsync`, so
+  that they can dispose the MCP clients they create. Implementations of the interface that don't derive from
+  `McpToolServerConfigurationService` get a default `GetMcpToolSetAsync` that calls their
+  `EnumerateToolsFromServersAsync`. These extensions no longer call the `EnumerateToolsFromServersAsync` or
+  `GetMcpClientToolsAsync` overrides of a class derived from `McpToolServerConfigurationService`.
+  **Migration:** a derived class that overrides those methods should also override `GetMcpToolSetAsync`. Tests that
+  mock `IMcpToolServerConfigurationService` for these extensions should set up `GetMcpToolSetAsync`.
 
 ### Added
 

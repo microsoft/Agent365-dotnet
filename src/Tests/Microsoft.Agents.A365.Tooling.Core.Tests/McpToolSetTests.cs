@@ -129,6 +129,41 @@ public sealed class McpToolSetTests : IDisposable
     }
 
     [Fact]
+    public async Task GetMcpToolSetAsync_AlreadyCancelled_ThrowsWithoutListingServers()
+    {
+        // Arrange
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        // Act
+        var call = () => GetToolSetAsync(cancellation.Token);
+
+        // Assert
+        await call.Should().ThrowAsync<OperationCanceledException>();
+        _service.Verify(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()), Times.Never);
+        _server.CreatedSessions.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetMcpToolSetAsync_CancelledWhileAcquiringTheOnlyServersToken_Throws()
+    {
+        // Arrange: the call is cancelled while the token of its only server is acquired.
+        using var cancellation = new CancellationTokenSource();
+        _service
+            .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
+            .ReturnsAsync(() => new List<MCPServerConfig> { Server("mcp_MailTools") });
+
+        // Act
+        var call = () => _service.Object
+            .GetMcpToolSetAsync("agent-id", "discovery-token", new CancellingTokenProvider(cancellation), _turnContext.Object, new ToolOptions(), cancellation.Token)
+            .WaitAsync(s_timeout);
+
+        // Assert
+        await call.Should().ThrowAsync<OperationCanceledException>();
+        _server.CreatedSessions.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GetMcpClientToolsAsync_ServerFailsToListTools_DisposesItsClient()
     {
         // Arrange
@@ -190,5 +225,14 @@ public sealed class McpToolSetTests : IDisposable
     private sealed class FixedTokenProvider(string token) : IMcpTokenProvider
     {
         public Task<string> GetTokenAsync(MCPServerConfig server, CancellationToken cancellationToken = default) => Task.FromResult(token);
+    }
+
+    private sealed class CancellingTokenProvider(CancellationTokenSource cancellation) : IMcpTokenProvider
+    {
+        public Task<string> GetTokenAsync(MCPServerConfig server, CancellationToken cancellationToken = default)
+        {
+            cancellation.Cancel();
+            return Task.FromCanceled<string>(cancellationToken);
+        }
     }
 }

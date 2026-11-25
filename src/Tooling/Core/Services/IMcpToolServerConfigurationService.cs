@@ -134,7 +134,9 @@ namespace Microsoft.Agents.A365.Tooling.Services
         /// <para>
         /// The default implementation returns the tools from
         /// <see cref="EnumerateToolsFromServersAsync(string, string, IMcpTokenProvider, ITurnContext, ToolOptions)"/> in a tool set
-        /// that doesn't dispose their clients. <see cref="McpToolServerConfigurationService"/> returns a tool set that disposes them.
+        /// that doesn't dispose their clients. <see cref="McpToolServerConfigurationService"/> returns a tool set that disposes them,
+        /// without calling <c>EnumerateToolsFromServersAsync</c> or <c>GetMcpClientToolsAsync</c>: a class derived from it that
+        /// overrides those methods should also override this one.
         /// </para>
         /// </remarks>
         async Task<McpToolSet> GetMcpToolSetAsync(string agentInstanceId, string authToken, IMcpTokenProvider tokenProvider, ITurnContext turnContext, ToolOptions toolOptions, CancellationToken cancellationToken = default)

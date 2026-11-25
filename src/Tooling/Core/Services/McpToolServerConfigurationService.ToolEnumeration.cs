@@ -123,6 +123,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
             ToolOptions toolOptions,
             CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var toolsByServer = new Dictionary<string, IReadOnlyList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
 
             List<MCPServerConfig> servers;
@@ -134,6 +136,10 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     tokenProvider,
                     toolOptions,
                     cancellationToken).ConfigureAwait(false);
+
+                // The discovery request doesn't take the token, and a server whose token acquisition is cancelled
+                // is skipped like any other token failure, so check before treating the result as complete.
+                cancellationToken.ThrowIfCancellationRequested();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
