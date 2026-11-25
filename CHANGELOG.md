@@ -30,12 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Observability migration guide](docs/observability-migration.md) for package replacement,
   configuration, authentication, context propagation, and framework instrumentation.
 
+### Added
+
+- **Microsoft.Agents.A365.Tooling** — `IMcpToolServerConfigurationService.GetMcpToolSetAsync` returns the
+  MCP servers and tools found for an agent together with the MCP clients that serve them, as an `McpToolSet`.
+  Each tool's MCP client sends the request headers, including the `Authorization` token, of the call that
+  created it, so use a tool set for one turn and dispose it when the turn ends. Disposing it disposes the
+  clients: it cancels their Streamable HTTP GET streams, ends their MCP sessions with a `DELETE` request, and
+  disposes their `HttpClient` instances, which closes their connections. The interface method has a default
+  implementation that returns the tools from `EnumerateToolsFromServersAsync` without disposing their clients,
+  so other implementations keep working.
+
 ### Fixed
 
 - **Microsoft.Agents.A365.Tooling** — Disposing an MCP client no longer waits indefinitely while the server
   keeps its Streamable HTTP GET stream open: `HttpLoggingHandler` no longer reads response bodies, so streaming
   responses are returned as soon as their headers arrive. Request bodies are still buffered and sent with a
-  `Content-Length` header.
+  `Content-Length` header. A failed connection or tool listing now disposes the MCP client and `HttpClient` it
+  created.
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `AddToolServersToAgentAsync` now
   removes the MCP plugins added to the kernel by an earlier call, including plugins carried over by
   `Kernel.Clone()`, before it adds the plugins for the current call. Plugins added by the caller are

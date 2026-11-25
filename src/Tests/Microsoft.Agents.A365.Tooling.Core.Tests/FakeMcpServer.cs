@@ -31,6 +31,15 @@ internal sealed class FakeMcpServer
     /// <summary>Gets the session IDs and <c>Authorization</c> headers of DELETE requests.</summary>
     public ConcurrentBag<(string? SessionId, string? Authorization)> DeletedSessions { get; } = new();
 
+    /// <summary>Gets or sets the path of a server that answers <c>tools/list</c> with HTTP 500.</summary>
+    public string? FailToolsListPath { get; set; }
+
+    /// <summary>Gets or sets a task that <c>tools/list</c> of the server at <see cref="ToolsListGatePath"/> waits for before it answers.</summary>
+    public Task? ToolsListGate { get; set; }
+
+    /// <summary>Gets or sets the path of the server whose <c>tools/list</c> waits for <see cref="ToolsListGate"/>.</summary>
+    public string? ToolsListGatePath { get; set; }
+
     /// <summary>Creates a handler that serves requests from one MCP client.</summary>
     public HttpMessageHandler CreateHandler() => new Handler(this);
 
@@ -90,6 +99,16 @@ internal sealed class FakeMcpServer
                     return response;
 
                 case "tools/list":
+                    if (server.ToolsListGate is { } gate && request.RequestUri!.AbsolutePath == server.ToolsListGatePath)
+                    {
+                        await gate.WaitAsync(cancellationToken);
+                    }
+
+                    if (request.RequestUri!.AbsolutePath == server.FailToolsListPath)
+                    {
+                        return new HttpResponseMessage(HttpStatusCode.InternalServerError);
+                    }
+
                     return Result(id, "{\"tools\":[{\"name\":\"whoami\",\"description\":\"Returns the caller\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}}}]}");
 
                 case "tools/call":

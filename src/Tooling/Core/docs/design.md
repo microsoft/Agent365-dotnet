@@ -11,7 +11,8 @@ Microsoft.Agents.A365.Tooling
 ├── Public API
 │   ├── Services/
 │   │   ├── IMcpToolServerConfigurationService  # Service interface
-│   │   └── McpToolServerConfigurationService   # Service implementation
+│   │   ├── McpToolServerConfigurationService   # Service implementation
+│   │   └── McpToolSet                          # Tools with the MCP clients that serve them
 │   └── Models/
 │       ├── MCPServerConfig                     # Server configuration
 │       ├── ToolOptions                         # Configuration options
@@ -21,6 +22,8 @@ Microsoft.Agents.A365.Tooling
 │   │   ├── BearerTokenHandler                  # Auth token handling
 │   │   ├── HttpContextHeadersHandler           # Header propagation
 │   │   └── HttpLoggingHandler                  # HTTP logging
+│   ├── Services/
+│   │   └── McpClientConnection                 # One MCP client and its HttpClient
 │   └── Utility/
 │       ├── Constants                           # Constants
 │       └── Utility                             # Helper methods
@@ -51,12 +54,25 @@ public interface IMcpToolServerConfigurationService
 
     /// <summary>
     /// Gets MCP Client Tools from the specified server.
+    /// The MCP client that serves the tools isn't disposed.
     /// </summary>
     Task<IList<McpClientTool>> GetMcpClientToolsAsync(
         ITurnContext turnContext,
         MCPServerConfig mCPServerConfig,
         string authToken,
         ToolOptions toolOptions);
+
+    /// <summary>
+    /// Lists the configured servers' tools and returns them together with the MCP clients
+    /// that serve them. Dispose the returned tool set when the turn ends.
+    /// </summary>
+    Task<McpToolSet> GetMcpToolSetAsync(
+        string agentInstanceId,
+        string authToken,
+        IMcpTokenProvider tokenProvider,
+        ITurnContext turnContext,
+        ToolOptions toolOptions,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends chat history for real-time threat protection.
@@ -198,6 +214,21 @@ public class ChatHistoryMessage
 ```
 
 ### HTTP Handlers
+
+#### MCP Client Lifetime
+
+Each MCP client gets its own `HttpClient` and handler chain (`HttpLoggingHandler` → `HttpContextHeadersHandler` → `BearerTokenHandler` → `HttpClientHandler`), so it sends the request headers, including the `Authorization` token, of the call that created it. An `McpClientTool` calls its server through that client, so the client can only be disposed once the tools are no longer used.
+
+`GetMcpToolSetAsync` returns an `McpToolSet` that owns the clients it created:
+
+- `Servers` and `ToolsByServer` expose the servers that were found and the tools of each server that responded. The tool set itself enumerates all tools, and is also enumerable as `AITool` instances.
+- `DisposeAsync` disposes every client in parallel, ignores errors from individual clients, and can be called more than once. For each client it cancels the Streamable HTTP GET stream, sends a `DELETE` with the `Mcp-Session-Id` to end the MCP session (bounded by a 5-second timeout; servers that don't allow it answer 405), and disposes the `HttpClient`, which closes its connections.
+- Servers whose tools can't be listed are skipped and their clients are disposed. If the call is cancelled, every client it created is disposed.
+- Tools from a disposed tool set can't be invoked.
+
+Use a tool set for one turn and dispose it when the turn ends. Don't cache tool sets or tools across turns, users or agent identities. `GetMcpClientToolsAsync`, `EnumerateToolsFromServersAsync` and `EnumerateAllToolsAsync` keep returning tools without their clients, so those clients aren't disposed.
+
+`HttpLoggingHandler` doesn't read response bodies, so streaming responses such as the GET `text/event-stream` are returned as soon as their headers arrive, and cancelling the stream (which `DisposeAsync` does) completes. It still buffers request bodies so they are sent with a `Content-Length` header.
 
 #### BearerTokenHandler
 
@@ -368,7 +399,9 @@ public async Task<OperationResult> SendChatHistoryAsync(
 src/Tooling/Core/
 ├── Services/
 │   ├── IMcpToolServerConfigurationService.cs  # Service interface
-│   └── McpToolServerConfigurationService.cs   # Service implementation
+│   ├── McpToolServerConfigurationService.cs   # Service implementation
+│   ├── McpToolSet.cs                          # Tools with the MCP clients that serve them
+│   └── McpClientConnection.cs                 # One MCP client and its HttpClient
 ├── Models/
 │   ├── MCPServerConfig.cs                     # Server config model
 │   ├── ToolOptions.cs                         # Options model
