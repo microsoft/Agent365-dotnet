@@ -136,11 +136,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                     It.IsAny<ITurnContext>(),
                     It.IsAny<ToolOptions>()));
 
-            foreach (var serverNames in serverNamesPerCall)
+            var resultsPerCall = serverNamesPerCall.Select(serverNames => serverNames.ToDictionary(
+                name => name,
+                _ => (IList<McpClientTool>)new List<McpClientTool>()));
+
+            foreach (var toolsByServer in resultsPerCall)
             {
-                var toolsByServer = serverNames.ToDictionary(
-                    name => name,
-                    _ => (IList<McpClientTool>)new List<McpClientTool>());
                 sequence = sequence.ReturnsAsync((new List<MCPServerConfig>(), toolsByServer));
             }
         }
