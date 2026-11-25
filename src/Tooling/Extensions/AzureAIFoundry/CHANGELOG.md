@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - MCP clients created to list tools are disposed
   - `AddToolServersToAgent`, `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create once the tool definitions and resources are built, which closes their connections and ends their MCP sessions; Azure AI Foundry calls the MCP servers itself
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - Updating an agent when no MCP servers are found clears its MCP tool resources
+  - `AddToolServersToAgent` and `AddToolServersToAgentAsync` now send an empty MCP resource list (`"tool_resources": { "mcp": [] }`) instead of leaving tool resources out of the update request, which kept the MCP resources and headers set by an earlier call on the agent
+  - `GetMcpToolDefinitionsAndResourcesAsync` still returns `null` tool resources when no MCP servers are found; callers that update an existing agent with the result should send an empty MCP resource list instead
 
 ## [2.0.0] - 2026-10-20
 

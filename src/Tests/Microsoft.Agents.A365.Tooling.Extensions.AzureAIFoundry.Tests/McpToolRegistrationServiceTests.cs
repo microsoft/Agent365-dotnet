@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.AI.Agents.Persistent;
+using Azure.Core;
+using Azure.Core.Pipeline;
 using FluentAssertions;
 using Microsoft.Agents.A365.Tooling.Extensions.AzureFoundry.Services;
 using Microsoft.Agents.A365.Tooling.Models;
@@ -126,6 +128,19 @@ public class McpToolRegistrationServiceTests
     }
 
     /// <summary>
+    /// Creates a PersistentAgentsClient whose requests are captured by <paramref name="handler"/>.
+    /// </summary>
+    private static PersistentAgentsClient CreateAgentsClient(CapturingHandler handler)
+    {
+        var options = new PersistentAgentsAdministrationClientOptions
+        {
+            Transport = new HttpClientTransport(new HttpClient(handler)),
+            Retry = { MaxRetries = 0 },
+        };
+        return new PersistentAgentsClient("https://example.services.ai.azure.com/api/projects/test", new FakeTokenCredential(), options);
+    }
+
+    /// <summary>
     /// Stands in for the MCP clients of a tool set and counts how often they are disposed.
     /// </summary>
     private sealed class DisposalProbe : IAsyncDisposable
@@ -137,6 +152,36 @@ public class McpToolRegistrationServiceTests
             DisposeCount++;
             return ValueTask.CompletedTask;
         }
+    }
+
+    /// <summary>
+    /// Captures the body of each request and answers with an agent.
+    /// </summary>
+    private sealed class CapturingHandler : HttpMessageHandler
+    {
+        public List<string> RequestBodies { get; } = new();
+
+        protected override HttpResponseMessage Send(HttpRequestMessage request, CancellationToken cancellationToken)
+            => SendAsync(request, cancellationToken).GetAwaiter().GetResult();
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestBodies.Add(request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken));
+            const string agent = "{\"id\":\"asst_1\",\"object\":\"assistant\",\"created_at\":0,\"name\":null,\"description\":null,\"model\":\"gpt-4o\",\"instructions\":null,\"tools\":[],\"tool_resources\":{},\"temperature\":1,\"top_p\":1,\"metadata\":{}}";
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(agent, System.Text.Encoding.UTF8, "application/json"),
+            };
+        }
+    }
+
+    private sealed class FakeTokenCredential : TokenCredential
+    {
+        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
+            => new("test-token", DateTimeOffset.UtcNow.AddHours(1));
+
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+            => new(GetToken(requestContext, cancellationToken));
     }
 
     #endregion
@@ -177,6 +222,36 @@ public class McpToolRegistrationServiceTests
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>()
             .WithParameterName("agentClient");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task AddToolServersToAgent_NoServersFound_SendsEmptyMcpToolResources(bool useAsyncOverload)
+    {
+        // Arrange
+        SetupMocksForEmptyToolEnumeration();
+        var handler = new CapturingHandler();
+        var agentClient = CreateAgentsClient(handler);
+        var turnContext = new Mock<ITurnContext>();
+        var activity = new Mock<IActivity>();
+        activity.Setup(a => a.Recipient).Returns(new ChannelAccount { Id = "test-agent-id", AgenticAppId = "asst_1" });
+        turnContext.Setup(tc => tc.Activity).Returns(activity.Object);
+
+        // Act
+        if (useAsyncOverload)
+        {
+            await _service.AddToolServersToAgentAsync(agentClient, null!, "handler", turnContext.Object, "token");
+        }
+        else
+        {
+            _service.AddToolServersToAgent(agentClient, "asst_1", null!, turnContext.Object, "token");
+        }
+
+        // Assert: a null value would be left out of the request, leaving the earlier MCP resources and headers on the agent.
+        using var body = System.Text.Json.JsonDocument.Parse(handler.RequestBodies.Should().ContainSingle().Subject);
+        body.RootElement.GetProperty("tools").GetArrayLength().Should().Be(0);
+        body.RootElement.GetProperty("tool_resources").GetProperty("mcp").GetArrayLength().Should().Be(0);
     }
 
     #endregion

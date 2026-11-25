@@ -430,6 +430,11 @@ Unlike Semantic Kernel and Agent Framework integrations, Azure AI Foundry handle
 
 The service lists each MCP server's tools only to find the servers that respond; Azure AI Foundry calls the servers itself. So it disposes the MCP clients it creates, which closes their connections and ends their MCP sessions, as soon as the tool definitions and resources are built.
 
+### Agent Updates
+
+- `AddToolServersToAgent` and `AddToolServersToAgentAsync` set the agent's tools and tool resources to the MCP servers found by the call. When no MCP servers are found, they send an empty MCP resource list (`"tool_resources": { "mcp": [] }`), which clears the MCP resources and headers set by an earlier call. A `null` tool resources value is left out of the update request, which would leave them on the agent.
+- `GetMcpToolDefinitionsAndResourcesAsync` returns `null` tool resources when no MCP servers are found. Callers that update an existing agent with the result should send an empty MCP resource list instead of `null`.
+
 ## External Resources
 
 - [Azure AI Foundry](https://learn.microsoft.com/azure/ai-studio/)

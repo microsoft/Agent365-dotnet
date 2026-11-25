@@ -65,7 +65,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   has a call in progress throws `InvalidOperationException`.
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** — `AddToolServersToAgent`,
   `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create
-  once the tool definitions and resources are built.
+  once the tool definitions and resources are built. When no MCP servers are found, `AddToolServersToAgent` and
+  `AddToolServersToAgentAsync` send an empty MCP resource list instead of leaving tool resources out of the
+  update request, which kept the MCP resources and headers set by an earlier call on the agent.
 
 ## [2.0.0] - 2026-10-20
 
