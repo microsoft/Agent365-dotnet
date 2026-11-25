@@ -115,6 +115,121 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <inheritdoc/>
+        public virtual async Task<McpToolSet> GetMcpToolSetAsync(
+            string agentInstanceId,
+            string authToken,
+            IMcpTokenProvider tokenProvider,
+            ITurnContext turnContext,
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var toolsByServer = new Dictionary<string, IReadOnlyList<McpClientTool>>(StringComparer.OrdinalIgnoreCase);
+
+            List<MCPServerConfig> servers;
+            try
+            {
+                servers = await ListToolServersWithTokensAsync(
+                    agentInstanceId,
+                    authToken,
+                    tokenProvider,
+                    toolOptions,
+                    cancellationToken).ConfigureAwait(false);
+
+                // The discovery request doesn't take the token, and a server whose token acquisition is cancelled
+                // is skipped like any other token failure, so check before treating the result as complete.
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list MCP tool servers for AgentInstanceId={AgentInstanceId}", agentInstanceId);
+                return new McpToolSet(new List<MCPServerConfig>(), toolsByServer);
+            }
+
+            if (servers.Count == 0)
+            {
+                _logger.LogInformation("No MCP servers configured for agentInstanceId={AgentInstanceId}", agentInstanceId);
+                return new McpToolSet(servers, toolsByServer);
+            }
+
+            var validServers = servers.Where(server =>
+            {
+                if (string.IsNullOrWhiteSpace(server.mcpServerName) || string.IsNullOrWhiteSpace(server.url))
+                {
+                    _logger.LogWarning(
+                        "Skipping invalid MCP server config: Name='{Name}', Url='{Url}'",
+                        server.mcpServerName,
+                        server.url);
+                    return false;
+                }
+                return true;
+            }).ToList();
+
+            // Every task returns normally so that the connections of servers that succeeded can always be collected.
+            var tasks = validServers.Select(async server =>
+            {
+                try
+                {
+                    // Per-server token is already in server.Headers; ConnectAndListToolsAsync
+                    // extracts it via ResolveEffectiveToken, falling back to authToken for V1.
+                    var (connection, tools) = await ConnectAndListToolsAsync(
+                        turnContext,
+                        server,
+                        authToken,
+                        toolOptions,
+                        cancellationToken).ConfigureAwait(false);
+
+                    _logger.LogInformation(
+                        "Successfully loaded {ToolCount} tools from MCP server '{ServerName}'",
+                        tools.Count,
+                        server.mcpServerName);
+
+                    return (ServerName: server.mcpServerName, Tools: tools, Connection: (McpClientConnection?)connection);
+                }
+                catch (Exception ex)
+                {
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        _logger.LogError(
+                            ex,
+                            "Failed to load tools from MCP server '{ServerName}' at '{Url}': {Error}",
+                            server.mcpServerName,
+                            server.url,
+                            ex.Message);
+                    }
+
+                    return (ServerName: server.mcpServerName, Tools: (IList<McpClientTool>)Array.Empty<McpClientTool>(), Connection: (McpClientConnection?)null);
+                }
+            });
+
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+            var connections = results.Where(r => r.Connection is not null).Select(r => r.Connection!).ToList();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                await new McpToolSet(servers, toolsByServer, connections).DisposeAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            foreach (var result in results.Where(r => r.Connection is not null))
+            {
+                toolsByServer[result.ServerName] = result.Tools.ToList();
+            }
+
+            _logger.LogInformation(
+                "MCP server discovery completed: Total servers={ServerCount}, Servers with tools={SuccessCount}",
+                servers.Count,
+                toolsByServer.Count);
+
+            return new McpToolSet(servers, toolsByServer, connections);
+        }
+
+        /// <inheritdoc/>
         public virtual async Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)> EnumerateToolsFromServersAsync(
             string agentInstanceId,
             string authToken,

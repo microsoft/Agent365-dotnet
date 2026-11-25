@@ -380,6 +380,7 @@ The library provides comprehensive error handling:
 4. **Authentication**: Use full authentication context when available for better security
 5. **Testing**: Test MCP server connectivity in development environments
 6. **IChatClient Usage**: Always use `IChatClient` interface, not concrete client implementations
+7. **Per-turn MCP tools**: Each MCP tool's client sends the request headers, including the `Authorization` token, of the call that created it. Get MCP tools for each turn with `GetMcpToolSetAsync` and dispose the tool set when the turn ends (`await using`); don't cache MCP tools across turns or identities
 
 ## Troubleshooting
 

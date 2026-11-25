@@ -84,6 +84,28 @@ namespace Microsoft.Agents.A365.Tooling.Services
             string authToken,
             ToolOptions toolOptions)
         {
+            // The client isn't disposed here because the returned tools use it to call the server.
+            var (_, tools) = await ConnectAndListToolsAsync(turnContext, mCPServerConfig, authToken, toolOptions, CancellationToken.None).ConfigureAwait(false);
+            return tools;
+        }
+
+        /// <summary>
+        /// Gets or sets a factory for the innermost HTTP handler of the MCP client handler chain.
+        /// When <see langword="null"/>, an <see cref="HttpClientHandler"/> is used. Tests replace it.
+        /// </summary>
+        internal Func<HttpMessageHandler>? McpHttpMessageHandlerFactory { get; set; }
+
+        /// <summary>
+        /// Connects an MCP client to the server and lists its tools. The caller owns the returned connection,
+        /// which the returned tools use to call the server.
+        /// </summary>
+        internal async Task<(McpClientConnection Connection, IList<McpClientTool> Tools)> ConnectAndListToolsAsync(
+            ITurnContext turnContext,
+            MCPServerConfig mCPServerConfig,
+            string authToken,
+            ToolOptions toolOptions,
+            CancellationToken cancellationToken)
+        {
             try
             {
                 // Validate the server name
@@ -99,12 +121,24 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 this._logger.LogInformation($"Creating custom MCP client for: {mCPServerConfig.mcpServerName} at {mCPServerConfig.url}");
 
                 // Use custom HTTP-based implementation since MCP client library doesn't work
-                var mcpClient = await CreateMcpClientWithAuthHandlers(turnContext, new Uri(mCPServerConfig.url), effectiveToken, toolOptions);
-                var tools = await mcpClient.ListToolsAsync();
+                var connection = await ConnectMcpClientAsync(turnContext, new Uri(mCPServerConfig.url), effectiveToken, toolOptions, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    var tools = await connection.Client.ListToolsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
+                    this._logger.LogInformation($"Successfully retrieved {tools.Count} tools from {mCPServerConfig.mcpServerName}");
 
-                return tools;
+                    return (connection, tools);
+                }
+                catch
+                {
+                    await connection.DisposeAsync().ConfigureAwait(false);
+                    throw;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (HttpRequestException httpEx)
             {
@@ -478,22 +512,17 @@ namespace Microsoft.Agents.A365.Tooling.Services
         }
 
         /// <summary>
-        /// Creates an MCP client with authentication handlers similar to your reference implementation
+        /// Creates an MCP client with the authentication and context handler chain and connects it.
+        /// The caller owns the returned connection.
         /// </summary>
-        private async Task<IMcpClient> CreateMcpClientWithAuthHandlers(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions)
+        private async Task<McpClientConnection> ConnectMcpClientAsync(ITurnContext turnContext, Uri endpoint, string authToken, ToolOptions toolOptions, CancellationToken cancellationToken)
         {
-            // Create HTTP client handler chain for MCP service authentication
-            var httpClientHandler = new HttpClientHandler();
+            // Validate and compute the initialization timeout once so HttpClient.Timeout
+            // and McpClientOptions.InitializationTimeout always agree.
+            var initializationTimeout = GetValidatedInitializationTimeout(toolOptions.McpClientInitializationTimeoutSeconds);
 
-            // WARNING: Only use this in development/testing - never in production!
-            // This bypasses SSL certificate validation
-            var isDevScenario = IsDevScenario();
-            if (isDevScenario)
-            {
-                httpClientHandler.ServerCertificateCustomValidationCallback =
-                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-                this._logger.LogInformation("WARNING: SSL certificate validation disabled for development!");
-            }
+            // Create HTTP client handler chain for MCP service authentication
+            var httpClientHandler = CreateMcpHttpMessageHandler();
 
             // Create a simple authentication handler that adds the bearer token
             var authHandler = new BearerTokenHandler(authToken)
@@ -514,47 +543,57 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 InnerHandler = httpContextHeaderHandler
             };
 
-            // Setup SSE client transport options without manual token management
-            var options = new SseClientTransportOptions
-            {
-                Endpoint = endpoint,
-                TransportMode = HttpTransportMode.AutoDetect,
-            };
-
-            // Validate and compute the initialization timeout once so HttpClient.Timeout
-            // and McpClientOptions.InitializationTimeout always agree.
-            var initializationTimeout = GetValidatedInitializationTimeout(toolOptions.McpClientInitializationTimeoutSeconds);
-
-            // Create HTTP client with the authentication handler chain
-            var httpClient = new HttpClient(loggingHandler);
+            // The connection owns the HTTP client and the handler chain.
+            var connection = new McpClientConnection(endpoint, loggingHandler, this._logger);
 
             // Apply custom timeout only when explicitly configured
             if (initializationTimeout.HasValue)
             {
-                httpClient.Timeout = initializationTimeout.Value;
+                connection.HttpClient.Timeout = initializationTimeout.Value;
             }
-
-            var clientTransport = new SseClientTransport(options, httpClient);
 
             try
             {
                 // Only pass McpClientOptions when a custom timeout is set to preserve default SDK behavior
-                if (initializationTimeout.HasValue)
-                {
-                    var clientOptions = new McpClientOptions
-                    {
-                        InitializationTimeout = initializationTimeout.Value,
-                    };
+                var clientOptions = initializationTimeout.HasValue
+                    ? new McpClientOptions { InitializationTimeout = initializationTimeout.Value }
+                    : null;
 
-                    return await McpClientFactory.CreateAsync(clientTransport, clientOptions, loggerFactory: this._loggerFactory);
-                }
-
-                return await McpClientFactory.CreateAsync(clientTransport, loggerFactory: this._loggerFactory);
+                await connection.ConnectAsync(clientOptions, this._loggerFactory, cancellationToken).ConfigureAwait(false);
+                return connection;
             }
             catch (Exception ex)
             {
+                await connection.DisposeAsync().ConfigureAwait(false);
+
+                if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
                 throw new InvalidOperationException($"Failed to create MCP client for endpoint '{endpoint}': {ex.Message}", ex);
             }
+        }
+
+        private HttpMessageHandler CreateMcpHttpMessageHandler()
+        {
+            if (McpHttpMessageHandlerFactory is { } factory)
+            {
+                return factory();
+            }
+
+            var httpClientHandler = new HttpClientHandler();
+
+            // WARNING: Only use this in development/testing - never in production!
+            // This bypasses SSL certificate validation
+            if (IsDevScenario())
+            {
+                httpClientHandler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                this._logger.LogInformation("WARNING: SSL certificate validation disabled for development!");
+            }
+
+            return httpClientHandler;
         }
 
         /// <summary>

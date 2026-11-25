@@ -7,6 +7,10 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
     /// <summary>
     /// Custom HTTP handler for logging HTTP requests and responses
     /// </summary>
+    /// <remarks>
+    /// Logs the response status code and headers. Response bodies aren't read, so streaming responses
+    /// such as the MCP <c>text/event-stream</c> GET stream are returned to the caller as soon as their headers arrive.
+    /// </remarks>
     public class HttpLoggingHandler : DelegatingHandler
     {
         private readonly ILogger _logger;
@@ -25,18 +29,14 @@ namespace Microsoft.Agents.A365.Tooling.Handlers
         {
             if (request.Content != null)
             {
-                var content = await request.Content.ReadAsStringAsync();
+                // Buffer the request body so it keeps being sent with a Content-Length header rather than chunked.
+                await request.Content.LoadIntoBufferAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            var response = await base.SendAsync(request, cancellationToken);
+            var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             this._logger.LogInformation($"HTTP Response: {response.StatusCode}");
             this._logger.LogInformation($"Response Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}: {string.Join(",", h.Value)}"))}");
-
-            if (response.Content != null)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-            }
 
             return response;
         }

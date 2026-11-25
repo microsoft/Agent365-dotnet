@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - Targets `net10.0` only
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - `AddToolServersToAgent`, `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` load MCP tools through `IMcpToolServerConfigurationService.GetMcpToolSetAsync` instead of `EnumerateToolsFromServersAsync`, so that they can dispose the MCP clients they create
+  - Implementations of the interface that don't derive from `McpToolServerConfigurationService` get a default `GetMcpToolSetAsync` that calls their `EnumerateToolsFromServersAsync`; the `EnumerateToolsFromServersAsync` or `GetMcpClientToolsAsync` overrides of a class derived from `McpToolServerConfigurationService` are no longer called
+  - **Migration:** a derived class that overrides those methods should also override `GetMcpToolSetAsync`; tests that mock `IMcpToolServerConfigurationService` should set up `GetMcpToolSetAsync`
+
+### Fixed
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - MCP clients created to list tools are disposed
+  - `AddToolServersToAgent`, `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create once the tool definitions and resources are built, which closes their connections and ends their MCP sessions; Azure AI Foundry calls the MCP servers itself
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - Updating an agent when no MCP servers are found clears its MCP tool resources
+  - `AddToolServersToAgent` and `AddToolServersToAgentAsync` now send an empty MCP resource list (`"tool_resources": { "mcp": [] }`) instead of leaving tool resources out of the update request, which kept the MCP resources and headers set by an earlier call on the agent
+  - `GetMcpToolDefinitionsAndResourcesAsync` still returns `null` tool resources when no MCP servers are found; callers that update an existing agent with the result should send an empty MCP resource list instead
 
 ## [2.0.0] - 2026-10-20
 

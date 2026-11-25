@@ -26,6 +26,11 @@ public interface IMcpToolRegistrationService
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
+    /// <remarks>
+    /// Updates the agent's tools and tool resources to the MCP servers found by this call. When no MCP servers are found,
+    /// the agent's MCP tools and MCP tool resources, including their headers, are cleared.
+    /// The MCP clients used to list the servers' tools are disposed before this method returns.
+    /// </remarks>
     Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
@@ -40,6 +45,12 @@ public interface IMcpToolRegistrationService
     /// <param name="authToken">Auth token to access the MCP servers.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <returns>A tuple containing the list of MCP tool definitions and tool resources.</returns>
+    /// <remarks>
+    /// <c>ToolResources</c> is <see langword="null"/> when no MCP servers are found. When you update an existing agent with
+    /// the result, pass tool resources with an empty <c>Mcp</c> list instead of <see langword="null"/>: a <see langword="null"/>
+    /// value is left out of the update request, so the agent keeps the MCP resources and headers set by an earlier update.
+    /// The MCP clients used to list the servers' tools are disposed before this method returns.
+    /// </remarks>
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,

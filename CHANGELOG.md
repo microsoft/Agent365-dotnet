@@ -29,6 +29,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   This is not a drop-in replacement or an automatic dependency redirect; follow the
   [Observability migration guide](docs/observability-migration.md) for package replacement,
   configuration, authentication, context propagation, and framework instrumentation.
+- **Semantic Kernel and Azure AI Foundry Tooling extensions load MCP tools through `GetMcpToolSetAsync`** - They
+  now call `IMcpToolServerConfigurationService.GetMcpToolSetAsync` instead of `EnumerateToolsFromServersAsync`, so
+  that they can dispose the MCP clients they create. Implementations of the interface that don't derive from
+  `McpToolServerConfigurationService` get a default `GetMcpToolSetAsync` that calls their
+  `EnumerateToolsFromServersAsync`. These extensions no longer call the `EnumerateToolsFromServersAsync` or
+  `GetMcpClientToolsAsync` overrides of a class derived from `McpToolServerConfigurationService`.
+  **Migration:** a derived class that overrides those methods should also override `GetMcpToolSetAsync`. Tests that
+  mock `IMcpToolServerConfigurationService` for these extensions should set up `GetMcpToolSetAsync`.
+
+### Added
+
+- **Microsoft.Agents.A365.Tooling** — `IMcpToolServerConfigurationService.GetMcpToolSetAsync` returns the
+  MCP servers and tools found for an agent together with the MCP clients that serve them, as an `McpToolSet`.
+  Each tool's MCP client sends the request headers, including the `Authorization` token, of the call that
+  created it, so use a tool set for one turn and dispose it when the turn ends. Disposing it disposes the
+  clients: it cancels their Streamable HTTP GET streams, ends their MCP sessions with a `DELETE` request, and
+  disposes their `HttpClient` instances, which closes their connections. The interface method has a default
+  implementation that returns the tools from `EnumerateToolsFromServersAsync` without disposing their clients,
+  so other implementations keep working.
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `IMcpToolRegistrationService.RemoveToolServersAsync(Kernel)`
+  removes the MCP plugins that `AddToolServersToAgentAsync` added to a kernel and disposes their MCP clients.
+  Call it when the turn that registered the tools ends, for example on the `Kernel.Clone()` copy used for the turn.
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** — `IMcpToolRegistrationService.GetMcpToolSetAsync`
+  returns the current turn's MCP tools as an `McpToolSet` that enumerates them as `AITool` instances. Dispose it
+  when the turn ends (`await using`). `GetMcpToolsAsync` and `AddToolServersToAgent` don't dispose the MCP
+  clients they create.
+
+### Fixed
+
+- **Microsoft.Agents.A365.Tooling** — Disposing an MCP client no longer waits indefinitely while the server
+  keeps its Streamable HTTP GET stream open: `HttpLoggingHandler` no longer reads response bodies, so streaming
+  responses are returned as soon as their headers arrive. Request bodies are still buffered and sent with a
+  `Content-Length` header. A failed connection or tool listing now disposes the MCP client and `HttpClient` it
+  created.
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `AddToolServersToAgentAsync` now
+  removes the MCP plugins added to the kernel by an earlier call, including plugins carried over by
+  `Kernel.Clone()`, before it adds the plugins for the current call, and disposes the MCP clients of the
+  plugins that an earlier call added to the same kernel. A `Kernel.Clone()` copy doesn't dispose the MCP
+  clients of plugins it shares with the kernel it was cloned from. Plugins added by the caller are kept, and
+  calling it again with the same kernel no longer throws `ArgumentException` when an MCP server name is
+  returned again. Turns that run concurrently must each use their own kernel: a call for a kernel that already
+  has a call in progress throws `InvalidOperationException`.
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** — `AddToolServersToAgent`,
+  `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create
+  once the tool definitions and resources are built. When no MCP servers are found, `AddToolServersToAgent` and
+  `AddToolServersToAgentAsync` send an empty MCP resource list instead of leaving tool resources out of the
+  update request, which kept the MCP resources and headers set by an earlier call on the agent.
 
 ## [2.0.0] - 2026-10-20
 

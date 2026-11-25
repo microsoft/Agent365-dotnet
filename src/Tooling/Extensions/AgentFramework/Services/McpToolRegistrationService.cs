@@ -121,26 +121,14 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     {
         try
         {
-            // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
-            // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
-            if (authToken is null && userAuthorization is not null && authHandlerName is not null)
-            {
-                authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
-            }
-            authToken ??= string.Empty;
+            authToken = await ResolveAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
 
             var toolOptions = new ToolOptions
             {
                 UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
             };
 
-            IMcpTokenProvider tokenProvider =
-                 (userAuthorization is not null && authHandlerName is not null)
-                     ? new TokenProviderCollection(_logger,
-                        new EnvMcpTokenProvider(_configuration, _logger),
-                        new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
-                     :
-                        new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
+            var tokenProvider = CreateTokenProvider(userAuthorization, authHandlerName, turnContext);
 
             var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
@@ -160,6 +148,70 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
                 agentUserId);
             throw;
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<McpToolSet> GetMcpToolSetAsync(
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            authToken = await ResolveAuthTokenAsync(userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
+
+            var toolOptions = new ToolOptions
+            {
+                UserAgentConfiguration = Agent365AgentFrameworkSdkUserAgentConfiguration.Instance
+            };
+
+            var tokenProvider = CreateTokenProvider(userAuthorization, authHandlerName, turnContext);
+
+            var toolSet = await _mcpServerConfigurationService.GetMcpToolSetAsync(agentUserId, authToken, tokenProvider, turnContext, toolOptions, cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Loaded {McpCount} MCP tools for agent {AgentUserId}",
+                toolSet.Count, agentUserId);
+
+            return toolSet;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add MCP tool servers for agent {AgentUserId}",
+                agentUserId);
+            throw;
+        }
+    }
+
+    private async Task<string> ResolveAuthTokenAsync(
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken)
+    {
+        // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
+        // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
+        if (authToken is null && userAuthorization is not null && authHandlerName is not null)
+        {
+            authToken = await AgenticAuthenticationService.GetAgenticUserTokenAsync(userAuthorization, authHandlerName, turnContext, _configuration).ConfigureAwait(false);
+        }
+
+        return authToken ?? string.Empty;
+    }
+
+    private IMcpTokenProvider CreateTokenProvider(
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext)
+    {
+        return (userAuthorization is not null && authHandlerName is not null)
+            ? new TokenProviderCollection(_logger,
+               new EnvMcpTokenProvider(_configuration, _logger),
+               new AgenticMcpTokenProvider(userAuthorization, authHandlerName, turnContext, _configuration, _logger))
+            :
+               new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
     }
 
     /// <inheritdoc />

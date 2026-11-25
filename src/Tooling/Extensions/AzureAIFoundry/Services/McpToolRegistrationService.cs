@@ -62,6 +62,10 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
     /// <param name="turnContext">Turn context for the current request.</param>
     /// <param name="authToken">Authentication token for MCP server access.</param>
     /// <exception cref="ArgumentNullException"></exception>
+    /// <remarks>
+    /// Updates the agent's tools and tool resources to the MCP servers found by this call. When no MCP servers are found,
+    /// the agent's MCP tools and MCP tool resources, including their headers, are cleared.
+    /// </remarks>
     public void AddToolServersToAgent(
         PersistentAgentsClient agentClient,
         string agentInstanceId,
@@ -82,7 +86,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             agentClient.Administration.UpdateAgent(
                 agentInstanceId,
                 tools: toolDefinitions,
-                toolResources: toolResources);
+                toolResources: toolResources ?? CreateEmptyMcpToolResources());
 
             _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
         }
@@ -125,7 +129,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             agentClient.Administration.UpdateAgent(
                 agenticAppId,
                 tools: toolDefinitions,
-                toolResources: toolResources);
+                toolResources: toolResources ?? CreateEmptyMcpToolResources());
 
             _logger.LogInformation("Successfully configured {Count} MCP tool servers for agent", toolDefinitions.Count);
         }
@@ -169,7 +173,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         };
 
         List<MCPServerConfig> servers;
-        Dictionary<string, IList<McpClientTool>> toolsByServer;
+        IReadOnlyDictionary<string, IReadOnlyList<McpClientTool>> toolsByServer;
 
         // Select token provider:
         //   Dev scenario  → EnvMcpTokenProvider reads per-server env vars (no OBO flow needed).
@@ -183,12 +187,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
              :
                 new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-        (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+        // The tools are listed only to find the servers that respond; Azure AI Foundry calls the servers itself,
+        // so the MCP clients are disposed as soon as the tool definitions and resources are built.
+        await using var toolSet = await _mcpServerConfigurationService.GetMcpToolSetAsync(
             agentInstanceId, 
             authToken, 
             tokenProvider, 
             turnContext, 
             toolOptions).ConfigureAwait(false);
+
+        servers = toolSet.Servers.ToList();
+        toolsByServer = toolSet.ToolsByServer;
 
 
         if (servers.Count == 0)
@@ -404,6 +413,22 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
             _logger.LogError(ex, "Failed to send chat history for thread {ThreadId}: {Message}", threadId, ex.Message);
             return OperationResult.Failed(new OperationError(ex));
         }
+    }
+
+    /// <summary>
+    /// Creates tool resources with an empty MCP resource list, sent as <c>"tool_resources": { "mcp": [] }</c>.
+    /// </summary>
+    /// <remarks>
+    /// Used when no MCP servers are found. A <see langword="null"/> value is left out of the update request, which leaves
+    /// the MCP resources and headers set by an earlier call on the agent; the empty list replaces them.
+    /// </remarks>
+    private static ToolResources CreateEmptyMcpToolResources()
+    {
+        var toolResources = new ToolResources();
+
+        // Clearing the list marks it as set, so it is serialized as an empty array instead of being left out.
+        toolResources.Mcp.Clear();
+        return toolResources;
     }
 
     /// <summary>

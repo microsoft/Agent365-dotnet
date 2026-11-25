@@ -13,7 +13,8 @@ dotnet add package Microsoft.Agents.A365.Tooling.Extensions.AgentFramework
 
 - **MCP tool discovery** — queries the Agent 365 Tooling Gateway and connects to configured MCP servers
 - **`AddToolServersToAgent`** — builds an `AIAgent` with MCP tools loaded alongside any existing tools
-- **`GetMcpToolsAsync`** — returns discovered MCP tools as `IList<AITool>` for manual agent wiring
+- **`GetMcpToolSetAsync`** — returns the current turn's MCP tools together with the MCP clients that serve them, as a disposable `McpToolSet` that enumerates the tools as `AITool` instances
+- **`GetMcpToolsAsync`** — returns discovered MCP tools as `IList<AITool>` for manual agent wiring; their MCP clients aren't disposed
 - **`SendChatHistoryAsync`** — forwards conversation history to the real-time threat-protection endpoint
 - **V1/V2 per-audience token support** — V1 servers share the ATG token; V2 servers (distinct `audience`) receive audience-scoped OBO tokens automatically
 - **Dev-mode support** — tokens sourced from environment variables when `ASPNETCORE_ENVIRONMENT=Development`
@@ -71,6 +72,21 @@ public class MyActivityHandler : ActivityHandler
 ```
 
 ### Retrieving tools without building an agent
+
+Each MCP tool calls its server through an MCP client that sends the request headers, including the `Authorization` token, of the call that created it. Get the MCP tools for each turn and dispose them when the turn ends:
+
+```csharp
+// The MCP clients are disposed when the turn ends, which closes their connections and MCP sessions.
+await using var mcpTools = await _mcpTools.GetMcpToolSetAsync(
+    agentUserId: turnContext.Activity.From.Id,
+    userAuthorization: userAuth,
+    authHandlerName: "default",
+    turnContext: turnContext);
+
+var agent = _chatClient.AsAIAgent(instructions: "You are a helpful assistant.", tools: [.. mcpTools]);
+```
+
+Don't cache MCP tools across turns or identities. `GetMcpToolsAsync` returns the same tools without their lifetime; the MCP clients it creates aren't disposed:
 
 ```csharp
 IList<AITool> tools = await _mcpTools.GetMcpToolsAsync(

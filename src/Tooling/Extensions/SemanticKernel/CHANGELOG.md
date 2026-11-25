@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - Targets `net10.0` only
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - `AddToolServersToAgentAsync` loads MCP tools through `IMcpToolServerConfigurationService.GetMcpToolSetAsync` instead of `EnumerateToolsFromServersAsync`, so that it can dispose the MCP clients it creates
+  - Implementations of the interface that don't derive from `McpToolServerConfigurationService` get a default `GetMcpToolSetAsync` that calls their `EnumerateToolsFromServersAsync`; the `EnumerateToolsFromServersAsync` or `GetMcpClientToolsAsync` overrides of a class derived from `McpToolServerConfigurationService` are no longer called
+  - **Migration:** a derived class that overrides those methods should also override `GetMcpToolSetAsync`; tests that mock `IMcpToolServerConfigurationService` should set up `GetMcpToolSetAsync`
+
+### Added
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - `RemoveToolServersAsync(Kernel)` removes the MCP plugins that `AddToolServersToAgentAsync` added to a kernel and disposes their MCP clients
+  - Call it when the turn that registered the tools ends, for example in a `finally` block on the `Kernel.Clone()` copy used for the turn; disposing the MCP clients closes their connections and ends their MCP sessions
+  - For a `Kernel.Clone()` copy, plugins it shares with the kernel it was cloned from are removed from the copy but their MCP clients aren't disposed
+  - The interface method has a default implementation, so other implementations of `IMcpToolRegistrationService` keep working
+
+### Fixed
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - `AddToolServersToAgentAsync` replaces the MCP plugins from an earlier call
+  - MCP plugins added to the kernel by an earlier call, including plugins carried over by `Kernel.Clone()`, are removed before the current call adds its own; plugins added by the caller are kept
+  - The MCP clients of plugins that an earlier call added to the same kernel are disposed; a `Kernel.Clone()` copy doesn't dispose the MCP clients of plugins it shares with the kernel it was cloned from
+  - Calling it again with the same kernel no longer throws `ArgumentException` when an MCP server name is returned again
+  - Turns that run concurrently must each use their own kernel; a call for a kernel that already has an `AddToolServersToAgentAsync` or `RemoveToolServersAsync` call in progress throws `InvalidOperationException`
+  - If adding a plugin fails, for example because a plugin added by the caller has the same name as an MCP server, the plugins added by the call are removed and its MCP clients are disposed
+  - Use MCP functions only through the plugins that the service adds; copies of them in other plugins keep the MCP client of the call that created them and fail once that client is disposed
 
 ## [2.0.0] - 2026-10-20
 
