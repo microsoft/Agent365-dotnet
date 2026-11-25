@@ -19,7 +19,7 @@ namespace Microsoft.Agents.A365.Tooling.Core.Tests;
 /// <summary>
 /// Tests for MCP client lifetime: <see cref="McpToolSet"/> and <see cref="McpToolServerConfigurationService.GetMcpToolSetAsync"/>.
 /// </summary>
-public class McpToolSetTests
+public sealed class McpToolSetTests : IDisposable
 {
     private const string TurnToken = "token-of-this-call";
     private static readonly TimeSpan s_timeout = TimeSpan.FromSeconds(10);
@@ -27,10 +27,11 @@ public class McpToolSetTests
     private readonly FakeMcpServer _server = new();
     private readonly Mock<McpToolServerConfigurationService> _service;
     private readonly Mock<ITurnContext> _turnContext = new();
+    private readonly TurnContextStateCollection _stackState = new();
 
     public McpToolSetTests()
     {
-        _turnContext.Setup(t => t.StackState).Returns(new TurnContextStateCollection());
+        _turnContext.Setup(t => t.StackState).Returns(_stackState);
 
         _service = new Mock<McpToolServerConfigurationService>(
             MockBehavior.Default,
@@ -44,6 +45,8 @@ public class McpToolSetTests
             .Setup(x => x.ListToolServersAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ToolOptions>()))
             .ReturnsAsync(() => new List<MCPServerConfig> { Server("mcp_MailTools"), Server("mcp_CalendarTools") });
     }
+
+    public void Dispose() => _stackState.Dispose();
 
     private static MCPServerConfig Server(string name) =>
         new() { mcpServerName = name, id = $"id-{name}", url = $"http://mcp.test/agents/servers/{name}" };

@@ -33,8 +33,9 @@ public class HttpLoggingHandlerTests
         using var invoker = new HttpMessageInvoker(new HttpLoggingHandler(new Mock<ILogger>().Object) { InnerHandler = inner.Object });
 
         // Act
+        using var request = new HttpRequestMessage(HttpMethod.Get, "http://mcp.test/agents/servers/mcp_MailTools");
         using var response = await invoker
-            .SendAsync(new HttpRequestMessage(HttpMethod.Get, "http://mcp.test/agents/servers/mcp_MailTools"), CancellationToken.None)
+            .SendAsync(request, CancellationToken.None)
             .WaitAsync(s_timeout);
 
         // Assert
