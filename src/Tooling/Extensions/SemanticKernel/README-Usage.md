@@ -186,13 +186,38 @@ Responsible for registering MCP tools with SemanticKernel.
 ```csharp
 public interface IMcpToolRegistrationService
 {
-    void AddToolServersToAgent(
+    Task AddToolServersToAgentAsync(
         Kernel kernel,
-        UserAuthorization userAuthorization, 
-        ITurnContext turnContext, 
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
         string? authToken = null);
+
+    Task RemoveToolServersAsync(Kernel kernel);
 }
 ```
+
+#### MCP tool lifetime
+
+Each MCP plugin calls its server through an MCP client that sends the request headers, including the `Authorization` token, of the call that registered it. Register MCP tools for each turn on a kernel used for that turn only, such as a `Kernel.Clone()` copy of a base kernel, and call `RemoveToolServersAsync` on that kernel when the turn ends:
+
+```csharp
+var kernel = baseKernel.Clone();
+await toolService.AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext);
+try
+{
+    // Run the turn with kernel.
+}
+finally
+{
+    // Removes the MCP plugins and disposes their MCP clients, which closes their connections and MCP sessions.
+    await toolService.RemoveToolServersAsync(kernel);
+}
+```
+
+- Turns that run concurrently must each use their own kernel; overlapping calls for one kernel throw `InvalidOperationException`.
+- Calling `AddToolServersToAgentAsync` again with the same kernel replaces the MCP plugins and disposes the clients of the earlier call.
+- Don't copy MCP functions into other plugins or kernels; use them through the plugins the service adds.
 
 ## Configuration
 

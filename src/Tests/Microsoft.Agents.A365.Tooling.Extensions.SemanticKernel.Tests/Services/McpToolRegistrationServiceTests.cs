@@ -35,6 +35,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         private readonly Mock<IMcpToolServerConfigurationService> _mcpServerConfigurationServiceMock;
         private readonly Mock<IConfiguration> _configurationMock;
         private readonly string _testJwtToken;
+        private readonly List<DisposalProbe> _clientsPerCall = new();
 
         public McpToolRegistrationServiceTests()
         {
@@ -108,46 +109,58 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         private void SetupMocksForEmptyToolEnumeration(Action<ToolOptions>? captureToolOptions = null)
         {
             var setup = _mcpServerConfigurationServiceMock
-                .Setup(x => x.EnumerateToolsFromServersAsync(
+                .Setup(x => x.GetMcpToolSetAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<IMcpTokenProvider>(),
                     It.IsAny<ITurnContext>(),
-                    It.IsAny<ToolOptions>()));
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()));
 
             if (captureToolOptions != null)
             {
-                setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions>((_, _, _, _, options) => captureToolOptions(options));
+                setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions, CancellationToken>((_, _, _, _, options, _) => captureToolOptions(options));
             }
 
-            setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
+            setup.ReturnsAsync(() => CreateToolSet());
         }
 
         /// <summary>
         /// Sets up the mock enumeration service to return the given MCP server names, one array per call.
         /// Each server has an empty tool list, so the service adds one empty plugin per server name.
+        /// The MCP clients of each call are represented by a <see cref="DisposalProbe"/> in <see cref="_clientsPerCall"/>.
         /// Returns the sequence so a test can add later results, such as a failure.
         /// </summary>
-        private ISetupSequentialResult<Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)>> SetupToolEnumerationSequence(params string[][] serverNamesPerCall)
+        private ISetupSequentialResult<Task<McpToolSet>> SetupToolEnumerationSequence(params string[][] serverNamesPerCall)
         {
             var sequence = _mcpServerConfigurationServiceMock
-                .SetupSequence(x => x.EnumerateToolsFromServersAsync(
+                .SetupSequence(x => x.GetMcpToolSetAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
                     It.IsAny<IMcpTokenProvider>(),
                     It.IsAny<ITurnContext>(),
-                    It.IsAny<ToolOptions>()));
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()));
 
-            var resultsPerCall = serverNamesPerCall.Select(serverNames => serverNames.ToDictionary(
-                name => name,
-                _ => (IList<McpClientTool>)new List<McpClientTool>()));
-
-            foreach (var toolsByServer in resultsPerCall)
+            foreach (var toolSet in serverNamesPerCall.Select(CreateToolSet))
             {
-                sequence = sequence.ReturnsAsync((new List<MCPServerConfig>(), toolsByServer));
+                sequence = sequence.ReturnsAsync(toolSet);
             }
 
             return sequence;
+        }
+
+        /// <summary>
+        /// Creates a tool set with an empty tool list for each server name, owning a new <see cref="DisposalProbe"/>.
+        /// </summary>
+        private McpToolSet CreateToolSet(params string[] serverNames)
+        {
+            var clients = new DisposalProbe();
+            _clientsPerCall.Add(clients);
+            return new McpToolSet(
+                Array.Empty<MCPServerConfig>(),
+                serverNames.ToDictionary(name => name, _ => (IReadOnlyList<McpClientTool>)Array.Empty<McpClientTool>()),
+                new[] { clients });
         }
 
         /// <summary>
@@ -161,6 +174,35 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
                 authHandlerName: "handler",
                 turnContext: CreateMockTurnContext().Object,
                 authToken: _testJwtToken);
+        }
+
+        /// <summary>
+        /// Stands in for the MCP clients of a tool set and counts how often they are disposed.
+        /// </summary>
+        private sealed class DisposalProbe : IAsyncDisposable
+        {
+            public int DisposeCount { get; private set; }
+
+            public ValueTask DisposeAsync()
+            {
+                DisposeCount++;
+                return ValueTask.CompletedTask;
+            }
+        }
+
+        /// <summary>
+        /// An implementation that only forwards AddToolServersToAgentAsync, so RemoveToolServersAsync uses the interface default.
+        /// </summary>
+        private sealed class ForwardingRegistrationService(IMcpToolRegistrationService inner) : IMcpToolRegistrationService
+        {
+            public Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null)
+                => inner.AddToolServersToAgentAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken);
+
+            public Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, CancellationToken cancellationToken = default)
+                => inner.SendChatHistoryAsync(turnContext, chatHistory, cancellationToken);
+
+            public Task<OperationResult> SendChatHistoryAsync(ITurnContext turnContext, ChatHistory chatHistory, ToolOptions toolOptions, CancellationToken cancellationToken = default)
+                => inner.SendChatHistoryAsync(turnContext, chatHistory, toolOptions, cancellationToken);
         }
 
         #endregion
@@ -188,7 +230,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         }
 
         [Fact]
-        public async Task AddToolServersToAgentAsync_CallsEnumerateToolsFromServersAsync()
+        public async Task AddToolServersToAgentAsync_CallsGetMcpToolSetAsync()
         {
             // Arrange
             var kernel = Kernel.CreateBuilder().Build();
@@ -206,12 +248,13 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
 
             // Assert
             _mcpServerConfigurationServiceMock.Verify(
-                x => x.EnumerateToolsFromServersAsync(
+                x => x.GetMcpToolSetAsync(
                     It.IsAny<string>(),
                     _testJwtToken,
                     It.IsAny<IMcpTokenProvider>(),
                     mockTurnContext.Object,
-                    It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365SemanticKernelSdkUserAgentConfiguration.Instance)),
+                    It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365SemanticKernelSdkUserAgentConfiguration.Instance),
+                    It.IsAny<CancellationToken>()),
                 Times.Once);
         }
 
@@ -375,6 +418,160 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             // Assert
             await act.Should().ThrowAsync<Exception>();
             kernel.Plugins.Should().ContainSingle().Which.Should().BeSameAs(callerPlugin);
+            _clientsPerCall[0].DisposeCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ReusedKernel_DisposesClientsOfEarlierCall()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_CalendarTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+
+            // Act
+            await AddToolServersAsync(service, kernel);
+
+            // Assert
+            _clientsPerCall[0].DisposeCount.Should().Be(1);
+            _clientsPerCall[1].DisposeCount.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ClonedKernel_DoesNotDisposeClientsOfOriginalKernel()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_MailTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            var originalPlugin = kernel.Plugins["mcp_CalendarTools"];
+            var clonedKernel = kernel.Clone();
+
+            // Act
+            await AddToolServersAsync(service, clonedKernel);
+
+            // Assert
+            _clientsPerCall[0].DisposeCount.Should().Be(0);
+            kernel.Plugins.Should().ContainSingle().Which.Should().BeSameAs(originalPlugin);
+        }
+
+        [Fact]
+        public async Task RemoveToolServersAsync_RemovesMcpPluginsAndDisposesClients_KeepsCallerPlugins()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var callerPlugin = kernel.Plugins.AddFromFunctions(
+                "CallerPlugin",
+                new[] { KernelFunctionFactory.CreateFromMethod(() => "pong", "Ping") });
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools", "mcp_MailTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+
+            // Act
+            await service.RemoveToolServersAsync(kernel);
+            await service.RemoveToolServersAsync(kernel);
+
+            // Assert
+            kernel.Plugins.Should().ContainSingle().Which.Should().BeSameAs(callerPlugin);
+            _clientsPerCall[0].DisposeCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task RemoveToolServersAsync_ClonedKernel_DisposesOnlyClientsAddedToTheClone()
+        {
+            // Arrange: the base kernel has MCP plugins, and a per-message copy registers its own.
+            var baseKernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_MailTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, baseKernel);
+            var turnKernel = baseKernel.Clone();
+            await AddToolServersAsync(service, turnKernel);
+
+            // Act
+            await service.RemoveToolServersAsync(turnKernel);
+
+            // Assert
+            turnKernel.Plugins.Should().BeEmpty();
+            _clientsPerCall[1].DisposeCount.Should().Be(1);
+            _clientsPerCall[0].DisposeCount.Should().Be(0);
+            baseKernel.Plugins.Select(p => p.Name).Should().Equal("mcp_CalendarTools");
+        }
+
+        [Fact]
+        public async Task RemoveToolServersAsync_InterfaceDefault_RemovesMcpPluginsAndDisposesClients()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" });
+            IMcpToolRegistrationService service = new ForwardingRegistrationService(CreateService());
+            await service.AddToolServersToAgentAsync(kernel, null!, "handler", CreateMockTurnContext().Object, _testJwtToken);
+
+            // Act
+            await service.RemoveToolServersAsync(kernel);
+
+            // Assert
+            kernel.Plugins.Should().BeEmpty();
+            _clientsPerCall[0].DisposeCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_CallInProgressForSameKernel_ThrowsInvalidOperationException()
+        {
+            // Arrange: the first call waits for discovery.
+            var kernel = Kernel.CreateBuilder().Build();
+            var discovery = new TaskCompletionSource<McpToolSet>();
+            _mcpServerConfigurationServiceMock
+                .SetupSequence(x => x.GetMcpToolSetAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IMcpTokenProvider>(),
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ToolOptions>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(discovery.Task)
+                .ReturnsAsync(CreateToolSet("mcp_MailTools"))
+                .ReturnsAsync(CreateToolSet("mcp_CalendarTools"));
+            var service = CreateService();
+            var firstCall = AddToolServersAsync(service, kernel);
+
+            // Act
+            var secondCall = () => AddToolServersAsync(service, kernel);
+            var removeCall = () => service.RemoveToolServersAsync(kernel);
+
+            // Assert
+            await secondCall.Should().ThrowAsync<InvalidOperationException>();
+            await removeCall.Should().ThrowAsync<InvalidOperationException>();
+            var clonedKernel = kernel.Clone();
+            await AddToolServersAsync(service, clonedKernel);
+            clonedKernel.Plugins.Select(p => p.Name).Should().Equal("mcp_MailTools");
+
+            discovery.SetResult(CreateToolSet("mcp_TeamsTools"));
+            await firstCall;
+            kernel.Plugins.Select(p => p.Name).Should().Equal("mcp_TeamsTools");
+            await AddToolServersAsync(service, kernel);
+            kernel.Plugins.Select(p => p.Name).Should().Equal("mcp_CalendarTools");
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_PluginNameTakenByCallerPlugin_RemovesPluginsOfThisCallAndDisposesClients()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var callerPlugin = kernel.Plugins.AddFromFunctions(
+                "mcp_MailTools",
+                new[] { KernelFunctionFactory.CreateFromMethod(() => "pong", "Ping") });
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools", "mcp_MailTools" });
+            var service = CreateService();
+
+            // Act
+            var act = () => AddToolServersAsync(service, kernel);
+
+            // Assert
+            await act.Should().ThrowAsync<ArgumentException>();
+            kernel.Plugins.Should().ContainSingle().Which.Should().BeSameAs(callerPlugin);
+            _clientsPerCall[0].DisposeCount.Should().Be(1);
         }
 
         #endregion

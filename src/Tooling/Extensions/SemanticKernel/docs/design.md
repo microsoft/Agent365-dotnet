@@ -44,6 +44,12 @@ public interface IMcpToolRegistrationService
         string? authToken = null);
 
     /// <summary>
+    /// Removes the MCP plugins added to the kernel and disposes the MCP clients that serve them.
+    /// </summary>
+    /// <param name="kernel">The kernel to remove the MCP plugins from.</param>
+    Task RemoveToolServersAsync(Kernel kernel);
+
+    /// <summary>
     /// Sends chat history for real-time threat protection.
     /// </summary>
     /// <param name="turnContext">The turn context.</param>
@@ -82,8 +88,12 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         string? authToken = null)
     {
-        // Remove MCP plugins added by an earlier call (also present in Kernel.Clone() copies)
-        RemovePluginsAddedByEarlierCall(kernel);
+        // Throws InvalidOperationException if another call for this kernel is in progress
+        EnterKernel(kernel);
+
+        // Remove MCP plugins added by an earlier call (also present in Kernel.Clone() copies),
+        // and dispose their MCP clients if this kernel is the one they were added to
+        await RemoveMcpPluginsAsync(kernel);
 
         // Get auth token if not provided
         authToken ??= await GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext);
@@ -91,22 +101,24 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         // Get agent instance ID
         var agentInstanceId = GetAgentInstanceId(turnContext);
 
-        // List available MCP servers
-        var servers = await _configService.ListToolServersAsync(agentInstanceId, authToken);
+        // List MCP servers and their tools, together with the MCP clients that serve them
+        var toolSet = await _configService.GetMcpToolSetAsync(
+            agentInstanceId, authToken, tokenProvider, turnContext, toolOptions);
 
-        // Register tools from each server as Kernel plugins
-        foreach (var server in servers)
+        // Register the tools of each server as a Kernel plugin
+        foreach (var (serverName, tools) in toolSet.ToolsByServer)
         {
-            var tools = await _configService.GetMcpClientToolsAsync(
-                turnContext, server, authToken, new ToolOptions());
-
-            // Convert MCP tools to Kernel functions
-            foreach (var tool in tools)
-            {
-                var function = CreateKernelFunctionFromMcpTool(tool, server, authToken);
-                kernel.Plugins.AddFromFunctions(server.mcpServerName, new[] { function });
-            }
+            kernel.Plugins.AddFromFunctions(serverName, tools.Select(t => t.AsKernelFunction()));
         }
+
+        // This kernel owns the MCP clients until its next call or RemoveToolServersAsync
+        TrackToolSet(kernel, toolSet);
+    }
+
+    public async Task RemoveToolServersAsync(Kernel kernel)
+    {
+        EnterKernel(kernel);
+        await RemoveMcpPluginsAsync(kernel);
     }
 
     public async Task<OperationResult> SendChatHistoryAsync(
@@ -230,7 +242,8 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 │ McpToolRegistrationService  │
 │                             │
 │ 1. Remove plugins added by  │
-│    an earlier call          │
+│    an earlier call and      │
+│    dispose their clients    │
 │ 2. Get auth token           │
 │ 3. List MCP servers         │
 │ 4. Get tools from servers   │
@@ -244,7 +257,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 │ Core tooling discovery      │
 └──────────────┬──────────────┘
                │
-               ▼ McpClientTool[]
+               ▼ McpToolSet (tools + MCP clients)
 ┌─────────────────────────────┐
 │ Convert to KernelFunctions  │
 │                             │
@@ -308,13 +321,26 @@ await registrationService.AddToolServersToAgentAsync(
     "default",
     turnContext);
 
-// Tools are now available as Kernel plugins
-var result = await kernel.InvokePromptAsync("Search for recent news about AI");
+try
+{
+    // Tools are now available as Kernel plugins
+    var result = await kernel.InvokePromptAsync("Search for recent news about AI");
+}
+finally
+{
+    // Remove the MCP plugins and dispose their MCP clients when the turn ends
+    await registrationService.RemoveToolServersAsync(kernel);
+}
 ```
 
 ### With Agent Handler
 
-Each call removes the MCP plugins added by an earlier call before it adds its own. Turns that run concurrently must each use their own kernel, so the handler below clones the kernel for every message.
+Each MCP plugin calls its server through an MCP client that sends the request headers, including the `Authorization` token, of the call that registered it, so register MCP tools for each turn:
+
+- Clone a base kernel for each message, register the MCP tools on the copy, run the turn, and call `RemoveToolServersAsync` on the copy in a `finally` block. Nothing else removes the plugins from a discarded copy, so without that call its MCP clients keep their connections and MCP sessions open.
+- Each call removes the MCP plugins that an earlier call added before it adds its own, including plugins carried over by `Kernel.Clone()`. It disposes the MCP clients of the removed plugins only when they were added to the same kernel, so a copy never disposes clients that the kernel it was cloned from still uses. A copy made after registration can use the shared plugins only until the original kernel registers again or calls `RemoveToolServersAsync`.
+- Turns that run concurrently must each use their own kernel. A second `AddToolServersToAgentAsync` or `RemoveToolServersAsync` call for a kernel that already has one in progress throws `InvalidOperationException`.
+- Use the MCP functions only through the plugins that the service adds. Don't copy them into other plugins or kernels (for example with `KernelPluginFactory.CreateFromFunctions`): the copies are new function objects, so the service can't find and remove them, and they keep calling the server through the client of the call that created them until that client is disposed, after which they fail.
 
 ```csharp
 public class MyAgentHandler : IActivityHandler
@@ -335,20 +361,28 @@ public class MyAgentHandler : IActivityHandler
             "MyAuthHandler",
             turnContext);
 
-        // Use kernel with registered tools
-        var agent = new ChatCompletionAgent
+        try
         {
-            Name = "Assistant",
-            Instructions = "You are a helpful assistant with access to external tools.",
-            Kernel = kernel
-        };
+            // Use kernel with registered tools
+            var agent = new ChatCompletionAgent
+            {
+                Name = "Assistant",
+                Instructions = "You are a helpful assistant with access to external tools.",
+                Kernel = kernel
+            };
 
-        var history = new ChatHistory();
-        history.AddUserMessage(turnContext.Activity.Text);
+            var history = new ChatHistory();
+            history.AddUserMessage(turnContext.Activity.Text);
 
-        await foreach (var message in agent.InvokeAsync(history))
+            await foreach (var message in agent.InvokeAsync(history))
+            {
+                await turnContext.SendActivityAsync(message.Content, cancellationToken: ct);
+            }
+        }
+        finally
         {
-            await turnContext.SendActivityAsync(message.Content, cancellationToken: ct);
+            // Remove this turn's MCP plugins and dispose their MCP clients
+            await _toolService.RemoveToolServersAsync(kernel);
         }
     }
 }

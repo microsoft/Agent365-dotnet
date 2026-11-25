@@ -25,7 +25,14 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     {
         // MCP plugins created by this service. Each call removes them from the kernel before adding its own.
         private static readonly ConditionalWeakTable<KernelPlugin, object> s_mcpPlugins = new();
-        private static readonly object s_mcpPluginMarker = new();
+        private static readonly object s_marker = new();
+
+        // The tool set whose MCP clients serve the plugins that the last call added to a kernel. Only that kernel owns it:
+        // Kernel.Clone() copies share the plugins but not the tool set, so removing the plugins from a copy doesn't dispose it.
+        private static readonly ConditionalWeakTable<Kernel, McpToolSet> s_toolSets = new();
+
+        // Kernels that an AddToolServersToAgentAsync or RemoveToolServersAsync call is in progress for.
+        private static readonly ConditionalWeakTable<Kernel, object> s_kernelsInUse = new();
 
         private readonly ILogger<IMcpToolRegistrationService> _logger;
         private readonly IServiceProvider _serviceProvider;
@@ -59,11 +66,22 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 throw new ArgumentNullException(nameof(kernel));
             }
 
-            // Remove plugins added by an earlier call (also present in Kernel.Clone() copies) before this call adds its own.
-            foreach (var earlierPlugin in kernel.Plugins.Where(p => s_mcpPlugins.TryGetValue(p, out _)).ToList())
+            EnterKernel(kernel);
+            try
             {
-                kernel.Plugins.Remove(earlierPlugin);
+                await AddToolServersCoreAsync(kernel, userAuthorization, authHandlerName, turnContext, authToken).ConfigureAwait(false);
             }
+            finally
+            {
+                s_kernelsInUse.Remove(kernel);
+            }
+        }
+
+        private async Task AddToolServersCoreAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken)
+        {
+            // Remove plugins added by an earlier call (also present in Kernel.Clone() copies) before this call adds its own,
+            // and dispose the MCP clients that serve them if this kernel owns them.
+            await RemoveMcpPluginsAsync(kernel).ConfigureAwait(false);
 
             // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
             // If this code is used outside of the Agent SDK context, the auth token may need to be provided directly, so we fall back to that if resolution fails.
@@ -89,19 +107,81 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                   :
                      new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-            var (_, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
+            var toolSet = await _mcpServerConfigurationService.GetMcpToolSetAsync(agenticAppId, authToken, tokenProvider, turnContext, toolOptions).ConfigureAwait(false);
 
-            foreach (var serverEntry in toolsByServer)
+            try
             {
-                var pluginName = serverEntry.Key;
-                var listAvailableToolsForServer = serverEntry.Value;
+                foreach (var serverEntry in toolSet.ToolsByServer)
+                {
+                    var pluginName = serverEntry.Key;
 
-                // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
-                listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
+                    // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
+                    var listAvailableToolsForServer = serverEntry.Value.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                var plugin = kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
+                    var plugin = kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                s_mcpPlugins.AddOrUpdate(plugin, s_mcpPluginMarker);
+                    s_mcpPlugins.AddOrUpdate(plugin, s_marker);
+                }
+            }
+            catch
+            {
+                // Don't leave the plugins of a partly registered call, or their MCP clients, behind.
+                RemoveMcpPlugins(kernel);
+                await toolSet.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+
+            s_toolSets.AddOrUpdate(kernel, toolSet);
+        }
+
+        /// <inheritdoc />
+        public Task RemoveToolServersAsync(Kernel kernel) => RemoveToolServersFromKernelAsync(kernel);
+
+        /// <summary>
+        /// Removes the MCP plugins that <see cref="AddToolServersToAgentAsync"/> added to the kernel, and disposes the MCP clients
+        /// that serve them if the kernel owns them.
+        /// </summary>
+        internal static async Task RemoveToolServersFromKernelAsync(Kernel kernel)
+        {
+            ArgumentNullException.ThrowIfNull(kernel);
+
+            EnterKernel(kernel);
+            try
+            {
+                await RemoveMcpPluginsAsync(kernel).ConfigureAwait(false);
+            }
+            finally
+            {
+                s_kernelsInUse.Remove(kernel);
+            }
+        }
+
+        private static async Task RemoveMcpPluginsAsync(Kernel kernel)
+        {
+            RemoveMcpPlugins(kernel);
+
+            if (s_toolSets.TryGetValue(kernel, out var toolSet))
+            {
+                s_toolSets.Remove(kernel);
+                await toolSet.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        private static void RemoveMcpPlugins(Kernel kernel)
+        {
+            foreach (var plugin in kernel.Plugins.Where(p => s_mcpPlugins.TryGetValue(p, out _)).ToList())
+            {
+                kernel.Plugins.Remove(plugin);
+            }
+        }
+
+        private static void EnterKernel(Kernel kernel)
+        {
+            if (!s_kernelsInUse.TryAdd(kernel, s_marker))
+            {
+                throw new InvalidOperationException(
+                    "An AddToolServersToAgentAsync or RemoveToolServersAsync call for this kernel is already in progress. " +
+                    "Turns that run concurrently must each use their own kernel, for example a Kernel.Clone() copy of a base kernel.");
             }
         }
 
