@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Microsoft.Agents.A365.Tooling** — Disposing an MCP client no longer waits indefinitely while the server
+  keeps its Streamable HTTP GET stream open: `HttpLoggingHandler` no longer reads response bodies, so streaming
+  responses are returned as soon as their headers arrive. Request bodies are still buffered and sent with a
+  `Content-Length` header.
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `AddToolServersToAgentAsync` now
   removes the MCP plugins added to the kernel by an earlier call, including plugins carried over by
   `Kernel.Clone()`, before it adds the plugins for the current call. Plugins added by the caller are
