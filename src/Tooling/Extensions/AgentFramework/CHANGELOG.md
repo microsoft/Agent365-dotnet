@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
 
+### Added
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** - `GetMcpToolSetAsync` returns the current turn's MCP tools together with the MCP clients that serve them
+  - Returns an `McpToolSet` that enumerates the tools as `AITool` instances; dispose it when the turn ends (`await using`), which disposes the MCP clients, closes their connections and ends their MCP sessions
+  - Each tool's MCP client sends the request headers, including the `Authorization` token, of the call that created it, so get the tools for each turn and don't cache them across turns or identities
+  - `GetMcpToolsAsync` and `AddToolServersToAgent` are unchanged; they don't dispose the MCP clients they create
+  - The interface method has a default implementation that throws `NotSupportedException`, so other implementations of `IMcpToolRegistrationService` keep working
+
 ## [2.0.0] - 2026-10-20
 
 ### Breaking Changes

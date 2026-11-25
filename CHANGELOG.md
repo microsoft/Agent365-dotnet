@@ -43,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `IMcpToolRegistrationService.RemoveToolServersAsync(Kernel)`
   removes the MCP plugins that `AddToolServersToAgentAsync` added to a kernel and disposes their MCP clients.
   Call it when the turn that registered the tools ends, for example on the `Kernel.Clone()` copy used for the turn.
+- **Microsoft.Agents.A365.Tooling.Extensions.AgentFramework** — `IMcpToolRegistrationService.GetMcpToolSetAsync`
+  returns the current turn's MCP tools as an `McpToolSet` that enumerates them as `AITool` instances. Dispose it
+  when the turn ends (`await using`). `GetMcpToolsAsync` and `AddToolServersToAgent` don't dispose the MCP
+  clients they create.
 
 ### Fixed
 

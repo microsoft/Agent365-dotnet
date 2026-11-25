@@ -56,6 +56,7 @@ public interface IMcpToolRegistrationService
 
     /// <summary>
     /// Returns a List of MCP tools to be added to the agent.
+    /// The MCP clients that serve the tools aren't disposed.
     /// </summary>
     Task<IList<AITool>> GetMcpToolsAsync(
         string agentUserId,
@@ -63,6 +64,18 @@ public interface IMcpToolRegistrationService
         string authHandlerName,
         ITurnContext turnContext,
         string? authToken = null);
+
+    /// <summary>
+    /// Returns the MCP tools for the current turn together with the MCP clients that serve them.
+    /// Dispose the returned tool set when the turn ends.
+    /// </summary>
+    Task<McpToolSet> GetMcpToolSetAsync(
+        string agentUserId,
+        UserAuthorization userAuthorization,
+        string authHandlerName,
+        ITurnContext turnContext,
+        string? authToken = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends chat history to the MCP platform.
@@ -334,7 +347,29 @@ public class MyAgentHandler : IActivityHandler
 }
 ```
 
+### Getting Tools for One Turn
+
+Each MCP tool calls its server through an MCP client that sends the request headers, including the `Authorization` token, of the call that created it. Get the MCP tools for each turn with `GetMcpToolSetAsync`, and dispose the tool set when the turn ends. Disposing it closes the clients' connections and ends their MCP sessions.
+
+```csharp
+// Get this turn's MCP tools together with the MCP clients that serve them
+await using var mcpTools = await _toolService.GetMcpToolSetAsync(
+    agentUserId,
+    userAuthorization,
+    "default",
+    turnContext);
+
+// The tool set enumerates the tools as AITool instances
+var allTools = new List<AITool>(existingTools);
+allTools.AddRange(mcpTools);
+var agent = chatClient.AsAIAgent(instructions: instructions, tools: allTools);
+
+// Run the agent for this turn; the tool set is disposed when the scope ends
+```
+
 ### Getting Tools Separately
+
+`GetMcpToolsAsync` returns the tools without their lifetime: their MCP clients aren't disposed. Prefer `GetMcpToolSetAsync` for tools used for one turn.
 
 ```csharp
 // Get tools without creating agent
@@ -434,9 +469,10 @@ var result = await _toolService.SendChatHistoryAsync(emptyMessages, turnContext)
 ### Performance Considerations
 
 Since a new agent must be created when tools change, consider:
-- Caching tool discovery results when possible
-- Minimizing tool discovery calls per conversation
-- Pre-warming tool discovery during application startup
+- Loading MCP tools once per turn and reusing them within that turn
+- Disposing the turn's `McpToolSet` when the turn ends, so MCP connections and sessions don't accumulate
+
+Don't cache MCP tools across turns, users or agent identities: each tool's MCP client sends the request headers, including the `Authorization` token, of the call that created it. `AddToolServersToAgent` and `GetMcpToolsAsync` don't dispose the MCP clients they create; use `GetMcpToolSetAsync` when the tools are used for one turn.
 
 ## External Resources
 
