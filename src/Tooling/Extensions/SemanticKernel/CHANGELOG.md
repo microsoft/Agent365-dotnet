@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
 
+### Fixed
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** - `AddToolServersToAgentAsync` replaces the MCP plugins from an earlier call
+  - MCP plugins added to the kernel by an earlier call, including plugins carried over by `Kernel.Clone()`, are removed before the current call adds its own; plugins added by the caller are kept
+  - Calling it again with the same kernel no longer throws `ArgumentException` when an MCP server name is returned again
+  - Turns that run concurrently must each use their own kernel
+
 ## [2.0.0] - 2026-10-20
 
 ### Breaking Changes

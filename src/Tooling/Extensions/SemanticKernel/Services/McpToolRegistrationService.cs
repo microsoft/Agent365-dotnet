@@ -15,6 +15,7 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     using Microsoft.SemanticKernel.ChatCompletion;
     using System;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using RuntimeUtility = Microsoft.Agents.A365.Runtime.Utils.Utility;
 
     /// <summary>
@@ -22,6 +23,10 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
     /// </summary>
     public class McpToolRegistrationService : IMcpToolRegistrationService
     {
+        // MCP plugins created by this service. Each call removes them from the kernel before adding its own.
+        private static readonly ConditionalWeakTable<KernelPlugin, object> s_mcpPlugins = new();
+        private static readonly object s_mcpPluginMarker = new();
+
         private readonly ILogger<IMcpToolRegistrationService> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly IMcpToolServerConfigurationService _mcpServerConfigurationService;
@@ -52,6 +57,12 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
             if (kernel == null)
             {
                 throw new ArgumentNullException(nameof(kernel));
+            }
+
+            // Remove plugins added by an earlier call (also present in Kernel.Clone() copies) before this call adds its own.
+            foreach (var earlierPlugin in kernel.Plugins.Where(p => s_mcpPlugins.TryGetValue(p, out _)).ToList())
+            {
+                kernel.Plugins.Remove(earlierPlugin);
             }
 
             // Try to resolve the auth token for the tool discovery service directly, which will handle both V1 and V2 auth scenarios
@@ -88,8 +99,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
                 // Tool names can only be 64 characters long, so filter out any that are too long. A tool name is the combination of the server name and tool name.
                 listAvailableToolsForServer = listAvailableToolsForServer.Where(t => (t.Name.Length + pluginName.Length + 1) <= 64).ToList();
 #pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-                kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
+                var plugin = kernel.Plugins.AddFromFunctions(pluginName, listAvailableToolsForServer.Select(x => x.AsKernelFunction()));
 #pragma warning restore SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                s_mcpPlugins.AddOrUpdate(plugin, s_mcpPluginMarker);
             }
         }
 

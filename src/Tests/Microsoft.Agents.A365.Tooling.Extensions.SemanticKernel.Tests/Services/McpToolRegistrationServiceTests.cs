@@ -122,6 +122,42 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
         }
 
+        /// <summary>
+        /// Sets up the mock enumeration service to return the given MCP server names, one array per call.
+        /// Each server has an empty tool list, so the service adds one empty plugin per server name.
+        /// </summary>
+        private void SetupToolEnumerationSequence(params string[][] serverNamesPerCall)
+        {
+            var sequence = _mcpServerConfigurationServiceMock
+                .SetupSequence(x => x.EnumerateToolsFromServersAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IMcpTokenProvider>(),
+                    It.IsAny<ITurnContext>(),
+                    It.IsAny<ToolOptions>()));
+
+            foreach (var serverNames in serverNamesPerCall)
+            {
+                var toolsByServer = serverNames.ToDictionary(
+                    name => name,
+                    _ => (IList<McpClientTool>)new List<McpClientTool>());
+                sequence = sequence.ReturnsAsync((new List<MCPServerConfig>(), toolsByServer));
+            }
+        }
+
+        /// <summary>
+        /// Calls AddToolServersToAgentAsync on the given kernel with the standard test arguments.
+        /// </summary>
+        private Task AddToolServersAsync(McpToolRegistrationService service, Kernel kernel)
+        {
+            return service.AddToolServersToAgentAsync(
+                kernel: kernel,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: CreateMockTurnContext().Object,
+                authToken: _testJwtToken);
+        }
+
         #endregion
 
         #region AddToolServersToAgentAsync Tests
@@ -216,6 +252,95 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             // Assert
             capturedToolOptions.Should().NotBeNull();
             capturedToolOptions!.UserAgentConfiguration.Should().BeSameAs(Agent365SemanticKernelSdkUserAgentConfiguration.Instance);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ReusedKernelAndNoServers_RemovesPluginsFromEarlierCall()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, Array.Empty<string>());
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            kernel.Plugins.Select(p => p.Name).Should().Equal("mcp_CalendarTools");
+
+            // Act
+            await AddToolServersAsync(service, kernel);
+
+            // Assert
+            kernel.Plugins.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ReusedKernelAndDifferentServers_KeepsOnlyPluginsFromCurrentCall()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_MailTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+
+            // Act
+            await AddToolServersAsync(service, kernel);
+
+            // Assert
+            kernel.Plugins.Select(p => p.Name).Should().Equal("mcp_MailTools");
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_SameServerReturnedTwice_ReplacesPluginFromEarlierCall()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_CalendarTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            var pluginFromEarlierCall = kernel.Plugins["mcp_CalendarTools"];
+
+            // Act
+            var act = () => AddToolServersAsync(service, kernel);
+
+            // Assert
+            await act.Should().NotThrowAsync();
+            kernel.Plugins.Should().ContainSingle();
+            kernel.Plugins["mcp_CalendarTools"].Should().NotBeSameAs(pluginFromEarlierCall);
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ClonedKernel_RemovesPluginsFromEarlierCall()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, new[] { "mcp_MailTools" });
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            var clonedKernel = kernel.Clone();
+
+            // Act
+            await AddToolServersAsync(service, clonedKernel);
+
+            // Assert
+            clonedKernel.Plugins.Select(p => p.Name).Should().Equal("mcp_MailTools");
+        }
+
+        [Fact]
+        public async Task AddToolServersToAgentAsync_ReusedKernel_KeepsCallerAddedPlugins()
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var callerPlugin = kernel.Plugins.AddFromFunctions(
+                "CallerPlugin",
+                new[] { KernelFunctionFactory.CreateFromMethod(() => "pong", "Ping") });
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" }, Array.Empty<string>());
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            kernel.Plugins.Select(p => p.Name).Should().BeEquivalentTo("CallerPlugin", "mcp_CalendarTools");
+
+            // Act
+            await AddToolServersAsync(service, kernel);
+
+            // Assert
+            kernel.Plugins.Should().Contain(callerPlugin);
         }
 
         #endregion

@@ -82,6 +82,9 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         ITurnContext turnContext,
         string? authToken = null)
     {
+        // Remove MCP plugins added by an earlier call (also present in Kernel.Clone() copies)
+        RemovePluginsAddedByEarlierCall(kernel);
+
         // Get auth token if not provided
         authToken ??= await GetAuthTokenAsync(userAuthorization, authHandlerName, turnContext);
 
@@ -226,9 +229,11 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
 ┌─────────────────────────────┐
 │ McpToolRegistrationService  │
 │                             │
-│ 1. Get auth token           │
-│ 2. List MCP servers         │
-│ 3. Get tools from servers   │
+│ 1. Remove plugins added by  │
+│    an earlier call          │
+│ 2. Get auth token           │
+│ 3. List MCP servers         │
+│ 4. Get tools from servers   │
 └──────────────┬──────────────┘
                │
                ▼
@@ -290,12 +295,12 @@ src/Tooling/Extensions/SemanticKernel/
 // Program.cs
 builder.Services.AddAgent365ToolingForSemanticKernel(builder.Configuration);
 
-// Create kernel
+// Create a kernel for the current turn
 var kernel = Kernel.CreateBuilder()
     .AddAzureOpenAIChatCompletion(deployment, endpoint, apiKey)
     .Build();
 
-// Register MCP tools
+// Register MCP tools for the current turn
 var registrationService = serviceProvider.GetRequiredService<IMcpToolRegistrationService>();
 await registrationService.AddToolServersToAgentAsync(
     kernel,
@@ -309,6 +314,8 @@ var result = await kernel.InvokePromptAsync("Search for recent news about AI");
 
 ### With Agent Handler
 
+Each call removes the MCP plugins added by an earlier call before it adds its own. Turns that run concurrently must each use their own kernel, so the handler below clones the kernel for every message.
+
 ```csharp
 public class MyAgentHandler : IActivityHandler
 {
@@ -318,9 +325,12 @@ public class MyAgentHandler : IActivityHandler
 
     public async Task OnMessageActivityAsync(ITurnContext turnContext, CancellationToken ct)
     {
-        // Register MCP tools for this conversation
+        // Use a kernel for this turn only
+        var kernel = _kernel.Clone();
+
+        // Register MCP tools for this turn
         await _toolService.AddToolServersToAgentAsync(
-            _kernel,
+            kernel,
             _userAuth,
             "MyAuthHandler",
             turnContext);
@@ -330,7 +340,7 @@ public class MyAgentHandler : IActivityHandler
         {
             Name = "Assistant",
             Instructions = "You are a helpful assistant with access to external tools.",
-            Kernel = _kernel
+            Kernel = kernel
         };
 
         var history = new ChatHistory();

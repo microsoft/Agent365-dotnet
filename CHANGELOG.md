@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [Observability migration guide](docs/observability-migration.md) for package replacement,
   configuration, authentication, context propagation, and framework instrumentation.
 
+### Fixed
+
+- **Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel** — `AddToolServersToAgentAsync` now
+  removes the MCP plugins added to the kernel by an earlier call, including plugins carried over by
+  `Kernel.Clone()`, before it adds the plugins for the current call. Plugins added by the caller are
+  kept, and calling it again with the same kernel no longer throws `ArgumentException` when an MCP
+  server name is returned again. Turns that run concurrently must each use their own kernel.
+
 ## [2.0.0] - 2026-10-20
 
 ### Breaking Changes

@@ -27,6 +27,11 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Services
         /// <param name="authToken">Auth token to access the MCP servers</param>
         /// <returns>Returns a new object of the kernel</returns>
         /// <exception cref="ArgumentNullException"></exception>
+        /// <remarks>
+        /// MCP plugins added to <paramref name="kernel"/> by an earlier call, including plugins carried over by
+        /// <c>Kernel.Clone()</c>, are removed before this call adds its own. Plugins added by the caller are kept.
+        /// Turns that run concurrently must each use their own kernel.
+        /// </remarks>
         Task AddToolServersToAgentAsync(Kernel kernel, UserAuthorization userAuthorization, string authHandlerName, ITurnContext turnContext, string? authToken = null);
 
         /// <summary>
