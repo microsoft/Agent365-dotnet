@@ -16,6 +16,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using ModelContextProtocol.Client;
 using Moq;
+using Moq.Language;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -125,8 +126,9 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
         /// <summary>
         /// Sets up the mock enumeration service to return the given MCP server names, one array per call.
         /// Each server has an empty tool list, so the service adds one empty plugin per server name.
+        /// Returns the sequence so a test can add later results, such as a failure.
         /// </summary>
-        private void SetupToolEnumerationSequence(params string[][] serverNamesPerCall)
+        private ISetupSequentialResult<Task<(List<MCPServerConfig> Servers, Dictionary<string, IList<McpClientTool>> ToolsByServer)>> SetupToolEnumerationSequence(params string[][] serverNamesPerCall)
         {
             var sequence = _mcpServerConfigurationServiceMock
                 .SetupSequence(x => x.EnumerateToolsFromServersAsync(
@@ -144,6 +146,8 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
             {
                 sequence = sequence.ReturnsAsync((new List<MCPServerConfig>(), toolsByServer));
             }
+
+            return sequence;
         }
 
         /// <summary>
@@ -342,6 +346,35 @@ namespace Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel.Tests.Services
 
             // Assert
             kernel.Plugins.Should().Contain(callerPlugin);
+        }
+
+        [Theory]
+        [InlineData("identity resolution")]
+        [InlineData("discovery")]
+        public async Task AddToolServersToAgentAsync_ReusedKernelAndFailingCall_RemovesPluginsFromEarlierCall(string failingStep)
+        {
+            // Arrange
+            var kernel = Kernel.CreateBuilder().Build();
+            var callerPlugin = kernel.Plugins.AddFromFunctions(
+                "CallerPlugin",
+                new[] { KernelFunctionFactory.CreateFromMethod(() => "pong", "Ping") });
+            SetupToolEnumerationSequence(new[] { "mcp_CalendarTools" })
+                .ThrowsAsync(new InvalidOperationException("discovery failed"));
+            var service = CreateService();
+            await AddToolServersAsync(service, kernel);
+            kernel.Plugins.Select(p => p.Name).Should().BeEquivalentTo("CallerPlugin", "mcp_CalendarTools");
+
+            // Act: a malformed token fails agent identity resolution; otherwise the second enumeration fails.
+            var act = () => service.AddToolServersToAgentAsync(
+                kernel: kernel,
+                userAuthorization: null!,
+                authHandlerName: "handler",
+                turnContext: CreateMockTurnContext().Object,
+                authToken: failingStep == "discovery" ? _testJwtToken : "not-a-jwt");
+
+            // Assert
+            await act.Should().ThrowAsync<Exception>();
+            kernel.Plugins.Should().ContainSingle().Which.Should().BeSameAs(callerPlugin);
         }
 
         #endregion
