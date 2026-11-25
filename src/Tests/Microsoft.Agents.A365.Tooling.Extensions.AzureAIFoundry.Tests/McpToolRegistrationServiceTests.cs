@@ -90,34 +90,53 @@ public class McpToolRegistrationServiceTests
     private void SetupMocksForEmptyToolEnumeration(Action<ToolOptions>? captureToolOptions = null)
     {
         var setup = _mockConfigService
-            .Setup(x => x.EnumerateToolsFromServersAsync(
+            .Setup(x => x.GetMcpToolSetAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<TokenProviderCollection>(),
+                It.IsAny<IMcpTokenProvider>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()));
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()));
 
         if (captureToolOptions != null)
         {
-            setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions>((_, _, _, _, options) => captureToolOptions(options));
+            setup.Callback<string, string, IMcpTokenProvider, ITurnContext, ToolOptions, CancellationToken>((_, _, _, _, options, _) => captureToolOptions(options));
         }
 
-        setup.ReturnsAsync((new List<MCPServerConfig>(), new Dictionary<string, IList<McpClientTool>>()));
+        setup.ReturnsAsync(() => new McpToolSet(new List<MCPServerConfig>(), new Dictionary<string, IReadOnlyList<McpClientTool>>()));
     }
 
     /// <summary>
     /// Sets up the mock enumeration service to return the specified servers and tools.
     /// </summary>
-    private void SetupMocksForToolEnumeration(List<MCPServerConfig> servers, Dictionary<string, IList<McpClientTool>> toolsByServer)
+    private void SetupMocksForToolEnumeration(List<MCPServerConfig> servers, Dictionary<string, IList<McpClientTool>> toolsByServer, IAsyncDisposable? clients = null)
     {
         _mockConfigService
-            .Setup(x => x.EnumerateToolsFromServersAsync(
+            .Setup(x => x.GetMcpToolSetAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<TokenProviderCollection>(),
+                It.IsAny<IMcpTokenProvider>(),
                 It.IsAny<ITurnContext>(),
-                It.IsAny<ToolOptions>()))
-            .ReturnsAsync((servers, toolsByServer));
+                It.IsAny<ToolOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new McpToolSet(
+                servers,
+                toolsByServer.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<McpClientTool>)entry.Value.ToList()),
+                clients is null ? null : new[] { clients }));
+    }
+
+    /// <summary>
+    /// Stands in for the MCP clients of a tool set and counts how often they are disposed.
+    /// </summary>
+    private sealed class DisposalProbe : IAsyncDisposable
+    {
+        public int DisposeCount { get; private set; }
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCount++;
+            return ValueTask.CompletedTask;
+        }
     }
 
     #endregion
@@ -182,7 +201,7 @@ public class McpToolRegistrationServiceTests
     }
 
     [Fact]
-    public async Task GetMcpToolDefinitionsAndResourcesAsync_CallsEnumerateToolsFromServersAsync()
+    public async Task GetMcpToolDefinitionsAndResourcesAsync_CallsGetMcpToolSetAsync()
     {
         // Arrange
         SetupMocksForEmptyToolEnumeration();
@@ -195,12 +214,13 @@ public class McpToolRegistrationServiceTests
 
         // Assert
         _mockConfigService.Verify(
-            x => x.EnumerateToolsFromServersAsync(
+            x => x.GetMcpToolSetAsync(
                 TestAgentInstanceId,
                 TestAuthToken,
                 It.IsAny<IMcpTokenProvider>(),
                 _mockTurnContext.Object,
-                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance)),
+                It.Is<ToolOptions>(o => o.UserAgentConfiguration == Agent365AzureAIFoundrySdkUserAgentConfiguration.Instance),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -353,6 +373,26 @@ public class McpToolRegistrationServiceTests
         toolResources.Should().NotBeNull();
         toolResources!.Mcp.Should().HaveCount(3);
         toolResources.Mcp.Select(r => r.ServerLabel).Should().BeEquivalentTo("server-alpha", "server-beta", "server-gamma");
+    }
+
+    [Fact]
+    public async Task GetMcpToolDefinitionsAndResourcesAsync_DisposesClientsAfterListingTools()
+    {
+        // Arrange
+        var servers = new List<MCPServerConfig> { CreateTestServerConfig("test-server") };
+        var toolsByServer = new Dictionary<string, IList<McpClientTool>> { ["test-server"] = CreatePlaceholderTools(1) };
+        var clients = new DisposalProbe();
+        SetupMocksForToolEnumeration(servers, toolsByServer, clients);
+
+        // Act
+        var (toolDefinitions, _) = await _service.GetMcpToolDefinitionsAndResourcesAsync(
+            TestAgentInstanceId,
+            TestAuthToken,
+            _mockTurnContext.Object);
+
+        // Assert
+        toolDefinitions.Should().HaveCount(1);
+        clients.DisposeCount.Should().Be(1);
     }
 
     #endregion

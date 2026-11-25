@@ -426,6 +426,10 @@ Azure AI Foundry Persistent Agents SDK is currently in beta (v1.2.0-beta.4). API
 
 Unlike Semantic Kernel and Agent Framework integrations, Azure AI Foundry handles tool execution on the server side. MCP tools registered here will be called by the Azure AI infrastructure.
 
+### MCP Clients
+
+The service lists each MCP server's tools only to find the servers that respond; Azure AI Foundry calls the servers itself. So it disposes the MCP clients it creates, which closes their connections and ends their MCP sessions, as soon as the tool definitions and resources are built.
+
 ## External Resources
 
 - [Azure AI Foundry](https://learn.microsoft.com/azure/ai-studio/)

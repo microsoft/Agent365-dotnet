@@ -63,6 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   calling it again with the same kernel no longer throws `ArgumentException` when an MCP server name is
   returned again. Turns that run concurrently must each use their own kernel: a call for a kernel that already
   has a call in progress throws `InvalidOperationException`.
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** — `AddToolServersToAgent`,
+  `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create
+  once the tool definitions and resources are built.
 
 ## [2.0.0] - 2026-10-20
 

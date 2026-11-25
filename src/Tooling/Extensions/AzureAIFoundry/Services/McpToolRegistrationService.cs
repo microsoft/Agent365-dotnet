@@ -169,7 +169,7 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
         };
 
         List<MCPServerConfig> servers;
-        Dictionary<string, IList<McpClientTool>> toolsByServer;
+        IReadOnlyDictionary<string, IReadOnlyList<McpClientTool>> toolsByServer;
 
         // Select token provider:
         //   Dev scenario  → EnvMcpTokenProvider reads per-server env vars (no OBO flow needed).
@@ -183,12 +183,17 @@ public class McpToolRegistrationService : IMcpToolRegistrationService
              :
                 new TokenProviderCollection(_logger, new EnvMcpTokenProvider(_configuration, _logger));
 
-        (servers, toolsByServer) = await _mcpServerConfigurationService.EnumerateToolsFromServersAsync(
+        // The tools are listed only to find the servers that respond; Azure AI Foundry calls the servers itself,
+        // so the MCP clients are disposed as soon as the tool definitions and resources are built.
+        await using var toolSet = await _mcpServerConfigurationService.GetMcpToolSetAsync(
             agentInstanceId, 
             authToken, 
             tokenProvider, 
             turnContext, 
             toolOptions).ConfigureAwait(false);
+
+        servers = toolSet.Servers.ToList();
+        toolsByServer = toolSet.ToolsByServer;
 
 
         if (servers.Count == 0)

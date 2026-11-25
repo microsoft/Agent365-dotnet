@@ -26,6 +26,9 @@ public interface IMcpToolRegistrationService
     /// <param name="authHandlerName">Authentication Handler Name for use with the UserAuthorization System</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <param name="authToken">Optional auth token to access the MCP servers.</param>
+    /// <remarks>
+    /// The MCP clients used to list the servers' tools are disposed before this method returns.
+    /// </remarks>
     Task AddToolServersToAgentAsync(
         PersistentAgentsClient agentClient,
         UserAuthorization userAuthorization,
@@ -40,6 +43,9 @@ public interface IMcpToolRegistrationService
     /// <param name="authToken">Auth token to access the MCP servers.</param>
     /// <param name="turnContext">Turn context for the conversation.</param>
     /// <returns>A tuple containing the list of MCP tool definitions and tool resources.</returns>
+    /// <remarks>
+    /// The MCP clients used to list the servers' tools are disposed before this method returns.
+    /// </remarks>
     Task<(IList<MCPToolDefinition> ToolDefinitions, ToolResources? ToolResources)> GetMcpToolDefinitionsAndResourcesAsync(
         string agentInstanceId,
         string authToken,

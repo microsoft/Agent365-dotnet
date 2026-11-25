@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - .NET 8 reached end of support on November 10, 2026; the package no longer includes a `net8.0` build, so applications that target `net8.0` or `net9.0` can't reference it
   - **Migration:** retarget applications to `net10.0` or later
 
+### Fixed
+- **Microsoft.Agents.A365.Tooling.Extensions.AzureAIFoundry** - MCP clients created to list tools are disposed
+  - `AddToolServersToAgent`, `AddToolServersToAgentAsync` and `GetMcpToolDefinitionsAndResourcesAsync` dispose the MCP clients they create once the tool definitions and resources are built, which closes their connections and ends their MCP sessions; Azure AI Foundry calls the MCP servers itself
+
 ## [2.0.0] - 2026-10-20
 
 ### Breaking Changes
