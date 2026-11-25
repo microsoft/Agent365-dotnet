@@ -280,6 +280,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 string? scope = null;
                 string? audience = null;
                 string? publisher = null;
+                string? instructions = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
@@ -318,6 +319,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     publisher = publisherElement.GetString();
                 }
+                if (serverElement.TryGetProperty("instructions", out var instructionsElement) &&
+                    instructionsElement.ValueKind == JsonValueKind.String)
+                {
+                    instructions = instructionsElement.GetString();
+                }
 
                 // Both Name and Endpoint are required
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(endpoint))
@@ -332,7 +338,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     id = id ?? string.Empty,
                     scope = scope,
                     audience = audience,
-                    publisher = publisher
+                    publisher = publisher,
+                    instructions = instructions
                 };
             }
             catch (Exception)
@@ -357,6 +364,7 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 string? scope = null;
                 string? audience = null;
                 string? publisher = null;
+                string? instructions = null;
 
                 if (serverElement.TryGetProperty("mcpServerName", out var nameElement) &&
                     nameElement.ValueKind == JsonValueKind.String)
@@ -395,6 +403,11 @@ namespace Microsoft.Agents.A365.Tooling.Services
                 {
                     publisher = publisherElement.GetString();
                 }
+                if (serverElement.TryGetProperty("instructions", out var instructionsElement) &&
+                    instructionsElement.ValueKind == JsonValueKind.String)
+                {
+                    instructions = instructionsElement.GetString();
+                }
 
                 // Both Name and ServerName are required
                 if (string.IsNullOrWhiteSpace(name))
@@ -412,7 +425,8 @@ namespace Microsoft.Agents.A365.Tooling.Services
                     id = id ?? string.Empty,
                     scope = scope,
                     audience = audience,
-                    publisher = publisher
+                    publisher = publisher,
+                    instructions = instructions
                 };
             }
             catch (Exception)
